@@ -117,14 +117,30 @@ correctly says so by trading 25 times a year instead of 500. This is not a
 disappointing detail to be buried; it is the main practical finding. A 5-minute
 mean-reversion strategy is a fee-tier business.
 
-### It is not a data-mining artefact
+### Is it a data-mining artefact?
 
-Pooled across held-out seeds at VIP 6:
+Pooled across held-out seeds at VIP 6 (~8.5 years of bars):
 
-- block-bootstrap 95% CI on the Sharpe: **[+0.59, +1.85]**
-- bootstrap `p(Sharpe ≤ 0)`: **0.0000**
-- Newey–West t-statistic: **+3.66**
-- probabilistic Sharpe ratio: **0.9999**
+| Test | Value |
+|---|---:|
+| Annualised Sharpe | +1.21 |
+| Block-bootstrap 95% CI | [+0.59, +1.85] |
+| Bootstrap `p(Sharpe ≤ 0)` | 0.0000 |
+| Newey–West t-statistic | +3.66 |
+| Probabilistic Sharpe ratio | 0.9999 |
+| **Deflated Sharpe ratio (18 trials)** | **0.0011** |
+
+The first five say the track record is very unlikely to have come from a
+zero-edge process. **The deflated Sharpe ratio says something less comfortable
+and it is reported here rather than omitted**: benchmarked against the best of
+18 configurations drawn with an annualised Sharpe dispersion of 1.2, a Sharpe of
+1.21 does *not* clear the bar that a lucky search would have produced anyway.
+Only the VIP 9 configuration (+2.32) approaches it.
+
+The honest reading is that the *mechanism* is well supported — the negative
+controls and the cross-seed consistency are hard to fake — while the *magnitude*
+at VIP 6 is not comfortably beyond what the search itself could have generated.
+Treat VIP 9 / market-maker fees as where this has real headroom.
 
 ### Negative controls
 
@@ -139,6 +155,28 @@ it must earn nothing:
 
 It does not merely lose less on the controls — it declines to trade at all,
 because the edge estimator finds no edge and the maximin size is zero.
+
+### Walk-forward is the weakest result
+
+Five purged, embargoed folds of a 420,000-bar (~4 year) series, a **fresh
+learner per fold**, VIP 6:
+
+| Seed | Per-fold Sharpe | Pooled |
+|---|---|---:|
+| 100 | 0.00, 0.00, 0.00, +2.77, −0.05 | +1.10 |
+| 101 | 0.00, +0.15, 0.00, 0.00, 0.00 | +0.07 |
+| 102 | +0.93, −0.14, +3.03, 0.00, 0.00 | +1.37 |
+
+Pooled results are positive on all three seeds, but most individual folds show
+`0.00` — the strategy did not trade at all in them. That is not a failure of the
+edge; it is the online learner needing roughly a year of 5-minute data before
+its weights and its edge estimate are confident enough for the sizer to allocate.
+An 80,000-bar fold with a cold learner is mostly warm-up.
+
+So this test partly measures *learning speed* rather than edge, and it is the
+number that most argues for caution. A deployment should warm the learner on all
+available history rather than restarting it, which is what `PaperTrader.warm_up`
+does.
 
 ---
 
@@ -173,8 +211,8 @@ square-root impact `k·σ·√(Q/V)`.
 - **The edge is thin.** 5–9 bp per trade against a 2–7 bp round trip. There is
   no configuration here that survives a large increase in costs.
 - **The online learner needs data.** It converges over ~100k bars (≈1 year of
-  5-minute data). Shorter samples are mostly warm-up, which is why the
-  walk-forward harness uses long folds.
+  5-minute data). Shorter samples are mostly warm-up — visible directly in the
+  walk-forward table, where several cold-started folds never trade at all.
 - **Contextual regimes are switched off by default.** Each context cell learns
   independently, so cells cost data; at this information coefficient a cell needs
   O(10k) observations before its weights mean anything. The machinery is there

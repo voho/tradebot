@@ -61,7 +61,7 @@
   "newey_west_t": 3.655364289774664,
   "skew": 18.30283265656369,
   "psr": 0.9998645371247906,
-  "dsr": 0.0
+  "dsr": 0.001143195622706035
  },
  "controls": {
   "random_walk": {
@@ -81,7 +81,7 @@
    "folds": [
     {
      "fold": 0,
-     "bars": 25725,
+     "bars": 79725,
      "sharpe": 0.0,
      "cagr": 0.0,
      "vol": 0.0,
@@ -90,7 +90,7 @@
     },
     {
      "fold": 1,
-     "bars": 25725,
+     "bars": 79725,
      "sharpe": 0.0,
      "cagr": 0.0,
      "vol": 0.0,
@@ -99,7 +99,7 @@
     },
     {
      "fold": 2,
-     "bars": 25725,
+     "bars": 79725,
      "sharpe": 0.0,
      "cagr": 0.0,
      "vol": 0.0,
@@ -108,43 +108,43 @@
     },
     {
      "fold": 3,
-     "bars": 25725,
-     "sharpe": 0.0,
-     "cagr": 0.0,
-     "vol": 0.0,
-     "max_dd": 0.0,
-     "trades": 0
+     "bars": 79725,
+     "sharpe": 2.7686949590477887,
+     "cagr": 0.13307364883155492,
+     "vol": 0.04549677393568359,
+     "max_dd": 0.028446217746365465,
+     "trades": 138
     },
     {
      "fold": 4,
-     "bars": 25725,
-     "sharpe": 0.0,
-     "cagr": 0.0,
-     "vol": 0.0,
-     "max_dd": 0.0,
-     "trades": 0
+     "bars": 79725,
+     "sharpe": -0.04676381913004312,
+     "cagr": -0.0013116923683825776,
+     "vol": 0.022608949012090183,
+     "max_dd": 0.0242035711821722,
+     "trades": 122
     }
    ],
    "pooled": {
-    "n_bars": 128625,
-    "years": 1.223601598173516,
-    "total_return": 0.0,
-    "cagr": 0.0,
-    "ann_vol": 0.0,
-    "sharpe": 0.0,
-    "sortino": 0.0,
-    "max_drawdown": 0.0,
-    "calmar": 0.0,
-    "hit_rate": 0.0,
-    "profit_factor": Infinity,
-    "skew": NaN,
-    "kurtosis": NaN,
-    "turnover_annual": 0.0,
-    "cost_drag_annual": 0.0,
-    "n_trades": 0,
-    "psr": NaN,
-    "dsr": NaN,
-    "t_stat": 0.0
+    "n_bars": 398625,
+    "years": 3.7920947488584473,
+    "total_return": 0.09829264717077524,
+    "cagr": 0.0250324657436809,
+    "ann_vol": 0.02272098759875154,
+    "sharpe": 1.0995068528905467,
+    "sortino": 0.06866914375932594,
+    "max_drawdown": 0.02844621774636591,
+    "calmar": 0.8799927627242772,
+    "hit_rate": 0.3813084112149533,
+    "profit_factor": 1.40511197143204,
+    "skew": 44.30094010677258,
+    "kurtosis": 9472.559040612745,
+    "turnover_annual": 57.91637287553997,
+    "cost_drag_annual": 0.013220461370909382,
+    "n_trades": 260,
+    "psr": 0.9888823482700914,
+    "dsr": 0.9888823482700914,
+    "t_stat": 2.141102854860668
    }
   },
   {
@@ -152,7 +152,7 @@
    "folds": [
     {
      "fold": 0,
-     "bars": 25725,
+     "bars": 79725,
      "sharpe": 0.0,
      "cagr": 0.0,
      "vol": 0.0,
@@ -161,16 +161,16 @@
     },
     {
      "fold": 1,
-     "bars": 25725,
-     "sharpe": 0.0,
-     "cagr": 0.0,
-     "vol": 0.0,
-     "max_dd": 0.0,
-     "trades": 0
+     "bars": 79725,
+     "sharpe": 0.1491581012208392,
+     "cagr": 0.0038336308182298495,
+     "vol": 0.028356521221327084,
+     "max_dd": 0.020918948516424063,
+     "trades": 54
     },
     {
      "fold": 2,
-     "bars": 25725,
+     "bars": 79725,
      "sharpe": 0.0,
      "cagr": 0.0,
      "vol": 0.0,
@@ -179,7 +179,7 @@
     },
     {
      "fold": 3,
-     "bars": 25725,
+     "bars": 79725,
      "sharpe": 0.0,
      "cagr": 0.0,
      "vol": 0.0,
@@ -188,7 +188,7 @@
     },
     {
      "fold": 4,
-     "bars": 25725,
+     "bars": 79725,
      "sharpe": 0.0,
      "cagr": 0.0,
      "vol": 0.0,
@@ -197,25 +197,25 @@
     }
    ],
    "pooled": {
-    "n_bars": 128625,
-    "years": 1.223601598173516,
-    "total_return": 0.0,
-    "cagr": 0.0,
-    "ann_vol": 0.0,
-    "sharpe": 0.0,
-    "sortino": 0.0,
-    "max_drawdown": 0.0,
-    "calmar": 0.0,
-    "hit_rate": 0.0,
-    "profit_factor": Infinity,
-    "skew": NaN,
-    "kurtosis": NaN,
-    "turnover_annual": 0.0,
-    "cost_drag_annual": 0.0,
-    "n_trades": 0,
-    "psr": NaN,
-    "dsr": NaN,
-    "t_stat": 0.0
+    "n_bars": 398625,
+    "years": 3.7920947488584473,
+    "total_return": 0.002906154026117491,
+    "cagr": 0.0007655531227963586,
+    "ann_vol": 0.012681359258711144,
+    "sharpe": 0.06670585977912667,
+    "sortino": 0.001205215718007185,
+    "max_drawdown": 0.02091894851642484,
+    "calmar": 0.03659615693376139,
+    "hit_rate": 0.3577981651376147,
+    "profit_factor": 1.0583055938425356,
+    "skew": -118.1858854755387,
+    "kurtosis": 75762.52410788763,
+    "turnover_annual": 9.879140437178773,
+    "cost_drag_annual": 0.0021124772862979916,
+    "n_trades": 54,
+    "psr": 0.5510429975006991,
+    "dsr": 0.5510429975006991,
+    "t_stat": 0.12989833254203587
    }
   },
   {
@@ -223,34 +223,34 @@
    "folds": [
     {
      "fold": 0,
-     "bars": 25725,
-     "sharpe": 0.0,
-     "cagr": 0.0,
-     "vol": 0.0,
-     "max_dd": 0.0,
-     "trades": 0
+     "bars": 79725,
+     "sharpe": 0.9294184940300436,
+     "cagr": 0.005583513813551155,
+     "vol": 0.006010245590350124,
+     "max_dd": 0.005811599094199482,
+     "trades": 20
     },
     {
      "fold": 1,
-     "bars": 25725,
-     "sharpe": 0.0,
-     "cagr": 0.0,
-     "vol": 0.0,
-     "max_dd": 0.0,
-     "trades": 0
+     "bars": 79725,
+     "sharpe": -0.1415553140775314,
+     "cagr": -0.0011284860554005016,
+     "vol": 0.00776376034559427,
+     "max_dd": 0.007863741269273139,
+     "trades": 24
     },
     {
      "fold": 2,
-     "bars": 25725,
-     "sharpe": 0.0,
-     "cagr": 0.0,
-     "vol": 0.0,
-     "max_dd": 0.0,
-     "trades": 0
+     "bars": 79725,
+     "sharpe": 3.0272670775693586,
+     "cagr": 0.22144592795625662,
+     "vol": 0.06681224472543823,
+     "max_dd": 0.04453954393504134,
+     "trades": 200
     },
     {
      "fold": 3,
-     "bars": 25725,
+     "bars": 79725,
      "sharpe": 0.0,
      "cagr": 0.0,
      "vol": 0.0,
@@ -259,7 +259,7 @@
     },
     {
      "fold": 4,
-     "bars": 25725,
+     "bars": 79725,
      "sharpe": 0.0,
      "cagr": 0.0,
      "vol": 0.0,
@@ -268,25 +268,25 @@
     }
    ],
    "pooled": {
-    "n_bars": 128625,
-    "years": 1.223601598173516,
-    "total_return": 0.0,
-    "cagr": 0.0,
-    "ann_vol": 0.0,
-    "sharpe": 0.0,
-    "sortino": 0.0,
-    "max_drawdown": 0.0,
-    "calmar": 0.0,
-    "hit_rate": 0.0,
-    "profit_factor": Infinity,
-    "skew": NaN,
-    "kurtosis": NaN,
-    "turnover_annual": 0.0,
-    "cost_drag_annual": 0.0,
-    "n_trades": 0,
-    "psr": NaN,
-    "dsr": NaN,
-    "t_stat": 0.0
+    "n_bars": 398625,
+    "years": 3.7920947488584473,
+    "total_return": 0.1677480041964008,
+    "cagr": 0.04174255103894353,
+    "ann_vol": 0.030201117387714336,
+    "sharpe": 1.3691251091995678,
+    "sortino": 0.09193057086228117,
+    "max_drawdown": 0.04453954393504056,
+    "calmar": 0.937202031072066,
+    "hit_rate": 0.3940594059405941,
+    "profit_factor": 1.5415121629299293,
+    "skew": 64.09428420788115,
+    "kurtosis": 11276.00643165517,
+    "turnover_annual": 74.59251447932866,
+    "cost_drag_annual": 0.017898723298981126,
+    "n_trades": 244,
+    "psr": 0.9987343100787941,
+    "dsr": 0.9987343100787941,
+    "t_stat": 2.6661386168371943
    }
   }
  ]

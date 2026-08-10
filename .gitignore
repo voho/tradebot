@@ -9,3 +9,4 @@ data/
 *.parquet
 !configs/*.csv
 report.md
+search_results.json

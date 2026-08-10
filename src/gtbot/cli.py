@@ -33,6 +33,23 @@ from .strategy import GameTheoreticStrategy, StrategyConfig
 BPY = BTCUSD_5M.bars_per_year
 
 
+#: Bars the online learner needs before its weights and edge estimate are
+#: confident enough for the sizer to allocate.  Below this a run is mostly
+#: warm-up and will report few or no trades — which is correct behaviour, not a
+#: bug, but is confusing without a warning.
+MIN_BARS_FOR_CONVERGENCE = 100_000
+
+
+def _warn_if_short(bars: pd.DataFrame) -> None:
+    if len(bars) < MIN_BARS_FOR_CONVERGENCE:
+        print(
+            f"note: {len(bars):,} bars is short for the online learner "
+            f"(~{MIN_BARS_FOR_CONVERGENCE:,} recommended). Expect few or no trades: "
+            "the sizer holds off until the edge estimate is statistically supported.\n",
+            file=sys.stderr,
+        )
+
+
 def _load(path: str) -> pd.DataFrame:
     p = Path(path)
     if not p.exists():
@@ -78,6 +95,7 @@ def cmd_simulate(args) -> None:
 
 def cmd_backtest(args) -> None:
     bars = _load(args.data) if args.data else validate(simulate(args.bars, seed=args.seed).bars)
+    _warn_if_short(bars)
     cost = CostModel.for_tier(args.tier)
     execution = _execution(args)
     res = run_backtest(
@@ -104,6 +122,7 @@ def cmd_backtest(args) -> None:
 
 def cmd_walkforward(args) -> None:
     bars = _load(args.data) if args.data else validate(simulate(args.bars, seed=args.seed).bars)
+    _warn_if_short(bars)
     cost = CostModel.for_tier(args.tier)
     wf = run_walkforward(
         bars,
@@ -122,6 +141,7 @@ def cmd_walkforward(args) -> None:
 
 def cmd_paper(args) -> None:
     bars = _load(args.data) if args.data else validate(simulate(args.bars, seed=args.seed).bars)
+    _warn_if_short(bars)
     session, broker = replay_paper(bars, _strategy(args))
     print(f"bars seen      {session.bars_seen:,}")
     print(f"decisions      {session.decisions:,}")
@@ -134,6 +154,7 @@ def cmd_paper(args) -> None:
 
 def cmd_report(args) -> None:
     bars = _load(args.data) if args.data else validate(simulate(args.bars, seed=args.seed).bars)
+    _warn_if_short(bars)
     text = render_report(bars, tiers=list(FEE_TIERS), max_leverage=args.max_leverage)
     if args.out:
         Path(args.out).write_text(text)

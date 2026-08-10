@@ -157,7 +157,19 @@ def test_metrics_on_a_known_series():
     m = metrics.compute(r, eq, np.ones(1000), np.zeros(1000), bars_per_year=1000)
     assert m.max_drawdown == pytest.approx(0.0, abs=1e-12)
     assert m.hit_rate == 1.0
-    assert m.sharpe > 100  # a constant positive return has no volatility
+    assert m.cagr > 0.0
+    # A constant series has zero variance, so its Sharpe is undefined.  We
+    # report 0 rather than +inf or NaN: an undefined ratio is not a track record.
+    assert m.sharpe == 0.0
+    assert m.psr == 0.5 and m.dsr == 0.0
+
+
+def test_metrics_on_a_noisy_series_with_a_real_edge():
+    rng = np.random.default_rng(0)
+    r = rng.standard_normal(5000) * 0.001 + 0.0005
+    m = metrics.compute(r, np.cumprod(1.0 + r), np.ones(5000), np.zeros(5000), bars_per_year=1000)
+    assert m.sharpe > 10  # 0.5 sigma per bar, 1000 bars per year
+    assert m.psr > 0.99
 
 
 def test_max_drawdown_is_correct():
@@ -181,12 +193,19 @@ def test_bootstrap_detects_a_real_edge_and_rejects_noise():
     assert bad.p_value > 0.05
 
 
-def test_permutation_test_rejects_a_shuffled_signal():
+def test_permutation_test_separates_signal_from_noise():
+    """A single noise p-value is uniform, so compare distributions, not one draw."""
     rng = np.random.default_rng(1)
     sig = rng.standard_normal(4000)
-    fwd = 0.05 * sig + rng.standard_normal(4000)
-    assert stats.permutation_test(sig, fwd, n_permutations=200, block=50) < 0.05
-    assert stats.permutation_test(sig, rng.standard_normal(4000), n_permutations=200, block=50) > 0.05
+    fwd = 0.08 * sig + rng.standard_normal(4000)
+    p_signal = stats.permutation_test(sig, fwd, n_permutations=300, block=50, seed=0)
+    assert p_signal < 0.05
+
+    p_noise = [
+        stats.permutation_test(sig, rng.standard_normal(4000), n_permutations=100, block=50, seed=s)
+        for s in range(8)
+    ]
+    assert float(np.median(p_noise)) > 0.2, p_noise
 
 
 def test_newey_west_widens_errors_under_autocorrelation():

@@ -130,8 +130,12 @@ def compute(
     turnover = float(np.abs(np.diff(position)).sum() / years) if years > 0 else 0.0
     cost_drag = float(costs.sum() / years) if years > 0 else 0.0
 
-    sk = float(stats.skew(r)) if n > 2 else 0.0
-    ku = float(stats.kurtosis(r, fisher=False)) if n > 3 else 3.0
+    # A strategy that never traded has a constant return series; skew and
+    # kurtosis are undefined there and would poison every downstream ratio
+    # with NaN rather than reporting the true answer, which is "no track record".
+    degenerate = n < 4 or r.std(ddof=1) <= 1e-15
+    sk = 0.0 if degenerate else float(stats.skew(r))
+    ku = 3.0 if degenerate else float(stats.kurtosis(r, fisher=False))
     sr_per_obs = sr / math.sqrt(bars_per_year) if bars_per_year else 0.0
 
     return Metrics(
@@ -151,7 +155,7 @@ def compute(
         turnover_annual=turnover,
         cost_drag_annual=cost_drag,
         n_trades=n_trades,
-        psr=probabilistic_sharpe(sr_per_obs, n, sk, ku),
-        dsr=deflated_sharpe(sr_per_obs, n, sk, ku, n_trials, trial_sr_std),
+        psr=0.5 if degenerate else probabilistic_sharpe(sr_per_obs, n, sk, ku),
+        dsr=0.0 if degenerate else deflated_sharpe(sr_per_obs, n, sk, ku, n_trials, trial_sr_std),
         t_stat=float(sr * math.sqrt(years)) if years > 0 else 0.0,
     )
