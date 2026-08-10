@@ -118,7 +118,15 @@ def compute(
     years = n / bars_per_year if bars_per_year else 0.0
 
     total = float(equity[-1] / equity[0] - 1.0) if equity.size else 0.0
-    cagr = float((1.0 + total) ** (1.0 / years) - 1.0) if years > 0 and total > -1 else 0.0
+    # A total return of exactly -1 (a wiped-out account) must not fall through
+    # to "0.0", which reads as "no growth" for the one outcome that destroyed
+    # the deposit — and which then gets averaged across seeds as if it were flat.
+    if years <= 0:
+        cagr = 0.0
+    elif total <= -1.0:
+        cagr = -1.0
+    else:
+        cagr = float((1.0 + total) ** (1.0 / years) - 1.0)
     ann_vol = float(r.std(ddof=1) * math.sqrt(bars_per_year)) if n > 1 else 0.0
     sr = sharpe_ratio(r, bars_per_year)
     mdd = max_drawdown(equity) if equity.size else 0.0

@@ -32,6 +32,14 @@ from gtbot.data.synthetic import block_bootstrap, make_random_walk, simulate
 from gtbot.engine.backtest import run_backtest
 from gtbot.engine.broker import FEE_TIERS, CostModel, ExecutionConfig
 from gtbot.eval import metrics, stats
+from gtbot.eval.account import (
+    DEFAULT_DEPOSIT,
+    DEFAULT_LEVERAGE,
+    DIRECTIONS,
+    AccountResult,
+    format_table,
+    simulate_account,
+)
 from gtbot.eval.walkforward import run_walkforward
 from gtbot.strategy import GameTheoreticStrategy, StrategyConfig
 
@@ -110,6 +118,16 @@ def job_control(args):
         bars = validate(simulate(N_BARS, seed=seed).bars)
     _, m = _run(bars, "vip6")
     return kind, seed, m.to_dict()
+
+
+def job_account(args):
+    seed, direction, sizing, tier = args
+    bars = validate(simulate(N_BARS, seed=seed).bars)
+    return simulate_account(
+        bars, tier=tier, direction=direction, sizing_mode=sizing,
+        leverage=DEFAULT_LEVERAGE, deposit=DEFAULT_DEPOSIT,
+        config=CONFIG, execution=EXECUTION,
+    )
 
 
 def job_walkforward(seed):
@@ -218,6 +236,64 @@ def main() -> None:
               f"pooled sharpe {pooled_m['sharpe']:+.2f}  positive folds {sum(s>0 for s in srs)}/{len(srs)}")
         wf_out.append({"seed": seed, "folds": folds, "pooled": pooled_m})
     out["walkforward"] = wf_out
+
+    # --- 5. account outcomes ------------------------------------------------
+    print(f"\n[5] ACCOUNT OUTCOMES  (${DEFAULT_DEPOSIT:,.0f} deposit, {DEFAULT_LEVERAGE:g}x leverage, "
+          f"mean over {len(TEST_SEEDS)} held-out seeds of {N_BARS / BPY:.2f}y each)")
+    acc_grid = [
+        (s, d, sm, t)
+        for sm in ("robust", "fixed")
+        for d in DIRECTIONS
+        for t in ("retail", "vip6", "vip9")
+        for s in TEST_SEEDS
+    ]
+    with Pool(4) as p:
+        acc_rows = p.map(job_account, acc_grid)
+
+    grouped: dict[tuple, list[AccountResult]] = {}
+    for r in acc_rows:
+        grouped.setdefault((r.sizing_mode, r.direction, r.tier), []).append(r)
+
+    def _mean(rs: list[AccountResult]) -> AccountResult:
+        """Average the account outcomes across seeds.
+
+        Seeds are independent parallel scenarios, not sequential periods, so
+        averaging total return is the right summary.  CAGR is *recomputed* from
+        that mean rather than averaged: it is a concave function of return, so
+        the mean of per-seed CAGRs contradicts the mean return printed beside it.
+        """
+        first = rs[0]
+        num = {
+            k: float(np.mean([getattr(r, k) for r in rs]))
+            for k, v in vars(first).items()
+            if isinstance(v, (int, float)) and not isinstance(v, bool)
+        }
+        years = num["years"]
+        total = num["return_pct"]
+        num["cagr"] = (
+            -1.0 if total <= -1.0 else (1.0 + total) ** (1.0 / years) - 1.0 if years > 0 else 0.0
+        )
+        return AccountResult(
+            direction=first.direction, direction_label=first.direction_label,
+            sizing_mode=first.sizing_mode, tier=first.tier,
+            liquidated=any(r.liquidated for r in rs), **num,
+        )
+
+    averaged = [_mean(v) for v in grouped.values()]
+    print(format_table(averaged))
+    worst = min(acc_rows, key=lambda r: r.profit_usd)
+    n_liq = sum(r.liquidated for r in acc_rows)
+    liq_by_row = {
+        k: sum(r.liquidated for r in v) for k, v in grouped.items() if any(x.liquidated for x in v)
+    }
+    print(f"\n   worst single seed: {worst.direction_label}/{worst.sizing_mode}/{worst.tier} "
+          f"-> ${worst.final_equity:,.0f} ({worst.profit_usd:+,.0f})")
+    print(f"   liquidations: {n_liq}/{len(acc_rows)} runs; "
+          f"peak margin use {max(r.margin_use for r in acc_rows):.1%} of the liquidation distance")
+    for k, cnt in liq_by_row.items():
+        print(f"     {k}: {cnt}/{len(TEST_SEEDS)} seeds liquidated")
+    out["accounts"] = [r.to_dict() for r in averaged]
+    out["accounts_worst"] = worst.to_dict()
 
     path = os.path.join(os.path.dirname(__file__), "..", "evaluation_results.json")
     with open(path, "w") as fh:

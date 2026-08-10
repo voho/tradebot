@@ -10,8 +10,9 @@ Decision pipeline, once per bar:
    weight from realised payoffs, with a shifting-expert tracking bound rather
    than a static one.
 3. **Edge estimate.**  An online estimator tracks the mean payoff of the
-   *triggered* trade population over the target horizon, together with a
-   t-statistic that becomes the sizer's confidence.
+   *triggered* trade population over the target horizon, together with its
+   standard error.  The sizer consumes the standard error directly, so the
+   ambiguity set contracts at the statistically correct rate.
 4. **Robust sizing.**  A zero-sum game against an adversarial nature
    (:mod:`gtbot.game.equilibrium`) turns edge, cost and confidence into a
    position size that collapses toward zero when the edge is not well supported.
@@ -44,7 +45,9 @@ class StrategyConfig:
     horizon: int = 3
     #: Half-life of the online edge estimator, in *triggered* observations.
     edge_halflife: float = 400.0
-    #: Minimum |t-statistic| on the edge before full confidence is granted.
+    #: Scale for the reported confidence diagnostic (|t| at which it reads 1).
+    #: The sizer does not consume this — it uses the edge's standard error
+    #: directly via :class:`~gtbot.game.equilibrium.AmbiguityConfig.k_sigma`.
     t_full_confidence: float = 3.0
     #: Round-trip cost assumption used by the sizer, in basis points.
     assumed_cost_bp: float = 6.65  # taker in (4.85) + maker out (1.8)
@@ -61,6 +64,18 @@ class StrategyConfig:
     #: horizon so the object traded is exactly the object the edge estimator
     #: measures.
     max_hold: int = 3
+    #: ``"both"`` or ``"long_only"``.  Long-only forgoes every short setup,
+    #: which on a symmetric mean-reversion signal is roughly half the trades
+    #: and half the P&L; it exists because some accounts and jurisdictions
+    #: cannot short, not because it is expected to perform better.
+    direction: str = "both"
+    #: ``"robust"`` sizes each trade by the equilibrium sizer's conviction and
+    #: then volatility-targets the book.  ``"fixed"`` takes the full permitted
+    #: exposure on every signal — the literal reading of "trade at Nx" — and is
+    #: provided because that is what most people mean by leverage.  It earns
+    #: more and draws down proportionally more; it is not the default because
+    #: sizing a thin edge at maximum exposure is how accounts die.
+    sizing_mode: str = "robust"
     #: Window for z-scoring the blended signal.
     signal_window: int = 2016
     #: Minimum samples in that window before any trade is allowed.
@@ -111,8 +126,17 @@ class GameTheoreticStrategy:
     # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------
-    def prepare(self, bars: pd.DataFrame) -> None:
-        """Vectorised precomputation of features and expert signals."""
+    def prepare(self, bars: pd.DataFrame, *, preserve_state: bool = False) -> None:
+        """Vectorised precomputation of features and expert signals.
+
+        ``preserve_state`` keeps the trade state machine and the per-bar history
+        across a re-preparation.  The paper/live loop re-prepares on every bar
+        as its history grows; without this the position, entry bar and signal
+        history are reset each time, the ``in_trade`` branch of :meth:`decide`
+        never fires, and every position is closed one bar after it opens.
+        Callers must only pass it for an *append-only* history, so that existing
+        indices still refer to the same bars.
+        """
         self.fs = F.build(bars, self.cfg.features)
         self.signals = signal_matrix(self.experts, self.fs)
         self.context = self.fs["regime_cell"].astype(int)
@@ -120,16 +144,24 @@ class GameTheoreticStrategy:
         self._atr_frac = self.fs["atr"]
         self._rv = self.fs["realized_vol"]
         n = len(self.fs)
-        self._blend = np.zeros(n)
-        self._target = np.zeros(n)
-        self._edge = np.zeros(n)
-        self._conf = np.zeros(n)
-        self._size = np.zeros(n)
-        self._z = np.zeros(n)
-        self._pos_target = 0.0
-        self._actual_pos = 0.0
-        self._entry_bar = -10**9
-        self._last_edge_u = -10**9
+        carried = {}
+        if preserve_state:
+            for name in ("_blend", "_target", "_edge", "_conf", "_size", "_z"):
+                arr = getattr(self, name, None)
+                if isinstance(arr, np.ndarray):
+                    carried[name] = arr
+        for name in ("_blend", "_target", "_edge", "_conf", "_size", "_z"):
+            fresh = np.zeros(n)
+            old = carried.get(name)
+            if old is not None:
+                k = min(old.size, n)
+                fresh[:k] = old[:k]
+            setattr(self, name, fresh)
+        if not preserve_state:
+            self._pos_target = 0.0
+            self._actual_pos = 0.0
+            self._entry_bar = -10**9
+            self._last_edge_u = -10**9
         self.warmup = max(self.cfg.features.warmup, self.cfg.horizon + 2)
         self._worst_mult_cache: dict[int, float] = {}
 
@@ -190,7 +222,17 @@ class GameTheoreticStrategy:
         # holds, not the one the strategy asked for.  A resting limit order that
         # never filled would otherwise leave the strategy believing it is in a
         # trade, ageing out a position it does not own and then "exiting" it.
-        if realized_position != 0.0 and self._actual_pos == 0.0:
+        opened = realized_position != 0.0 and self._actual_pos == 0.0
+        flipped = (
+            realized_position != 0.0
+            and self._actual_pos != 0.0
+            and np.sign(realized_position) != np.sign(self._actual_pos)
+        )
+        if opened or flipped:
+            # A flip is a new trade.  Without this the flipped position inherits
+            # the previous trade's entry bar, is born already aged, expires on
+            # the next bar and immediately re-enters the same direction —
+            # paying a full round trip for nothing.
             self._entry_bar = t
         self._actual_pos = realized_position
 
@@ -209,7 +251,7 @@ class GameTheoreticStrategy:
         return max(self._edge_mean, 0.0)
 
     def _confidence(self) -> float:
-        """Map the edge estimate's t-statistic onto ``[0, 1]``."""
+        """Reported confidence diagnostic; not an input to the sizer."""
         if self._edge_n < 30 or self._edge_var <= 1e-24:
             return 0.0
         se = math.sqrt(self._edge_var / max(self._edge_n, 1.0))
@@ -264,6 +306,12 @@ class GameTheoreticStrategy:
             self._pos_target = 0.0
             return 0.0
 
+        if self.cfg.direction == "long_only" and z < 0:
+            # Stand aside rather than invert: a short setup carries no
+            # information about a long one.
+            self._pos_target = 0.0
+            return 0.0
+
         # Expected return over the horizon for a trade like this one.
         edge = self._edge_estimate()
         se = self._edge_se()
@@ -276,8 +324,17 @@ class GameTheoreticStrategy:
         self._conf[t] = confidence
         self._size[t] = size
 
-        raw = math.copysign(size, blended)
-        target = self.risk.apply(raw, self._last_equity or 1.0)
+        if self.cfg.sizing_mode == "fixed":
+            # Full permitted exposure on every signal; the leverage cap and the
+            # drawdown governor are the only things still limiting it.
+            full = self.cfg.risk.max_leverage
+            target = self.risk.apply(
+                math.copysign(full, blended), self._last_equity or 1.0, vol_target=False
+            )
+            if size <= 0.0:
+                target = 0.0  # the sizer still holds a veto when edge < cost
+        else:
+            target = self.risk.apply(math.copysign(size, blended), self._last_equity or 1.0)
         self._pos_target = target
         return target
 

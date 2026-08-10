@@ -120,6 +120,66 @@ class ExecutionConfig:
     min_trade: float = 0.02
 
 
+@dataclass(frozen=True)
+class MarginConfig:
+    """Margin and liquidation, which only start to matter above ~2x.
+
+    On a cross-margined perpetual the position is closed by the exchange when
+    equity falls to the maintenance margin requirement.  For a position of
+    ``L`` times equity and a maintenance margin rate ``mmr``, that happens on an
+    adverse price move of ``(1 - mmr*L) / L`` — about 19.5% at 5x with a 0.5%
+    maintenance rate.
+
+    A 5-minute strategy will not normally see a 19.5% intrabar move, but
+    "normally" is doing a lot of work in that sentence: BTC has printed such
+    candles.  Modelling it means a leveraged backtest cannot quietly assume an
+    account survives what would in reality have been liquidated.
+    """
+
+    maintenance_margin_rate: float = 0.005  # Binance BTCUSDT lowest tier
+    #: Fraction of remaining equity left after a forced close (fees + slippage
+    #: on a liquidation are punitive).
+    liquidation_recovery: float = 0.0
+
+    def liquidation_move(self, leverage: float) -> float:
+        """Adverse price move, as a fraction of the entry price, that liquidates.
+
+        Maintenance margin is charged on the notional at the *current* mark, not
+        at entry, so the condition is ``E(1 - Lx) = mmr * L * E * (1 - x)`` for a
+        long, giving ``x = (1 - mmr*L) / (L * (1 - mmr))``.  That matches the
+        exchange's published cross-margin liquidation price; dropping the
+        ``(1 - mmr)`` denominator liquidates fractionally too early.
+        """
+        lev = abs(float(leverage))
+        if lev <= 1e-9:
+            return float("inf")
+        denom = lev * (1.0 - self.maintenance_margin_rate)
+        if denom <= 1e-12:
+            return 0.0
+        return max((1.0 - self.maintenance_margin_rate * lev) / denom, 0.0)
+
+    def margin_use(self, position: float, entry_price: float, low: float, high: float) -> float:
+        """How far a bar's adverse extreme went, as a fraction of the distance
+        to liquidation, for a position opened at ``entry_price``.
+
+        Anchoring to the *entry* price matters: a position opened mid-bar never
+        experienced the move between the previous close and its own fill, and
+        charging it that move invents liquidations that did not happen.
+        """
+        if position == 0.0 or entry_price <= 0.0:
+            return 0.0
+        adverse = (
+            (entry_price - low) / entry_price
+            if position > 0
+            else (high - entry_price) / entry_price
+        )
+        adverse = max(adverse, 0.0)
+        limit = self.liquidation_move(abs(position))
+        if limit <= 0.0:
+            return float("inf")
+        return adverse / limit
+
+
 @dataclass
 class Fill:
     bar: int

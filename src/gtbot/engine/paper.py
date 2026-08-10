@@ -153,7 +153,13 @@ class PaperTrader:
         # standardisation window; anything less and early live decisions are
         # made on features that have not converged.
         self.history_bars = history_bars or (strategy.cfg.features.warmup + 2016 + 64)
+        #: History is append-only during a session.  A rolling window would
+        #: shift every index each bar, and the strategy's per-bar arrays (its
+        #: signal history, its edge-estimator bookkeeping) are indexed by bar
+        #: position — shifting them silently corrupts the online state.
+        self.max_history = max(self.history_bars * 4, 200_000)
         self._history: pd.DataFrame | None = None
+        self._prepared = False
         self.session = PaperSession(started_ts=int(time.time() * 1000))
 
     # ------------------------------------------------------------------
@@ -162,6 +168,7 @@ class PaperTrader:
         frame = validate(bars, self.spec, strict=False)
         self._history = frame.tail(self.history_bars).reset_index(drop=True)
         self._replay()
+        self._prepared = True
 
     def _replay(self) -> None:
         """Re-run the online learner over the retained history."""
@@ -189,17 +196,17 @@ class PaperTrader:
             raise RuntimeError("call warm_up() before streaming bars")
 
         row = pd.DataFrame([bar])
-        self._history = (
-            pd.concat([self._history, row], ignore_index=True)
-            .tail(self.history_bars)
-            .reset_index(drop=True)
-        )
+        self._history = pd.concat([self._history, row], ignore_index=True)
+        if len(self._history) > self.max_history:
+            # Trimming shifts indices, so the online state has to be rebuilt.
+            self._history = self._history.tail(self.history_bars).reset_index(drop=True)
+            self._replay()
         self.session.bars_seen += 1
 
         # Recompute features over the retained window.  This is the same code
         # path the backtester uses, so a paper decision is bit-for-bit the
         # decision the backtest would have made on the same window.
-        self.strategy.prepare(self._history)
+        self.strategy.prepare(self._history, preserve_state=self._prepared)
         t = len(self._history) - 1
         if t <= self.strategy.warmup:
             return None
@@ -240,6 +247,7 @@ def replay_paper(
     *,
     warmup_bars: int | None = None,
     spec: BarSpec = BTCUSD_5M,
+    max_leverage: float = 2.0,
 ) -> tuple[PaperSession, PaperBroker]:
     """Replay historical bars through the paper loop.
 
@@ -247,7 +255,7 @@ def replay_paper(
     run both over the same bars and compare the equity curves.
     """
     broker = PaperBroker()
-    trader = PaperTrader(strategy, broker, spec=spec)
+    trader = PaperTrader(strategy, broker, spec=spec, max_leverage=max_leverage)
     split = warmup_bars or (strategy.cfg.features.warmup + 2016)
     trader.warm_up(bars.iloc[:split])
     for _, row in bars.iloc[split:].iterrows():

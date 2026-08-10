@@ -11,16 +11,23 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from dataclasses import replace
+
 from ..data.schema import BTCUSD_5M, BarSpec
 from ..engine.backtest import run_backtest
 from ..engine.broker import FEE_TIERS, CostModel, ExecutionConfig
+from ..risk import RiskConfig
 from ..strategy import GameTheoreticStrategy, StrategyConfig
 from . import metrics, stats
+from .account import DEFAULT_DEPOSIT, DEFAULT_LEVERAGE, DIRECTIONS, format_table, simulate_account
 
 
 def _run(bars, tier, execution, max_leverage):
     cost = CostModel.for_tier(tier)
     cfg = StrategyConfig(assumed_cost_bp=cost.round_trip_bp(execution))
+    # Keep the risk layer's cap in step with the requested one, or the table
+    # below would be produced at 2x while the header claims otherwise.
+    cfg.risk = replace(cfg.risk, max_leverage=max_leverage)
     res = run_backtest(bars, GameTheoreticStrategy(cfg), costs=cost,
                        execution=execution, max_leverage=max_leverage)
     m = metrics.compute(res.returns, res.equity, res.position, res.costs,
@@ -37,6 +44,8 @@ def render_report(
     tiers: list[str] | None = None,
     execution: ExecutionConfig | None = None,
     max_leverage: float = 2.0,
+    leverage: float = DEFAULT_LEVERAGE,
+    deposit: float = DEFAULT_DEPOSIT,
     spec: BarSpec = BTCUSD_5M,
 ) -> str:
     """Render a full markdown report for one bar series."""
@@ -68,6 +77,26 @@ def render_report(
             best_sharpe, best_returns, best_tier = m.sharpe, res.returns, tier
 
     lines.append("")
+    lines.append(f"## What ${deposit:,.0f} at {leverage:g}x actually does\n")
+    accounts = [
+        simulate_account(bars, tier=tier, direction=d, sizing_mode=sm,
+                         leverage=leverage, deposit=deposit,
+                         execution=execution, spec=spec)
+        for sm in ("robust", "fixed")
+        for d in DIRECTIONS
+        for tier in tiers
+    ]
+    lines.append(format_table(accounts, markdown=True))
+    liq = [a for a in accounts if a.liquidated]
+    if liq:
+        lines.append(f"\n**{len(liq)} of {len(accounts)} configurations were liquidated.**")
+    else:
+        lines.append(
+            f"\nNo liquidations; the worst bar consumed "
+            f"{max(a.margin_use for a in accounts):.1%} of the distance to liquidation."
+        )
+    lines.append("")
+
     if best_returns is not None:
         st = stats.summarise(best_returns, bars_per_year=spec.bars_per_year)
         lines.append(f"## Statistics (best tier: {best_tier})\n")

@@ -85,9 +85,15 @@ class RiskManager:
         span = max(self.cfg.drawdown_hard - self.cfg.drawdown_soft, 1e-9)
         return float(1.0 - (dd - self.cfg.drawdown_soft) / span)
 
-    def apply(self, raw_position: float, equity: float) -> float:
-        """Turn a conviction-scaled position into a permitted position."""
-        pos = raw_position * self.vol_scalar() * self.drawdown_scalar(equity)
+    def apply(self, raw_position: float, equity: float, *, vol_target: bool = True) -> float:
+        """Turn a conviction-scaled position into a permitted position.
+
+        ``vol_target=False`` skips the volatility scalar, for the fixed-size
+        mode where the caller has already decided the exposure and only wants
+        the drawdown governor and the leverage cap applied.
+        """
+        scale = self.vol_scalar() if vol_target else 1.0
+        pos = raw_position * scale * self.drawdown_scalar(equity)
         pos = max(-self.cfg.max_leverage, min(self.cfg.max_leverage, pos))
         if abs(pos) < self.cfg.min_position:
             return 0.0

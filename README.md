@@ -4,6 +4,17 @@ A trading system for BTCUSD 5-minute bars built on repeated-game and
 market-microstructure theory, with a backtester, a paper-trading loop, and an
 evaluation harness designed to try to *disprove* its own results.
 
+**$1,000 at 5x leverage, over 1.43 years, averaged across 6 held-out seeds:**
+
+| | retail fees | VIP 6 | VIP 9 |
+|---|---:|---:|---:|
+| long/short | **+$5** | **+$107** | **+$342** |
+| long-only | **+$1** | **+$47** | **+$141** |
+| long/short, max size every trade | +$25 | +$277 | **+$1,114** |
+
+Worst of all 72 runs: −$129. No liquidations. Full table and the four caveats
+that matter: [What $1,000 at 5x actually does](#what-1000-at-5x-actually-does).
+
 > **Read this first.** The numbers below were produced on a calibrated
 > agent-based market simulator, because the environment this was developed in
 > had no network access to any exchange. They are evidence that the machinery
@@ -117,6 +128,51 @@ correctly says so by trading 25 times a year instead of 500. This is not a
 disappointing detail to be buried; it is the main practical finding. A 5-minute
 mean-reversion strategy is a fee-tier business.
 
+### What $1,000 at 5x actually does
+
+Mean over the 6 held-out seeds, 1.43 years each. `robust` is the default (each
+trade sized by the equilibrium sizer's conviction); `fixed` takes the full 5x on
+every signal, which is what most people mean by "trading at 5x".
+
+| mode | sizing | tier | final $ | P&L | return | CAGR | max DD $ | worst bar | trades/yr | in mkt | fees $ |
+|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| long/short | robust | retail | 1,005 | **+$5** | +0.5% | +0.3% | 3 | −1 | 18 | 0.0% | 9 |
+| long/short | robust | VIP 6 | 1,107 | **+$107** | +10.7% | +7.4% | 44 | −12 | 206 | 0.3% | 74 |
+| long/short | robust | VIP 9 | 1,342 | **+$342** | +34.2% | +22.9% | 64 | −19 | 361 | 0.5% | 93 |
+| long-only | robust | retail | 1,001 | **+$1** | +0.1% | +0.1% | 3 | −1 | 10 | 0.0% | 5 |
+| long-only | robust | VIP 6 | 1,047 | **+$47** | +4.7% | +3.3% | 40 | −13 | 106 | 0.2% | 46 |
+| long-only | robust | VIP 9 | 1,141 | **+$141** | +14.1% | +9.7% | 63 | −25 | 185 | 0.3% | 54 |
+| long/short | fixed | retail | 1,025 | +$25 | +2.5% | +1.7% | 24 | −5 | 18 | 0.0% | 46 |
+| long/short | fixed | VIP 6 | 1,277 | +$277 | +27.7% | +18.7% | 150 | −56 | 208 | 0.3% | 223 |
+| long/short | fixed | VIP 9 | 2,114 | **+$1,114** | +111.4% | +69.0% | 230 | −96 | 363 | 0.6% | 375 |
+| long-only | fixed | retail | 1,002 | +$2 | +0.2% | +0.1% | 20 | −5 | 10 | 0.0% | 25 |
+| long-only | fixed | VIP 6 | 1,051 | +$51 | +5.1% | +3.5% | 126 | −46 | 107 | 0.2% | 107 |
+| long-only | fixed | VIP 9 | 1,292 | +$292 | +29.2% | +19.7% | 169 | −64 | 186 | 0.3% | 148 |
+
+**Worst single seed of all 72 runs: $871, a $129 loss.** No liquidations; the
+worst bar anywhere consumed 8.9% of the distance to liquidation.
+
+Five things this table says that a Sharpe ratio does not:
+
+1. **At retail fees you make roughly nothing** — $1 to $25 on $1,000 over 17
+   months. The fee tier, not the signal, is the binding constraint.
+2. **Long-only gives up more than half the profit.** The signal is symmetric:
+   dislocations resolve upward and downward about equally often, so refusing
+   shorts discards half the opportunities and, because the fixed costs of being
+   set up do not halve, rather more than half the profit.
+3. **`fixed` sizing earns more and is worse.** At VIP 9 it turns $342 into
+   $1,114 — and the drawdown goes from $64 to $230, with Sharpe falling from
+   +3.4 to +2.7. Sizing a thin edge at maximum exposure buys return with a
+   worse-than-proportional increase in risk.
+4. **The account is idle ~99.5% of the time.** A 5x *cap* is not 5x *exposure*:
+   the robust sizer averages 1.2–1.6x while in a trade and is flat otherwise,
+   which is why realised volatility is 7–10%, not 50%.
+5. **Fees are a third to a half of gross profit.** At VIP 9 long/short fixed,
+   $375 of fees against $1,114 of net profit.
+
+Reproduce any row with `gtbot backtest --tier vip9 --leverage 5 --deposit 1000`,
+which prints this table for every mode.
+
 ### Is it a data-mining artefact?
 
 Pooled across held-out seeds at VIP 6 (~8.5 years of bars):
@@ -219,6 +275,14 @@ square-root impact `k·σ·√(Q/V)`.
   for deployments with more history.
 - **No slippage beyond the model, no exchange outages, no funding by default**
   (funding is supported, set `CostModel.funding_bp_per_8h`).
+- **Liquidation is modelled but never triggered here.** At 5x the account dies
+  on a ~19.6% adverse move; the worst bar in 72 runs reached 8.9% of that. On a
+  real BTC series with a genuine flash crash the margin is thinner than these
+  numbers suggest, and `fixed` sizing at 5x is the configuration that would
+  find out first.
+- **A $1,000 account has no market impact**, so these returns are scale-free up
+  to roughly six figures. Beyond that the square-root impact term starts to
+  matter and the per-trade edge erodes.
 
 ---
 

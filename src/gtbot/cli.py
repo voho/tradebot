@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -26,8 +27,10 @@ from .engine.backtest import run_backtest
 from .engine.broker import FEE_TIERS, CostModel, ExecutionConfig
 from .engine.paper import replay_paper
 from .eval import metrics, stats
+from .eval.account import DEFAULT_DEPOSIT, DEFAULT_LEVERAGE, DIRECTIONS, format_table, simulate_account
 from .eval.report import render_report
 from .eval.walkforward import run_walkforward
+from .risk import RiskConfig
 from .strategy import GameTheoreticStrategy, StrategyConfig
 
 BPY = BTCUSD_5M.bars_per_year
@@ -67,6 +70,10 @@ def _strategy(args) -> GameTheoreticStrategy:
         max_hold=args.horizon,
         assumed_cost_bp=cost.round_trip_bp(execution),
     )
+    # The risk layer clamps before the backtester's own clip, so a --max-leverage
+    # above RiskConfig's default would otherwise be silently ignored and every
+    # reported number would come from a 2x run.
+    cfg.risk = replace(cfg.risk, max_leverage=args.max_leverage)
     return GameTheoreticStrategy(cfg)
 
 
@@ -115,6 +122,26 @@ def cmd_backtest(args) -> None:
     print(f"trades         {m.n_trades:,}  ({m.n_trades / max(m.years, 1e-9):.0f}/yr)")
     print(f"cost drag      {m.cost_drag_annual:.2%}/yr")
     print(f"deflated SR    {m.dsr:.3f}")
+
+    # The account outcome is always reported: a Sharpe ratio does not tell you
+    # how many dollars come back, nor whether the account survived the path.
+    print()
+    accounts = [
+        simulate_account(
+            bars, tier=args.tier, direction=d, sizing_mode=sm,
+            leverage=args.leverage, deposit=args.deposit,
+            config=_strategy(args).cfg, execution=execution,
+        )
+        for sm in ("robust", "fixed")
+        for d in DIRECTIONS
+    ]
+    print(format_table(accounts))
+    if any(a.liquidated for a in accounts):
+        print("\n*** LIQUIDATED in at least one configuration ***")
+    else:
+        peak = max(a.margin_use for a in accounts)
+        print(f"\nno liquidation; worst bar used {peak:.1%} of the distance to it")
+
     if args.out:
         res.to_frame().to_csv(args.out, index=False)
         print(f"equity curve -> {args.out}")
@@ -142,7 +169,7 @@ def cmd_walkforward(args) -> None:
 def cmd_paper(args) -> None:
     bars = _load(args.data) if args.data else validate(simulate(args.bars, seed=args.seed).bars)
     _warn_if_short(bars)
-    session, broker = replay_paper(bars, _strategy(args))
+    session, broker = replay_paper(bars, _strategy(args), max_leverage=args.max_leverage)
     print(f"bars seen      {session.bars_seen:,}")
     print(f"decisions      {session.decisions:,}")
     print(f"orders         {session.orders:,}")
@@ -155,7 +182,8 @@ def cmd_paper(args) -> None:
 def cmd_report(args) -> None:
     bars = _load(args.data) if args.data else validate(simulate(args.bars, seed=args.seed).bars)
     _warn_if_short(bars)
-    text = render_report(bars, tiers=list(FEE_TIERS), max_leverage=args.max_leverage)
+    text = render_report(bars, tiers=list(FEE_TIERS), max_leverage=args.max_leverage,
+                         leverage=args.leverage, deposit=args.deposit)
     if args.out:
         Path(args.out).write_text(text)
         print(f"wrote {args.out}")
@@ -179,6 +207,10 @@ def build_parser() -> argparse.ArgumentParser:
         sp.add_argument("--horizon", type=int, default=3)
         sp.add_argument("--entry-signal", dest="entry_signal", type=float, default=0.55)
         sp.add_argument("--max-leverage", dest="max_leverage", type=float, default=2.0)
+        sp.add_argument("--leverage", type=float, default=DEFAULT_LEVERAGE,
+                        help="leverage for the reported account outcome")
+        sp.add_argument("--deposit", type=float, default=DEFAULT_DEPOSIT,
+                        help="starting capital for the reported account outcome")
 
     f = sub.add_parser("fetch", help="download real bars from an exchange")
     f.add_argument("--exchange", default="binance", choices=["binance", "bybit", "okx", "coinbase"])
