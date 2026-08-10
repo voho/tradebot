@@ -215,3 +215,25 @@ def test_newey_west_widens_errors_under_autocorrelation():
     for i in range(1, ar.size):
         ar[i] += 0.7 * (ar[i - 1] - 0.002)
     assert abs(stats.newey_west_tstat(ar)) < abs(stats.newey_west_tstat(iid)) * 1.5
+
+
+def test_confidence_sequence_is_conclusive_only_on_a_real_edge():
+    rng = np.random.default_rng(0)
+    edge = rng.standard_normal(60_000) * 0.001 + 0.00012
+    noise = rng.standard_normal(60_000) * 0.001
+
+    lo, hi, first = stats.confidence_sequence(edge, bars_per_year=105_120)
+    assert lo > 0.0 and first is not None, "a real edge must become conclusive"
+
+    lo_n, hi_n, first_n = stats.confidence_sequence(noise, bars_per_year=105_120)
+    assert lo_n < 0.0 < hi_n, "noise must not exclude zero"
+    assert first_n is None
+
+
+def test_confidence_sequence_is_wider_than_the_fixed_sample_interval():
+    """Anytime validity costs width; if it did not, it would be unsound."""
+    rng = np.random.default_rng(1)
+    r = rng.standard_normal(20_000) * 0.001 + 0.00008
+    cs_lo, cs_hi, _ = stats.confidence_sequence(r, bars_per_year=105_120)
+    boot = stats.bootstrap_sharpe(r, bars_per_year=105_120, n_resamples=200, mean_block=10)
+    assert (cs_hi - cs_lo) > (boot.upper - boot.lower)

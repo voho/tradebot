@@ -19,6 +19,18 @@ Two rules are implemented:
     correlated equilibria; here it is used purely as an alternative no-regret
     rule with no learning-rate to tune.
 
+``DCFR``
+    Discounted regret matching, following the CFR+/DCFR line (Tammelin 2014;
+    Brown & Sandholm 2019).  Regret-matching+ clamps cumulative regrets at zero
+    so an action that has been bad is not buried under an unrecoverable deficit,
+    and DCFR discounts positive and negative cumulative regret at different
+    rates — ``t^alpha/(t^alpha+1)`` and ``t^beta/(t^beta+1)`` with the published
+    defaults ``alpha=1.5, beta=0``.  ``beta=0`` halves negative regret every
+    step, which is exactly the property this application needs: an expert whose
+    sign has flipped with the regime recovers in tens of observations instead of
+    tens of thousands.  It also has no learning rate to mis-set, which is the
+    failure mode that cost this bot its edge twice.
+
 Two design choices matter for trading:
 
 *Signed action set.*  The action set is ``{+e_1..+e_K, -e_1..-e_K, flat}``.
@@ -56,7 +68,10 @@ class LearnerConfig:
     mix: float = 2e-5
     payoff_halflife: float = 500.0  # for the running payoff scale
     include_flat: bool = True
-    rule: str = "hedge"  # "hedge" | "regret_matching"
+    rule: str = "hedge"  # "hedge" | "regret_matching" | "dcfr"
+    #: DCFR discount exponents (Brown & Sandholm 2019 defaults).
+    dcfr_alpha: float = 1.5
+    dcfr_beta: float = 0.0
     #: Prior weight on the ``+`` action of the named expert; the rest of the
     #: mass is spread uniformly over the remaining actions.
     #:
@@ -86,12 +101,15 @@ class _SingleLearner:
         self.updates = 0
 
     def weights(self) -> np.ndarray:
-        if self.cfg.rule == "regret_matching":
+        if self.cfg.rule in ("regret_matching", "dcfr"):
             pos = np.maximum(self.cum_regret, 0.0)
             total = pos.sum()
             if total <= 1e-12:
-                return np.full(self.n, 1.0 / self.n)
-            return pos / total
+                return self.prior.copy()
+            w = pos / total
+            if self.cfg.mix > 0:
+                w = (1.0 - self.cfg.mix) * w + self.cfg.mix * self.prior
+            return w
         return self.w
 
     def update(self, payoffs: np.ndarray) -> None:
@@ -110,7 +128,20 @@ class _SingleLearner:
 
         played = self.weights()
         realized = float(played @ normed)
-        self.cum_regret = (1.0 - self.cfg.mix) * self.cum_regret + (normed - realized)
+        instant = normed - realized
+
+        if self.cfg.rule == "dcfr":
+            # Discount positive and negative cumulative regret separately, then
+            # apply the regret-matching+ clamp.
+            t = float(self.updates + 1)
+            ta = t**self.cfg.dcfr_alpha
+            tb = t**self.cfg.dcfr_beta
+            pos_d = ta / (ta + 1.0)
+            neg_d = tb / (tb + 1.0)
+            decay = np.where(self.cum_regret > 0.0, pos_d, neg_d)
+            self.cum_regret = np.maximum(self.cum_regret * decay + instant, 0.0)
+        else:
+            self.cum_regret = (1.0 - self.cfg.mix) * self.cum_regret + instant
 
         w = self.w * np.exp(self.cfg.eta * normed)
         w = np.maximum(w, 1e-300)

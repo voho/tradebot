@@ -64,6 +64,11 @@ class StrategyConfig:
     #: horizon so the object traded is exactly the object the edge estimator
     #: measures.
     max_hold: int = 3
+    #: Subtract an AIVAT-style control variate from each realised trade payoff
+    #: before it enters the edge estimator.  See :meth:`observe`.
+    variance_reduction: bool = True
+    #: Exit on a learned continuation value rather than a fixed holding period.
+    adaptive_exit: bool = True
     #: ``"both"`` or ``"long_only"``.  Long-only forgoes every short setup,
     #: which on a symmetric mean-reversion signal is roughly half the trades
     #: and half the P&L; it exists because some accounts and jurisdictions
@@ -112,6 +117,19 @@ class GameTheoreticStrategy:
         self._edge_var = 0.0
         self._edge_n = 0.0
         self._last_edge_u = -10**9
+        # Control-variate state for the variance-reduced payoff estimator.
+        self._cv_mean = 0.0
+        self._cv_var = 0.0
+        self._cv_cov = 0.0
+        self._cv_beta = 0.0
+        # Continuation values: expected next-bar payoff, indexed by how many
+        # bars the trade has already been held.  The exit rule is a one-ply
+        # depth-limited search against this learned value function, in the
+        # spirit of DeepStack's continual re-solving: rather than committing to
+        # a fixed holding period, re-decide each bar whether the remaining
+        # reversion is still worth the risk of staying in.
+        self._cont_value = np.zeros(0)
+        self._cont_count = np.zeros(0)
         self._alpha = 1.0 - math.exp(-math.log(2.0) / max(self.cfg.edge_halflife, 1.0))
 
         self._blend = np.zeros(0)
@@ -121,6 +139,9 @@ class GameTheoreticStrategy:
         self._pos_target = 0.0
         self._actual_pos = 0.0
         self._entry_bar = -10**9
+        self._prev_pos_for_cont = 0.0
+        self._prev_bar_for_cont = -1
+        self._prev_age_for_cont = 0
         self._history: list[dict] = []
 
     # ------------------------------------------------------------------
@@ -141,6 +162,10 @@ class GameTheoreticStrategy:
         self.signals = signal_matrix(self.experts, self.fs)
         self.context = self.fs["regime_cell"].astype(int)
         self._log_close = np.log(np.maximum(self.fs.close, 1e-12))
+        # Prefix sums of signed volume give O(1) window flow for the control
+        # variate; Kyle's lambda converts that flow into the return it explains.
+        self._sv_cumsum = np.concatenate([[0.0], np.cumsum(self.fs["signed_volume"])])
+        self._lam = self.fs["kyle_lambda"]
         self._atr_frac = self.fs["atr"]
         self._rv = self.fs["realized_vol"]
         n = len(self.fs)
@@ -162,6 +187,12 @@ class GameTheoreticStrategy:
             self._actual_pos = 0.0
             self._entry_bar = -10**9
             self._last_edge_u = -10**9
+        span = int(self.cfg.max_hold) + 2
+        if self._cont_value.size != span:
+            self._cont_value = np.zeros(span)
+            self._cont_count = np.zeros(span)
+        self._prev_pos_for_cont = 0.0
+        self._prev_bar_for_cont = -1
         self.warmup = max(self.cfg.features.warmup, self.cfg.horizon + 2)
         self._worst_mult_cache: dict[int, float] = {}
 
@@ -211,10 +242,45 @@ class GameTheoreticStrategy:
                 # serially correlated and would inflate the t-statistic that
                 # becomes the sizer's confidence.
                 self._last_edge_u = u
-                pay = math.copysign(1.0, zu) * float(self._log_close[t] - self._log_close[u])
+                sign = math.copysign(1.0, zu)
+                pay = sign * float(self._log_close[t] - self._log_close[u])
+
+                # --- AIVAT-style control variate -------------------------
+                # Most of a trade's payoff variance comes from order flow that
+                # arrived *after* entry — the "chance" node of this game.  That
+                # flow is unpredictable at entry, so the return it explains has
+                # zero conditional mean and can be subtracted as a control
+                # variate: the estimator stays unbiased while its variance falls
+                # by a factor of (1 - rho^2).
+                #
+                # This is the same construction AIVAT uses to evaluate agents in
+                # imperfect-information games (Burch, Schmid et al.), where a
+                # value function of the chance outcome is subtracted with a
+                # correction term of zero expectation.  It matters here because
+                # the sizer allocates on ``edge - k * SE``: shrinking SE is
+                # worth as much as raising the edge.
+                #
+                # It is also exactly the strategy's own thesis: the edge is the
+                # part of the move order flow does *not* explain, so removing
+                # the flow-explained part removes noise, not signal.
+                pay_adj = pay
+                if self.cfg.variance_reduction:
+                    flow = float(self._sv_cumsum[t + 1] - self._sv_cumsum[u + 1])
+                    cv = sign * float(self._lam[u]) * flow
+                    # Use the beta estimated from *earlier* samples, then update
+                    # it, so a sample never contributes to its own adjustment.
+                    if self._edge_n >= 20 and self._cv_var > 1e-24:
+                        pay_adj = pay - self._cv_beta * (cv - self._cv_mean)
+                    a = self._alpha
+                    self._cv_cov += a * ((pay - self._edge_mean) * (cv - self._cv_mean) - self._cv_cov)
+                    self._cv_mean += a * (cv - self._cv_mean)
+                    self._cv_var += a * ((cv - self._cv_mean) ** 2 - self._cv_var)
+                    if self._cv_var > 1e-24:
+                        self._cv_beta = self._cv_cov / self._cv_var
+
                 a = self._alpha
-                self._edge_mean += a * (pay - self._edge_mean)
-                self._edge_var += a * ((pay - self._edge_mean) ** 2 - self._edge_var)
+                self._edge_mean += a * (pay_adj - self._edge_mean)
+                self._edge_var += a * ((pay_adj - self._edge_mean) ** 2 - self._edge_var)
                 self._edge_n = min(self._edge_n + 1.0, 1.0 / a)
 
     def record(self, t: int, *, target: float, realized_position: float, equity: float) -> None:
@@ -285,6 +351,24 @@ class GameTheoreticStrategy:
         in_trade = self._actual_pos != 0.0
         held = t - self._entry_bar if in_trade else 0
 
+        # Learn the continuation value: what the bar just finished paid, as a
+        # function of how long the trade had been open when it started.
+        if (
+            self._prev_pos_for_cont != 0.0
+            and self._prev_bar_for_cont == t - 1
+            and t >= 1
+        ):
+            age = min(max(self._prev_age_for_cont, 0), self._cont_value.size - 1)
+            realised = math.copysign(1.0, self._prev_pos_for_cont) * float(
+                self._log_close[t] - self._log_close[t - 1]
+            )
+            self._cont_count[age] += 1.0
+            rate = 1.0 / min(self._cont_count[age], 400.0)
+            self._cont_value[age] += rate * (realised - self._cont_value[age])
+        self._prev_pos_for_cont = self._actual_pos
+        self._prev_bar_for_cont = t
+        self._prev_age_for_cont = held
+
         if in_trade:
             flipped = np.sign(z) == -np.sign(self._actual_pos) and abs(z) >= self.cfg.entry_signal
             expired = held >= self.cfg.max_hold
@@ -294,7 +378,18 @@ class GameTheoreticStrategy:
             # bar — paying a full round trip to capture a fraction of a
             # reversion that was measured over ``horizon`` bars.
             faded = held >= self.cfg.horizon and abs(z) <= self.cfg.exit_signal
-            if not (flipped or expired or faded):
+
+            # One-ply re-solve: hold only while the learned continuation value
+            # for the next bar is positive.  A fixed holding period pays to stay
+            # in after the dislocation has already closed and cuts trades that
+            # are still reverting; this re-decides every bar against evidence.
+            resolved_exit = False
+            if self.cfg.adaptive_exit and held >= 1:
+                nxt = min(held, self._cont_value.size - 1)
+                if self._cont_count[nxt] >= 30 and self._cont_value[nxt] <= 0.0:
+                    resolved_exit = True
+
+            if not (flipped or expired or faded or resolved_exit):
                 # Hold the existing position untouched: no churn, no cost.
                 return self._pos_target
             self._pos_target = 0.0
@@ -360,4 +455,8 @@ class GameTheoreticStrategy:
             "z": self._z,
             "edge": self._edge,
             "size": self._size,
+            "continuation_value_bp": 1e4 * self._cont_value,
+            "continuation_count": self._cont_count,
+            "cv_beta": self._cv_beta,
+            "edge_se_bp": 1e4 * self._edge_se() if self._edge_n >= 5 else float("nan"),
         }

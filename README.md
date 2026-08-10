@@ -8,12 +8,12 @@ evaluation harness designed to try to *disprove* its own results.
 
 | | retail fees | VIP 6 | VIP 9 |
 |---|---:|---:|---:|
-| long/short | **+$5** | **+$107** | **+$342** |
-| long-only | **+$1** | **+$47** | **+$141** |
-| long/short, max size every trade | +$25 | +$277 | **+$1,114** |
+| long/short | **+$4** | **+$167** | **+$419** |
+| long-only | **+$4** | **+$82** | **+$197** |
+| long/short, max size every trade | +$14 | +$412 | **+$1,764** |
 
-Worst of all 72 runs: −$129. No liquidations. Full table and the four caveats
-that matter: [What $1,000 at 5x actually does](#what-1000-at-5x-actually-does).
+Worst of all 72 runs: −$143. No liquidations. Full table and the caveats that
+matter: [What $1,000 at 5x actually does](#what-1000-at-5x-actually-does).
 
 > **Read this first.** The numbers below were produced on a calibrated
 > agent-based market simulator, because the environment this was developed in
@@ -116,11 +116,11 @@ Reproduce with `python scripts/evaluate.py`.
 
 | Fee tier | Round trip | Net Sharpe | worst seed | CAGR | Vol | Max DD | Trades/yr | Gross Sharpe |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| retail | 6.65 bp | +0.13 | +0.00 | +0.30% | 0.39% | 0.34% | 25 | +0.39 |
-| VIP 3 | 4.95 bp | +0.43 | −0.37 | +2.04% | 2.20% | 2.04% | 148 | +1.11 |
-| **VIP 6** | **3.85 bp** | **+1.19** | **+0.60** | **+6.45%** | 4.47% | 4.27% | 294 | +2.08 |
-| **VIP 9** | **2.05 bp** | **+2.32** | **+1.28** | **+20.88%** | 7.71% | 5.48% | 516 | +3.09 |
-| market maker | 2.15 bp | +2.24 | +1.17 | +19.57% | 7.54% | 5.47% | 502 | +3.07 |
+| retail | 6.65 bp | +0.21 | +0.00 | +0.28% | 0.45% | 0.33% | 23 | +0.51 |
+| VIP 3 | 4.95 bp | +0.59 | −1.44 | +3.85% | 2.14% | 1.86% | 119 | +1.26 |
+| **VIP 6** | **3.85 bp** | **+1.74** | +0.00 | **+10.35%** | 4.06% | 2.74% | 287 | +2.68 |
+| **VIP 9** | **2.05 bp** | **+2.90** | **+1.74** | **+25.10%** | 7.14% | 4.49% | 487 | +3.74 |
+| market maker | 2.15 bp | +2.85 | +1.63 | +24.21% | 6.99% | 4.56% | 471 | +3.75 |
 
 The gross edge is 5–9 bp per trade over a 3-bar hold. A retail round trip costs
 6.65 bp, so at retail fees **this strategy is not viable** and the sizer
@@ -136,39 +136,38 @@ every signal, which is what most people mean by "trading at 5x".
 
 | mode | sizing | tier | final $ | P&L | return | CAGR | max DD $ | worst bar | trades/yr | in mkt | fees $ |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| long/short | robust | retail | 1,005 | **+$5** | +0.5% | +0.3% | 3 | −1 | 18 | 0.0% | 9 |
-| long/short | robust | VIP 6 | 1,107 | **+$107** | +10.7% | +7.4% | 44 | −12 | 206 | 0.3% | 74 |
-| long/short | robust | VIP 9 | 1,342 | **+$342** | +34.2% | +22.9% | 64 | −19 | 361 | 0.5% | 93 |
-| long-only | robust | retail | 1,001 | **+$1** | +0.1% | +0.1% | 3 | −1 | 10 | 0.0% | 5 |
-| long-only | robust | VIP 6 | 1,047 | **+$47** | +4.7% | +3.3% | 40 | −13 | 106 | 0.2% | 46 |
-| long-only | robust | VIP 9 | 1,141 | **+$141** | +14.1% | +9.7% | 63 | −25 | 185 | 0.3% | 54 |
-| long/short | fixed | retail | 1,025 | +$25 | +2.5% | +1.7% | 24 | −5 | 18 | 0.0% | 46 |
-| long/short | fixed | VIP 6 | 1,277 | +$277 | +27.7% | +18.7% | 150 | −56 | 208 | 0.3% | 223 |
-| long/short | fixed | VIP 9 | 2,114 | **+$1,114** | +111.4% | +69.0% | 230 | −96 | 363 | 0.6% | 375 |
-| long-only | fixed | retail | 1,002 | +$2 | +0.2% | +0.1% | 20 | −5 | 10 | 0.0% | 25 |
-| long-only | fixed | VIP 6 | 1,051 | +$51 | +5.1% | +3.5% | 126 | −46 | 107 | 0.2% | 107 |
-| long-only | fixed | VIP 9 | 1,292 | +$292 | +29.2% | +19.7% | 169 | −64 | 186 | 0.3% | 148 |
+| long/short | robust | retail | 1,004 | **+$4** | +0.4% | +0.3% | 3 | −1 | 16 | 0.0% | 6 |
+| long/short | robust | VIP 6 | 1,167 | **+$167** | +16.7% | +11.4% | 30 | −12 | 201 | 0.1% | 75 |
+| long/short | robust | VIP 9 | 1,419 | **+$419** | +41.9% | +27.8% | 55 | −20 | 341 | 0.3% | 99 |
+| long-only | robust | retail | 1,004 | **+$4** | +0.4% | +0.3% | 2 | −1 | 7 | 0.0% | 3 |
+| long-only | robust | VIP 6 | 1,082 | **+$82** | +8.2% | +5.7% | 37 | −14 | 105 | 0.1% | 45 |
+| long-only | robust | VIP 9 | 1,197 | **+$197** | +19.7% | +13.4% | 57 | −22 | 174 | 0.1% | 56 |
+| long/short | fixed | retail | 1,014 | +$14 | +1.4% | +1.0% | 25 | −8 | 16 | 0.0% | 40 |
+| long/short | fixed | VIP 6 | 1,412 | +$412 | +41.2% | +27.4% | 130 | −52 | 202 | 0.1% | 235 |
+| long/short | fixed | VIP 9 | 2,764 | **+$1,764** | +176.4% | +103.9% | 231 | −99 | 343 | 0.3% | 465 |
+| long-only | fixed | retail | 1,003 | +$3 | +0.3% | +0.2% | 15 | −5 | 8 | 0.0% | 18 |
+| long-only | fixed | VIP 6 | 1,179 | +$179 | +17.9% | +12.2% | 122 | −42 | 105 | 0.1% | 128 |
+| long-only | fixed | VIP 9 | 1,526 | +$526 | +52.6% | +34.5% | 152 | −66 | 175 | 0.1% | 152 |
 
-**Worst single seed of all 72 runs: $871, a $129 loss.** No liquidations; the
+**Worst single seed of all 72 runs: $857, a $143 loss.** No liquidations; the
 worst bar anywhere consumed 8.9% of the distance to liquidation.
 
 Five things this table says that a Sharpe ratio does not:
 
-1. **At retail fees you make roughly nothing** — $1 to $25 on $1,000 over 17
+1. **At retail fees you make roughly nothing** — $3 to $14 on $1,000 over 17
    months. The fee tier, not the signal, is the binding constraint.
 2. **Long-only gives up more than half the profit.** The signal is symmetric:
    dislocations resolve upward and downward about equally often, so refusing
    shorts discards half the opportunities and, because the fixed costs of being
    set up do not halve, rather more than half the profit.
-3. **`fixed` sizing earns more and is worse.** At VIP 9 it turns $342 into
-   $1,114 — and the drawdown goes from $64 to $230, with Sharpe falling from
-   +3.4 to +2.7. Sizing a thin edge at maximum exposure buys return with a
+3. **`fixed` sizing earns more and is worse.** At VIP 9 it turns $419 into
+   $1,764 — and the drawdown goes from $55 to $231, with Sharpe falling. Sizing a thin edge at maximum exposure buys return with a
    worse-than-proportional increase in risk.
-4. **The account is idle ~99.5% of the time.** A 5x *cap* is not 5x *exposure*:
+4. **The account is idle ~99.7% of the time.** A 5x *cap* is not 5x *exposure*:
    the robust sizer averages 1.2–1.6x while in a trade and is flat otherwise,
    which is why realised volatility is 7–10%, not 50%.
-5. **Fees are a third to a half of gross profit.** At VIP 9 long/short fixed,
-   $375 of fees against $1,114 of net profit.
+5. **Fees are a quarter of gross profit.** At VIP 9 long/short fixed, $465 of
+   fees against $1,764 of net profit.
 
 Reproduce any row with `gtbot backtest --tier vip9 --leverage 5 --deposit 1000`,
 which prints this table for every mode.
@@ -179,24 +178,27 @@ Pooled across held-out seeds at VIP 6 (~8.5 years of bars):
 
 | Test | Value |
 |---|---:|
-| Annualised Sharpe | +1.21 |
-| Block-bootstrap 95% CI | [+0.59, +1.85] |
+| Annualised Sharpe | +2.04 |
+| Block-bootstrap 95% CI | [+1.42, +2.66] |
 | Bootstrap `p(Sharpe ≤ 0)` | 0.0000 |
-| Newey–West t-statistic | +3.66 |
-| Probabilistic Sharpe ratio | 0.9999 |
-| **Deflated Sharpe ratio (18 trials)** | **0.0011** |
+| Newey–West t-statistic | +6.07 |
+| Anytime-valid 95% confidence sequence | [+0.93, +3.16] |
+| Probabilistic Sharpe ratio | 1.0000 |
+| **Deflated Sharpe ratio (18 trials)** | **0.2756** |
 
-The first five say the track record is very unlikely to have come from a
-zero-edge process. **The deflated Sharpe ratio says something less comfortable
-and it is reported here rather than omitted**: benchmarked against the best of
-18 configurations drawn with an annualised Sharpe dispersion of 1.2, a Sharpe of
-1.21 does *not* clear the bar that a lucky search would have produced anyway.
-Only the VIP 9 configuration (+2.32) approaches it.
+The confidence sequence is the strictest of these: it is valid at *every* sample
+size simultaneously, so it stays honest under the repeated looks that
+backtesting inevitably involves. It excluded zero after 130,530 bars — about
+1.24 years of 5-minute data, which is a fair statement of how much history this
+edge needs before anyone should believe it.
 
-The honest reading is that the *mechanism* is well supported — the negative
-controls and the cross-seed consistency are hard to fake — while the *magnitude*
-at VIP 6 is not comfortably beyond what the search itself could have generated.
-Treat VIP 9 / market-maker fees as where this has real headroom.
+The deflated Sharpe ratio rose from **0.0011 to 0.2756** with the improvements
+below. It is still not a decisive number, and it is reported rather than
+omitted: benchmarked against the best of 18 configurations, a Sharpe of 2.04 now
+has real headroom over what a lucky search would produce, but not overwhelming
+headroom. The *mechanism* is well supported — the negative controls and the
+cross-seed consistency are hard to fake. Treat VIP 9 / market-maker fees as
+where this has margin to spare.
 
 ### Negative controls
 
@@ -207,7 +209,7 @@ it must earn nothing:
 |---|---:|---:|
 | Structureless random walk (same vol) | **0.00** | **0** |
 | Block-bootstrapped surrogate | **0.00** | **0** |
-| Simulated market | **+1.19** | 294 |
+| Simulated market | **+1.74** | 287 |
 
 It does not merely lose less on the controls — it declines to trade at all,
 because the edge estimator finds no edge and the maximin size is zero.
@@ -219,9 +221,9 @@ learner per fold**, VIP 6:
 
 | Seed | Per-fold Sharpe | Pooled |
 |---|---|---:|
-| 100 | 0.00, 0.00, 0.00, +2.77, −0.05 | +1.10 |
+| 100 | 0.00, 0.00, 0.00, +1.58, +0.44 | +0.69 |
 | 101 | 0.00, +0.15, 0.00, 0.00, 0.00 | +0.07 |
-| 102 | +0.93, −0.14, +3.03, 0.00, 0.00 | +1.37 |
+| 102 | +1.24, 0.00, +2.86, 0.00, 0.00 | +1.32 |
 
 Pooled results are positive on all three seeds, but most individual folds show
 `0.00` — the strategy did not trade at all in them. That is not a failure of the
@@ -235,6 +237,80 @@ available history rather than restarting it, which is what `PaperTrader.warm_up`
 does.
 
 ---
+
+## Improvements, and what they were worth
+
+Four ideas were taken from the search-and-learning literature on
+imperfect-information games — a setting that shares this problem's structure:
+act under partial observation, against adversaries, where evaluating your own
+performance is itself statistically hard. Each was ablated **on training seeds**
+before anything was promoted; the held-out numbers above are the winners only.
+
+| variant | Sharpe | worst seed | $1,000 → | verdict |
+|---|---:|---:|---:|---|
+| baseline | +2.02 | +0.70 | $1,234 | |
+| + variance reduction | +2.06 | **+1.36** | $1,256 | kept |
+| + re-solved exit | +2.34 | +0.75 | $1,281 | kept |
+| **+ both** | **+2.65** | **+2.23** | **$1,324** | **shipped** |
+| discounted regret matching | +0.11 | +0.00 | $1,013 | rejected |
+
+### 1. AIVAT-style variance reduction — kept
+
+The sizer allocates on `edge − k·SE`, so halving the standard error is worth as
+much as doubling the edge. Most of a trade's payoff variance comes from order
+flow arriving *after* entry: unpredictable at entry, therefore zero conditional
+mean, therefore removable as a control variate without bias.
+
+This is the construction [AIVAT](https://ojs.aaai.org/index.php/AAAI/article/view/11481)
+uses to evaluate agents in imperfect-information games — `v̂(z) = v̂_b(z) + v̂_c(z)`,
+a heuristic baseline plus zero-expectation corrections on chance events — where
+it cuts the trials needed for a given claim by more than 10×. It fits this
+strategy exactly, because the edge *is* the part of the move order flow does not
+explain, so subtracting the flow-explained part removes noise and not signal.
+
+It barely moved the mean and roughly doubled the worst seed (+0.70 → +1.36),
+which is the signature of an estimator getting more reliable rather than more
+optimistic.
+
+### 2. Continual re-solving of the exit — kept
+
+The exit was a fixed holding period. Now each bar re-decides against a learned
+continuation value — a one-ply depth-limited search, in the spirit of DeepStack's
+continual re-solving. A fixed period both pays to sit in a dislocation that has
+already closed and cuts trades that are still reverting. Worth +0.32 Sharpe on
+its own, and it *reduced* out-of-sample drawdown from 4.27% to 2.74%.
+
+### 3. Anytime-valid confidence sequences — kept, for evaluation
+
+A fixed-sample confidence interval is only valid if the sample size was fixed
+before looking, which backtesting never does. A confidence sequence is valid at
+every sample size at once. It reports that this edge becomes conclusive after
+~130,500 bars — a concrete answer to "how much history do I need before believing
+this", and a considerably more honest one than a p-value computed after the fact.
+
+### 4. Discounted regret matching (CFR+/DCFR) — rejected
+
+Replacing Hedge with regret-matching⁺ and
+[DCFR's](https://dl.acm.org/doi/10.1609/aaai.v33i01.33011829) α=1.5/β=0
+discounting is attractive on paper: no learning rate to mis-set (this bot lost
+its edge twice to a mis-set η), and halving negative regret each step lets an
+expert whose sign has flipped recover in tens of observations instead of tens of
+thousands. On a planted-signal benchmark it *beat* Hedge (blend IC +0.048 vs
++0.037).
+
+On the real problem it collapsed to near-zero trades at every entry threshold
+tried. The reason is structural: regret matching spreads weight across every
+action with positive cumulative regret, where Hedge concentrates exponentially.
+With 17 actions and signals that are zero 95% of the time, the blend never
+becomes decisive enough to clear an entry threshold. The implementation is kept
+and unit-tested (`LearnerConfig(rule="dcfr")`) because it may well be right for a
+denser action set — but it is not the default, and the benchmark that liked it
+was not representative of the deployment.
+
+**Sources:** [AIVAT (Burch, Schmid, Bowling)](https://ojs.aaai.org/index.php/AAAI/article/view/11481) ·
+[Search in Imperfect Information Games (Schmid)](https://arxiv.org/pdf/2111.05884) ·
+[Discounted Regret Minimization (Brown & Sandholm)](https://arxiv.org/pdf/1809.04040) ·
+[AIVAT variance-reduction follow-ups](https://arxiv.org/html/2605.14261)
 
 ## Execution matters more than the signal
 

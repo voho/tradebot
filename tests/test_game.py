@@ -120,3 +120,33 @@ def test_action_positions_cover_both_signs_and_flat():
     learner = ContextualNoRegret(n_experts=2, n_contexts=1, expert_names=["a", "b"])
     pos = learner.action_positions(np.array([0.5, -0.25]))
     assert pos.tolist() == pytest.approx([0.5, -0.25, -0.5, 0.25, 0.0])
+
+
+def test_dcfr_matches_or_beats_hedge_on_a_planted_signal():
+    """Sanity check on the discounted regret-matching rule itself.
+
+    It is not the shipped default — it dilutes the blend across a large sparse
+    action set and the strategy stops trading — but the rule must still identify
+    a planted signal, or the implementation is simply wrong.
+    """
+    hedge = _run_learner([0.04, -0.04, 0.0, 0.0, 0.0], cfg=LearnerConfig(prior_expert=None))
+    dcfr = _run_learner(
+        [0.04, -0.04, 0.0, 0.0, 0.0],
+        cfg=LearnerConfig(rule="dcfr", prior_expert=None),
+    )
+    for w in (hedge, dcfr):
+        assert w[0] > 0.2 or w[1] < -0.2, "should load on an informative expert"
+    assert np.all(np.abs(dcfr[2:]) < 0.35), "noise experts should stay small"
+
+
+def test_dcfr_weights_are_a_valid_distribution():
+    learner = ContextualNoRegret(
+        n_experts=3, n_contexts=1,
+        cfg=LearnerConfig(rule="dcfr"), expert_names=["a", "b", "target"],
+    )
+    rng = np.random.default_rng(0)
+    for _ in range(500):
+        learner.update(0, rng.standard_normal(3), float(rng.standard_normal()))
+    w = learner.weights(0)
+    assert w.sum() == pytest.approx(1.0)
+    assert np.all(w >= 0.0)

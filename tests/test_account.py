@@ -188,3 +188,73 @@ def test_format_table_renders_both_flavours(bars):
     assert "5x leverage" in plain
     assert md.startswith("**") and "|" in md
     assert format_table([]) == "(no results)"
+
+
+# ------------------------------------------------- improvements (ablated in)
+def test_variance_reduction_shrinks_the_edge_standard_error(bars):
+    """The control variate must cut SE without moving the edge estimate."""
+    from gtbot.engine.backtest import run_backtest as _rb
+
+    out = {}
+    for vr in (False, True):
+        st = GameTheoreticStrategy(_small_cfg(variance_reduction=vr))
+        _rb(bars, st, costs=CostModel.for_tier("vip9"), max_leverage=5.0)
+        if st._edge_n < 30:
+            pytest.skip("too few triggered samples on this fixture")
+        out[vr] = (st._edge_mean, st._edge_se())
+
+    (m_off, se_off), (m_on, se_on) = out[False], out[True]
+    assert se_on <= se_off, "variance reduction must not increase the standard error"
+    # Unbiasedness: the point estimate should not move much.  The control
+    # variate has zero conditional mean, so any shift is sampling noise.
+    assert abs(m_on - m_off) < 4.0 * se_off
+
+
+def test_control_variate_beta_is_estimated():
+    """Beta should be non-zero once enough samples have accumulated."""
+    import numpy as np
+
+    from gtbot.data.synthetic import simulate as _sim
+
+    long_bars = validate(_sim(60_000, seed=3).bars)
+    st = GameTheoreticStrategy(_small_cfg(variance_reduction=True))
+    from gtbot.engine.backtest import run_backtest as _rb
+
+    res = _rb(long_bars, st, costs=CostModel.for_tier("vip9"), max_leverage=5.0)
+    if st._edge_n < 30:
+        pytest.skip("too few triggered samples")
+    assert np.isfinite(st._cv_beta)
+    assert res.diagnostics["cv_beta"] == st._cv_beta
+
+
+def test_adaptive_exit_learns_a_continuation_value(bars):
+    st = GameTheoreticStrategy(_small_cfg(adaptive_exit=True))
+    from gtbot.engine.backtest import run_backtest as _rb
+
+    res = _rb(bars, st, costs=CostModel.for_tier("vip9"), max_leverage=5.0)
+    cont = res.diagnostics["continuation_value_bp"]
+    counts = res.diagnostics["continuation_count"]
+    assert cont.shape == counts.shape
+    assert np.all(np.isfinite(cont))
+    if counts.sum() > 0:
+        assert counts[: st.cfg.max_hold + 1].sum() > 0
+
+
+def test_adaptive_exit_never_extends_beyond_max_hold(bars):
+    """Re-solving may exit early; it must never hold longer than the cap."""
+    from gtbot.engine.backtest import run_backtest as _rb
+
+    fixed = _rb(bars, GameTheoreticStrategy(_small_cfg(adaptive_exit=False)),
+                costs=CostModel.for_tier("vip9"), max_leverage=5.0)
+    adaptive = _rb(bars, GameTheoreticStrategy(_small_cfg(adaptive_exit=True)),
+                   costs=CostModel.for_tier("vip9"), max_leverage=5.0)
+
+    def _max_run(pos):
+        best = run = 0
+        for p in pos:
+            run = run + 1 if p != 0 else 0
+            best = max(best, run)
+        return best
+
+    cap = _small_cfg().max_hold + 2
+    assert _max_run(adaptive.position) <= max(_max_run(fixed.position), cap)

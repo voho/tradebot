@@ -44,7 +44,8 @@ from gtbot.eval.walkforward import run_walkforward
 from gtbot.strategy import GameTheoreticStrategy, StrategyConfig
 
 # --- frozen configuration -------------------------------------------------
-CONFIG = StrategyConfig(horizon=3, entry_signal=0.55, max_hold=3)
+CONFIG = StrategyConfig(horizon=3, entry_signal=0.55, max_hold=3,
+                        variance_reduction=True, adaptive_exit=True)
 EXECUTION = ExecutionConfig(entry_mode="taker", exit_mode="maker", ttl_bars=1)
 MAX_LEVERAGE = 2.0
 
@@ -149,7 +150,9 @@ def main() -> None:
     print("=" * 78)
     print("HELD-OUT EVALUATION  (test seeds never used during development)")
     print(f"config: horizon={CONFIG.horizon} entry_signal={CONFIG.entry_signal} "
-          f"max_hold={CONFIG.max_hold}  execution: {EXECUTION.entry_mode}->{EXECUTION.exit_mode}")
+          f"max_hold={CONFIG.max_hold} varred={CONFIG.variance_reduction} "
+          f"adaptive_exit={CONFIG.adaptive_exit}  "
+          f"execution: {EXECUTION.entry_mode}->{EXECUTION.exit_mode}")
     print("=" * 78)
 
     # --- 1. fee-tier sweep -------------------------------------------------
@@ -199,6 +202,10 @@ def main() -> None:
     print(f"   bootstrap 95% CI         [{st['sharpe_ci95'][0]:+.3f}, {st['sharpe_ci95'][1]:+.3f}]")
     print(f"   bootstrap p(SR<=0)       {st['bootstrap_p_value']:.4f}")
     print(f"   Newey-West t-stat        {st['newey_west_t']:+.3f}")
+    cs_lo, cs_hi = st["conf_seq_95"]
+    first = st["conf_seq_first_conclusive_bar"]
+    print(f"   anytime-valid 95% CS     [{cs_lo:+.3f}, {cs_hi:+.3f}]"
+          + (f"  conclusive after {first:,} bars" if first else "  never conclusive"))
     print(f"   probabilistic SR         {m_pooled.psr:.4f}")
     print(f"   deflated SR ({N_TRIALS} trials) {m_pooled.dsr:.4f}")
     out["statistics"] = {

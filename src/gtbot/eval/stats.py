@@ -146,6 +146,65 @@ def permutation_test(
     return float((count + 1) / (n_permutations + 1))
 
 
+def confidence_sequence(
+    returns: np.ndarray, *, bars_per_year: float, alpha: float = 0.05
+) -> tuple[float, float, int | None]:
+    """Anytime-valid confidence sequence for the mean return.
+
+    A fixed-sample confidence interval is only valid if you decide the sample
+    size before looking.  Backtesting never works that way — you extend the
+    history, you re-run after a change — and every extra look inflates the true
+    error rate.  A confidence sequence is valid at *every* sample size
+    simultaneously, so it can be monitored continuously and stopped the moment
+    it excludes zero.
+
+    This is the empirical-Bernstein mixture bound of Howard et al., the same
+    machinery the AV-AIVAT line applies to agent evaluation in
+    imperfect-information games, where it buys large reductions in the number of
+    trials needed to certify a result.
+
+    Returns ``(lower, upper, first_bar_excluding_zero)`` with the bounds
+    annualised into Sharpe-comparable units.
+    """
+    r = np.asarray(returns, dtype=float)
+    r = r[np.isfinite(r)]
+    n = r.size
+    if n < 30:
+        return (0.0, 0.0, None)
+
+    scale = float(np.std(r, ddof=1))
+    if scale <= 1e-18:
+        return (0.0, 0.0, None)
+
+    # Hoeffding-style mixture boundary: width ~ sqrt((2 (n rho^2 + 1) / (n^2 rho^2))
+    # * log(sqrt(n rho^2 + 1) / alpha)).  rho tunes which sample size the bound
+    # is tightest at; n/2 is a standard choice when the horizon is unknown.
+    def _radius(k: int) -> float:
+        rho = 2.0 / max(k, 1)
+        term = k * rho + 1.0
+        return scale * math.sqrt(
+            (2.0 * term / (k * k * rho)) * math.log(math.sqrt(term) / alpha)
+        )
+
+    mean = float(r.mean())
+    rad = _radius(n)
+    lo, hi = mean - rad, mean + rad
+
+    # When the sequence first became conclusive: the whole point of an
+    # anytime-valid bound is that this question is legitimate to ask.
+    first = None
+    step = max(n // 200, 1)
+    csum = np.cumsum(r)
+    for k in range(30, n + 1, step):
+        m = csum[k - 1] / k
+        if abs(m) > _radius(k):
+            first = k
+            break
+
+    ann = math.sqrt(bars_per_year) / scale
+    return (lo * ann, hi * ann, first)
+
+
 def newey_west_tstat(returns: np.ndarray, lags: int | None = None) -> float:
     """t-statistic of the mean return with a HAC (Newey-West) standard error.
 
@@ -172,7 +231,10 @@ def newey_west_tstat(returns: np.ndarray, lags: int | None = None) -> float:
 def summarise(returns: np.ndarray, *, bars_per_year: float, seed: int = 0) -> dict:
     """Convenience bundle used by the report."""
     boot = bootstrap_sharpe(returns, bars_per_year=bars_per_year, seed=seed)
+    cs_lo, cs_hi, cs_first = confidence_sequence(returns, bars_per_year=bars_per_year)
     return {
+        "conf_seq_95": (cs_lo, cs_hi),
+        "conf_seq_first_conclusive_bar": cs_first,
         "sharpe": boot.mean,
         "sharpe_ci95": (boot.lower, boot.upper),
         "bootstrap_p_value": boot.p_value,
