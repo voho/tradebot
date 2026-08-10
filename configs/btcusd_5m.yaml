@@ -1,0 +1,59 @@
+# Reference configuration for BTCUSD 5-minute trading.
+#
+# Values match the defaults in gtbot.strategy.StrategyConfig; this file exists
+# to make the whole configuration surface visible in one place and to be edited
+# per deployment.
+
+symbol: BTCUSDT
+interval: 5m
+
+strategy:
+  # Horizon over which the edge is estimated and trades are sized, in bars.
+  # The transient this fades has a half-life well under one bar; three bars is
+  # where the absolute per-trade edge peaks against a fixed round-trip cost.
+  horizon: 3
+  max_hold: 3
+  # Blended-signal magnitude required to open a trade.  Expert signals are zero
+  # inside 2 sigma and rise linearly to 1 at 6 sigma, so 0.55 is roughly a
+  # 3.5-sigma dislocation.
+  entry_signal: 0.55
+  exit_signal: 0.10
+  # Round-trip cost the sizer assumes.  Must match the fee tier and execution
+  # profile below, or the sizer will either over-trade or refuse to trade.
+  assumed_cost_bp: 3.85
+  edge_halflife: 400        # in triggered observations
+  t_full_confidence: 3.0
+
+learner:
+  eta: 0.03                 # ~ sqrt(8 ln K / T); an order of magnitude more chases noise
+  mix: 2.0e-5               # memory ~ 1/mix updates; must exceed O(20k)
+  prior_expert: transient_dislocation
+  prior_weight: 0.70
+
+ambiguity:                  # the sizing game's adversary
+  k_sigma: 0.5              # standard errors of downside nature may claim
+  model_haircut: 0.90       # structural backtest-to-live allowance
+  risk_aversion: 0.06
+
+risk:
+  target_vol_annual: 0.15
+  max_leverage: 2.0
+  drawdown_soft: 0.06
+  drawdown_hard: 0.15
+  max_vol_scalar: 12.0
+
+execution:
+  # Cross to enter (a passive entry is adversely selected on this signal),
+  # work the exit passively.
+  entry_mode: taker
+  exit_mode: maker
+  ttl_bars: 1
+  queue_ticks: 1.0
+  min_trade: 0.02
+
+costs:
+  tier: vip6                # see gtbot.engine.broker.FEE_TIERS
+  half_spread_bp: 0.35
+  impact_coef: 0.35
+  funding_bp_per_8h: 0.0
+  tick_size: 0.1

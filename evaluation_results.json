@@ -1,0 +1,293 @@
+{
+ "fee_tiers": {
+  "retail": {
+   "round_trip_bp": 6.6499999999999995,
+   "sharpe_mean": 0.12938185127184856,
+   "sharpe_min": 0.0,
+   "cagr": 0.0029721772063390217,
+   "vol": 0.0038522379883227952,
+   "max_dd": 0.003380947178603914,
+   "trades": 25.333333333333332,
+   "gross_sharpe": 0.38527630410108166
+  },
+  "vip3": {
+   "round_trip_bp": 4.95,
+   "sharpe_mean": 0.4286855344998488,
+   "sharpe_min": -0.3741281826546992,
+   "cagr": 0.020379488255743688,
+   "vol": 0.022026343373816298,
+   "max_dd": 0.02038634050564621,
+   "trades": 148.33333333333334,
+   "gross_sharpe": 1.1147370058804913
+  },
+  "vip6": {
+   "round_trip_bp": 3.85,
+   "sharpe_mean": 1.1933225688513023,
+   "sharpe_min": 0.5959753899806295,
+   "cagr": 0.06452179865973968,
+   "vol": 0.04471470956926654,
+   "max_dd": 0.042676035356569296,
+   "trades": 294.5,
+   "gross_sharpe": 2.0786266357245275
+  },
+  "vip9": {
+   "round_trip_bp": 2.05,
+   "sharpe_mean": 2.3166265115588156,
+   "sharpe_min": 1.2828350512683298,
+   "cagr": 0.20876437752087626,
+   "vol": 0.07710496012406308,
+   "max_dd": 0.054814646404487,
+   "trades": 515.8333333333334,
+   "gross_sharpe": 3.0883577711483015
+  },
+  "market_maker": {
+   "round_trip_bp": 2.15,
+   "sharpe_mean": 2.2351432100753006,
+   "sharpe_min": 1.1657890057290343,
+   "cagr": 0.19568100102809446,
+   "vol": 0.07538744744243864,
+   "max_dd": 0.05468247275007182,
+   "trades": 501.8333333333333,
+   "gross_sharpe": 3.065927986289107
+  }
+ },
+ "statistics": {
+  "sharpe": 1.21061904013235,
+  "sharpe_ci95": [
+   0.5936715173679447,
+   1.852927888812081
+  ],
+  "bootstrap_p_value": 0.0,
+  "newey_west_t": 3.655364289774664,
+  "skew": 18.30283265656369,
+  "psr": 0.9998645371247906,
+  "dsr": 0.0
+ },
+ "controls": {
+  "random_walk": {
+   "sharpe_mean": 0.0,
+   "sharpe_std": 0.0,
+   "trades": 0.0
+  },
+  "block_bootstrap": {
+   "sharpe_mean": 0.0,
+   "sharpe_std": 0.0,
+   "trades": 0.0
+  }
+ },
+ "walkforward": [
+  {
+   "seed": 100,
+   "folds": [
+    {
+     "fold": 0,
+     "bars": 25725,
+     "sharpe": 0.0,
+     "cagr": 0.0,
+     "vol": 0.0,
+     "max_dd": 0.0,
+     "trades": 0
+    },
+    {
+     "fold": 1,
+     "bars": 25725,
+     "sharpe": 0.0,
+     "cagr": 0.0,
+     "vol": 0.0,
+     "max_dd": 0.0,
+     "trades": 0
+    },
+    {
+     "fold": 2,
+     "bars": 25725,
+     "sharpe": 0.0,
+     "cagr": 0.0,
+     "vol": 0.0,
+     "max_dd": 0.0,
+     "trades": 0
+    },
+    {
+     "fold": 3,
+     "bars": 25725,
+     "sharpe": 0.0,
+     "cagr": 0.0,
+     "vol": 0.0,
+     "max_dd": 0.0,
+     "trades": 0
+    },
+    {
+     "fold": 4,
+     "bars": 25725,
+     "sharpe": 0.0,
+     "cagr": 0.0,
+     "vol": 0.0,
+     "max_dd": 0.0,
+     "trades": 0
+    }
+   ],
+   "pooled": {
+    "n_bars": 128625,
+    "years": 1.223601598173516,
+    "total_return": 0.0,
+    "cagr": 0.0,
+    "ann_vol": 0.0,
+    "sharpe": 0.0,
+    "sortino": 0.0,
+    "max_drawdown": 0.0,
+    "calmar": 0.0,
+    "hit_rate": 0.0,
+    "profit_factor": Infinity,
+    "skew": NaN,
+    "kurtosis": NaN,
+    "turnover_annual": 0.0,
+    "cost_drag_annual": 0.0,
+    "n_trades": 0,
+    "psr": NaN,
+    "dsr": NaN,
+    "t_stat": 0.0
+   }
+  },
+  {
+   "seed": 101,
+   "folds": [
+    {
+     "fold": 0,
+     "bars": 25725,
+     "sharpe": 0.0,
+     "cagr": 0.0,
+     "vol": 0.0,
+     "max_dd": 0.0,
+     "trades": 0
+    },
+    {
+     "fold": 1,
+     "bars": 25725,
+     "sharpe": 0.0,
+     "cagr": 0.0,
+     "vol": 0.0,
+     "max_dd": 0.0,
+     "trades": 0
+    },
+    {
+     "fold": 2,
+     "bars": 25725,
+     "sharpe": 0.0,
+     "cagr": 0.0,
+     "vol": 0.0,
+     "max_dd": 0.0,
+     "trades": 0
+    },
+    {
+     "fold": 3,
+     "bars": 25725,
+     "sharpe": 0.0,
+     "cagr": 0.0,
+     "vol": 0.0,
+     "max_dd": 0.0,
+     "trades": 0
+    },
+    {
+     "fold": 4,
+     "bars": 25725,
+     "sharpe": 0.0,
+     "cagr": 0.0,
+     "vol": 0.0,
+     "max_dd": 0.0,
+     "trades": 0
+    }
+   ],
+   "pooled": {
+    "n_bars": 128625,
+    "years": 1.223601598173516,
+    "total_return": 0.0,
+    "cagr": 0.0,
+    "ann_vol": 0.0,
+    "sharpe": 0.0,
+    "sortino": 0.0,
+    "max_drawdown": 0.0,
+    "calmar": 0.0,
+    "hit_rate": 0.0,
+    "profit_factor": Infinity,
+    "skew": NaN,
+    "kurtosis": NaN,
+    "turnover_annual": 0.0,
+    "cost_drag_annual": 0.0,
+    "n_trades": 0,
+    "psr": NaN,
+    "dsr": NaN,
+    "t_stat": 0.0
+   }
+  },
+  {
+   "seed": 102,
+   "folds": [
+    {
+     "fold": 0,
+     "bars": 25725,
+     "sharpe": 0.0,
+     "cagr": 0.0,
+     "vol": 0.0,
+     "max_dd": 0.0,
+     "trades": 0
+    },
+    {
+     "fold": 1,
+     "bars": 25725,
+     "sharpe": 0.0,
+     "cagr": 0.0,
+     "vol": 0.0,
+     "max_dd": 0.0,
+     "trades": 0
+    },
+    {
+     "fold": 2,
+     "bars": 25725,
+     "sharpe": 0.0,
+     "cagr": 0.0,
+     "vol": 0.0,
+     "max_dd": 0.0,
+     "trades": 0
+    },
+    {
+     "fold": 3,
+     "bars": 25725,
+     "sharpe": 0.0,
+     "cagr": 0.0,
+     "vol": 0.0,
+     "max_dd": 0.0,
+     "trades": 0
+    },
+    {
+     "fold": 4,
+     "bars": 25725,
+     "sharpe": 0.0,
+     "cagr": 0.0,
+     "vol": 0.0,
+     "max_dd": 0.0,
+     "trades": 0
+    }
+   ],
+   "pooled": {
+    "n_bars": 128625,
+    "years": 1.223601598173516,
+    "total_return": 0.0,
+    "cagr": 0.0,
+    "ann_vol": 0.0,
+    "sharpe": 0.0,
+    "sortino": 0.0,
+    "max_drawdown": 0.0,
+    "calmar": 0.0,
+    "hit_rate": 0.0,
+    "profit_factor": Infinity,
+    "skew": NaN,
+    "kurtosis": NaN,
+    "turnover_annual": 0.0,
+    "cost_drag_annual": 0.0,
+    "n_trades": 0,
+    "psr": NaN,
+    "dsr": NaN,
+    "t_stat": 0.0
+   }
+  }
+ ]
+}
