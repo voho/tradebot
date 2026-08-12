@@ -98,6 +98,14 @@ def run_backtest(
 
     for i in range(len(prepared)):
         ts = index[i]
+        # A gap can put the account past its liquidation price at the open,
+        # before any queued order gets to trade — check the open first so a
+        # close order cannot realize more loss than the account holds.
+        liq = broker.check_liquidation(ts, opens[i], opens[i], opens[i])
+        if liq is not None:
+            fills.append(liq)
+            pending = []
+
         if pending and not broker.dead:
             for order in pending:
                 fills.extend(broker.execute(order, ts, opens[i]))
@@ -115,8 +123,7 @@ def run_backtest(
             strategy.on_bar(ctx)
             pending = ctx.orders
 
-    trades = build_trades(fills, end_ts=index[-1] if len(index) else None,
-                          end_price=closes[-1] if len(closes) else None,
+    trades = build_trades(fills, end_price=closes[-1] if len(closes) else None,
                           broker=broker)
 
     return BacktestResult(
@@ -133,13 +140,14 @@ def run_backtest(
     )
 
 
-def build_trades(fills: list[Fill], end_ts, end_price, broker: PaperBroker) -> list[Trade]:
+def build_trades(fills: list[Fill], end_price, broker: PaperBroker) -> list[Trade]:
     """Group fills into round-trip trades.
 
     The broker executes sign flips as close-then-open, so the running
     position only ever moves toward or away from zero within one episode.
-    An episode still open at the end of the data is marked ``open_at_end``
-    and its PnL includes the unrealized part marked at the last close.
+    An episode still open at the end of the data keeps ``exit_ts=None``,
+    is marked ``open_at_end`` and its PnL includes the unrealized part
+    marked at the last close.
     """
     trades: list[Trade] = []
     pos = 0.0
@@ -194,5 +202,5 @@ def build_trades(fills: list[Fill], end_ts, end_price, broker: PaperBroker) -> l
             episode_fills = []
 
     if episode_fills:
-        flush(end_ts, end_price, closed=False, liquidated=False)
+        flush(None, end_price, closed=False, liquidated=False)
     return trades

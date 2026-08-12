@@ -87,8 +87,11 @@ Built-in baselines: `buy_and_hold`, `macd_cross`, `rsi_reversion`,
 - **Spot**: long-only, 1x, 0.10% taker fee.
 - **Futures**: long/short at configurable leverage (default 5x), 0.05%
   taker fee, cross-margin liquidation at a 0.5% maintenance-margin rate.
-  Liquidation uses the analytic liquidation price against each bar's
-  high/low; a liquidated run stops trading and is flagged in the table.
+  Liquidation uses the analytic liquidation price, checked first at each
+  bar's open (before queued orders fill, so a gap through the bankruptcy
+  price can never lose more than the account holds) and then against the
+  bar's high/low. Accounts floor at zero; a liquidated run stops trading
+  and is flagged in the table.
 - `order_target(f)` moves the position to `f` × max notional
   (equity × leverage), `f` ∈ [-1, 1] (clamped to [0, 1] on spot).
   Same-sign re-targets inside a 5% deadband are ignored so strategies

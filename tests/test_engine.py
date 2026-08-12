@@ -56,6 +56,44 @@ def test_liquidation_stops_trading():
     assert result.trades[-1].liquidated
 
 
+def test_gap_through_bankruptcy_liquidates_at_open_before_orders():
+    """A gap past the bankruptcy price must floor the account at zero.
+
+    The queued close order must NOT fill; the open-price liquidation check
+    preempts it, and the sum of trade PnLs equals the account's real loss.
+    """
+
+    class BuyThenClose(Strategy):
+        name = "_test_buy_then_close"
+
+        def on_bar(self, ctx: Context) -> None:
+            if ctx.i == 5 and not ctx.in_market:
+                ctx.order_target(1.0)
+            elif ctx.i == 7:
+                ctx.close_position()
+
+    closes = [100.0] * 8 + [40.0] * 4
+    df = make_ohlcv(closes)
+    df.iloc[8, df.columns.get_loc("open")] = 40.0  # gap straight through p_liq
+
+    result = run_backtest(BuyThenClose(), df, MarketSpec.futures(leverage=5.0), 1_000.0)
+    assert result.liquidated
+    assert result.fills[-1].kind == "liquidation"
+    assert result.final_balance == pytest.approx(0.0)
+    assert sum(t.pnl for t in result.trades) == pytest.approx(-1_000.0)
+
+
+def test_open_trade_has_no_exit_ts_and_counts_last_bar(flat_df):
+    result = run_backtest(get_strategy("buy_and_hold"), flat_df, MarketSpec.spot(), 1_000.0)
+    trade = result.trades[0]
+    assert trade.open_at_end and trade.exit_ts is None
+    from tradebot.metrics import compute_metrics
+
+    m = compute_metrics(result)
+    # fill at bar 1's open; in market bars 1..49 of 50
+    assert m.time_in_market_pct == pytest.approx(98.0)
+
+
 def test_strategy_cannot_change_row_count(trend_df):
     class BadStrategy(Strategy):
         name = "_test_bad"

@@ -122,6 +122,13 @@ class PaperBroker:
         fee = self.market.fee_rate * abs(delta) * px
         self.cash += realized - fee
         self.fees_paid += fee
+        if pos1 == 0.0 and self.cash < 0.0:
+            # Bankrupt: an account cannot lose more than it holds. Absorb the
+            # shortfall (insurance-fund style) so reported trade PnL matches
+            # the money actually lost, and stop trading.
+            realized += -self.cash
+            self.cash = 0.0
+            self.dead = True
         self.pos, self.entry = pos1, entry1
         return Fill(ts=ts, side=side, qty=abs(delta), price=px, fee=fee,
                     realized_pnl=realized, kind=kind)
@@ -135,17 +142,32 @@ class PaperBroker:
         if order.target is not None:
             return self._execute_target(order.target, ts, price)
         delta = order.qty if order.side is Side.BUY else -order.qty
+        fills: list[Fill] = []
+        if (self.pos != 0.0 and math.copysign(1.0, delta) != math.copysign(1.0, self.pos)
+                and abs(delta) > abs(self.pos)):
+            # Crossing zero: close first, so the reopened side is margin-checked
+            # against post-close equity and trade episodes never straddle zero.
+            remaining = delta + self.pos
+            fill = self._transact(ts, -self.pos, price)
+            if fill:
+                fills.append(fill)
+            if self.dead:
+                return fills
+            delta = remaining
         delta = self._clamp_delta(delta, price)
         fill = self._transact(ts, delta, price)
-        return [fill] if fill else []
+        if fill:
+            fills.append(fill)
+        return fills
 
     def _max_qty(self, price: float) -> float:
-        """Largest position size affordable at ``price`` after fees."""
+        """Largest position size affordable at ``price`` after fees and slippage."""
         eq = self.equity(price)
         if eq <= 0:
             return 0.0
         lev = self.market.leverage
-        haircut = max(0.0, 1.0 - self.market.fee_rate * lev)
+        slip = self.slippage_bps / 10_000.0
+        haircut = max(0.0, 1.0 - (self.market.fee_rate + slip) * lev)
         return eq * lev * haircut / price
 
     def _clamp_delta(self, delta: float, price: float) -> float:
@@ -169,6 +191,8 @@ class PaperBroker:
             fill = self._transact(ts, -self.pos, price)
             if fill:
                 fills.append(fill)
+            if self.dead:
+                return fills
 
         desired = math.copysign(self._max_qty(price) * abs(target), target) if target != 0.0 else 0.0
         delta = desired - self.pos
@@ -210,7 +234,8 @@ class PaperBroker:
             px = max(o, p_liq)
         else:
             return None
+        # _transact absorbs any bankruptcy shortfall into the fill's
+        # realized_pnl and floors cash at zero.
         fill = self._transact(ts, -self.pos, px, kind="liquidation")
-        self.cash = max(self.cash, 0.0)
         self.dead = True
         return fill

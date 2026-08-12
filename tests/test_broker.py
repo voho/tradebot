@@ -138,6 +138,44 @@ def test_slippage_hurts_both_sides():
     assert fills[0].price == pytest.approx(100.0 * 0.999)
 
 
+def test_qty_order_crossing_zero_splits_fills():
+    b = fut_broker(fee=0.0)
+    b.execute(Order(side=Side.BUY, qty=1.0), ts=0, price=100.0)
+    fills = b.execute(Order(side=Side.SELL, qty=2.0), ts=1, price=100.0)
+    assert len(fills) == 2  # close leg + open leg, never one fill through zero
+    assert fills[0].qty == pytest.approx(1.0)
+    assert b.pos == pytest.approx(-1.0)
+
+
+def test_qty_flip_respects_leverage_cap():
+    b = fut_broker(balance=1_000.0, lev=5.0)
+    b.execute(Order(target=-1.0), ts=0, price=100.0)
+    # adverse move guts equity; a huge flip order must be margin-checked
+    b.execute(Order(side=Side.BUY, qty=99.0), ts=1, price=119.0)
+    assert b.pos >= 0
+    assert abs(b.pos) * 119.0 <= max(b.equity(119.0), 0.0) * 5.0 + 1e-6
+
+
+def test_bankrupt_close_floors_cash_at_zero_and_kills_broker():
+    b = fut_broker(balance=1_000.0, lev=5.0)
+    b.execute(Order(target=1.0), ts=0, price=100.0)
+    # voluntary close far below the bankruptcy price
+    fills = b.execute(Order(target=0.0), ts=1, price=40.0)
+    assert b.cash == 0.0
+    assert b.dead
+    # the fill's pnl reflects money actually lost, not more than the account
+    assert fills[0].realized_pnl - fills[0].fee >= -1_000.0 - 1e-6
+
+
+def test_sizing_accounts_for_slippage():
+    b = spot_broker(balance=1_000.0, fee=0.001)
+    b.slippage_bps = 50.0
+    fills = b.execute(Order(target=1.0), ts=0, price=100.0)
+    f = fills[0]
+    # never spend more than the account holds, even with heavy slippage
+    assert f.qty * f.price + f.fee <= 1_000.0 + 1e-9
+
+
 def test_min_notional_blocks_dust_opens_but_not_closes():
     b = fut_broker(balance=1_000.0, fee=0.0)
     # dust open is skipped

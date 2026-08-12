@@ -64,12 +64,13 @@ def _mmoney(x: float) -> str:
 def _money(x: float) -> str:
     neg = x < 0
     a = abs(x)
-    if a >= 1e9:
-        s = f"${a / 1e9:.2f}B"
-    elif a >= 1e6:
-        s = f"${a / 1e6:.2f}M"
-    elif a >= 1e4:
-        s = f"${a / 1e3:.1f}K"
+    # pick the unit off the ROUNDED value so 999,950 -> $1.00M, not $1000.0K
+    if round(a / 1e9, 2) >= 1.0:
+        s = f"${a / 1e9:,.2f}B"
+    elif round(a / 1e6, 2) >= 1.0:
+        s = f"${a / 1e6:,.2f}M"
+    elif round(a / 1e3, 1) >= 10.0:
+        s = f"${a / 1e3:,.1f}K"
     else:
         s = f"${a:,.2f}" if a < 100 else f"${a:,.0f}"
     return f"-{s}" if neg else s
@@ -115,6 +116,7 @@ def run_chart(result: BacktestResult, metrics: Metrics, path: str | Path) -> Pat
     hi = float(max(equity.max(), hold.max()))
     if lo > 0 and hi / lo > 50:
         ax_e.set_yscale("log")
+        ax_e.yaxis.set_major_formatter(mticker.FuncFormatter(lambda v, _: f"{v:,.0f}"))
     ax_e.set_ylabel("balance (USD)", color=MUTED, fontsize=9)
     _legend(ax_e)
 
@@ -138,6 +140,9 @@ def run_chart(result: BacktestResult, metrics: Metrics, path: str | Path) -> Pat
     ax_d.fill_between(idx, dd, 0.0, color=CRITICAL, alpha=0.10, zorder=2)
     ax_d.plot(idx, dd, color=CRITICAL, linewidth=1.5, zorder=3)
     ax_d.set_ylabel("drawdown %", color=MUTED, fontsize=9)
+    # percent axis needs decimals for shallow drawdowns ("-0.25", not "-0")
+    ax_d.yaxis.set_major_formatter(
+        mticker.FuncFormatter(lambda v, _: f"{v:,.2f}".rstrip("0").rstrip(".")))
 
     ax_d.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
     label = "" if metrics.data_label == "real" else f"   [{metrics.data_label} DATA]"
@@ -154,15 +159,34 @@ def run_chart(result: BacktestResult, metrics: Metrics, path: str | Path) -> Pat
     return path
 
 
-def overlay_chart(results: list[BacktestResult], title: str, path: str | Path) -> Path:
-    """All strategies' balance curves for one (market, start balance) group."""
+def overlay_chart(results: list[BacktestResult], title: str, path: str | Path) -> list[Path]:
+    """All strategies' balance curves for one (market, start balance) group.
+
+    The categorical palette has 8 slots and is never cycled: past 8
+    strategies the group is faceted into multiple charts (…_part2.png).
+    Chunk membership follows the stable run order, so a strategy keeps
+    its color in every group.
+    """
+    path = Path(path)
+    if len(results) > len(SERIES):
+        chunks = [results[j:j + len(SERIES)] for j in range(0, len(results), len(SERIES))]
+        return [
+            _overlay_chart_single(
+                chunk, f"{title} ({k + 1}/{len(chunks)})",
+                path.with_stem(f"{path.stem}_part{k + 1}"))
+            for k, chunk in enumerate(chunks)
+        ]
+    return [_overlay_chart_single(results, title, path)]
+
+
+def _overlay_chart_single(results: list[BacktestResult], title: str, path: Path) -> Path:
     fig, ax = plt.subplots(figsize=(12, 5.5))
     fig.patch.set_facecolor(PAGE)
     _style_axes(ax)
 
     lo, hi = float("inf"), 0.0
     for k, res in enumerate(results):
-        color = SERIES[k % len(SERIES)]
+        color = SERIES[k]
         ax.plot(res.equity.index, res.equity, color=color, linewidth=2,
                 solid_joinstyle="round", solid_capstyle="round",
                 label=res.strategy_name)
@@ -176,6 +200,7 @@ def overlay_chart(results: list[BacktestResult], title: str, path: str | Path) -
             )
     if lo > 0 and hi / lo > 50:
         ax.set_yscale("log")
+        ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda v, _: f"{v:,.0f}"))
     ax.set_ylabel("balance (USD)", color=MUTED, fontsize=9)
     _legend(ax)
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
