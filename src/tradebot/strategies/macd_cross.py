@@ -9,7 +9,15 @@ from tradebot.strategy import Context, Strategy
 
 @register
 class MacdCross(Strategy):
-    """Long when MACD crosses above its signal line; flat (spot) or short (futures) on the cross below."""
+    """Trend-following: long when MACD crosses above its signal line, flat/short on the cross below.
+
+    The idea: MACD (the gap between a fast and a slow EMA) turns positive
+    when momentum shifts upward; crossing its own signal line marks the
+    shift early. Ride the new trend until the opposite cross. Classic
+    12/26/9 parameters. Weakness: on a 5-minute chart crosses fire
+    constantly in sideways chop, so fees and whipsaws eat the edge —
+    which is exactly what the baseline comparison should expose.
+    """
 
     name = "macd_cross"
     warmup = 150  # let the EMAs stabilize

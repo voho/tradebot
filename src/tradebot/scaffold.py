@@ -70,9 +70,14 @@ def new_strategy(name: str, strategies_dir: Path | None = None) -> Path:
     path.write_text(TEMPLATE.format(name=name, cls=cls, title=title))
     print(f"created {path}", file=sys.stderr)
     print("next steps:", file=sys.stderr)
-    print(f"  - edit the indicators and rules in {path.name}", file=sys.stderr)
+    print(f"  - edit the indicators, rules and DOCSTRING (the idea) in {path.name}",
+          file=sys.stderr)
     print("  - pytest                        # incl. automatic no-lookahead check",
           file=sys.stderr)
-    print(f"  - tradebot run --strategies {name} buy_and_hold   # quick comparison",
+    print(f"  - tradebot run --strategies {name} buy_and_hold --max-bars 100000  # quick look",
+          file=sys.stderr)
+    print("  - tradebot run                  # full matrix; refreshes the README",
+          file=sys.stderr)
+    print("    (CI requires every strategy to appear in the README comparison table)",
           file=sys.stderr)
     return path

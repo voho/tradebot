@@ -270,9 +270,27 @@ def _source_path(strategy_name: str, relative_to: str | Path | None) -> str | No
         return None
 
 
+def _strategy_doc(name: str) -> str:
+    """First docstring line of the strategy class: the idea in one line."""
+    try:
+        from tradebot.registry import available_strategies
+
+        cls = available_strategies().get(name)
+        doc = (cls.__doc__ or "").strip() if cls else ""
+        return doc.splitlines()[0].strip() if doc else ""
+    except Exception:  # noqa: BLE001
+        return ""
+
+
 def _strategy_cell(name: str, out_dir: str | Path | None) -> str:
+    parts = [f"**{name}**"]
+    doc = _strategy_doc(name)
+    if doc:
+        parts.append(f"_{doc}_")
     link = _source_path(name, out_dir)
-    return f"**{name}**<br>[source]({link})" if link else f"**{name}**"
+    if link:
+        parts.append(f"[source]({link})")
+    return "<br>".join(parts)
 
 
 def _balance_label(balance: float) -> str:
@@ -369,6 +387,35 @@ def markdown_table(group: list[Metrics], out_dir: str | Path | None = None) -> s
             cells[0] = f"[{m.strategy}]({link})"
         lines.append("| " + " | ".join(cells) + " |")
     return "\n".join(lines)
+
+
+README_BEGIN = "<!-- comparison:begin -->"
+README_END = "<!-- comparison:end -->"
+
+
+def update_readme(all_metrics: list[Metrics], readme_path: str | Path,
+                  period: str = "") -> bool:
+    """Splice the consolidated comparison table into the README.
+
+    The table lands between the ``comparison:begin``/``end`` markers,
+    sorted best to worst by final balance. Returns False when the README
+    or its markers are missing.
+    """
+    readme_path = Path(readme_path)
+    if not readme_path.exists():
+        return False
+    text = readme_path.read_text()
+    if README_BEGIN not in text or README_END not in text:
+        return False
+
+    labels = ", ".join(sorted({m.data_label for m in all_metrics}))
+    head = f"_Period: {period} · data: {labels}_\n\n" if period else f"_Data: {labels}_\n\n"
+    table = matrix_table(all_metrics, out_dir=readme_path.parent)
+    before = text.split(README_BEGIN)[0]
+    after = text.split(README_END)[1]
+    readme_path.write_text(
+        f"{before}{README_BEGIN}\n{head}{table}\n{README_END}{after}")
+    return True
 
 
 def comparison_report(all_metrics: list[Metrics], out_dir: str | Path,

@@ -11,7 +11,13 @@ from tradebot.broker import MarketSpec
 from tradebot.engine import BacktestResult, run_backtest
 from tradebot.metrics import Metrics, compute_metrics
 from tradebot.registry import available_strategies, get_strategy
-from tradebot.report import comparison_report, overlay_chart, print_comparison, run_chart
+from tradebot.report import (
+    comparison_report,
+    overlay_chart,
+    print_comparison,
+    run_chart,
+    update_readme,
+)
 
 
 @dataclass
@@ -26,6 +32,7 @@ class RunConfig:
     slippage_bps: float = 0.0
     strategies: list[str] | None = None  # None = all registered
     max_bars: int | None = None  # optionally trim to the most recent N bars
+    readme: Path = Path("README.md")  # comparison table target (markers inside)
 
     def market_specs(self) -> list[tuple[MarketSpec, str]]:
         """(spec, data kind) pairs; spot trades spot data, futures the perp."""
@@ -87,4 +94,15 @@ def run_matrix(cfg: RunConfig) -> tuple[list[Metrics], list[BacktestResult]]:
     md = comparison_report(all_metrics, cfg.out_dir, period=period)
     print_comparison(all_metrics)
     print(f"\nreport: {md}\ncharts: {charts_dir}/", file=sys.stderr)
+
+    # The README table must always cover every registered strategy on the
+    # full matrix (CI enforces it), so partial or synthetic runs skip it.
+    full_run = set(names) >= set(available_strategies())
+    real_data = all(m.data_label != "SYNTHETIC" for m in all_metrics)
+    if full_run and real_data and not cfg.max_bars:
+        if update_readme(all_metrics, cfg.readme, period=period):
+            print(f"updated comparison table in {cfg.readme}", file=sys.stderr)
+    else:
+        print("README comparison not updated (partial/synthetic/trimmed run)",
+              file=sys.stderr)
     return all_metrics, all_results

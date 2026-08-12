@@ -9,7 +9,15 @@ from tradebot.strategy import Context, Strategy
 
 @register
 class RsiReversion(Strategy):
-    """Buy when RSI drops below the oversold level, exit on recovery; mirror short on futures."""
+    """Mean-reversion: buy oversold dips (RSI < 30), exit on recovery; mirror short overbought on futures.
+
+    The idea: sharp moves overshoot; when the 14-period RSI drops under 30
+    the sell-off is statistically stretched and price tends to snap back.
+    Enter long on the dip, exit once RSI recovers past 55 (don't wait for
+    overbought). On futures the mirror applies: short RSI > 70, cover
+    below 45. Works in ranging markets; bleeds in strong trends, where
+    "oversold" keeps getting more oversold.
+    """
 
     name = "rsi_reversion"
     warmup = 150

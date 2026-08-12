@@ -9,7 +9,16 @@ from tradebot.strategy import Context, Strategy
 
 @register
 class MacdRsi(Strategy):
-    """Enter longs on RSI pullback recoveries while MACD trend is up; mirror short on futures."""
+    """Trend + timing combo: trade RSI pullback recoveries only in the direction of the MACD trend.
+
+    The idea: filter mean-reversion entries by trend so the two indicators
+    cover each other's weakness. MACD histogram > 0 defines an uptrend;
+    within it, wait for a pullback and enter long when RSI crosses back up
+    through 45 (the dip is ending). Exit when the trend flips or RSI gets
+    greedy (> 75). Mirrored short side on futures. Fewer, better-timed
+    trades than either indicator alone — the comparison shows whether
+    that survives 5m fees.
+    """
 
     name = "macd_rsi"
     warmup = 150
