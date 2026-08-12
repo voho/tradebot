@@ -11,3 +11,4 @@ venv/
 *.parquet
 !/data/btcusdt_perp_5m.csv
 !/data/btcusdt_spot_aligned_5m.csv
+/reports/
