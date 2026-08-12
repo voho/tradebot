@@ -7,9 +7,23 @@ Ranked by **final balance** (the primary comparison criterion); rows ordered by 
 | strategy | spot · $1K | spot · $1M | futures_5x · $1K | futures_5x · $1M |
 |---|---|---|---|---|
 | **buy_and_hold**<br>_Buy everything on the first bar and never trade again._<br>[source](../src/tradebot/strategies/buy_and_hold.py) | trades 1<br>profit $65.0K<br>worst $65.0K<br>best $65.0K<br>**after $66.0K** | trades 1<br>profit $65.04M<br>worst $65.04M<br>best $65.04M<br>**after $66.04M** | trades 1<br>profit -$982<br>worst -$982<br>best -$982<br>**after $18.05**<br>LIQUIDATED | trades 1<br>profit -$982.0K<br>worst -$982.0K<br>best -$982.0K<br>**after $18.0K**<br>LIQUIDATED |
+| **hedge_experts**<br>_No-regret Hedge blend of technical experts, each charged its own turnover._<br>[source](../src/tradebot/strategies/hedge_experts.py) | trades 2,044<br>profit $12.3K<br>worst -$1,469<br>best $11.0K<br>**after $13.3K** | trades 2,159<br>profit $12.27M<br>worst -$1.47M<br>best $11.03M<br>**after $13.27M** | trades 4,103<br>profit -$742<br>worst -$15.9K<br>best $53.0K<br>**after $258** | trades 4,316<br>profit -$742.6K<br>worst -$15.87M<br>best $52.98M<br>**after $257.4K** |
+| **replicator_book**<br>_Reallocate capital across trend, value and cash species with replicator dynamics on their realized fee-adjusted fitness._<br>[source](../src/tradebot/strategies/replicator_book.py) | trades 713<br>profit $1,330<br>worst -$90.85<br>best $451<br>**after $2,330** | trades 717<br>profit $1.33M<br>worst -$90.8K<br>best $451.4K<br>**after $2.33M** | trades 1,427<br>profit -$989<br>worst -$681<br>best $1,847<br>**after $10.58** | trades 1,435<br>profit -$989.4K<br>worst -$680.7K<br>best $1.85M<br>**after $10.6K** |
+| **universal_kelly**<br>_Universal-portfolio exposure: wealth-weighted mixture over fixed exposures, half-Kelly capped._<br>[source](../src/tradebot/strategies/universal_kelly.py) | trades 9<br>profit $276<br>worst -$6.99<br>best $131<br>**after $1,276** | trades 1,529<br>profit $202.9K<br>worst -$6,509<br>best $123.9K<br>**after $1.20M** | trades 20<br>profit $227<br>worst -$15.25<br>best $129<br>**after $1,227** | trades 3,047<br>profit $3,730<br>worst -$238<br>best $4,923<br>**after $1.00M** |
+| **harsanyi_crowd**<br>_Trade the belief margin over hidden market types, sized down when the trend is crowded._<br>[source](../src/tradebot/strategies/harsanyi_crowd.py) | trades 91<br>profit -$112<br>worst -$13.89<br>best $7.93<br>**after $888** | trades 91<br>profit -$111.9K<br>worst -$13.9K<br>best $7,926<br>**after $888.1K** | trades 178<br>profit -$571<br>worst -$73.42<br>best $34.04<br>**after $429** | trades 178<br>profit -$571.3K<br>worst -$73.4K<br>best $34.0K<br>**after $428.7K** |
+| **overshoot_fade**<br>_Fade forced-liquidation overshoots once the aggressive flow driving them is exhausted._<br>[source](../src/tradebot/strategies/overshoot_fade.py) | trades 189<br>profit -$338<br>worst -$52.43<br>best $21.29<br>**after $662** | trades 189<br>profit -$338.4K<br>worst -$52.4K<br>best $21.3K<br>**after $661.6K** | trades 341<br>profit -$966<br>worst -$115<br>best $71.14<br>**after $33.52** | trades 341<br>profit -$966.5K<br>worst -$115.2K<br>best $71.1K<br>**after $33.5K** |
+| **camouflage_flow**<br>_Follow persistent informed order flow recovered from bars via Bulk Volume Classification._<br>[source](../src/tradebot/strategies/camouflage_flow.py) | trades 802<br>profit -$452<br>worst -$40.11<br>best $73.99<br>**after $548** | trades 802<br>profit -$452.4K<br>worst -$40.1K<br>best $74.0K<br>**after $547.6K** | trades 1,044<br>profit -$999<br>worst -$205<br>best $101<br>**after $0.99** | trades 1,676<br>profit -$1.00M<br>worst -$204.8K<br>best $100.9K<br>**after $127** |
+| **stealth_trend**<br>_Follow momentum only when it prints on deep, high-participation bars where informed flow hides._<br>[source](../src/tradebot/strategies/stealth_trend.py) | trades 1,605<br>profit -$535<br>worst -$40.68<br>best $109<br>**after $465** | trades 1,605<br>profit -$535.5K<br>worst -$40.7K<br>best $108.7K<br>**after $464.5K** | trades 248<br>profit -$1,000<br>worst -$144<br>best $37.26<br>**after $0.38** | trades 1,285<br>profit -$1.00M<br>worst -$144.4K<br>best $37.3K<br>**after $0.84** |
+| **flow_regime**<br>_Combine the two sides of the microstructure game: follow flow, but fade liquidation overshoots._<br>[source](../src/tradebot/strategies/flow_regime.py) | trades 1,184<br>profit -$553<br>worst -$52.56<br>best $102<br>**after $447** | trades 1,184<br>profit -$553.3K<br>worst -$52.6K<br>best $101.6K<br>**after $446.7K** | trades 467<br>profit -$999<br>worst -$107<br>best $50.52<br>**after $0.80** | trades 2,135<br>profit -$1.00M<br>worst -$106.6K<br>best $50.5K<br>**after $1.46** |
+| **game_council**<br>_Combination of games: no-regret Hedge allocation over the game strategies' own signals._<br>[source](../src/tradebot/strategies/game_council.py) | trades 2,541<br>profit -$716<br>worst -$14.04<br>best $22.92<br>**after $284** | trades 2,541<br>profit -$716.0K<br>worst -$14.0K<br>best $22.9K<br>**after $284.0K** | trades 2,494<br>profit -$998<br>worst -$55.75<br>best $17.63<br>**after $2.00** | trades 4,978<br>profit -$1.00M<br>worst -$55.8K<br>best $17.6K<br>**after $34.66** |
+| **minority_oracle**<br>_Trade the abstention-filtered vote of a grand-canonical minority game trained online on binarized returns._<br>[source](../src/tradebot/strategies/minority_oracle.py) | trades 9,039<br>profit -$947<br>worst -$2.93<br>best $3.00<br>**after $53.36** | trades 9,039<br>profit -$946.6K<br>worst -$2,930<br>best $2,995<br>**after $53.4K** | trades 7,065<br>profit -$996<br>worst -$10.12<br>best $11.19<br>**after $3.83** | trades 15,493<br>profit -$1.00M<br>worst -$10.1K<br>best $11.2K<br>**after $4.29** |
 | **rsi_reversion**<br>_Mean-reversion: buy oversold dips (RSI < 30), exit on recovery; mirror short overbought on futures._<br>[source](../src/tradebot/strategies/rsi_reversion.py) | trades 4,464<br>profit -$995<br>worst -$159<br>best $133<br>**after $4.85** | trades 5,713<br>profit -$1.00M<br>worst -$159.0K<br>best $133.5K<br>**after $365** | trades 2,264<br>profit -$999<br>worst -$346<br>best $246<br>**after $0.77** | trades 2,638<br>profit -$1.00M<br>worst -$345.7K<br>best $246.1K<br>**after $3.41**<br>LIQUIDATED |
+| **game_switch**<br>_Best-respond to whichever game the market is currently playing by trading only history states with significant conditional drift._<br>[source](../src/tradebot/strategies/game_switch.py) | trades 6,672<br>profit -$995<br>worst -$11.38<br>best $9.00<br>**after $5.00** | trades 13,899<br>profit -$1.00M<br>worst -$11.4K<br>best $9,001<br>**after $4.95** | trades 6,449<br>profit -$999<br>worst -$17.26<br>best $21.63<br>**after $1.00** | trades 11,485<br>profit -$1.00M<br>worst -$17.3K<br>best $21.6K<br>**after $1.00** |
+| **regret_grid**<br>_Regret-matching+ over a position grid: correlated-equilibrium play against the market._<br>[source](../src/tradebot/strategies/regret_grid.py) | trades 3,461<br>profit -$995<br>worst -$46.98<br>best $13.29<br>**after $5.00** | trades 10,834<br>profit -$1.00M<br>worst -$47.0K<br>best $13.3K<br>**after $5.00** | trades 1,389<br>profit -$999<br>worst -$136<br>best $33.17<br>**after $1.00** | trades 4,027<br>profit -$1.00M<br>worst -$136.2K<br>best $33.2K<br>**after $1.00** |
 | **macd_rsi**<br>_Trend + timing combo: trade RSI pullback recoveries only in the direction of the MACD trend._<br>[source](../src/tradebot/strategies/macd_rsi.py) | trades 2,454<br>profit -$995<br>worst -$44.90<br>best $42.97<br>**after $4.96** | trades 5,503<br>profit -$1.00M<br>worst -$44.9K<br>best $43.0K<br>**after $5.00** | trades 1,239<br>profit -$999<br>worst -$150<br>best $110<br>**after $0.94** | trades 2,120<br>profit -$1.00M<br>worst -$149.6K<br>best $110.2K<br>**after $0.98** |
 | **macd_cross**<br>_Trend-following: long when MACD crosses above its signal line, flat/short on the cross below._<br>[source](../src/tradebot/strategies/macd_cross.py) | trades 4,301<br>profit -$995<br>worst -$46.33<br>best $42.19<br>**after $4.99** | trades 7,945<br>profit -$1.00M<br>worst -$46.3K<br>best $42.2K<br>**after $5.00** | trades 1,464<br>profit -$999<br>worst -$259<br>best $566<br>**after $1.00** | trades 3,306<br>profit -$1.00M<br>worst -$258.6K<br>best $566.0K<br>**after $0.73** |
+| **tft_trend**<br>_Repeated-game trend truce: hold while the market cooperates, forgive one defection, punish two._<br>[source](../src/tradebot/strategies/tft_trend.py) | trades 2,538<br>profit -$995<br>worst -$92.03<br>best $36.26<br>**after $4.99** | trades 5,939<br>profit -$1.00M<br>worst -$92.0K<br>best $36.3K<br>**after $4.97** | trades 659<br>profit -$999<br>worst -$125<br>best $120<br>**after $1.00** | trades 1,583<br>profit -$1.00M<br>worst -$125.2K<br>best $119.8K<br>**after $0.94** |
+| **attrition_reversion**<br>_Fade deviations from an inventory-shifted fair value; quit when waiting costs exceed the prize._<br>[source](../src/tradebot/strategies/attrition_reversion.py) | trades 2,930<br>profit -$995<br>worst -$90.17<br>best $28.72<br>**after $4.94** | trades 7,221<br>profit -$1.00M<br>worst -$90.2K<br>best $28.7K<br>**after $4.97** | trades 1,176<br>profit -$999<br>worst -$457<br>best $103<br>**after $0.99** | trades 2,034<br>profit -$1.00M<br>worst -$456.9K<br>best $103.1K<br>**after $0.95** |
 
 ## Details per market and starting balance
 
@@ -17,18 +31,46 @@ Ranked by **final balance** (the primary comparison criterion); rows ordered by 
 
 | strategy | final balance | profit | profit % | trades | win % | best trade | worst trade | max DD % | sharpe | in market % | fees | liq. |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
+| [universal_kelly](../src/tradebot/strategies/universal_kelly.py) | $1,227 | $227 | +22.65% | 20 | 50.0 | $129 | -$15.25 | 9.0 | 0.46 | 30.0 | $1.18 |  |
+| [harsanyi_crowd](../src/tradebot/strategies/harsanyi_crowd.py) | $429 | -$571 | -57.13% | 178 | 28.7 | $34.04 | -$73.42 | 57.7 | -0.86 | 0.2 | $308 |  |
+| [hedge_experts](../src/tradebot/strategies/hedge_experts.py) | $258 | -$742 | -74.25% | 4103 | 11.4 | $53.0K | -$15.9K | 99.9 | 0.96 | 99.6 | $52.1K |  |
+| [overshoot_fade](../src/tradebot/strategies/overshoot_fade.py) | $33.52 | -$966 | -96.65% | 341 | 57.2 | $71.14 | -$115 | 97.0 | -1.16 | 0.3 | $309 |  |
 | [buy_and_hold](../src/tradebot/strategies/buy_and_hold.py) | $18.05 | -$982 | -98.20% | 1 | 0.0 | -$982 | -$982 | 99.0 | -0.19 | 0.3 | $4.50 | yes |
+| [replicator_book](../src/tradebot/strategies/replicator_book.py) | $10.58 | -$989 | -98.94% | 1427 | 24.4 | $1,847 | -$681 | 99.8 | 0.33 | 99.6 | $2,215 |  |
+| [minority_oracle](../src/tradebot/strategies/minority_oracle.py) | $3.83 | -$996 | -99.62% | 7065 | 25.4 | $11.19 | -$10.12 | 99.6 | -8.29 | 0.9 | $1,180 |  |
+| [game_council](../src/tradebot/strategies/game_council.py) | $2.00 | -$998 | -99.80% | 2494 | 33.8 | $17.63 | -$55.75 | 99.8 | -1.66 | 2.5 | $297 |  |
 | [macd_cross](../src/tradebot/strategies/macd_cross.py) | $1.00 | -$999 | -99.90% | 1464 | 27.6 | $566 | -$259 | 99.9 | -1.08 | 1.8 | $1,086 |  |
+| [game_switch](../src/tradebot/strategies/game_switch.py) | $1.00 | -$999 | -99.90% | 6449 | 40.1 | $21.63 | -$17.26 | 99.9 | -1.60 | 1.2 | $1,167 |  |
+| [tft_trend](../src/tradebot/strategies/tft_trend.py) | $1.00 | -$999 | -99.90% | 659 | 34.1 | $120 | -$125 | 99.9 | -1.03 | 0.7 | $465 |  |
+| [regret_grid](../src/tradebot/strategies/regret_grid.py) | $1.00 | -$999 | -99.90% | 1389 | 9.4 | $33.17 | -$136 | 99.9 | -2.13 | 2.2 | $537 |  |
+| [camouflage_flow](../src/tradebot/strategies/camouflage_flow.py) | $0.99 | -$999 | -99.90% | 1044 | 34.3 | $101 | -$205 | 99.9 | -0.64 | 3.3 | $190 |  |
+| [attrition_reversion](../src/tradebot/strategies/attrition_reversion.py) | $0.99 | -$999 | -99.90% | 1176 | 60.4 | $103 | -$457 | 99.9 | -0.24 | 2.8 | $549 |  |
 | [macd_rsi](../src/tradebot/strategies/macd_rsi.py) | $0.94 | -$999 | -99.91% | 1239 | 31.9 | $110 | -$150 | 99.9 | -0.94 | 1.8 | $709 |  |
+| [flow_regime](../src/tradebot/strategies/flow_regime.py) | $0.80 | -$999 | -99.92% | 467 | 34.5 | $50.52 | -$107 | 99.9 | -1.04 | 1.3 | $102 |  |
 | [rsi_reversion](../src/tradebot/strategies/rsi_reversion.py) | $0.77 | -$999 | -99.92% | 2264 | 63.1 | $246 | -$346 | 100.0 | 0.68 | 7.4 | $2,074 |  |
+| [stealth_trend](../src/tradebot/strategies/stealth_trend.py) | $0.38 | -$1,000 | -99.96% | 248 | 24.6 | $37.26 | -$144 | 100.0 | -0.85 | 1.3 | $86.66 |  |
 
 ### futures_5x · start balance $1.00M
 
 | strategy | final balance | profit | profit % | trades | win % | best trade | worst trade | max DD % | sharpe | in market % | fees | liq. |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
+| [universal_kelly](../src/tradebot/strategies/universal_kelly.py) | $1.00M | $3,730 | +0.37% | 3047 | 3.8 | $4,923 | -$238 | 0.8 | 0.18 | 97.5 | $722 |  |
+| [harsanyi_crowd](../src/tradebot/strategies/harsanyi_crowd.py) | $428.7K | -$571.3K | -57.13% | 178 | 28.7 | $34.0K | -$73.4K | 57.7 | -0.86 | 0.2 | $308.0K |  |
+| [hedge_experts](../src/tradebot/strategies/hedge_experts.py) | $257.4K | -$742.6K | -74.26% | 4316 | 11.1 | $52.98M | -$15.87M | 99.9 | 0.96 | 99.8 | $52.05M |  |
+| [overshoot_fade](../src/tradebot/strategies/overshoot_fade.py) | $33.5K | -$966.5K | -96.65% | 341 | 57.2 | $71.1K | -$115.2K | 97.0 | -1.16 | 0.3 | $309.1K |  |
 | [buy_and_hold](../src/tradebot/strategies/buy_and_hold.py) | $18.0K | -$982.0K | -98.20% | 1 | 0.0 | -$982.0K | -$982.0K | 99.0 | -0.19 | 0.3 | $4,499 | yes |
+| [replicator_book](../src/tradebot/strategies/replicator_book.py) | $10.6K | -$989.4K | -98.94% | 1435 | 24.3 | $1.85M | -$680.7K | 99.8 | 0.33 | 99.8 | $2.22M |  |
+| [camouflage_flow](../src/tradebot/strategies/camouflage_flow.py) | $127 | -$1.00M | -99.99% | 1676 | 34.5 | $100.9K | -$204.8K | 100.0 | -0.87 | 5.1 | $191.3K |  |
+| [game_council](../src/tradebot/strategies/game_council.py) | $34.66 | -$1.00M | -100.00% | 4978 | 31.8 | $17.6K | -$55.8K | 100.0 | -2.38 | 5.2 | $299.9K |  |
+| [minority_oracle](../src/tradebot/strategies/minority_oracle.py) | $4.29 | -$1.00M | -100.00% | 15493 | 26.3 | $11.2K | -$10.1K | 100.0 | -13.34 | 2.0 | $1.18M |  |
 | [rsi_reversion](../src/tradebot/strategies/rsi_reversion.py) | $3.41 | -$1.00M | -100.00% | 2638 | 63.6 | $246.1K | -$345.7K | 100.0 | 0.53 | 8.6 | $2.07M | yes |
+| [flow_regime](../src/tradebot/strategies/flow_regime.py) | $1.46 | -$1.00M | -100.00% | 2135 | 38.6 | $50.5K | -$106.6K | 100.0 | -1.08 | 6.2 | $103.1K |  |
+| [game_switch](../src/tradebot/strategies/game_switch.py) | $1.00 | -$1.00M | -100.00% | 11485 | 41.2 | $21.6K | -$17.3K | 100.0 | -2.94 | 2.1 | $1.17M |  |
+| [regret_grid](../src/tradebot/strategies/regret_grid.py) | $1.00 | -$1.00M | -100.00% | 4027 | 9.7 | $33.2K | -$136.2K | 100.0 | -2.91 | 4.8 | $538.9K |  |
 | [macd_rsi](../src/tradebot/strategies/macd_rsi.py) | $0.98 | -$1.00M | -100.00% | 2120 | 32.9 | $110.2K | -$149.6K | 100.0 | -1.26 | 3.2 | $710.4K |  |
+| [attrition_reversion](../src/tradebot/strategies/attrition_reversion.py) | $0.95 | -$1.00M | -100.00% | 2034 | 61.6 | $103.1K | -$456.9K | 100.0 | -0.51 | 4.6 | $550.0K |  |
+| [tft_trend](../src/tradebot/strategies/tft_trend.py) | $0.94 | -$1.00M | -100.00% | 1583 | 33.9 | $119.8K | -$125.2K | 100.0 | -1.13 | 1.7 | $465.7K |  |
+| [stealth_trend](../src/tradebot/strategies/stealth_trend.py) | $0.84 | -$1.00M | -100.00% | 1285 | 30.1 | $37.3K | -$144.4K | 100.0 | -0.54 | 7.9 | $86.8K |  |
 | [macd_cross](../src/tradebot/strategies/macd_cross.py) | $0.73 | -$1.00M | -100.00% | 3306 | 29.6 | $566.0K | -$258.6K | 100.0 | -1.18 | 4.0 | $1.09M |  |
 
 ### spot · start balance $1,000
@@ -36,8 +78,22 @@ Ranked by **final balance** (the primary comparison criterion); rows ordered by 
 | strategy | final balance | profit | profit % | trades | win % | best trade | worst trade | max DD % | sharpe | in market % | fees | liq. |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | [buy_and_hold](../src/tradebot/strategies/buy_and_hold.py) | $66.0K | $65.0K | +6504.41% | 1 | 0.0 | $65.0K | $65.0K | 84.1 | 0.95 | 100.0 | $1.00 |  |
+| [hedge_experts](../src/tradebot/strategies/hedge_experts.py) | $13.3K | $12.3K | +1227.66% | 2044 | 7.5 | $11.0K | -$1,469 | 59.3 | 0.87 | 88.0 | $16.7K |  |
+| [replicator_book](../src/tradebot/strategies/replicator_book.py) | $2,330 | $1,330 | +132.98% | 713 | 26.2 | $451 | -$90.85 | 38.4 | 0.52 | 53.0 | $1,630 |  |
+| [universal_kelly](../src/tradebot/strategies/universal_kelly.py) | $1,276 | $276 | +27.60% | 9 | 88.9 | $131 | -$6.99 | 7.4 | 0.62 | 22.7 | $1.33 |  |
+| [harsanyi_crowd](../src/tradebot/strategies/harsanyi_crowd.py) | $888 | -$112 | -11.19% | 91 | 28.6 | $7.93 | -$13.89 | 11.4 | -0.82 | 0.1 | $90.02 |  |
+| [overshoot_fade](../src/tradebot/strategies/overshoot_fade.py) | $662 | -$338 | -33.84% | 189 | 59.8 | $21.29 | -$52.43 | 37.1 | -0.95 | 0.2 | $214 |  |
+| [camouflage_flow](../src/tradebot/strategies/camouflage_flow.py) | $548 | -$452 | -45.24% | 802 | 29.9 | $73.99 | -$40.11 | 52.7 | -0.66 | 2.4 | $950 |  |
+| [stealth_trend](../src/tradebot/strategies/stealth_trend.py) | $465 | -$535 | -53.55% | 1605 | 30.5 | $109 | -$40.68 | 54.8 | -0.31 | 9.9 | $1,542 |  |
+| [flow_regime](../src/tradebot/strategies/flow_regime.py) | $447 | -$553 | -55.33% | 1184 | 38.0 | $102 | -$52.56 | 56.1 | -0.72 | 3.5 | $966 |  |
+| [game_council](../src/tradebot/strategies/game_council.py) | $284 | -$716 | -71.60% | 2541 | 25.9 | $22.92 | -$14.04 | 71.7 | -2.67 | 2.8 | $718 |  |
+| [minority_oracle](../src/tradebot/strategies/minority_oracle.py) | $53.36 | -$947 | -94.66% | 9039 | 12.2 | $3.00 | -$2.93 | 94.7 | -19.17 | 1.2 | $1,024 |  |
+| [game_switch](../src/tradebot/strategies/game_switch.py) | $5.00 | -$995 | -99.50% | 6672 | 26.6 | $9.00 | -$11.38 | 99.5 | -6.19 | 1.2 | $1,264 |  |
+| [regret_grid](../src/tradebot/strategies/regret_grid.py) | $5.00 | -$995 | -99.50% | 3461 | 8.4 | $13.29 | -$46.98 | 99.5 | -5.11 | 7.7 | $872 |  |
+| [tft_trend](../src/tradebot/strategies/tft_trend.py) | $4.99 | -$995 | -99.50% | 2538 | 26.4 | $36.26 | -$92.03 | 99.5 | -2.78 | 3.1 | $883 |  |
 | [macd_cross](../src/tradebot/strategies/macd_cross.py) | $4.99 | -$995 | -99.50% | 4301 | 30.9 | $42.19 | -$46.33 | 99.5 | -2.02 | 5.3 | $1,269 |  |
 | [macd_rsi](../src/tradebot/strategies/macd_rsi.py) | $4.96 | -$995 | -99.50% | 2454 | 29.5 | $42.97 | -$44.90 | 99.5 | -2.56 | 3.8 | $1,103 |  |
+| [attrition_reversion](../src/tradebot/strategies/attrition_reversion.py) | $4.94 | -$995 | -99.51% | 2930 | 58.6 | $28.72 | -$90.17 | 99.5 | -1.61 | 6.4 | $1,165 |  |
 | [rsi_reversion](../src/tradebot/strategies/rsi_reversion.py) | $4.85 | -$995 | -99.51% | 4464 | 57.0 | $133 | -$159 | 99.8 | -1.07 | 14.5 | $4,882 |  |
 
 ### spot · start balance $1.00M
@@ -45,6 +101,20 @@ Ranked by **final balance** (the primary comparison criterion); rows ordered by 
 | strategy | final balance | profit | profit % | trades | win % | best trade | worst trade | max DD % | sharpe | in market % | fees | liq. |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | [buy_and_hold](../src/tradebot/strategies/buy_and_hold.py) | $66.04M | $65.04M | +6504.41% | 1 | 0.0 | $65.04M | $65.04M | 84.1 | 0.95 | 100.0 | $999 |  |
+| [hedge_experts](../src/tradebot/strategies/hedge_experts.py) | $13.27M | $12.27M | +1227.50% | 2159 | 7.3 | $11.03M | -$1.47M | 59.3 | 0.87 | 88.1 | $16.70M |  |
+| [replicator_book](../src/tradebot/strategies/replicator_book.py) | $2.33M | $1.33M | +132.99% | 717 | 26.1 | $451.4K | -$90.8K | 38.4 | 0.52 | 53.1 | $1.63M |  |
+| [universal_kelly](../src/tradebot/strategies/universal_kelly.py) | $1.20M | $202.9K | +20.29% | 1529 | 2.7 | $123.9K | -$6,509 | 7.2 | 0.49 | 61.7 | $1,838 |  |
+| [harsanyi_crowd](../src/tradebot/strategies/harsanyi_crowd.py) | $888.1K | -$111.9K | -11.19% | 91 | 28.6 | $7,926 | -$13.9K | 11.4 | -0.82 | 0.1 | $90.0K |  |
+| [overshoot_fade](../src/tradebot/strategies/overshoot_fade.py) | $661.6K | -$338.4K | -33.84% | 189 | 59.8 | $21.3K | -$52.4K | 37.1 | -0.95 | 0.2 | $214.4K |  |
+| [camouflage_flow](../src/tradebot/strategies/camouflage_flow.py) | $547.6K | -$452.4K | -45.24% | 802 | 29.9 | $74.0K | -$40.1K | 52.7 | -0.66 | 2.4 | $950.4K |  |
+| [stealth_trend](../src/tradebot/strategies/stealth_trend.py) | $464.5K | -$535.5K | -53.55% | 1605 | 30.5 | $108.7K | -$40.7K | 54.8 | -0.31 | 9.9 | $1.54M |  |
+| [flow_regime](../src/tradebot/strategies/flow_regime.py) | $446.7K | -$553.3K | -55.33% | 1184 | 38.0 | $101.6K | -$52.6K | 56.1 | -0.72 | 3.5 | $965.9K |  |
+| [game_council](../src/tradebot/strategies/game_council.py) | $284.0K | -$716.0K | -71.60% | 2541 | 25.9 | $22.9K | -$14.0K | 71.7 | -2.67 | 2.8 | $717.8K |  |
+| [minority_oracle](../src/tradebot/strategies/minority_oracle.py) | $53.4K | -$946.6K | -94.66% | 9039 | 12.2 | $2,995 | -$2,930 | 94.7 | -19.17 | 1.2 | $1.02M |  |
 | [rsi_reversion](../src/tradebot/strategies/rsi_reversion.py) | $365 | -$1.00M | -99.96% | 5713 | 54.6 | $133.5K | -$159.0K | 100.0 | -1.63 | 18.6 | $4.89M |  |
+| [regret_grid](../src/tradebot/strategies/regret_grid.py) | $5.00 | -$1.00M | -100.00% | 10834 | 4.7 | $13.3K | -$47.0K | 100.0 | -8.77 | 15.0 | $879.8K |  |
 | [macd_rsi](../src/tradebot/strategies/macd_rsi.py) | $5.00 | -$1.00M | -100.00% | 5503 | 26.5 | $43.0K | -$44.9K | 100.0 | -4.64 | 8.5 | $1.11M |  |
 | [macd_cross](../src/tradebot/strategies/macd_cross.py) | $5.00 | -$1.00M | -100.00% | 7945 | 26.2 | $42.2K | -$46.3K | 100.0 | -3.80 | 9.8 | $1.27M |  |
+| [attrition_reversion](../src/tradebot/strategies/attrition_reversion.py) | $4.97 | -$1.00M | -100.00% | 7221 | 58.2 | $28.7K | -$90.2K | 100.0 | -2.80 | 15.9 | $1.17M |  |
+| [tft_trend](../src/tradebot/strategies/tft_trend.py) | $4.97 | -$1.00M | -100.00% | 5939 | 24.8 | $36.3K | -$92.0K | 100.0 | -5.10 | 6.8 | $888.2K |  |
+| [game_switch](../src/tradebot/strategies/game_switch.py) | $4.95 | -$1.00M | -100.00% | 13899 | 20.1 | $9,001 | -$11.4K | 100.0 | -11.46 | 2.5 | $1.27M |  |
