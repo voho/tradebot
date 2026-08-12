@@ -22,6 +22,9 @@ import matplotlib.dates as mdates  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 import matplotlib.ticker as mticker  # noqa: E402
 
+import inspect  # noqa: E402
+import os  # noqa: E402
+
 from tradebot.engine import BacktestResult  # noqa: E402
 from tradebot.metrics import Metrics  # noqa: E402
 
@@ -248,6 +251,85 @@ def _overlay_chart_single(results: list[BacktestResult], title: str, path: Path)
 
 # ----------------------------------------------------------------- tables
 
+
+def _source_path(strategy_name: str, relative_to: str | Path | None) -> str | None:
+    """Path of the strategy's source file, relative to the report location."""
+    try:
+        from tradebot.registry import available_strategies
+
+        cls = available_strategies().get(strategy_name)
+        if cls is None:
+            return None
+        src = inspect.getsourcefile(cls)
+        if src is None:
+            return None
+        if relative_to is None:
+            return src
+        return os.path.relpath(src, Path(relative_to).resolve())
+    except Exception:  # noqa: BLE001 - a report must never die over a link
+        return None
+
+
+def _strategy_cell(name: str, out_dir: str | Path | None) -> str:
+    link = _source_path(name, out_dir)
+    return f"**{name}**<br>[source]({link})" if link else f"**{name}**"
+
+
+def _balance_label(balance: float) -> str:
+    if balance >= 1e6 and balance % 1e6 == 0:
+        return f"${balance / 1e6:g}M"
+    if balance >= 1e3 and balance % 1e3 == 0:
+        return f"${balance / 1e3:g}K"
+    return _money(balance)
+
+
+def _config_order(all_metrics: list[Metrics]) -> list[tuple[str, float]]:
+    """(market, balance) columns: spot before futures, small balance first."""
+    configs = {(m.market, m.start_balance) for m in all_metrics}
+    return sorted(configs, key=lambda c: (0 if c[0] == "spot" else 1, c[0], c[1]))
+
+
+def matrix_table(all_metrics: list[Metrics], out_dir: str | Path | None = None) -> str:
+    """One row per strategy; per-config cells with the key numbers.
+
+    Cell contents: num trades, profit, worst trade, best trade and the
+    balance after the run — for every (market, start balance) config.
+    Rows are ranked by the strategy's best final balance across configs.
+    """
+    configs = _config_order(all_metrics)
+    by_key = {(m.strategy, m.market, m.start_balance): m for m in all_metrics}
+    strategies = sorted(
+        {m.strategy for m in all_metrics},
+        key=lambda s: max((by_key[(s, mk, b)].final_balance
+                           for (mk, b) in configs if (s, mk, b) in by_key),
+                          default=float("-inf")),
+        reverse=True,
+    )
+
+    header = ("| strategy | "
+              + " | ".join(f"{mk} · {_balance_label(b)}" for mk, b in configs) + " |")
+    sep = "|" + "|".join("---" for _ in range(len(configs) + 1)) + "|"
+    lines = [header, sep]
+    for name in strategies:
+        cells = [_strategy_cell(name, out_dir)]
+        for mk, b in configs:
+            m = by_key.get((name, mk, b))
+            if m is None:
+                cells.append("—")
+                continue
+            parts = [
+                f"trades {m.num_trades:,}",
+                f"profit {_money(m.profit)}",
+                f"worst {_money(m.worst_trade)}",
+                f"best {_money(m.best_trade)}",
+                f"**after {_money(m.final_balance)}**",
+            ]
+            if m.liquidated:
+                parts.append("LIQUIDATED")
+            cells.append("<br>".join(parts))
+        lines.append("| " + " | ".join(cells) + " |")
+    return "\n".join(lines)
+
 TABLE_COLS = [
     ("strategy", "strategy", "{}"),
     ("final_balance", "final balance", "money"),
@@ -273,7 +355,7 @@ def _fmt(value, spec: str) -> str:
     return spec.format(value)
 
 
-def markdown_table(group: list[Metrics]) -> str:
+def markdown_table(group: list[Metrics], out_dir: str | Path | None = None) -> str:
     """One markdown table, sorted by final balance (primary criterion)."""
     rows = sorted(group, key=lambda m: m.final_balance, reverse=True)
     header = "| " + " | ".join(h for _, h, _ in TABLE_COLS) + " |"
@@ -281,7 +363,11 @@ def markdown_table(group: list[Metrics]) -> str:
     lines = [header, sep]
     for m in rows:
         d = m.as_row()
-        lines.append("| " + " | ".join(_fmt(d[k], spec) for k, _, spec in TABLE_COLS) + " |")
+        cells = [_fmt(d[k], spec) for k, _, spec in TABLE_COLS]
+        link = _source_path(m.strategy, out_dir)
+        if link:
+            cells[0] = f"[{m.strategy}]({link})"
+        lines.append("| " + " | ".join(cells) + " |")
     return "\n".join(lines)
 
 
@@ -296,16 +382,21 @@ def comparison_report(all_metrics: list[Metrics], out_dir: str | Path,
     if period:
         parts.append(f"Period: {period}  ")
     parts.append(f"Data: {', '.join(sorted(data_labels))}  ")
-    parts.append("Ranked by **final balance** (the primary comparison criterion).")
+    parts.append("Ranked by **final balance** (the primary comparison criterion); "
+                 "rows ordered by each strategy's best config.")
+    parts.append("")
+    parts.append(matrix_table(all_metrics, out_dir))
+    parts.append("")
+    parts.append("## Details per market and starting balance")
     parts.append("")
 
     groups: dict[tuple[str, float], list[Metrics]] = {}
     for m in all_metrics:
         groups.setdefault((m.market, m.start_balance), []).append(m)
     for (market, balance) in sorted(groups):
-        parts.append(f"## {market} · start balance {_money(balance)}")
+        parts.append(f"### {market} · start balance {_money(balance)}")
         parts.append("")
-        parts.append(markdown_table(groups[(market, balance)]))
+        parts.append(markdown_table(groups[(market, balance)], out_dir))
         parts.append("")
 
     md_path = out_dir / "comparison.md"
@@ -319,6 +410,33 @@ def comparison_report(all_metrics: list[Metrics], out_dir: str | Path,
 
 
 def print_comparison(all_metrics: list[Metrics]) -> None:
+    # summary matrix: final balance per strategy per config
+    configs = _config_order(all_metrics)
+    by_key = {(m.strategy, m.market, m.start_balance): m for m in all_metrics}
+    strategies = sorted(
+        {m.strategy for m in all_metrics},
+        key=lambda s: max((by_key[(s, mk, b)].final_balance
+                           for (mk, b) in configs if (s, mk, b) in by_key),
+                          default=float("-inf")),
+        reverse=True,
+    )
+    headers = ["strategy"] + [f"{mk} · {_balance_label(b)}" for mk, b in configs]
+    rows = []
+    for name in strategies:
+        row = [name]
+        for mk, b in configs:
+            m = by_key.get((name, mk, b))
+            cell = "—" if m is None else _money(m.final_balance)
+            if m is not None and m.liquidated:
+                cell += " (liq.)"
+            row.append(cell)
+        rows.append(row)
+    widths = [max(len(headers[c]), *(len(r[c]) for r in rows)) for c in range(len(headers))]
+    print("\n=== final balance after run (primary criterion) ===")
+    print("  ".join(h.ljust(w) for h, w in zip(headers, widths)))
+    for r in rows:
+        print("  ".join(v.ljust(w) for v, w in zip(r, widths)))
+
     groups: dict[tuple[str, float], list[Metrics]] = {}
     for m in all_metrics:
         groups.setdefault((m.market, m.start_balance), []).append(m)
