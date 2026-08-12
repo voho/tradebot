@@ -33,11 +33,17 @@ class GameCouncil(Strategy):
     name = "game_council"
     warmup = 3100
 
+    # Hysteresis and quantization retuned after the first paper test:
+    # a continuously drifting blended target with a 0.05 band produced
+    # 15k-43k trades and died to fees. Quantizing the played position to
+    # a coarse grid keeps it piecewise-constant like its members.
     def __init__(self, eta: float = 0.08, fixed_share: float = 1e-4,
-                 hysteresis: float = 0.05, fee_rate: float = 0.0005) -> None:
+                 hysteresis: float = 0.20, quantum: float = 0.25,
+                 fee_rate: float = 0.0005) -> None:
         self.eta = eta
         self.fixed_share = fixed_share
         self.hysteresis = hysteresis
+        self.quantum = quantum
         self.fee_rate = fee_rate
 
     @staticmethod
@@ -86,6 +92,7 @@ class GameCouncil(Strategy):
             p = (1.0 - self.fixed_share) * p + self.fixed_share / num
             logw = np.log(p)
             x = float(p @ a[i])
+            x = round(x / self.quantum) * self.quantum  # piecewise-constant play
             if abs(x - pos) > self.hysteresis or (x > 0) != (pos > 0) or (x < 0) != (pos < 0):
                 pos = x
             target[i] = pos

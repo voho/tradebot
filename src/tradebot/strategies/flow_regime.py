@@ -32,7 +32,9 @@ class FlowRegime(Strategy):
     name = "flow_regime"
     warmup = 2300
 
-    def __init__(self, consensus_floor: float = 0.15) -> None:
+    # Floor raised after the first paper test: weak half-hearted consensus
+    # entries churned; demand both followers to lean the same way hard.
+    def __init__(self, consensus_floor: float = 0.35) -> None:
         self.consensus_floor = consensus_floor
 
     def prepare(self, df: pd.DataFrame) -> pd.DataFrame:

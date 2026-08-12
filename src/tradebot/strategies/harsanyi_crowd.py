@@ -34,8 +34,10 @@ class HarsanyiCrowd(Strategy):
     name = "harsanyi_crowd"
     warmup = 1300
 
-    def __init__(self, mu: float = 0.15, stick: float = 0.98, b_in: float = 0.60,
-                 b_out: float = 0.35, age_scale: float = 150.0, lam_crowd: float = 0.7,
+    # Bands widened after the first paper test: beliefs oscillating around
+    # b_in paid entry fees for micro-trends; entries now need conviction.
+    def __init__(self, mu: float = 0.15, stick: float = 0.985, b_in: float = 0.70,
+                 b_out: float = 0.40, age_scale: float = 150.0, lam_crowd: float = 0.7,
                  deadband: float = 0.25) -> None:
         self.mu = mu
         self.stick = stick

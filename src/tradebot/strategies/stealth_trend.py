@@ -41,8 +41,10 @@ class StealthTrend(Strategy):
     name = "stealth_trend"
     warmup = 2200
 
-    def __init__(self, mom_span: int = 144, z_in: float = 1.25, z_out: float = 0.4,
-                 z_max: float = 3.0, deadband: float = 0.25, panic_z: float = 1.0,
+    # z_in/z_out widened after the first paper test (2.3k trades bled to
+    # fees): demand rarer momentum extremes and hold them longer.
+    def __init__(self, mom_span: int = 144, z_in: float = 1.75, z_out: float = 0.6,
+                 z_max: float = 3.5, deadband: float = 0.4, panic_z: float = 1.0,
                  vol_span: int = 288, liq_window: int = 2016, lam_span: int = 36,
                  z_window: int = 864, v_cap: float = 3.0, fee: float = 0.001) -> None:
         self.mom_span = mom_span

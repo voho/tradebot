@@ -49,10 +49,13 @@ class MinorityOracle(Strategy):
     name = "minority_oracle"
     warmup = 2500
 
+    # Defaults retuned after the first paper test: the original gates
+    # (eps=0.02, v_in=0.40, edge_horizon=12) never fired on real data -
+    # a 12-bar horizon needs a ~60% hit rate to clear round-trip fees.
     def __init__(self, memory: int = 6, agents: int = 65, tables: int = 2,
-                 eps: float = 0.02, v_in: float = 0.40, v_out: float = 0.15,
+                 eps: float = 0.01, v_in: float = 0.15, v_out: float = 0.05,
                  seed: int = 7, score_halflife: int = 4096, vol_span: int = 288,
-                 fee_rate: float = 0.001, edge_horizon: int = 12) -> None:
+                 fee_rate: float = 0.001, edge_horizon: int = 96) -> None:
         self.memory = memory
         self.agents = agents
         self.tables = tables

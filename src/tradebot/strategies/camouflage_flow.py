@@ -33,8 +33,10 @@ class CamouflageFlow(Strategy):
     name = "camouflage_flow"
     warmup = 2200
 
-    def __init__(self, flow_window: int = 36, tox_window: int = 144, z_in: float = 1.5,
-                 z_out: float = 0.5, z_max: float = 3.0, deadband: float = 0.25,
+    # z_in/z_out/deadband widened after the first paper test (2.3k trades
+    # bled ~90% to fees): rarer, more extreme flow signals held longer.
+    def __init__(self, flow_window: int = 36, tox_window: int = 144, z_in: float = 2.0,
+                 z_out: float = 0.75, z_max: float = 3.5, deadband: float = 0.4,
                  fee_hurdle: float = 0.004) -> None:
         self.flow_window = flow_window
         self.tox_window = tox_window
