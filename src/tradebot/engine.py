@@ -86,6 +86,7 @@ def run_backtest(
 
     broker = PaperBroker(market=market, start_balance=start_balance, slippage_bps=slippage_bps)
 
+    cols = {c: prepared[c].to_numpy() for c in prepared.columns}
     opens = prepared["open"].to_numpy(dtype=float)
     highs = prepared["high"].to_numpy(dtype=float)
     lows = prepared["low"].to_numpy(dtype=float)
@@ -119,7 +120,7 @@ def run_backtest(
 
         last_bar = i == len(prepared) - 1
         if not broker.dead and not last_bar and i >= strategy.warmup:
-            ctx = Context(prepared, i, broker)
+            ctx = Context(prepared, i, broker, cols=cols)
             strategy.on_bar(ctx)
             pending = ctx.orders
 

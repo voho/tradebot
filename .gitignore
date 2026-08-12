@@ -9,6 +9,7 @@ venv/
 /data/*
 *.csv
 *.parquet
+!/data/btcusd_spot_5m.csv.gz
 !/data/btcusdt_perp_5m.csv
 !/data/btcusdt_spot_aligned_5m.csv
 /reports/

@@ -147,7 +147,7 @@ def fetch_klines(kind: str, symbol: str, start: datetime, end: datetime,
 
 
 def fetch_data(data_dir: str | Path, symbol: str = "BTCUSDT",
-               start: str = "2025-01-01", end: str | None = None) -> None:
+               start: str = "2020-01-01", end: str | None = None) -> None:
     data_dir = Path(data_dir)
     start_dt = datetime.fromisoformat(start).replace(tzinfo=timezone.utc)
     end_dt = (datetime.fromisoformat(end).replace(tzinfo=timezone.utc)
@@ -159,6 +159,6 @@ def fetch_data(data_dir: str | Path, symbol: str = "BTCUSDT",
     spot = fetch_klines("spot", symbol, start_dt, end_dt)
 
     perp, spot = datamod.align(perp, spot)
-    datamod.save_ohlcv_csv(perp, data_dir / datamod.CANONICAL["perp"])
-    datamod.save_ohlcv_csv(spot, data_dir / datamod.CANONICAL["spot"])
+    datamod.save_ohlcv_csv(perp, data_dir / datamod.CANONICAL["perp"][0])
+    datamod.save_ohlcv_csv(spot, data_dir / datamod.CANONICAL["spot"][0])
     print(f"Wrote {len(perp)} aligned bars to {data_dir}/", file=sys.stderr)

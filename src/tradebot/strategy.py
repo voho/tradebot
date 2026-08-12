@@ -12,6 +12,34 @@ if TYPE_CHECKING:
     from tradebot.broker import MarketSpec, PaperBroker
 
 
+class Row:
+    """Mapping-style view of one bar, backed by numpy arrays (fast).
+
+    Supports ``row["close"]``, ``"rsi" in row``, ``row.get("x")`` and
+    ``row.keys()`` — everything the strategy examples use. Values are
+    numpy scalars.
+    """
+
+    __slots__ = ("_cols", "_i")
+
+    def __init__(self, cols: dict, i: int) -> None:
+        self._cols = cols
+        self._i = i
+
+    def __getitem__(self, key: str):
+        return self._cols[key][self._i]
+
+    def __contains__(self, key: str) -> bool:
+        return key in self._cols
+
+    def get(self, key: str, default=None):
+        arr = self._cols.get(key)
+        return arr[self._i] if arr is not None else default
+
+    def keys(self):
+        return self._cols.keys()
+
+
 class Context:
     """What a strategy sees on one bar, and how it places orders.
 
@@ -20,8 +48,10 @@ class Context:
     the strategy does can use future data.
     """
 
-    def __init__(self, df: pd.DataFrame, i: int, broker: "PaperBroker") -> None:
+    def __init__(self, df: pd.DataFrame, i: int, broker: "PaperBroker",
+                 cols: dict | None = None) -> None:
         self._df = df
+        self._cols = cols if cols is not None else {c: df[c].to_numpy() for c in df.columns}
         self.i = i
         self._broker = broker
         self.orders: list[Order] = []
@@ -33,18 +63,18 @@ class Context:
         return self._df.index[self.i]
 
     @property
-    def bar(self) -> pd.Series:
+    def bar(self) -> Row:
         """Current (just closed) bar, including any prepare() columns."""
-        return self._df.iloc[self.i]
+        return Row(self._cols, self.i)
 
     @property
-    def prev(self) -> pd.Series | None:
+    def prev(self) -> Row | None:
         """Previous bar, or None on the first bar."""
-        return self._df.iloc[self.i - 1] if self.i > 0 else None
+        return Row(self._cols, self.i - 1) if self.i > 0 else None
 
     @property
     def close(self) -> float:
-        return float(self._df["close"].iloc[self.i])
+        return float(self._cols["close"][self.i])
 
     def history(self, n: int | None = None) -> pd.DataFrame:
         """All closed bars up to and including the current one (last n rows)."""

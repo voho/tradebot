@@ -75,7 +75,7 @@ def run_matrix(cfg: RunConfig) -> tuple[list[Metrics], list[BacktestResult]]:
                 all_metrics.append(metrics)
                 group_results.append(result)
             title = (f"balance curves · {spec.name} · start {balance:,.0f} USD"
-                     + ("" if label == "real" else f" · [{label} DATA]"))
+                     + ("" if label == "real" else f" · [{label} data]"))
             overlay_chart(group_results,
                           title,
                           charts_dir / f"_all__{spec.name}__{balance:g}.png")

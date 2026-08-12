@@ -33,10 +33,14 @@ def main(argv: list[str] | None = None) -> int:
 
     sub.add_parser("list", help="list registered strategies")
 
+    p_new = sub.add_parser("new", help="scaffold a new strategy file")
+    p_new.add_argument("name", help="strategy name, e.g. ema_trend (lowercase_with_underscores)")
+
     p_fetch = sub.add_parser("fetch", help="download real BTCUSDT 5m data from Binance")
     p_fetch.add_argument("--data-dir", type=Path, default=Path("data"))
     p_fetch.add_argument("--symbol", default="BTCUSDT")
-    p_fetch.add_argument("--start", default="2025-01-01")
+    p_fetch.add_argument("--start", default="2020-01-01",
+                         help="long default span so bull and bear regimes are covered")
     p_fetch.add_argument("--end", default=None)
 
     args = parser.parse_args(argv)
@@ -47,6 +51,12 @@ def main(argv: list[str] | None = None) -> int:
         for name, cls in sorted(available_strategies().items()):
             doc = (cls.__doc__ or "").strip().splitlines()[0] if cls.__doc__ else ""
             print(f"{name:20s} {doc}")
+        return 0
+
+    if args.cmd == "new":
+        from tradebot.scaffold import new_strategy
+
+        new_strategy(args.name)
         return 0
 
     if args.cmd == "fetch":

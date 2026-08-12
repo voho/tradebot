@@ -39,6 +39,30 @@ GOOD = "#0ca30c"      # buy marker (with ▲ shape carrying the meaning)
 CRITICAL = "#d03b3b"  # sell marker / drawdown
 
 
+# Cap plotted points per line so decade-long 5m series render fast without
+# hiding spikes: decimation keeps each bucket's min and max in time order.
+MAX_PLOT_POINTS = 60_000
+MAX_MARKERS = 6_000
+
+
+def _decimate(idx, values):
+    values = np.asarray(values, dtype=float)
+    n = len(values)
+    if n <= MAX_PLOT_POINTS:
+        return idx, values
+    buckets = MAX_PLOT_POINTS // 2
+    edges = np.linspace(0, n, buckets + 1, dtype=int)
+    keep: list[int] = []
+    for a, b in zip(edges[:-1], edges[1:]):
+        if a == b:
+            continue
+        seg = values[a:b]
+        lo, hi = a + int(np.argmin(seg)), a + int(np.argmax(seg))
+        keep.extend(sorted({lo, hi}))
+    keep_arr = np.array(keep)
+    return idx[keep_arr], values[keep_arr]
+
+
 def _style_axes(ax) -> None:
     ax.set_facecolor(SURFACE)
     for side in ("top", "right", "left"):
@@ -90,10 +114,18 @@ def run_chart(result: BacktestResult, metrics: Metrics, path: str | Path) -> Pat
 
     # -- panel 1: price with trade markers
     _style_axes(ax_p)
-    ax_p.plot(idx, df["close"], color=INK_2, linewidth=1.3,
+    ax_p.plot(*_decimate(idx, df["close"]), color=INK_2, linewidth=1.3,
               solid_joinstyle="round", solid_capstyle="round", zorder=2)
+    fills = result.fills
+    shown = fills
+    if len(fills) > MAX_MARKERS:
+        stride = -(-len(fills) // MAX_MARKERS)
+        shown = fills[::stride]
+        ax_p.text(0.995, 0.97, f"showing {len(shown):,} of {len(fills):,} trade markers",
+                  transform=ax_p.transAxes, fontsize=7, color=INK_2,
+                  va="top", ha="right")
     buys_t, buys_p, sells_t, sells_p = [], [], [], []
-    for f in result.fills:
+    for f in shown:
         (buys_t if f.side.name == "BUY" else sells_t).append(f.ts)
         (buys_p if f.side.name == "BUY" else sells_p).append(f.price)
     ax_p.scatter(buys_t, buys_p, marker="^", s=64, color=GOOD,
@@ -106,10 +138,10 @@ def run_chart(result: BacktestResult, metrics: Metrics, path: str | Path) -> Pat
     # -- panel 2: balance curve vs hold benchmark
     _style_axes(ax_e)
     hold = result.start_balance * df["close"] / float(df["close"].iloc[0])
-    ax_e.plot(idx, hold, color=BASELINE, linewidth=2,
+    ax_e.plot(*_decimate(idx, hold), color=BASELINE, linewidth=2,
               solid_joinstyle="round", solid_capstyle="round",
               label="hold benchmark (1x)", zorder=2)
-    ax_e.plot(idx, equity, color=SERIES[0], linewidth=2,
+    ax_e.plot(*_decimate(idx, equity), color=SERIES[0], linewidth=2,
               solid_joinstyle="round", solid_capstyle="round",
               label="strategy balance", zorder=3)
     lo = float(min(equity.min(), hold.min()))
@@ -137,15 +169,16 @@ def run_chart(result: BacktestResult, metrics: Metrics, path: str | Path) -> Pat
     eq = equity.to_numpy(dtype=float)
     peaks = np.maximum.accumulate(eq)
     dd = np.where(peaks > 0, (eq - peaks) / peaks * 100.0, 0.0)
-    ax_d.fill_between(idx, dd, 0.0, color=CRITICAL, alpha=0.10, zorder=2)
-    ax_d.plot(idx, dd, color=CRITICAL, linewidth=1.5, zorder=3)
+    dd_idx, dd_vals = _decimate(idx, dd)
+    ax_d.fill_between(dd_idx, dd_vals, 0.0, color=CRITICAL, alpha=0.10, zorder=2)
+    ax_d.plot(dd_idx, dd_vals, color=CRITICAL, linewidth=1.5, zorder=3)
     ax_d.set_ylabel("drawdown %", color=MUTED, fontsize=9)
     # percent axis needs decimals for shallow drawdowns ("-0.25", not "-0")
     ax_d.yaxis.set_major_formatter(
         mticker.FuncFormatter(lambda v, _: f"{v:,.2f}".rstrip("0").rstrip(".")))
 
     ax_d.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
-    label = "" if metrics.data_label == "real" else f"   [{metrics.data_label} DATA]"
+    label = "" if metrics.data_label == "real" else f"   [{metrics.data_label} data]"
     fig.suptitle(
         f"{metrics.strategy}  ·  {metrics.market}  ·  start {_mmoney(metrics.start_balance)}{label}",
         color=INK, fontsize=12, x=0.06, ha="left",
@@ -187,7 +220,7 @@ def _overlay_chart_single(results: list[BacktestResult], title: str, path: Path)
     lo, hi = float("inf"), 0.0
     for k, res in enumerate(results):
         color = SERIES[k]
-        ax.plot(res.equity.index, res.equity, color=color, linewidth=2,
+        ax.plot(*_decimate(res.equity.index, res.equity), color=color, linewidth=2,
                 solid_joinstyle="round", solid_capstyle="round",
                 label=res.strategy_name)
         lo = min(lo, float(res.equity.min()))

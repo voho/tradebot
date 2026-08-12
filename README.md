@@ -12,34 +12,60 @@ a chart per run (price + trades, balance curve, drawdown, results box).
 python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
 
-# get real data (needs network access to binance.com / binance.vision)
-tradebot fetch --start 2025-01-01
-
 tradebot run            # full matrix -> reports/comparison.md + reports/charts/
 tradebot list           # show registered strategies
+tradebot new my_idea    # scaffold a new strategy file
 pytest                  # test suite (incl. a no-lookahead check for every strategy)
 ```
 
-If the real data CSVs are missing, `tradebot run` falls back to a
-deterministic **synthetic** BTC-like series so the pipeline stays
-runnable; every chart and table is then clearly labeled `SYNTHETIC`.
+Real data ships with the repo (see below), so `tradebot run` works out of
+the box. Use `--max-bars 100000` for a quick iteration loop over the most
+recent ~1 year instead of the full decade.
 
 ## Data
 
-Two canonical files in `data/` (whitelisted in `.gitignore`, format
-`timestamp,open,high,low,close,volume`, timestamp in ms UTC):
+**Committed dataset**: `data/btcusd_spot_5m.csv.gz` — real Bitstamp
+BTC/USD 5-minute candles, **2017-01-01 to 2026-08**, ~1.01M bars, no gaps.
+Resampled from the 1-minute data in
+[ff137/bitstamp-btcusd-minute-data](https://github.com/ff137/bitstamp-btcusd-minute-data)
+(MIT-licensed, daily-updated). The span covers the 2017 bull run, 2018
+bear, 2020 crash + bull, 2021 top, 2022 bear, and the 2023+ cycle, so
+strategies are judged across both bull and bear regimes. Refresh it with:
 
-| file | contents |
-|---|---|
-| `btcusdt_perp_5m.csv` | BTCUSDT USDT-margined perpetual, 5m klines (traded by the futures market) |
-| `btcusdt_spot_aligned_5m.csv` | BTCUSDT spot 5m, aligned to the perp timestamps (traded by the spot market) |
+```bash
+git clone --depth 1 https://github.com/ff137/bitstamp-btcusd-minute-data /tmp/bitstamp
+python scripts/build_bitstamp_dataset.py --source /tmp/bitstamp
+```
 
-`tradebot fetch` downloads both from Binance public endpoints (bulk
-monthly archives first, REST API for the tail) and aligns them.
+Data files are resolved in priority order (all
+`timestamp,open,high,low,close,volume`, ms UTC epoch, `.gz` read
+transparently):
+
+| priority | file | used by | label |
+|---|---|---|---|
+| 1 | `btcusdt_perp_5m.csv` (via `tradebot fetch`) | futures | `real` |
+| 1 | `btcusdt_spot_aligned_5m.csv` (via `tradebot fetch`) | spot | `real` |
+| 2 | `btcusd_spot_5m.csv.gz` (committed) | spot; futures fall back to it | `real` / `spot (perp proxy)` |
+| 3 | `synthetic_*.csv` (generated, seeded) | last resort | `SYNTHETIC` |
+
+Without true perp data the futures market trades the spot series — the
+perp basis is small, and every table row and chart carries the
+`spot (perp proxy)` label so it's never mistaken for real perp fills.
+`tradebot fetch` (needs Binance network access) produces the true
+perp + aligned-spot pair, which then takes precedence automatically.
 
 ## Adding a strategy
 
-Create one file in `src/tradebot/strategies/` — it is auto-discovered:
+Scaffold it (creates `src/tradebot/strategies/<name>.py` with a working
+EMA-cross template, auto-discovered on the next run):
+
+```bash
+tradebot new my_strategy
+pytest                                        # no-lookahead check runs for it automatically
+tradebot run --strategies my_strategy buy_and_hold --max-bars 100000   # quick compare
+```
+
+Or write the file by hand:
 
 ```python
 # src/tradebot/strategies/my_strategy.py
@@ -75,9 +101,11 @@ class MyStrategy(Strategy):
 That's it — `tradebot run` picks it up, tests it on the whole matrix and
 ranks it in the comparison table. `ctx` also offers `history(n)`,
 `equity`, `position`, `can_short`, and raw `buy(qty)` / `sell(qty)`.
+`ctx.bar` / `ctx.prev` are fast mapping-style views (`bar["rsi"]`).
 
 Built-in baselines: `buy_and_hold`, `macd_cross`, `rsi_reversion`,
-`macd_rsi`.
+`macd_rsi`. CI (GitHub Actions) runs the full test suite — including the
+per-strategy causality check — on every push and pull request.
 
 ## How the simulation works
 
@@ -108,9 +136,10 @@ Built-in baselines: `buy_and_hold`, `macd_cross`, `rsi_reversion`,
 tradebot run [--balances 1000 1000000] [--markets spot futures]
              [--leverage 5] [--strategies macd_cross ...]
              [--slippage-bps 1] [--spot-fee 0.001] [--futures-fee 0.0005]
-             [--max-bars 20000] [--data-dir data] [--out reports]
+             [--max-bars 100000] [--data-dir data] [--out reports]
 tradebot list
-tradebot fetch [--start 2025-01-01] [--end 2025-08-01] [--symbol BTCUSDT]
+tradebot new <name>
+tradebot fetch [--start 2020-01-01] [--end 2026-08-01] [--symbol BTCUSDT]
 ```
 
 Outputs: `reports/comparison.md` (+ `.csv`) ranked by final balance per

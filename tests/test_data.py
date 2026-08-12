@@ -37,6 +37,22 @@ def test_csv_round_trip(tmp_path):
     assert np.allclose(loaded["close"], perp["close"])
 
 
+def test_csv_round_trip_seconds_resolution_index(tmp_path):
+    """pandas may hold a DatetimeIndex in s/ms/us resolution; saving must
+    still write correct ms epochs (regression: index.view assumed ns)."""
+    idx = pd.to_datetime(pd.Series([1_483_228_800, 1_483_229_100]), unit="s", utc=True)
+    df = pd.DataFrame(
+        {"open": [1.0, 2.0], "high": [2.0, 3.0], "low": [0.5, 1.5],
+         "close": [1.5, 2.5], "volume": [10.0, 11.0]},
+        index=pd.DatetimeIndex(idx, name="timestamp"),
+    )
+    path = tmp_path / "x.csv"
+    save_ohlcv_csv(df, path)
+    loaded = load_ohlcv_csv(path)
+    assert len(loaded) == 2
+    assert loaded.index.equals(df.index.as_unit(loaded.index.unit))
+
+
 def test_load_epoch_units(tmp_path):
     idx_ms = 1_700_000_000_000
     for factor, name in [(1, "ms"), (1_000, "us"), (0.001, "s")]:
