@@ -45,9 +45,16 @@ def _engine_decisions(result):
 @pytest.mark.parametrize("market", [MarketSpec.spot(), MarketSpec.futures(leverage=5.0)])
 def test_live_signals_match_backtest_decisions(name, market):
     """Walk the data bar by bar through compute_signal (as a live bot
-    would) and compare against the backtester's fills."""
+    would) and compare against the backtester's fills.
+
+    Windows shorter than the strategy's warmup are skipped (neither the
+    engine nor compute_signal can act there); strategies whose warmup
+    exceeds the test data are vacuously covered here and rely on the
+    truncation causality test plus the shared emit-on-change on_bar.
+    """
     df = _wave()
-    result = run_backtest(get_strategy(name), df, market, 10_000.0)
+    strategy = get_strategy(name)
+    result = run_backtest(strategy, df, market, 10_000.0)
     expected, liq_ts = _engine_decisions(result)
 
     live = get_strategy(name)  # fresh instance, like a live process
@@ -56,7 +63,7 @@ def test_live_signals_match_backtest_decisions(name, market):
     end = len(df) - 1  # engine never acts on the last bar's signal
     if liq_ts is not None:
         end = df.index.get_loc(liq_ts) - 1  # account dead from the liq bar on
-    for i in range(end):
+    for i in range(strategy.warmup, end):
         window = df.iloc[: i + 1]
         account = LiveAccount(position=pos_sign, equity_quote=10_000.0, market=market)
         orders = compute_signal(live, window, account)

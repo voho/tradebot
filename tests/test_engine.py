@@ -94,6 +94,25 @@ def test_open_trade_has_no_exit_ts_and_counts_last_bar(flat_df):
     assert m.time_in_market_pct == pytest.approx(98.0)
 
 
+def test_order_notional_is_leverage_independent(trend_df):
+    """order_notional(0.5) must risk the same notional on spot and 5x futures."""
+
+    class HalfNotional(Strategy):
+        name = "_test_half_notional"
+
+        def on_bar(self, ctx: Context) -> None:
+            if ctx.i == 10 and not ctx.in_market:
+                ctx.order_notional(0.5)
+
+    notionals = {}
+    for market in (MarketSpec.spot(fee_rate=0.0), MarketSpec.futures(leverage=5.0, fee_rate=0.0)):
+        result = run_backtest(HalfNotional(), trend_df, market, 1_000.0)
+        fill = result.fills[0]
+        notionals[market.name] = fill.qty * fill.price
+    assert notionals["spot"] == pytest.approx(notionals["futures_5x"], rel=1e-9)
+    assert notionals["spot"] == pytest.approx(500.0, rel=1e-9)
+
+
 def test_strategy_cannot_change_row_count(trend_df):
     class BadStrategy(Strategy):
         name = "_test_bad"

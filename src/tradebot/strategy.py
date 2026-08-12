@@ -119,6 +119,17 @@ class Context:
         """
         return self.submit(Order(target=fraction))
 
+    def order_notional(self, fraction: float) -> Order:
+        """Target |notional| = ``fraction`` x equity, independent of leverage.
+
+        Sizing strategies (Kelly, portfolio weights) should use this so a
+        0.5 target risks the same notional on spot and on 5x futures; the
+        leverage cap still applies (|fraction| above the market leverage
+        is clamped).
+        """
+        lev = max(self.market.leverage, 1e-9)
+        return self.order_target(fraction / lev)
+
     def buy(self, qty: float) -> Order:
         return self.submit(Order(side=Side.BUY, qty=qty))
 
