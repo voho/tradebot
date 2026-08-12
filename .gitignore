@@ -1,12 +1,13 @@
 __pycache__/
 *.py[cod]
 *.egg-info/
+/build/
+/dist/
 .pytest_cache/
 .venv/
 venv/
-data/
+/data/*
 *.csv
 *.parquet
-!configs/*.csv
-report.md
-search_results.json
+!/data/btcusdt_perp_5m.csv
+!/data/btcusdt_spot_aligned_5m.csv
