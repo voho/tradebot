@@ -283,14 +283,9 @@ def _strategy_doc(name: str) -> str:
 
 
 def _strategy_cell(name: str, out_dir: str | Path | None) -> str:
-    parts = [f"**{name}**"]
-    doc = _strategy_doc(name)
-    if doc:
-        parts.append(f"_{doc}_")
+    """Strategy name, linked to its source file when the path resolves."""
     link = _source_path(name, out_dir)
-    if link:
-        parts.append(f"[source]({link})")
-    return "<br>".join(parts)
+    return f"[{name}]({link})" if link else name
 
 
 def _balance_label(balance: float) -> str:
@@ -308,44 +303,58 @@ def _config_order(all_metrics: list[Metrics]) -> list[tuple[str, float]]:
 
 
 def matrix_table(all_metrics: list[Metrics], out_dir: str | Path | None = None) -> str:
-    """One row per strategy; per-config cells with the key numbers.
+    """Scannable leaderboard: one row per strategy, one balance per cell.
 
-    Cell contents: num trades, profit, worst trade, best trade and the
-    balance after the run — for every (market, start balance) config.
-    Rows are ranked by the strategy's best final balance across configs.
+    Columns are the (market, start balance) configs; each cell is the
+    balance after the run, with the strategy's best config in bold and a
+    liquidation marked ``!``. Trades, profit and best/worst trade live in
+    the per-config detail tables below the summary, so this table stays
+    readable at a glance. Rows are ranked by best final balance.
     """
     configs = _config_order(all_metrics)
     by_key = {(m.strategy, m.market, m.start_balance): m for m in all_metrics}
-    strategies = sorted(
-        {m.strategy for m in all_metrics},
-        key=lambda s: max((by_key[(s, mk, b)].final_balance
-                           for (mk, b) in configs if (s, mk, b) in by_key),
-                          default=float("-inf")),
-        reverse=True,
-    )
+    best_of = {
+        s: max((by_key[(s, mk, b)].final_balance
+                for (mk, b) in configs if (s, mk, b) in by_key), default=float("-inf"))
+        for s in {m.strategy for m in all_metrics}
+    }
+    strategies = sorted(best_of, key=lambda s: best_of[s], reverse=True)
 
-    header = ("| strategy | "
-              + " | ".join(f"{mk} · {_balance_label(b)}" for mk, b in configs) + " |")
-    sep = "|" + "|".join("---" for _ in range(len(configs) + 1)) + "|"
+    header = ("| # | strategy | "
+              + " | ".join(f"{mk} · {_balance_label(b)}" for mk, b in configs)
+              + " | trades | profit | max DD |")
+    sep = "|" + "|".join("---" for _ in range(len(configs) + 5)) + "|"
     lines = [header, sep]
-    for name in strategies:
-        cells = [_strategy_cell(name, out_dir)]
+    for rank, name in enumerate(strategies, 1):
+        cells = [str(rank), _strategy_cell(name, out_dir)]
+        # exactly one config is marked best, even when balances tie
+        best_config = max(
+            (c for c in configs if (name, *c) in by_key),
+            key=lambda c: by_key[(name, *c)].final_balance,
+            default=None,
+        )
+        best = by_key[(name, *best_config)] if best_config else None
         for mk, b in configs:
             m = by_key.get((name, mk, b))
             if m is None:
                 cells.append("—")
                 continue
-            parts = [
-                f"trades {m.num_trades:,}",
-                f"profit {_money(m.profit)}",
-                f"worst {_money(m.worst_trade)}",
-                f"best {_money(m.best_trade)}",
-                f"**after {_money(m.final_balance)}**",
-            ]
+            text = _money(m.final_balance)
             if m.liquidated:
-                parts.append("LIQUIDATED")
-            cells.append("<br>".join(parts))
+                text += " !"
+            if (mk, b) == best_config:
+                text = f"**{text}**"  # the row's focus
+            cells.append(text)
+        if best is None:
+            cells += ["—", "—", "—"]
+        else:
+            cells += [f"{best.num_trades:,}", _money(best.profit),
+                      f"{best.max_drawdown_pct:.0f}%"]
         lines.append("| " + " | ".join(cells) + " |")
+    lines.append("")
+    lines.append("_Bold = the strategy's best config · `!` = liquidated. "
+                 "Trades, profit and max drawdown describe that best config; "
+                 "per-config detail is in the tables below._")
     return "\n".join(lines)
 
 TABLE_COLS = [

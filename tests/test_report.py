@@ -54,18 +54,25 @@ def test_matrix_table_one_row_per_strategy_with_config_cells(tmp_path):
     table = matrix_table(metrics, out_dir=tmp_path)
     lines = table.splitlines()
 
-    # header: strategy + one column per config, spot before futures, $1K before $1M
-    assert lines[0] == ("| strategy | spot · $1K | spot · $1M "
-                        "| futures_5x · $1K | futures_5x · $1M |")
-    assert len(lines) == 4  # header, separator, one row per strategy
-    # ranked by best final balance: buy_and_hold first
-    assert lines[2].startswith("| **buy_and_hold**")
-    assert "[source](" in lines[2] and "buy_and_hold.py)" in lines[2]
-    # each config cell carries the requested numbers
-    assert lines[2].count("trades 3") == 4
-    assert lines[2].count("**after ") == 4
-    assert "profit " in lines[2] and "worst " in lines[2] and "best " in lines[2]
-    assert lines[3].count("LIQUIDATED") == 2  # both futures configs
+    # header: rank + strategy + one column per config + summary columns
+    assert lines[0] == ("| # | strategy | spot · $1K | spot · $1M "
+                        "| futures_5x · $1K | futures_5x · $1M "
+                        "| trades | profit | max DD |")
+    # header, separator, two strategy rows, blank line, legend
+    assert len(lines) == 6
+    # ranked by best final balance: buy_and_hold first, with a rank number
+    assert lines[2].startswith("| 1 | [buy_and_hold](")
+    assert "buy_and_hold.py)" in lines[2]
+    assert lines[3].startswith("| 2 | ")
+
+    # one balance per cell, best config bolded exactly once per row
+    assert lines[2].count("**") == 2
+    # the verbose per-cell stats moved to the detail tables
+    for token in ("trades 3", "worst ", "<br>"):
+        assert token not in lines[2]
+    assert lines[3].count(" !") == 2  # both futures configs liquidated
+    # summary columns describe the best config
+    assert lines[2].endswith("| 3 | $500.0K | 10% |")
 
 
 def test_matrix_table_missing_config_shows_dash():

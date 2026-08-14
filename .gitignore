@@ -19,3 +19,13 @@ venv/
 !/reports/stress/
 !/reports/stress/*.png
 !/reports/stress/*.csv
+# a curated set of run charts is committed so the README renders on GitHub;
+# the other ~90 regenerate with `tradebot run`
+!/reports/charts/
+/reports/charts/*
+!/reports/charts/_all__spot__1000_part1.png
+!/reports/charts/_all__futures_5x__1000_part1.png
+!/reports/charts/kelly_regime__futures_5x__1000.png
+!/reports/charts/kelly_regime__spot__1000.png
+!/reports/charts/champions_council__futures_5x__1000.png
+!/reports/charts/buy_and_hold__spot__1000.png

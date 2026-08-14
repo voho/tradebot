@@ -19,7 +19,7 @@ def _comparison_section() -> str:
 def test_every_registered_strategy_is_in_readme_table():
     section = _comparison_section()
     for name in available_strategies():
-        assert f"**{name}**" in section, (
+        assert f"[{name}](" in section, (
             f"strategy {name!r} is missing from the README comparison table - "
             "run the full 'tradebot run' and commit the regenerated README")
 
@@ -47,8 +47,9 @@ def test_update_readme_splices_between_markers(tmp_path):
     assert text.rstrip().endswith("tail stays")
     assert "test period" in text
     section = text.split(README_BEGIN)[1].split(README_END)[0]
-    # sorted best to worst
+    # sorted best to worst, and numbered
     assert section.index("buy_and_hold") < section.index("macd_cross")
+    assert "| 1 | " in section and "| 2 | " in section
 
 
 def test_update_readme_returns_false_without_markers(tmp_path):
