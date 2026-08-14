@@ -30,6 +30,15 @@ regenerates the table and CI fails if a strategy is missing from it.
 Full metrics (win rate, drawdown, sharpe, fees, ...) live in
 [reports/comparison.md](reports/comparison.md).
 
+One full-history number can hide a lucky path, so the top three are also
+resampled over 40 random windows
+(`python scripts/stress_test.py`, charts in
+[reports/stress/](reports/stress/), analysis in
+[docs/VALIDATION.md](docs/VALIDATION.md)). Headline: on 5x futures,
+leveraged buy-and-hold was **liquidated in 23 of 40 windows**, while
+`kelly_regime` and `champions_council` survived every one and stayed
+profitable in 80–88% of them.
+
 <!-- comparison:begin -->
 _Period: 2017-01-01 to 2026-08-12 (1,010,889 x 5m bars) · data: real, spot (perp proxy)_
 

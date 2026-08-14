@@ -15,3 +15,7 @@ venv/
 /reports/*
 !/reports/comparison.md
 !/reports/comparison.csv
+# stress-test outputs are committed: the charts are the deliverable
+!/reports/stress/
+!/reports/stress/*.png
+!/reports/stress/*.csv

@@ -97,6 +97,53 @@ risk-adjusted profile and is *not* recommended despite the biggest
 headline number. Change these via constructor arguments rather than
 editing defaults, so the comparison table stays a stable record.
 
+## Monte Carlo window stress test
+
+A single full-history number cannot separate a robust edge from one lucky
+path, so the top three strategies were resampled over **40 random windows**
+(random start, random length between 133 and 681 days), each preceded by a
+warmup prefix so short windows are not penalised for a cold start. All
+strategies see identical windows. Reproduce with
+`python scripts/stress_test.py --trials 40`; raw rows and the summary are
+in `reports/stress/`.
+
+![spot stress test](../reports/stress/stress_spot.png)
+
+### Spot (1x)
+
+| strategy | median | mean | profitable | beat hold | worst | median DD | worst DD |
+|---|---|---|---|---|---|---|---|
+| `kelly_regime` | **+66.8%** | +87.1% | **82.5%** | 47.5% | **−23.0%** | **26.3%** | **45.3%** |
+| buy_and_hold | +49.4% | **+96.8%** | 72.5% | — | −50.8% | 52.7% | 84.1% |
+| `champions_council` | +57.4% | +62.1% | 77.5% | 40.0% | −20.5% | 23.5% | 33.6% |
+
+The nuance worth stating plainly: `kelly_regime` has the **higher median**
+but buy-and-hold has the **higher mean**, and beats it in slightly more
+than half the windows. That is not a contradiction — the distributions
+differ in shape. Holding wins often, by a little, in bull windows (its best
+window returned +589% vs +354%); the regime filter wins rarely, by a lot,
+in the windows that contain a crash. You are trading away part of the right
+tail for a much better typical outcome and a far better left tail
+(worst window −23% vs −51%, worst drawdown 45% vs 84%).
+
+### Futures (5x) — the decisive case
+
+![futures stress test](../reports/stress/stress_futures.png)
+
+| strategy | median | profitable | beat hold | worst | worst DD | **liquidated** |
+|---|---|---|---|---|---|---|
+| `kelly_regime` | **+103.4%** | **87.5%** | 60.0% | **−25.8%** | 46.3% | **0%** |
+| buy_and_hold | +0.0% | 32.5% | — | −99.2% | 99.5% | **57.5%** |
+| `champions_council` | +88.6% | 80.0% | 57.5% | −20.1% | **37.1%** | **0%** |
+
+**Leveraged buy-and-hold was liquidated in 23 of 40 windows.** Its median
+window return is exactly 0.0% because the median path is a wipeout, and it
+is profitable in barely a third of windows. Both game-theoretic allocators
+survived **every** window, stayed profitable in 80–88% of them, and beat
+holding in ~60%. This is the clearest evidence in the project that the
+value is in growth-optimal position sizing: same asset, same windows, same
+fees — the difference is entirely how much is held and when.
+
 ## Known limitations
 
 - **No funding rates.** Perpetual futures pay/receive funding every 8
