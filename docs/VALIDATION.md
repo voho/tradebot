@@ -46,17 +46,56 @@ next bar's sign.
 ## Parameter honesty
 
 Deliberately **not** the tuned optimum. A sweep of single regime anchors
-found 50 days best over the full period ($146K spot vs $66K
-buy-and-hold), with 200 days at only $6K — that spread is exactly the
-sensitivity that signals curve-fitting. So the shipped strategy:
+(raw filter, no volatility targeting) found 50 days best over the full
+period ($146K spot vs $66K buy-and-hold), with 200 days at only $6K —
+that spread is exactly the sensitivity that signals curve-fitting. So the
+shipped strategy votes across **three** anchors, targets **55%
+annualized volatility** (BTC's own long-run realized vol, not a swept
+value), and caps leverage at **2x**, inside fractional-Kelly practice
+(MacLean, Thorp & Ziemba 2010).
 
-- votes across **three** anchors (30/50/100 days) rather than picking the
-  winner;
-- targets **55% annualized volatility**, which is BTC's own long-run
-  realized volatility, not a swept value;
-- caps leverage at **2x**, comfortably inside fractional-Kelly practice
-  (MacLean, Thorp & Ziemba 2010) rather than at the return-maximizing 3x
-  (which reached $690K on futures and is not the default).
+Both choices are defensible on the evidence below. Reproduce either table
+with `python scripts/experiment.py horizons` / `frontier`.
+
+### The three-anchor vote dominates its own members
+
+Full period, futures 5x, $1,000 start:
+
+| regime anchors | final | Sharpe | max DD | trades |
+|---|---|---|---|---|
+| 30 days only | $79.4K | 1.31 | 44.9% | 203 |
+| 50 days only | $105.5K | 1.38 | 51.1% | 135 |
+| 100 days only | $73.2K | 1.27 | 44.9% | 89 |
+| 200 days only | $28.5K | 1.04 | 54.4% | 69 |
+| **30/50/100 vote (shipped)** | **$108.2K** | **1.42** | **42.6%** | 143 |
+
+The vote beats every individual member on **all three** of return, Sharpe
+and drawdown simultaneously. That is a genuine ensemble effect, not a
+lucky pick — and it is why the shipped default is the vote even though a
+single 50-day anchor is nearly as profitable. (Note also that volatility
+targeting compresses the horizon spread from 24x in the raw sweep to
+under 4x here: most of the apparent "best lookback" sensitivity was
+really uncontrolled risk.)
+
+### The leverage frontier shows the overbetting penalty
+
+Full period, futures 5x, $1,000 start:
+
+| target vol / cap | final | Sharpe | max DD |
+|---|---|---|---|
+| 0.40 / 1x | $30.4K | 1.38 | 35.5% |
+| **0.55 / 2x (shipped)** | **$108.2K** | **1.42** | 42.6% |
+| 0.60 / 3x | $174.3K | 1.46 | 48.0% |
+| 0.80 / 3x | $312.2K | 1.34 | 57.6% |
+
+Raw return keeps climbing with leverage, but **Sharpe peaks at moderate
+sizing and then degrades** — the classic overbetting penalty that
+fractional-Kelly practice exists to avoid. The shipped 0.55/2x sits on
+the efficient part of the curve; 0.60/3x is the Sharpe optimum for a
+risk-tolerant operator; 0.80/3x buys return with a materially worse
+risk-adjusted profile and is *not* recommended despite the biggest
+headline number. Change these via constructor arguments rather than
+editing defaults, so the comparison table stays a stable record.
 
 ## Known limitations
 

@@ -39,6 +39,15 @@ class KellyRegime(Strategy):
     exposure of target_vol / realized_vol, capped at max_leverage, sized
     as a fraction of EQUITY notional so spot and futures risk the same.
     A 10% deadband keeps turnover to a few trades a month.
+
+    Sizing presets (see docs/VALIDATION.md for the measured frontier;
+    pass as constructor arguments rather than editing the defaults):
+
+    - ``target_vol=0.40, max_leverage=1.0`` - conservative, 36% max DD
+    - ``target_vol=0.55, max_leverage=2.0`` - shipped default
+    - ``target_vol=0.60, max_leverage=3.0`` - Sharpe optimum, 48% max DD
+    - ``target_vol=0.80, max_leverage=3.0`` - highest raw return, but
+      lower Sharpe: the overbetting region fractional Kelly warns about
     """
 
     name = "kelly_regime"

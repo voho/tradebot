@@ -62,8 +62,17 @@ _Period: 2017-01-01 to 2026-08-12 (1,010,889 x 5m bars) · data: real, spot (per
 Twenty strategies, grouped by what they are. Each file's docstring carries
 the full idea plus its citations; the literature survey behind them is in
 [docs/RESEARCH.md](docs/RESEARCH.md), and the walk-forward validation of
-the leaders — including where they *lose* — is in
-[docs/VALIDATION.md](docs/VALIDATION.md).
+the leaders — including where they *lose*, and the measured parameter
+frontiers — is in [docs/VALIDATION.md](docs/VALIDATION.md).
+
+**Nothing is deleted.** Unprofitable strategies stay registered as
+documented negative results: knowing that the Kyle/VPIN flow followers,
+the minority-game oracle and the fictitious-play machine all lose to fees
+on 5m bars is a finding, and keeping them in the table stops the same
+ideas being re-tried blind. Explore variants with
+`python scripts/experiment.py` (see `frontier`, `horizons`,
+`walkforward`) rather than by editing a registered strategy's defaults,
+so the comparison table stays a stable record.
 
 **Baselines** — [buy_and_hold](src/tradebot/strategies/buy_and_hold.py)
 (the benchmark, and a leverage stress test: it liquidates on 5x),
