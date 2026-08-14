@@ -35,7 +35,9 @@ _Period: 2017-01-01 to 2026-08-12 (1,010,889 x 5m bars) · data: real, spot (per
 
 | strategy | spot · $1K | spot · $1M | futures_5x · $1K | futures_5x · $1M |
 |---|---|---|---|---|
+| **kelly_regime**<br>_Size growth-optimally (fractional Kelly, vol-targeted) while the crowd regime stays bullish._<br>[source](src/tradebot/strategies/kelly_regime.py) | trades 143<br>profit $41.1K<br>worst -$2,428<br>best $14.5K<br>**after $42.1K** | trades 143<br>profit $41.10M<br>worst -$2.43M<br>best $14.50M<br>**after $42.10M** | trades 143<br>profit $107.2K<br>worst -$6,782<br>best $44.9K<br>**after $108.2K** | trades 143<br>profit $107.22M<br>worst -$6.78M<br>best $44.94M<br>**after $108.22M** |
 | **buy_and_hold**<br>_Buy everything on the first bar and never trade again._<br>[source](src/tradebot/strategies/buy_and_hold.py) | trades 1<br>profit $65.0K<br>worst $65.0K<br>best $65.0K<br>**after $66.0K** | trades 1<br>profit $65.04M<br>worst $65.04M<br>best $65.04M<br>**after $66.04M** | trades 1<br>profit -$982<br>worst -$982<br>best -$982<br>**after $18.05**<br>LIQUIDATED | trades 1<br>profit -$982.0K<br>worst -$982.0K<br>best -$982.0K<br>**after $18.0K**<br>LIQUIDATED |
+| **champions_council**<br>_Combine the games that actually pay: Hedge over their signals, sized by fractional Kelly._<br>[source](src/tradebot/strategies/champions_council.py) | trades 131<br>profit $18.3K<br>worst -$1,150<br>best $8,520<br>**after $19.3K** | trades 132<br>profit $18.32M<br>worst -$1.15M<br>best $8.52M<br>**after $19.32M** | trades 261<br>profit $35.8K<br>worst -$2,070<br>best $18.6K<br>**after $36.8K** | trades 263<br>profit $35.77M<br>worst -$2.07M<br>best $18.57M<br>**after $36.77M** |
 | **hedge_experts**<br>_No-regret Hedge blend of technical experts, each charged its own turnover._<br>[source](src/tradebot/strategies/hedge_experts.py) | trades 2,044<br>profit $12.3K<br>worst -$1,469<br>best $11.0K<br>**after $13.3K** | trades 2,159<br>profit $12.27M<br>worst -$1.47M<br>best $11.03M<br>**after $13.27M** | trades 4,103<br>profit -$742<br>worst -$15.9K<br>best $53.0K<br>**after $258** | trades 4,316<br>profit -$742.6K<br>worst -$15.87M<br>best $52.98M<br>**after $257.4K** |
 | **replicator_book**<br>_Reallocate capital across trend, value and cash species with replicator dynamics on their realized fee-adjusted fitness._<br>[source](src/tradebot/strategies/replicator_book.py) | trades 713<br>profit $1,330<br>worst -$90.85<br>best $451<br>**after $2,330** | trades 717<br>profit $1.33M<br>worst -$90.8K<br>best $451.4K<br>**after $2.33M** | trades 1,427<br>profit -$989<br>worst -$681<br>best $1,847<br>**after $10.58** | trades 1,435<br>profit -$989.4K<br>worst -$680.7K<br>best $1.85M<br>**after $10.6K** |
 | **universal_kelly**<br>_Universal-portfolio exposure: wealth-weighted mixture over fixed exposures, half-Kelly capped._<br>[source](src/tradebot/strategies/universal_kelly.py) | trades 9<br>profit $276<br>worst -$6.99<br>best $131<br>**after $1,276** | trades 1,529<br>profit $202.9K<br>worst -$6,509<br>best $123.9K<br>**after $1.20M** | trades 20<br>profit $227<br>worst -$15.25<br>best $129<br>**after $1,227** | trades 3,047<br>profit $3,730<br>worst -$238<br>best $4,923<br>**after $1.00M** |
@@ -57,12 +59,60 @@ _Period: 2017-01-01 to 2026-08-12 (1,010,889 x 5m bars) · data: real, spot (per
 
 ## Built-in strategies
 
-| strategy | the idea |
-|---|---|
-| [buy_and_hold](src/tradebot/strategies/buy_and_hold.py) | Buy everything on the first bar, never trade again. BTC has historically rewarded holding through entire cycles — this is the benchmark every active strategy must beat after fees. On 5x futures it doubles as a stress test: a deep drawdown liquidates a passive leveraged long. |
-| [macd_cross](src/tradebot/strategies/macd_cross.py) | Trend following. MACD (fast EMA minus slow EMA, 12/26) crossing above its 9-period signal line marks upward momentum early — go long and ride it; cross below → flat (spot) or short (futures). Weakness: on 5m bars it whipsaws in chop and fees eat the edge. |
-| [rsi_reversion](src/tradebot/strategies/rsi_reversion.py) | Mean reversion. Sharp moves overshoot: RSI(14) < 30 means the sell-off is stretched, so buy the dip and exit once RSI recovers past 55; mirrored short side (RSI > 70) on futures. Works in ranges, bleeds in strong trends where "oversold" keeps falling. |
-| [macd_rsi](src/tradebot/strategies/macd_rsi.py) | Trend + timing combo. Only take RSI pullback recoveries in the direction of the MACD trend (histogram > 0 → longs on RSI crossing up through 45; mirrored short side). Fewer but better-timed trades than either indicator alone. |
+Twenty strategies, grouped by what they are. Each file's docstring carries
+the full idea plus its citations; the literature survey behind them is in
+[docs/RESEARCH.md](docs/RESEARCH.md), and the walk-forward validation of
+the leaders — including where they *lose* — is in
+[docs/VALIDATION.md](docs/VALIDATION.md).
+
+**Baselines** — [buy_and_hold](src/tradebot/strategies/buy_and_hold.py)
+(the benchmark, and a leverage stress test: it liquidates on 5x),
+[macd_cross](src/tradebot/strategies/macd_cross.py),
+[rsi_reversion](src/tradebot/strategies/rsi_reversion.py),
+[macd_rsi](src/tradebot/strategies/macd_rsi.py).
+
+**Allocators — how much to hold** (the ones that make money; see
+VALIDATION.md for why sizing beats prediction here):
+[kelly_regime](src/tradebot/strategies/kelly_regime.py) — fractional-Kelly
+volatility-targeted exposure, gated by a multi-horizon crowd-regime vote
+(Bell & Cover; Cardaliaguet & Lehalle);
+[hedge_experts](src/tradebot/strategies/hedge_experts.py) — no-regret
+Hedge over ten technical experts (Freund & Schapire);
+[replicator_book](src/tradebot/strategies/replicator_book.py) — replicator
+dynamics across chartist/fundamentalist/cash species (Taylor & Jonker;
+Lux & Marchesi); [universal_kelly](src/tradebot/strategies/universal_kelly.py)
+— Cover's universal portfolio over an exposure grid.
+
+**Microstructure games — reading informed flow from bars:**
+[camouflage_flow](src/tradebot/strategies/camouflage_flow.py) (Kyle
+insider flow via Bulk Volume Classification),
+[stealth_trend](src/tradebot/strategies/stealth_trend.py) (momentum gated
+by Amihud price impact), [overshoot_fade](src/tradebot/strategies/overshoot_fade.py)
+(fade forced-liquidation overshoots — Brunnermeier & Pedersen).
+
+**Learning & equilibrium play:**
+[regret_grid](src/tradebot/strategies/regret_grid.py) (regret matching →
+correlated equilibrium, Hart & Mas-Colell),
+[game_switch](src/tradebot/strategies/game_switch.py) (fictitious play over
+history states), [minority_oracle](src/tradebot/strategies/minority_oracle.py)
+(a grand-canonical minority game trained online).
+
+**Repeated games & beliefs:**
+[tft_trend](src/tradebot/strategies/tft_trend.py) (generous tit-for-tat
+truce with the trend — Axelrod),
+[attrition_reversion](src/tradebot/strategies/attrition_reversion.py)
+(reservation-price reversion with war-of-attrition exits — Avellaneda &
+Stoikov; Maynard Smith),
+[harsanyi_crowd](src/tradebot/strategies/harsanyi_crowd.py) (Bayesian
+belief over hidden market types with a crowding haircut).
+
+**Combinations — games of games:**
+[champions_council](src/tradebot/strategies/champions_council.py) (Hedge
+over the profitable allocators, risk-shaped by fractional Kelly),
+[game_council](src/tradebot/strategies/game_council.py) (Hedge over the
+seven game-theoretic members),
+[flow_regime](src/tradebot/strategies/flow_regime.py) (flow followers with
+a liquidation-event override and a belief veto).
 
 ## Data
 

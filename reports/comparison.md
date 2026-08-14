@@ -6,7 +6,9 @@ Ranked by **final balance** (the primary comparison criterion); rows ordered by 
 
 | strategy | spot · $1K | spot · $1M | futures_5x · $1K | futures_5x · $1M |
 |---|---|---|---|---|
+| **kelly_regime**<br>_Size growth-optimally (fractional Kelly, vol-targeted) while the crowd regime stays bullish._<br>[source](../src/tradebot/strategies/kelly_regime.py) | trades 143<br>profit $41.1K<br>worst -$2,428<br>best $14.5K<br>**after $42.1K** | trades 143<br>profit $41.10M<br>worst -$2.43M<br>best $14.50M<br>**after $42.10M** | trades 143<br>profit $107.2K<br>worst -$6,782<br>best $44.9K<br>**after $108.2K** | trades 143<br>profit $107.22M<br>worst -$6.78M<br>best $44.94M<br>**after $108.22M** |
 | **buy_and_hold**<br>_Buy everything on the first bar and never trade again._<br>[source](../src/tradebot/strategies/buy_and_hold.py) | trades 1<br>profit $65.0K<br>worst $65.0K<br>best $65.0K<br>**after $66.0K** | trades 1<br>profit $65.04M<br>worst $65.04M<br>best $65.04M<br>**after $66.04M** | trades 1<br>profit -$982<br>worst -$982<br>best -$982<br>**after $18.05**<br>LIQUIDATED | trades 1<br>profit -$982.0K<br>worst -$982.0K<br>best -$982.0K<br>**after $18.0K**<br>LIQUIDATED |
+| **champions_council**<br>_Combine the games that actually pay: Hedge over their signals, sized by fractional Kelly._<br>[source](../src/tradebot/strategies/champions_council.py) | trades 131<br>profit $18.3K<br>worst -$1,150<br>best $8,520<br>**after $19.3K** | trades 132<br>profit $18.32M<br>worst -$1.15M<br>best $8.52M<br>**after $19.32M** | trades 261<br>profit $35.8K<br>worst -$2,070<br>best $18.6K<br>**after $36.8K** | trades 263<br>profit $35.77M<br>worst -$2.07M<br>best $18.57M<br>**after $36.77M** |
 | **hedge_experts**<br>_No-regret Hedge blend of technical experts, each charged its own turnover._<br>[source](../src/tradebot/strategies/hedge_experts.py) | trades 2,044<br>profit $12.3K<br>worst -$1,469<br>best $11.0K<br>**after $13.3K** | trades 2,159<br>profit $12.27M<br>worst -$1.47M<br>best $11.03M<br>**after $13.27M** | trades 4,103<br>profit -$742<br>worst -$15.9K<br>best $53.0K<br>**after $258** | trades 4,316<br>profit -$742.6K<br>worst -$15.87M<br>best $52.98M<br>**after $257.4K** |
 | **replicator_book**<br>_Reallocate capital across trend, value and cash species with replicator dynamics on their realized fee-adjusted fitness._<br>[source](../src/tradebot/strategies/replicator_book.py) | trades 713<br>profit $1,330<br>worst -$90.85<br>best $451<br>**after $2,330** | trades 717<br>profit $1.33M<br>worst -$90.8K<br>best $451.4K<br>**after $2.33M** | trades 1,427<br>profit -$989<br>worst -$681<br>best $1,847<br>**after $10.58** | trades 1,435<br>profit -$989.4K<br>worst -$680.7K<br>best $1.85M<br>**after $10.6K** |
 | **universal_kelly**<br>_Universal-portfolio exposure: wealth-weighted mixture over fixed exposures, half-Kelly capped._<br>[source](../src/tradebot/strategies/universal_kelly.py) | trades 9<br>profit $276<br>worst -$6.99<br>best $131<br>**after $1,276** | trades 1,529<br>profit $202.9K<br>worst -$6,509<br>best $123.9K<br>**after $1.20M** | trades 20<br>profit $227<br>worst -$15.25<br>best $129<br>**after $1,227** | trades 3,047<br>profit $3,730<br>worst -$238<br>best $4,923<br>**after $1.00M** |
@@ -31,6 +33,8 @@ Ranked by **final balance** (the primary comparison criterion); rows ordered by 
 
 | strategy | final balance | profit | profit % | trades | win % | best trade | worst trade | max DD % | sharpe | in market % | fees | liq. |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
+| [kelly_regime](../src/tradebot/strategies/kelly_regime.py) | $108.2K | $107.2K | +10722.13% | 143 | 14.1 | $44.9K | -$6,782 | 42.6 | 1.42 | 66.3 | $8,000 |  |
+| [champions_council](../src/tradebot/strategies/champions_council.py) | $36.8K | $35.8K | +3577.35% | 261 | 22.3 | $18.6K | -$2,070 | 37.2 | 1.37 | 97.1 | $2,052 |  |
 | [universal_kelly](../src/tradebot/strategies/universal_kelly.py) | $1,227 | $227 | +22.65% | 20 | 50.0 | $129 | -$15.25 | 9.0 | 0.46 | 30.0 | $1.18 |  |
 | [harsanyi_crowd](../src/tradebot/strategies/harsanyi_crowd.py) | $429 | -$571 | -57.13% | 178 | 28.7 | $34.04 | -$73.42 | 57.7 | -0.86 | 0.2 | $308 |  |
 | [hedge_experts](../src/tradebot/strategies/hedge_experts.py) | $258 | -$742 | -74.25% | 4103 | 11.4 | $53.0K | -$15.9K | 99.9 | 0.96 | 99.6 | $52.1K |  |
@@ -54,6 +58,8 @@ Ranked by **final balance** (the primary comparison criterion); rows ordered by 
 
 | strategy | final balance | profit | profit % | trades | win % | best trade | worst trade | max DD % | sharpe | in market % | fees | liq. |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
+| [kelly_regime](../src/tradebot/strategies/kelly_regime.py) | $108.22M | $107.22M | +10722.13% | 143 | 14.1 | $44.94M | -$6.78M | 42.6 | 1.42 | 66.3 | $8.00M |  |
+| [champions_council](../src/tradebot/strategies/champions_council.py) | $36.77M | $35.77M | +3577.29% | 263 | 22.1 | $18.57M | -$2.07M | 37.2 | 1.37 | 97.1 | $2.05M |  |
 | [universal_kelly](../src/tradebot/strategies/universal_kelly.py) | $1.00M | $3,730 | +0.37% | 3047 | 3.8 | $4,923 | -$238 | 0.8 | 0.18 | 97.5 | $722 |  |
 | [harsanyi_crowd](../src/tradebot/strategies/harsanyi_crowd.py) | $428.7K | -$571.3K | -57.13% | 178 | 28.7 | $34.0K | -$73.4K | 57.7 | -0.86 | 0.2 | $308.0K |  |
 | [hedge_experts](../src/tradebot/strategies/hedge_experts.py) | $257.4K | -$742.6K | -74.26% | 4316 | 11.1 | $52.98M | -$15.87M | 99.9 | 0.96 | 99.8 | $52.05M |  |
@@ -78,6 +84,8 @@ Ranked by **final balance** (the primary comparison criterion); rows ordered by 
 | strategy | final balance | profit | profit % | trades | win % | best trade | worst trade | max DD % | sharpe | in market % | fees | liq. |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | [buy_and_hold](../src/tradebot/strategies/buy_and_hold.py) | $66.0K | $65.0K | +6504.41% | 1 | 0.0 | $65.0K | $65.0K | 84.1 | 0.95 | 100.0 | $1.00 |  |
+| [kelly_regime](../src/tradebot/strategies/kelly_regime.py) | $42.1K | $41.1K | +4109.63% | 143 | 14.1 | $14.5K | -$2,428 | 45.3 | 1.29 | 66.3 | $5,445 |  |
+| [champions_council](../src/tradebot/strategies/champions_council.py) | $19.3K | $18.3K | +1832.14% | 131 | 14.6 | $8,520 | -$1,150 | 34.6 | 1.23 | 87.9 | $4,050 |  |
 | [hedge_experts](../src/tradebot/strategies/hedge_experts.py) | $13.3K | $12.3K | +1227.66% | 2044 | 7.5 | $11.0K | -$1,469 | 59.3 | 0.87 | 88.0 | $16.7K |  |
 | [replicator_book](../src/tradebot/strategies/replicator_book.py) | $2,330 | $1,330 | +132.98% | 713 | 26.2 | $451 | -$90.85 | 38.4 | 0.52 | 53.0 | $1,630 |  |
 | [universal_kelly](../src/tradebot/strategies/universal_kelly.py) | $1,276 | $276 | +27.60% | 9 | 88.9 | $131 | -$6.99 | 7.4 | 0.62 | 22.7 | $1.33 |  |
@@ -101,6 +109,8 @@ Ranked by **final balance** (the primary comparison criterion); rows ordered by 
 | strategy | final balance | profit | profit % | trades | win % | best trade | worst trade | max DD % | sharpe | in market % | fees | liq. |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | [buy_and_hold](../src/tradebot/strategies/buy_and_hold.py) | $66.04M | $65.04M | +6504.41% | 1 | 0.0 | $65.04M | $65.04M | 84.1 | 0.95 | 100.0 | $999 |  |
+| [kelly_regime](../src/tradebot/strategies/kelly_regime.py) | $42.10M | $41.10M | +4109.63% | 143 | 14.1 | $14.50M | -$2.43M | 45.3 | 1.29 | 66.3 | $5.45M |  |
+| [champions_council](../src/tradebot/strategies/champions_council.py) | $19.32M | $18.32M | +1832.12% | 132 | 14.5 | $8.52M | -$1.15M | 34.6 | 1.23 | 87.9 | $4.05M |  |
 | [hedge_experts](../src/tradebot/strategies/hedge_experts.py) | $13.27M | $12.27M | +1227.50% | 2159 | 7.3 | $11.03M | -$1.47M | 59.3 | 0.87 | 88.1 | $16.70M |  |
 | [replicator_book](../src/tradebot/strategies/replicator_book.py) | $2.33M | $1.33M | +132.99% | 717 | 26.1 | $451.4K | -$90.8K | 38.4 | 0.52 | 53.1 | $1.63M |  |
 | [universal_kelly](../src/tradebot/strategies/universal_kelly.py) | $1.20M | $202.9K | +20.29% | 1529 | 2.7 | $123.9K | -$6,509 | 7.2 | 0.49 | 61.7 | $1,838 |  |
