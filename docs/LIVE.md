@@ -103,22 +103,74 @@ roughly halves the drawdown (48.7% vs 84.1%) and carries a better Sharpe
 (1.18 vs 0.95). You are paying return for a much smoother ride, which is
 a legitimate trade — just not the trade the headline numbers describe.
 
-**If you want the published edge, one of these has to change:**
-
-1. **A lower fee tier.** Bitstamp's taker fee falls with 30-day volume;
-   the results here need roughly 0.10% to hold.
-2. **Maker orders instead of market orders.** Maker fees are materially
-   lower, at the cost of fills that are no longer guaranteed — which the
-   backtester does not model.
-3. **A cheaper venue.** Binance spot is 0.10%, which is the assumption
-   every table in this repo was built on.
-4. **Leverage.** The strategies' real advantage is on 5x futures, where
-   the comparison is not "more return than holding" but "holding gets
-   liquidated in 26 of 40 random windows and this does not". That is out
-   of scope for this spot-only path.
-
 Set `taker_fee` to your actual tier either way — it feeds the strategy's
 own fee awareness through `MarketSpec`, so it is not cosmetic.
+
+### Can it be tuned to beat the fee? No, and the attempt is instructive
+
+The obvious response is to trade less. It was tried properly and it does
+not work. Four independent checks, all pointing the same way:
+
+**1. The arithmetic says no before you start.** `kelly_regime_v4`'s
+*gross*, fee-free edge on spot is only **1.33x** holding ($87.8K vs
+$66.1K). Its turnover at 0.40% costs a factor of 0.34, so beating holding
+would need a gross edge of **2.98x**. The gap is not close, and slowing
+the strategy down to save fees shrinks the gross edge too — the two move
+together.
+
+**2. Break-even fee, full period, spot:**
+
+| strategy | beats holding below |
+|---|---|
+| `kelly_regime_v4` | **0.20%** taker |
+| `kelly_regime_v3` | **0.10%** taker |
+| raw 50-day regime filter, no vol targeting | **0.40%** taker (just barely: $64.9K vs $65.8K) |
+
+Bitstamp's schedule puts 0.10% taker at **$20M** of 30-day volume. At any
+tier a retail account will actually see, the return edge is gone.
+
+**3. The parameter grid has no plateau.** Sweeping the raw filter over
+8 lookbacks × 4 hysteresis bands at 0.40%, **10 of 32** configurations
+beat holding — but scattered, not clustered. Adjacent cells swing 2–3x
+($90.4K at a 40-day anchor sits next to $43.5K at 50-day). Compare the
+genuine plateau behind `kelly_regime_v4`, where *every* anchor set in an
+entire range moved the same way. This is the signature of noise.
+
+**4. Walk-forward kills it outright.** Select on 2017–2022, evaluate on
+2023–2026:
+
+- **28 of 32** configurations beat holding in-sample.
+- **0 of those 28** beat it out-of-sample.
+- The config you would actually have picked (50-day, 3% band) returned
+  **−34.5% against holding** out-of-sample.
+
+A core-satellite version (hold a permanent core, manage only the rest)
+edges past holding on the full period at a 70–85% core — by 1%, within
+noise, monotone in the core fraction with no plateau, and it still loses
+out-of-sample. That is not an edge; it is a dial that points at
+buy-and-hold.
+
+### What is actually on offer at 0.40%
+
+The strategy is **profitable** — $1,000 → $29,498 is +2,850% over nine
+years. It just does not beat holding, and its product is risk, not
+return:
+
+| | `kelly_regime_v4` | buy_and_hold |
+|---|---|---|
+| final balance | $29.5K | **$65.8K** |
+| max drawdown | **48.7%** | 84.1% |
+| Sharpe | **1.18** | 0.95 |
+| out-of-sample max DD | **34.1%** | 54.0% |
+
+That drawdown gap is the one thing that **does** survive out-of-sample,
+which matches what the variant research found independently: for this
+family the risk reduction is robust and the return improvement is not.
+If you want BTC exposure without an 84% drawdown, this delivers it and
+costs you return to do so. If you want to beat holding, the edge lives on
+leverage — where the claim is not "more return than holding" but "holding
+is liquidated in 26 of 40 random windows and this is not" — and that is
+out of scope for this spot-only path.
 
 ## Cold start: how much history a bot must fetch
 

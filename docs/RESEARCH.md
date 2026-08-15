@@ -218,7 +218,17 @@ validation here leans on Monte Carlo windows rather than one path.
    from $1,000 at Sharpe 73 with a green suite.
    `tests/test_causality_strict.py` now compares the *orders* a strategy
    queues under two opposite tampers of the future.
-6. **A warmup prefix is not free.** Letting a strategy trade through the
+6. **Turnover reduction cannot buy back a fee tier.** At a 0.40% taker
+   fee the leading strategy's *gross* edge on spot (1.33x holding) is far
+   below what its turnover costs (a 2.98x gross edge would be needed),
+   and slowing it down to save fees shrinks the gross edge in step.
+   Sweeping the raw regime filter over 8 lookbacks × 4 hysteresis bands,
+   **28 of 32 configurations beat holding in-sample and 0 of 28 beat it
+   out-of-sample**; the one you would have selected lost 34.5% to
+   holding. A negative result worth the space, because "just trade less"
+   is the first thing anyone tries. Detail in
+   [LIVE.md](LIVE.md#can-it-be-tuned-to-beat-the-fee-no-and-the-attempt-is-instructive).
+7. **A warmup prefix is not free.** Letting a strategy trade through the
    prefix of a resampled window lets it be liquidated before the window
    opens (19 of buy-and-hold's 23 stress-test liquidations were of this
    kind), and slicing a frame to an out-of-sample date range leaves a

@@ -247,7 +247,9 @@ strategy the forming candle.
 > ⚠️ **Fees decide this.** Every table here assumes a 0.10% taker fee. At
 > Bitstamp's 0.40% entry tier, on spot, **no strategy here beats
 > buy-and-hold** ($29.5K vs $65.8K for `kelly_regime_v4`) — it keeps a
-> better Sharpe and roughly half the drawdown, but not the return. See
+> better Sharpe and roughly half the drawdown, but not the return.
+> Tuning around it was tried and fails walk-forward: 28 of 32
+> configurations beat holding in-sample, **0 of 28** out-of-sample. See
 > [docs/LIVE.md](docs/LIVE.md#read-this-before-trading-bitstamp-spot-at-the-entry-fee-tier).
 
 Setup, cold-start cost and the honest list of what live will *not* match:
