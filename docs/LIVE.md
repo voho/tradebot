@@ -70,7 +70,7 @@ warmup — and a venue only returns 1000 candles per request:
 |---|---|---|---|
 | `kelly_regime_v4` | 23,050 | 80 | **24** |
 | `kelly_regime_v3` | 28,810 | 100 | **30** |
-| `kelly_regime` | 28,810 | 100 | **30** |
+| `kelly_regime_v2` | 28,810 | 100 | **30** |
 
 `Exchange.fetch_history()` does this paging automatically, walking
 backwards with `end_ms` and stitching the pages. At Binance's rate
@@ -88,9 +88,15 @@ This is the check that matters, and it runs in CI
 1. **Pagination is lossless.** Fetching 29,000 bars in 1000-bar pages
    reproduces the underlying series exactly — same index, same closes,
    no duplicates, no gaps.
-2. **Decisions match.** For each of the top three strategies, the target
-   computed from *paged exchange data* is identical to the target
-   computed from the contiguous backtest frame.
+2. **Decisions match, bar for bar.** For each of the top three
+   strategies, the venue clock is stepped forward 30 consecutive candles;
+   at every one, the bot re-pages its whole history and its target must
+   equal the one the backtest engine computed at that same bar. One
+   matching bar would prove little — page boundaries land at a different
+   offset on each new candle, so a stitching bug appears at some
+   alignments and not others. A separate test asserts the replay venue
+   never serves a bar past its clock, so the parity checks cannot pass
+   for the wrong reason.
 3. **The forming candle never leaks.** Both adapters drop the still-open
    bar. A strategy that sees a partial candle is reading the future —
    this is the single most common way live bots differ from their

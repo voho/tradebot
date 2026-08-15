@@ -20,6 +20,7 @@ from tradebot.exchanges.bitstamp import BitstampSpot
 from tradebot.exchanges.replay import ReplayExchange
 from tradebot.live import LiveAccount, compute_signal
 from tradebot.registry import get_strategy
+from tradebot.strategy import Context
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 # The top three by final balance — the ones anyone would actually deploy.
@@ -93,6 +94,63 @@ def test_strategy_signal_matches_backtest_on_exchange_data(real, name):
 
     assert [(o.target, o.qty, o.side) for o in from_paged] == \
            [(o.target, o.qty, o.side) for o in from_contig]
+
+
+@pytest.mark.parametrize("name", TOP3)
+def test_exchange_decisions_match_the_backtest_bar_for_bar(real, name):
+    """Walk the venue forward and compare EVERY decision, not just the last.
+
+    One matching bar proves little: page boundaries fall at a different
+    offset on each new candle, so a stitching bug shows up at some
+    alignments and not others. This steps the replay clock bar by bar,
+    fetches through the 1000-candle page limit each time as a bot must,
+    and requires the target to equal the one the backtest engine computed
+    from the contiguous frame at that same bar.
+    """
+    steps = 30
+    strategy = get_strategy(name)
+    bars = strategy.warmup + 500
+    window = real.iloc[-(bars + steps):]
+    market = MarketSpec.spot()
+
+    # what the ranked backtest decides at each bar, from one batch prepare
+    engine_strategy = get_strategy(name)
+    prepared = engine_strategy.prepare(window.copy())
+    account = LiveAccount(position=0.0, equity_quote=1_000.0, market=market)
+
+    ex = ReplayExchange(window, max_candles_per_request=1000)
+    live_strategy = get_strategy(name)
+
+    compared = 0
+    for i in range(len(window) - steps, len(window)):
+        ctx = Context(prepared, i, account)
+        engine_strategy.on_bar(ctx)
+        expected = [(o.side, o.qty, o.target) for o in ctx.orders]
+
+        ex.set_now(i)
+        candles = ex.fetch_history("BTCUSD", bars=bars)
+        assert candles.index[-1] == window.index[i], "venue served the wrong last bar"
+        got = [(o.side, o.qty, o.target)
+               for o in compute_signal(live_strategy, candles, account)]
+
+        assert got == expected, (
+            f"{name}: bar {window.index[i]} decided {got} from paged exchange "
+            f"data but {expected} in the backtest")
+        compared += 1
+
+    assert compared == steps
+
+
+def test_replay_never_serves_a_bar_past_the_clock(real):
+    """The guard behind the test above: a venue that leaked future bars
+    would make every parity check pass for the wrong reason."""
+    window = real.iloc[-5_000:]
+    ex = ReplayExchange(window, max_candles_per_request=1000)
+    ex.set_now(3_000)
+    candles = ex.fetch_history("BTCUSD", bars=2_000)
+    assert candles.index[-1] == window.index[3_000]
+    assert len(candles) == 2_000
+    assert (candles.index <= window.index[3_000]).all()
 
 
 @pytest.mark.parametrize("name", TOP3)
