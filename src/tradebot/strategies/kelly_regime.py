@@ -55,13 +55,17 @@ class KellyRegime(Strategy):
 
     def __init__(self, horizons: tuple[int, ...] = (30, 50, 100), band: float = 0.01,
                  target_vol: float = 0.55, max_leverage: float = 2.0,
-                 vol_span: int = 8 * BARS_PER_DAY, deadband: float = 0.10) -> None:
+                 vol_span: int = 8 * BARS_PER_DAY, deadband: float = 0.10,
+                 vote_gamma: float = 1.0) -> None:
         self.horizons = horizons
         self.band = band
         self.target_vol = target_vol
         self.max_leverage = max_leverage
         self.vol_span = vol_span
         self.deadband = deadband
+        # 1.0 = exposure linear in the vote; >1 shrinks partial agreement
+        # (see kelly_regime_v2 and docs/VALIDATION.md)
+        self.vote_gamma = vote_gamma
 
     def prepare(self, df: pd.DataFrame) -> pd.DataFrame:
         close = df["close"]
@@ -79,6 +83,8 @@ class KellyRegime(Strategy):
             )
             votes.append(v.ffill().fillna(0.0))
         frac = (sum(votes) / len(votes)).to_numpy()
+        if self.vote_gamma != 1.0:
+            frac = frac ** self.vote_gamma  # convex confidence response
 
         # Fractional-Kelly sizing: exposure ~ target_vol / realized_vol.
         vol = (r.ewm(span=self.vol_span, min_periods=BARS_PER_DAY).std()

@@ -172,6 +172,127 @@ Run `tradebot run --balances 1000 1000000` to reproduce; the comparison
 table flags any strategy whose return moves more than 1pp with account
 size.
 
+## Beta testing variants: `kelly_regime_v2`
+
+A second research round (ML/DL and game theory, see
+[RESEARCH.md](RESEARCH.md#improving-the-best-strategy)) proposed four ways
+to improve the leading strategy. Three of them — a walk-forward
+statistical jump model, Bayesian online changepoint detection, and
+meta-labeling with a walk-forward logistic model — **failed to beat the
+baseline** and are recorded there as negative results. The one that
+worked is not a new detector at all: it reshapes how the existing vote
+maps to exposure, `vote ** 1.75` instead of `vote`.
+
+Run `python scripts/beta_test.py --windows 24` to reproduce. Futures 5x,
+$1,000 start:
+
+| metric | `kelly_regime` | `kelly_regime_v2` |
+|---|---|---|
+| full period | $108,221 | **$121,993** |
+| Sharpe | 1.42 | **1.49** |
+| max drawdown | 42.6% | **39.6%** |
+| trades | 143 | **113** |
+| in-sample (2017–22) | $25,486 | **$30,737** |
+| **out-of-sample (2023–26)** | **$2,422** | $2,336 |
+| Monte Carlo median window | +49.7% | **+54.6%** |
+| Monte Carlo worst window | −30.6% | **−22.6%** |
+| windows where it beats the baseline | — | 62.5% |
+| liquidations | 0% | 0% |
+
+**Nine of ten metrics improve, and it still fails the promotion rule.**
+The rule requires a candidate to beat the incumbent on the full period,
+*not degrade out-of-sample*, and win the median Monte Carlo window; v2
+lands 3.5% below on out-of-sample final balance, so the harness reports
+"no better (fails: oos)". Both are kept registered and both appear in the
+comparison table, with the caveat stated rather than buried.
+
+Reading it honestly: the out-of-sample shortfall is well inside the
+**±0.2 Sharpe noise floor** measured by paired stationary block bootstrap
+(30-day blocks, 2,000 resamples) — a single 3.6-year path cannot resolve
+a 3.5% difference. The research predicted this exact pattern in advance:
+shrinking partial-agreement states costs return in a market that sits at
+two-thirds agreement while drifting up, which describes 2023–2026. What
+argues for the change is not any single number but that return, Sharpe,
+drawdown, turnover, the Monte Carlo median *and* the Monte Carlo left
+tail all move the right way together, with the effect a plateau across
+gamma ∈ [1.25, 4.0] rather than a spike at one tuned value — the opposite
+of the overfitting signature.
+
+`kelly_regime` keeps `vote_gamma=1.0` as its default, so the incumbent's
+published record is unchanged; v2 is a separate registered strategy.
+
+### `kelly_regime_v3` — the one that earned promotion
+
+The sizing half of the research produced the clear winner. Instead of
+re-sizing continuously, it holds a **constant notional through normal
+volatility** and switches to full inverse-volatility sizing only when
+volatility breaks out (high or low), latching that state until it
+retraces — the same hysteresis the regime gate uses, applied to risk.
+
+| metric | `kelly_regime` | `kelly_regime_v3` |
+|---|---|---|
+| full period | $108,221 | **$139,509** |
+| Sharpe | 1.42 | **1.55** |
+| max drawdown | 42.6% | **41.8%** |
+| in-sample (2017–22) | $25,486 | **$32,971** |
+| **out-of-sample (2023–26)** | $2,422 | **$2,568** |
+| Monte Carlo median window | +49.7% | **+64.3%** |
+| Monte Carlo median drawdown | 32.7% | **26.8%** |
+| windows where it beats the baseline | — | **75.0%** |
+| liquidations | 0% | 0% |
+
+It improves **every** metric, in both sub-periods and on both markets,
+and the harness promotes it. The parameter neighbourhood is flat (eight
+threshold combinations land at Sharpe 1.47–1.55) and it survives a 20bps
+slippage stress at Sharpe 1.42 — matching the *frictionless* incumbent.
+
+### Why it works: BTC has an inverse leverage effect
+
+This is the most useful thing the research turned up, and it inverts the
+textbook. Forward 5-day Sharpe by lagged-volatility quintile, measured on
+this data:
+
+| sample | Q1 (low vol) | Q2 | Q3 | Q4 | Q5 (high vol) |
+|---|---|---|---|---|---|
+| all bars | +0.82 | −0.12 | +0.57 | +0.64 | **+1.08** |
+| gate bullish | +1.76 | +0.41 | +1.57 | +1.23 | **+2.06** |
+
+**High volatility forecasts the *highest* forward Sharpe in BTC**, the
+opposite of equities — consistent with Baur & Dimpfl (2018, Economics
+Letters 173), who find positive shocks raise crypto volatility more than
+negative ones. So Moreira & Muir's (2017, J. Finance) volatility-managed
+alpha, which requires high volatility to forecast *low* returns, is
+absent-to-inverted here. Continuous targeting de-levers into precisely
+the best states; conditional targeting (Bongaerts, Kang & van Dijk 2020,
+FAJ 76(4)) keeps Harvey et al.'s (2018) mechanical tail protection and
+discards the part that fights the asset.
+
+**Corollary, and it is counterintuitive: better volatility *forecasting*
+makes this strategy worse.** A timescale blend that beats the incumbent
+estimator by 8% on QLIKE — a genuinely better forecast — returns **$52K
+instead of $115K** when plugged in, because it de-levers more promptly
+into the high-Sharpe states. The incumbent's 8-day span is not merely
+adequate; part of its value is that it is *sluggish*.
+
+Two further negative results worth recording: range-based estimators
+(Parkinson, Garman-Klass, Rogers-Satchell, Yang-Zhang) read **7–18% low**
+on 5m bars from discretisation bias, so a drop-in swap silently raises
+effective leverage and invalidates the `target_vol` calibration; and
+their textbook 5–8x efficiency advantage does not transfer, because it is
+measured against a *daily close-to-close* estimator while the incumbent
+already averages 288 squared returns per day.
+
+### A leak the old tests would have missed
+
+The same round found that a daily-aggregated signal broadcast onto every
+5-minute bar of the *same* day leaks that entire day of future — worth
+**+2.1 Sharpe** in a prototype (3.09 vs 0.99 once lagged correctly). Such
+a signal **passes** the truncation test, because truncating the tail does
+not change earlier rows. `tests/test_causality_real.py` now also perturbs
+future bars (×3 on prices, ×7 on volume) and asserts every prepared
+column before the cut is bit-identical, which catches it directly. All 21
+strategies pass.
+
 ## Known limitations
 
 - **No funding rates.** Perpetual futures pay/receive funding every 8

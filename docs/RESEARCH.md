@@ -138,3 +138,130 @@ the GCMG abstention threshold and Avellaneda–Stoikov's spread are
 mechanically the same object — a no-trade band sized so the expected
 value of switching state exceeds the certain cost of switching. At a
 0.1% round trip on 5m bars, that band decides viability.
+
+---
+
+# Improving the best strategy
+
+A second research round targeted `kelly_regime` specifically, covering
+machine learning and deep learning alongside the game theory. The
+headline result is negative for complexity: **every learned regime
+detector failed to beat a moving-average vote**, and the only change that
+helped was a one-line reshaping of the existing signal.
+
+## Regime detection: what was tried and what happened
+
+- **Markov-switching / HMM** — Hamilton (1989, Econometrica 57(2)). The
+  *filtered* state probability is causal; the *smoothed* one that most
+  tutorials plot is not. Practitioner reports of rapid switching are fatal
+  at a 0.1% round trip.
+- **Statistical jump models** — Nystrup, Lindström & Madsen (2020, ESWA
+  150); Shu, Yu & Mulvey (2024, J. Asset Management 25(5)) is the
+  strongest out-of-sample evidence in the area (three equity indices,
+  1990–2023, with costs and delays, walk-forward). Note their benchmark is
+  buy-and-hold and HMM — **not** a moving-average filter. Implemented
+  walk-forward with deterministic restarts: it delivered a **6–11pp
+  smaller drawdown and ~40% less turnover, but no Sharpe gain**
+  (0.96–1.06 vs 1.09 baseline; bootstrap P(gap>0) = 0.26). An earlier
+  random-initialisation version looked like a win purely through optimizer
+  noise — changing only the seed moved Sharpe 0.13 and growth 40%.
+- **Bayesian online changepoint detection** — Adams & MacKay (2007,
+  arXiv:0710.3742). Used as a severity haircut it *lost* (OOS 0.84 vs
+  1.03): in BTC, short run lengths fire on volatility bursts, and large
+  **up** moves are volatility bursts too.
+- **Meta-labeling + triple barrier** — López de Prado (2018, *Advances in
+  Financial Machine Learning*); Joubert (2022, JFDS 4(3)). A walk-forward,
+  purged and embargoed logistic secondary model **hurt in-sample and was
+  neutral out-of-sample**. Note their trend-scanning label looks *forward*
+  and is not admissible as a causal signal.
+
+## Deep learning: why none was adopted
+
+The positive results are real but do not transfer to this problem. Lim,
+Zohren & Roberts (2019, JFDS) and Wood, Giegerich, Roberts & Zohren
+(Momentum Transformer, arXiv:2112.08534) train directly on Sharpe and beat
+classical momentum — but their cost tolerance is **2–3 bps against our 10
+bps round trip**, and much of the edge comes from **diversifying across
+88–100 instruments**, where we have one. Against that: Makridakis et al.
+(2018, PLoS ONE 13(3)) found classical methods dominate ML on 1,045
+series; Buczyński et al. (2023, Eng. Proc. 39(1)) reproduced 15 prominent
+deep-learning finance papers and found most do not beat a naive forecast;
+Zeng et al. (AAAI 2023) show a one-layer linear model beats transformer
+forecasters on nine benchmarks. No torch/sklearn dependency was added.
+
+Sobering for our own baseline: Zakamulin (2014, J. Asset Management; 2018,
+Int. Review of Finance) finds moving-average timing performance "highly
+overstated" with substantial data-mining bias — which is why the
+validation here leans on Monte Carlo windows rather than one path.
+
+## Methodology findings that changed how this repo tests
+
+1. **A one-day lookahead is worth +2.1 Sharpe.** A daily signal broadcast
+   onto the same day's 5m bars leaks, *passes* the truncation test, and
+   produces Sharpe 3.09 instead of 0.99. Any result in that range should
+   be read as a bug report. `tests/test_causality_real.py` now perturbs
+   future bars to catch it.
+2. **The noise floor is ±0.2 Sharpe** (paired stationary block bootstrap,
+   30-day blocks, 2,000 resamples). Smaller differences on one path are
+   not evidence — the analytic standard error of a Sharpe *level* (±0.02)
+   is misleadingly tight for comparing strategies.
+3. **More anchors do not help.** Ladders of 7–48 moving averages scored
+   at or below the three-anchor vote, and the individual anchors are
+   wildly dispersed (20d: 1.17, 250d: 0.59).
+4. **Deflate for trials.** Bailey & López de Prado (2014, JPM 40(5)) —
+   every sweep in VALIDATION.md is a trial and inflates the observed
+   Sharpe of whatever was selected.
+
+## What shipped
+
+Only the convex vote response (`kelly_regime_v2`), and only as a separate
+strategy, with its failed out-of-sample check reported. See
+[VALIDATION.md](VALIDATION.md#beta-testing-variants-kelly_regime_v2).
+
+## Volatility & sizing: the second half of the round
+
+The sizing research produced the one change that earned promotion, plus
+two negative results that invert the textbook reading.
+
+- **Conditional volatility targeting** — Bongaerts, Kang & van Dijk (2020,
+  FAJ 76(4)) show conventional continuous targeting fails to consistently
+  improve performance and can deepen drawdowns, while adjusting exposure
+  only in the volatility *extremes* improves Sharpe at low turnover.
+  Implemented as `kelly_regime_v3`: **$139,509 vs $108,221, Sharpe 1.55 vs
+  1.42, better out-of-sample, beats the baseline in 75% of random
+  windows.**
+- **Why it works here** — Baur & Dimpfl (2018, Economics Letters 173):
+  crypto has an **inverse leverage effect**, positive shocks raising
+  volatility more than negative ones. Measured on this data, the
+  highest-volatility quintile carries the *highest* forward Sharpe
+  (+1.08 overall, +2.06 when the gate is bullish). So the Moreira & Muir
+  (2017, J. Finance) volatility-managed alpha — which requires high
+  volatility to forecast low returns — is absent-to-inverted for BTC.
+  What remains is Harvey et al.'s (2018, JPM) mechanical tail protection,
+  worth roughly +7% Sharpe on buy-and-hold, which conditional targeting
+  keeps. Cederburg et al. (2020, JFE 138(1)) independently find
+  volatility-managed portfolios do not systematically outperform out of
+  sample across 103 equity strategies.
+- **Negative result: better volatility forecasting makes this strategy
+  worse.** A timescale blend beat the incumbent estimator by 8% on QLIKE
+  (Patton 2011, J. Econometrics 160(1), for why QLIKE) — a genuinely
+  better forecast — and returned **$52K instead of $115K**, because it
+  de-levers more promptly into the high-Sharpe states. Corsi's (2009)
+  HAR insight that timescale mixing beats estimator choice held for
+  *forecasting* and reversed for *trading*.
+- **Negative result: range estimators are biased low at 5m.** Parkinson
+  (1980), Garman & Klass (1980), Rogers & Satchell (1991), Yang & Zhang
+  (2000) read **7–18% low** on 5-minute bars — the documented
+  discretisation bias, since observed extremes sit inside true continuous
+  ones. A drop-in swap silently raises effective leverage. Their 5–8x
+  efficiency advantage is measured per observation against a *daily
+  close-to-close* estimator; the incumbent already averages 288 squared
+  returns per day, so there is nothing left to gain. Hansen & Lunde
+  (2005, J. Applied Econometrics 20(7)) found nothing beats GARCH(1,1)
+  absent a leverage effect — and BTC's is inverted.
+- **Drawdown control** — Grossman & Zhou (1993, Mathematical Finance
+  3(3)) cushion sizing applied to the *whole* book cut drawdown to 28%
+  but destroyed return ($21.6K); applied only to leverage above 1x it
+  gave −1.2pp drawdown for roughly zero cost. Klass & Nowicki (2005)
+  predicted the former: the cushion rule is not optimal in discrete time
+  and systematically sells low in a mean-reverting-drawdown asset.

@@ -9,6 +9,7 @@ enough to exercise them.
 
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
 from tradebot.broker import MarketSpec
@@ -50,3 +51,36 @@ def test_no_lookahead_on_real_data(name, real_slice):
                 for f in result.fills if f.ts <= cutoff]
 
     assert fills(full) == fills(part)
+
+
+@pytest.mark.parametrize("name", sorted(available_strategies()))
+def test_prepare_columns_ignore_future_bars(name, real_slice):
+    """Perturbing FUTURE bars must not change any prepared value at bar i.
+
+    Stronger than the truncation check: a strategy that aggregates to a
+    coarser timeframe (daily, say) and broadcasts the result back onto
+    every bar of the SAME period passes truncation while still leaking -
+    a same-day daily signal carries that whole day of future. Multiplying
+    the tail of the series and re-running catches it directly.
+    """
+    df = real_slice.iloc[-40_000:].copy()
+    cut = len(df) - 5_000
+
+    strategy = get_strategy(name)
+    base = strategy.prepare(df.copy())
+
+    tampered = df.copy()
+    for col in ("open", "high", "low", "close"):
+        tampered.iloc[cut:, tampered.columns.get_loc(col)] *= 3.0
+    tampered.iloc[cut:, tampered.columns.get_loc("volume")] *= 7.0
+    after = get_strategy(name).prepare(tampered)
+
+    for col in base.columns:
+        if col in ("open", "high", "low", "close", "volume"):
+            continue
+        a = base[col].to_numpy()[:cut]
+        b = after[col].to_numpy()[:cut]
+        mismatch = ~(pd.isna(a) & pd.isna(b)) & (a != b)
+        assert not mismatch.any(), (
+            f"{name}: column {col!r} changed at {int(mismatch.sum())} bars before "
+            "the cut when only FUTURE bars were modified - the signal leaks")

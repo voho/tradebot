@@ -471,3 +471,67 @@ waiting cost matches the prize, and Fudenberg & Tirole (1986) add that
 non-reversion is *itself* information about the opponent's strength. It
 wins most of its trades and still loses, which is the signature of a
 short-gamma payoff paying fees on 7,221 round trips.
+
+---
+
+## Appendix: the variants
+
+A second research round (ML/DL + game theory) produced two variants of
+the leader. Both are registered; only one earned promotion. Full detail:
+[VALIDATION.md](VALIDATION.md#beta-testing-variants-kelly_regime_v2).
+
+### `kelly_regime_v3` — PROMOTED
+
+**What it is.** The leader, but it stops re-sizing continuously. It holds
+a **constant notional through normal volatility** and switches to full
+inverse-volatility sizing only when volatility breaks out high or low,
+latching that state until it retraces. $139,509 vs the incumbent's
+$108,221, Sharpe 1.55 vs 1.42, better out-of-sample, and it beats the
+baseline in 75% of random windows.
+
+**How it works.** A 180-day anchor defines "normal" volatility. While the
+ratio of current to anchor volatility sits inside [0.55, 1.70], notional
+is pinned at `target_vol / anchor_vol`. Outside that band it reverts to
+`target_vol / current_vol`, and only relaxes back once the ratio returns
+inside [0.85, 1.20] — the same hysteresis the regime gate uses, applied
+to the risk axis.
+
+**Principles.** Bongaerts, Kang & van Dijk (2020, FAJ 76(4)): conditional
+(extremes-only) volatility targeting improves Sharpe and cuts tails where
+continuous targeting fails. It bites here because of an asset-class fact —
+Baur & Dimpfl (2018, Economics Letters 173) document crypto's **inverse
+leverage effect**, and on this data the highest-volatility quintile
+carries the *highest* forward Sharpe. Continuous targeting therefore
+de-levers into the best states; Moreira & Muir's (2017) volatility-managed
+alpha requires the opposite sign and is absent here. What survives is
+Harvey et al.'s (2018) mechanical tail protection, which this keeps.
+
+### `kelly_regime_v2` — not promoted
+
+**What it is.** The incumbent with one line changed: exposure
+scales with `vote_fraction ** 1.75` instead of `vote_fraction`. Same
+anchors, same fractional-Kelly volatility target, same cap and deadband.
+
+**How it works.** The three-anchor vote produces 0, ⅓, ⅔ or 1. The
+partial values are the *transitional* states — a fast anchor has flipped
+while a slow one has not — where drift is near zero and volatility is
+elevated. Raising the vote to a power above 1 shrinks those states toward
+flat (⅓ becomes 0.19, ⅔ becomes 0.59) while leaving full agreement at 1.
+
+**Principles.** Growth-optimal (Kelly) exposure scales with expected drift
+over variance, and that relationship is convex in agreement rather than
+linear, so a linear response over-invests in exactly the state momentum
+strategies handle worst (Wood, Roberts & Zohren 2022, JFDS). Shrinking
+super-linearly when the edge estimate is least reliable is the standard
+fractional-Kelly prescription under parameter uncertainty (MacLean, Thorp
+& Ziemba 2010).
+
+**Result and the honest caveat.** It improves the full period ($121,993 vs
+$108,221), Sharpe (1.49 vs 1.42), drawdown (39.6% vs 42.6%), turnover
+(113 vs 143 trades), the Monte Carlo median window and the Monte Carlo
+worst window — but it lands **3.5% below the incumbent out-of-sample**, so
+the beta-test harness declines to promote it. That shortfall is inside the
+±0.2 Sharpe noise floor, and the effect is a plateau across gamma ∈
+[1.25, 4.0] rather than a spike, but the failed check is reported rather
+than buried. Full detail:
+[VALIDATION.md](VALIDATION.md#beta-testing-variants-kelly_regime_v2).
