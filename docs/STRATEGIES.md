@@ -476,9 +476,39 @@ short-gamma payoff paying fees on 7,221 round trips.
 
 ## Appendix: the variants
 
-A second research round (ML/DL + game theory) produced two variants of
-the leader. Both are registered; only one earned promotion. Full detail:
+Research rounds on the leader produced three registered variants. Two
+earned promotion, one did not. Full detail:
 [VALIDATION.md](VALIDATION.md#beta-testing-variants-kelly_regime_v2).
+
+### `kelly_regime_v4` — PROMOTED, and what it is honestly good for
+
+**What it is.** `kelly_regime_v3` with one change: the regime anchors move
+from the ad-hoc 30/50/100 days to a **doubling ladder, 20/40/80**. Nothing
+else — same conditional volatility targeting, same hysteresis, same cap.
+
+**How it works.** Each anchor covers twice the horizon of the one below
+it, the same a-priori multi-scale structure MACD (12/26) and the HAR
+volatility model (daily/weekly/monthly) use, chosen for its structure
+rather than fitted. Faster anchors mean the gate flips out of a
+deteriorating regime sooner, which is where the change earns its keep.
+
+**Principles.** Same as v3 (Bongaerts–Kang–van Dijk conditional targeting
+on top of BTC's inverse leverage effect); the anchor ladder is the
+Müller et al. (1997) heterogeneous-market / Corsi (2009) HAR idea that
+several fixed timescales beat one estimated horizon.
+
+**Result, and the part that is *not* established.** Across nine anchor
+sets in the 18–28 day range, **every** variant cut max drawdown to 35–39%
+from v3's 41.8%, and seven of nine scored Sharpe ≥ 1.52. The **drawdown
+reduction is the robust finding**. The Sharpe spread across that plateau
+(1.52–1.60) sits inside the ±0.2 path-noise band measured by block
+bootstrap, so the return improvement should **not** be read as
+established — a claim worth stating explicitly, because the headline
+balance is the number people will quote. Below ~18 days the plateau
+breaks sharply (16/32/64 scores 1.46), which is what makes this a region
+rather than a tuned peak. The beta-test harness promotes it: it beats the
+base on the full period, drawdown, out-of-sample, and the Monte Carlo
+left tail.
 
 ### `kelly_regime_v3` — PROMOTED
 

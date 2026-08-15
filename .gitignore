@@ -25,6 +25,8 @@ venv/
 /reports/charts/*
 !/reports/charts/_all__spot__1000_part1.png
 !/reports/charts/_all__futures_5x__1000_part1.png
+!/reports/charts/kelly_regime_v4__futures_5x__1000.png
+!/reports/charts/kelly_regime_v4__spot__1000.png
 !/reports/charts/kelly_regime__futures_5x__1000.png
 !/reports/charts/kelly_regime__spot__1000.png
 !/reports/charts/champions_council__futures_5x__1000.png

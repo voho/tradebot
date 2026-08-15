@@ -6,28 +6,29 @@ Ranked by **final balance** (the primary comparison criterion); rows ordered by 
 
 | # | strategy | spot | futures_5x | trades | profit | max DD |
 |---|---|---|---|---|---|---|
-| 🥇1 | [kelly_regime_v3](../src/tradebot/strategies/kelly_regime_v3.py) | 🟢 $65.8K | 🟢 **$139.5K** | 147 | 📈 $138.5K | 42% |
-| 🥈2 | [kelly_regime_v2](../src/tradebot/strategies/kelly_regime_v2.py) | 🟢 $46.4K | 🟢 **$122.0K** | 113 | 📈 $121.0K | 40% |
-| 🥉3 | [kelly_regime](../src/tradebot/strategies/kelly_regime.py) | 🟢 $42.1K | 🟢 **$108.2K** | 143 | 📈 $107.2K | 43% |
-| 4 | [buy_and_hold](../src/tradebot/strategies/buy_and_hold.py) | 🟢 **$66.0K** | 💀 $18.05 | 1 | 📈 $65.0K | 84% ⚠️ |
-| 5 | [champions_council](../src/tradebot/strategies/champions_council.py) | 🟢 $19.3K | 🟢 **$36.8K** | 261 | 📈 $35.8K | 37% |
-| 6 | [hedge_experts](../src/tradebot/strategies/hedge_experts.py) | 🟢 **$13.3K** | 🔴 $258 | 2,044 | 📈 $12.3K | 59% ⚠️ |
-| 7 | [replicator_book](../src/tradebot/strategies/replicator_book.py) | 🟢 **$2,330** | 🔴 $10.58 | 713 | 📈 $1,330 | 38% |
-| 8 | [universal_kelly](../src/tradebot/strategies/universal_kelly.py) | 🟢 **$1,276** | 🟢 $1,227 | 9 | 📈 $276 | 7% |
-| 9 | [harsanyi_crowd](../src/tradebot/strategies/harsanyi_crowd.py) | 🔴 **$888** | 🔴 $429 | 91 | 📉 -$112 | 11% |
-| 10 | [overshoot_fade](../src/tradebot/strategies/overshoot_fade.py) | 🔴 **$662** | 🔴 $33.52 | 189 | 📉 -$338 | 37% |
-| 11 | [camouflage_flow](../src/tradebot/strategies/camouflage_flow.py) | 🔴 **$548** | 🔴 $0.99 | 802 | 📉 -$452 | 53% ⚠️ |
-| 12 | [stealth_trend](../src/tradebot/strategies/stealth_trend.py) | 🔴 **$465** | 🔴 $0.38 | 1,605 | 📉 -$535 | 55% ⚠️ |
-| 13 | [flow_regime](../src/tradebot/strategies/flow_regime.py) | 🔴 **$447** | 🔴 $0.80 | 1,184 | 📉 -$553 | 56% ⚠️ |
-| 14 | [game_council](../src/tradebot/strategies/game_council.py) | 🔴 **$284** | 🔴 $2.00 | 2,541 | 📉 -$716 | 72% ⚠️ |
-| 15 | [minority_oracle](../src/tradebot/strategies/minority_oracle.py) | 🔴 **$53.36** | 🔴 $3.83 | 9,039 | 📉 -$947 | 95% ⚠️ |
-| 16 | [game_switch](../src/tradebot/strategies/game_switch.py) | 🔴 **$5.00** | 🔴 $1.00 | 6,672 | 📉 -$995 | 99% ⚠️ |
-| 17 | [regret_grid](../src/tradebot/strategies/regret_grid.py) | 🔴 **$5.00** | 🔴 $1.00 | 3,461 | 📉 -$995 | 100% ⚠️ |
-| 18 | [tft_trend](../src/tradebot/strategies/tft_trend.py) | 🔴 **$4.99** | 🔴 $1.00 | 2,538 | 📉 -$995 | 100% ⚠️ |
-| 19 | [macd_cross](../src/tradebot/strategies/macd_cross.py) | 🔴 **$4.99** | 🔴 $1.00 | 4,301 | 📉 -$995 | 100% ⚠️ |
-| 20 | [macd_rsi](../src/tradebot/strategies/macd_rsi.py) | 🔴 **$4.96** | 🔴 $0.94 | 2,454 | 📉 -$995 | 100% ⚠️ |
-| 21 | [attrition_reversion](../src/tradebot/strategies/attrition_reversion.py) | 🔴 **$4.94** | 🔴 $0.99 | 2,930 | 📉 -$995 | 100% ⚠️ |
-| 22 | [rsi_reversion](../src/tradebot/strategies/rsi_reversion.py) | 🔴 **$4.85** | 🔴 $0.77 | 4,464 | 📉 -$995 | 100% ⚠️ |
+| 🥇1 | [kelly_regime_v4](../src/tradebot/strategies/kelly_regime_v4.py) | 🟢 $66.8K | 🟢 **$156.2K** | 174 | 📈 $155.2K | 35% |
+| 🥈2 | [kelly_regime_v3](../src/tradebot/strategies/kelly_regime_v3.py) | 🟢 $65.8K | 🟢 **$139.5K** | 147 | 📈 $138.5K | 42% |
+| 🥉3 | [kelly_regime_v2](../src/tradebot/strategies/kelly_regime_v2.py) | 🟢 $46.4K | 🟢 **$122.0K** | 113 | 📈 $121.0K | 40% |
+| 4 | [kelly_regime](../src/tradebot/strategies/kelly_regime.py) | 🟢 $42.1K | 🟢 **$108.2K** | 143 | 📈 $107.2K | 43% |
+| 5 | [buy_and_hold](../src/tradebot/strategies/buy_and_hold.py) | 🟢 **$66.0K** | 💀 $18.05 | 1 | 📈 $65.0K | 84% ⚠️ |
+| 6 | [champions_council](../src/tradebot/strategies/champions_council.py) | 🟢 $19.3K | 🟢 **$36.8K** | 261 | 📈 $35.8K | 37% |
+| 7 | [hedge_experts](../src/tradebot/strategies/hedge_experts.py) | 🟢 **$13.3K** | 🔴 $258 | 2,044 | 📈 $12.3K | 59% ⚠️ |
+| 8 | [replicator_book](../src/tradebot/strategies/replicator_book.py) | 🟢 **$2,330** | 🔴 $10.58 | 713 | 📈 $1,330 | 38% |
+| 9 | [universal_kelly](../src/tradebot/strategies/universal_kelly.py) | 🟢 **$1,276** | 🟢 $1,227 | 9 | 📈 $276 | 7% |
+| 10 | [harsanyi_crowd](../src/tradebot/strategies/harsanyi_crowd.py) | 🔴 **$888** | 🔴 $429 | 91 | 📉 -$112 | 11% |
+| 11 | [overshoot_fade](../src/tradebot/strategies/overshoot_fade.py) | 🔴 **$662** | 🔴 $33.52 | 189 | 📉 -$338 | 37% |
+| 12 | [camouflage_flow](../src/tradebot/strategies/camouflage_flow.py) | 🔴 **$548** | 🔴 $0.99 | 802 | 📉 -$452 | 53% ⚠️ |
+| 13 | [stealth_trend](../src/tradebot/strategies/stealth_trend.py) | 🔴 **$465** | 🔴 $0.38 | 1,605 | 📉 -$535 | 55% ⚠️ |
+| 14 | [flow_regime](../src/tradebot/strategies/flow_regime.py) | 🔴 **$447** | 🔴 $0.80 | 1,184 | 📉 -$553 | 56% ⚠️ |
+| 15 | [game_council](../src/tradebot/strategies/game_council.py) | 🔴 **$284** | 🔴 $2.00 | 2,541 | 📉 -$716 | 72% ⚠️ |
+| 16 | [minority_oracle](../src/tradebot/strategies/minority_oracle.py) | 🔴 **$53.36** | 🔴 $3.83 | 9,039 | 📉 -$947 | 95% ⚠️ |
+| 17 | [game_switch](../src/tradebot/strategies/game_switch.py) | 🔴 **$5.00** | 🔴 $1.00 | 6,672 | 📉 -$995 | 99% ⚠️ |
+| 18 | [regret_grid](../src/tradebot/strategies/regret_grid.py) | 🔴 **$5.00** | 🔴 $1.00 | 3,461 | 📉 -$995 | 100% ⚠️ |
+| 19 | [tft_trend](../src/tradebot/strategies/tft_trend.py) | 🔴 **$4.99** | 🔴 $1.00 | 2,538 | 📉 -$995 | 100% ⚠️ |
+| 20 | [macd_cross](../src/tradebot/strategies/macd_cross.py) | 🔴 **$4.99** | 🔴 $1.00 | 4,301 | 📉 -$995 | 100% ⚠️ |
+| 21 | [macd_rsi](../src/tradebot/strategies/macd_rsi.py) | 🔴 **$4.96** | 🔴 $0.94 | 2,454 | 📉 -$995 | 100% ⚠️ |
+| 22 | [attrition_reversion](../src/tradebot/strategies/attrition_reversion.py) | 🔴 **$4.94** | 🔴 $0.99 | 2,930 | 📉 -$995 | 100% ⚠️ |
+| 23 | [rsi_reversion](../src/tradebot/strategies/rsi_reversion.py) | 🔴 **$4.85** | 🔴 $0.77 | 4,464 | 📉 -$995 | 100% ⚠️ |
 
 _Balances from a $1,000 start · bold = the strategy's better market · 🟢 profit · 🔴 loss · 💀 liquidated · ⚠️ drawdown over 50%. Trades, profit and max drawdown describe that market._
 
@@ -37,6 +38,7 @@ _Balances from a $1,000 start · bold = the strategy's better market · 🟢 pro
 
 | strategy | final balance | profit | profit % | trades | win % | best trade | worst trade | max DD % | sharpe | in market % | fees | liq. |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
+| [kelly_regime_v4](../src/tradebot/strategies/kelly_regime_v4.py) | $156.2K | $155.2K | +15517.02% | 174 | 14.9 | $53.8K | -$8,817 | 35.3 | 1.59 | 66.4 | $9,532 |  |
 | [kelly_regime_v3](../src/tradebot/strategies/kelly_regime_v3.py) | $139.5K | $138.5K | +13850.95% | 147 | 14.4 | $50.9K | -$9,152 | 41.8 | 1.55 | 66.5 | $8,396 |  |
 | [kelly_regime_v2](../src/tradebot/strategies/kelly_regime_v2.py) | $122.0K | $121.0K | +12099.31% | 113 | 15.2 | $44.7K | -$9,232 | 39.6 | 1.49 | 67.3 | $8,222 |  |
 | [kelly_regime](../src/tradebot/strategies/kelly_regime.py) | $108.2K | $107.2K | +10722.13% | 143 | 14.1 | $44.9K | -$6,782 | 42.6 | 1.42 | 66.3 | $8,000 |  |
@@ -64,6 +66,7 @@ _Balances from a $1,000 start · bold = the strategy's better market · 🟢 pro
 
 | strategy | final balance | profit | profit % | trades | win % | best trade | worst trade | max DD % | sharpe | in market % | fees | liq. |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
+| [kelly_regime_v4](../src/tradebot/strategies/kelly_regime_v4.py) | $66.8K | $65.8K | +6579.39% | 174 | 14.4 | $21.7K | -$2,883 | 43.3 | 1.42 | 66.4 | $8,050 |  |
 | [buy_and_hold](../src/tradebot/strategies/buy_and_hold.py) | $66.0K | $65.0K | +6504.41% | 1 | 0.0 | $65.0K | $65.0K | 84.1 | 0.95 | 100.0 | $1.00 |  |
 | [kelly_regime_v3](../src/tradebot/strategies/kelly_regime_v3.py) | $65.8K | $64.8K | +6484.44% | 147 | 14.4 | $23.7K | -$3,788 | 47.4 | 1.40 | 66.5 | $7,856 |  |
 | [kelly_regime_v2](../src/tradebot/strategies/kelly_regime_v2.py) | $46.4K | $45.4K | +4542.30% | 113 | 15.2 | $13.9K | -$3,420 | 41.4 | 1.36 | 67.3 | $5,403 |  |
