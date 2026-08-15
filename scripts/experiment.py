@@ -19,10 +19,13 @@ Reproduce the horizon-robustness table (the ensemble-vs-members check)::
 
 Use it interactively for a new idea::
 
-    from scripts.experiment import ev, DF, splits
+    from scripts.experiment import ev, OOS_START
     from tradebot.strategies.kelly_regime import KellyRegime
-    ins, oos = splits(DF)
-    ev(KellyRegime(target_vol=0.6), df=oos)      # out-of-sample only
+    ev(KellyRegime(target_vol=0.6), start=OOS_START)   # out-of-sample only
+
+Pass ``start``/``end`` rather than slicing the frame yourself: a slice
+gives the strategy no warmup, so it sits flat for its first 100 days
+while a zero-warmup benchmark trades from day one.
 """
 
 from __future__ import annotations
@@ -41,6 +44,7 @@ from tradebot.data import load_dataset  # noqa: E402
 from tradebot.engine import run_backtest  # noqa: E402
 from tradebot.metrics import compute_metrics  # noqa: E402
 from tradebot.strategy import Strategy  # noqa: E402
+from tradebot.window import run_period  # noqa: E402
 
 DF, LABEL = load_dataset(ROOT / "data", "spot")
 FUTURES = MarketSpec.futures(leverage=5.0)
@@ -50,19 +54,23 @@ SPOT = MarketSpec.spot()
 OOS_START = "2023-01-01"
 
 
-def splits(df: pd.DataFrame = None) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """(in-sample 2017-2022, out-of-sample 2023-present)."""
-    df = DF if df is None else df
-    return df.loc[:"2022-12-31"], df.loc[OOS_START:]
-
-
 def ev(strategy: Strategy, df: pd.DataFrame = None, market: MarketSpec = None,
-       balance: float = 1_000.0, tag: str = "") -> object:
-    """Run one backtest and print a one-line summary; returns the Metrics."""
+       balance: float = 1_000.0, tag: str = "", start=None, end=None) -> object:
+    """Run one backtest and print a one-line summary; returns the Metrics.
+
+    Pass ``start``/``end`` rather than a pre-sliced frame for sub-periods:
+    that routes through :func:`tradebot.window.run_period`, which warms the
+    strategy on the bars *before* the period instead of burning the first
+    100 days of it.
+    """
     df = DF if df is None else df
     market = SPOT if market is None else market
     t0 = time.time()
-    result = run_backtest(strategy, df, market, balance, data_label=LABEL)
+    if start is None and end is None:
+        result = run_backtest(strategy, df, market, balance, data_label=LABEL)
+    else:
+        result = run_period(strategy, df, start, end, market=market,
+                            start_balance=balance, data_label=LABEL)
     m = compute_metrics(result)
     print(f"{tag or strategy.name:24s} {market.name:11s} "
           f"final=${m.final_balance:>13,.0f} ({m.profit_pct:>+9.1f}%) "
@@ -95,10 +103,10 @@ def walkforward() -> None:
     """In-sample vs out-of-sample for the leading strategies."""
     from tradebot.registry import get_strategy
 
-    ins, oos = splits()
-    for name in ("buy_and_hold", "kelly_regime", "champions_council"):
-        ev(get_strategy(name), df=ins, market=FUTURES, tag=f"IS  {name}")
-        ev(get_strategy(name), df=oos, market=FUTURES, tag=f"OOS {name}")
+    for name in ("buy_and_hold", "kelly_regime_v4", "kelly_regime_v3",
+                 "kelly_regime", "champions_council"):
+        ev(get_strategy(name), market=FUTURES, tag=f"IS  {name}", end="2022-12-31")
+        ev(get_strategy(name), market=FUTURES, tag=f"OOS {name}", start=OOS_START)
 
 
 if __name__ == "__main__":

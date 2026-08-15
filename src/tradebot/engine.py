@@ -10,6 +10,7 @@ Per-bar sequence (no lookahead by construction):
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 
 import pandas as pd
@@ -76,7 +77,18 @@ def run_backtest(
     start_balance: float,
     slippage_bps: float = 0.0,
     data_label: str = "",
+    trade_start: int = 0,
 ) -> BacktestResult:
+    """Backtest ``strategy`` over ``df``.
+
+    ``trade_start`` separates *warming up* from *trading*: bars before it
+    feed the strategy (``on_bar`` still runs, so any internal state warms
+    normally) but the orders they produce are discarded, so the account is
+    untouched — flat, at ``start_balance`` — until that bar. Window
+    resampling needs this: without it a leveraged strategy can be
+    liquidated inside the data prefix and the window then measures a
+    corpse rather than a fresh account.
+    """
     validate_ohlcv(df)
     prepared = strategy.prepare(df.copy())
     if prepared is None:
@@ -117,12 +129,24 @@ def run_backtest(
             fills.append(liq)
 
         equity[i] = broker.equity(closes[i])
+        if not math.isfinite(equity[i]):
+            # Fail loudly: an all-NaN curve otherwise reports 0% drawdown and
+            # 0.00 Sharpe, which reads like a valid (if flat) result.
+            raise ValueError(
+                f"{strategy.name}: equity became non-finite at bar {i} "
+                f"({index[i]}) - a NaN entered the account, check the strategy's "
+                "target/qty for NaN")
 
         last_bar = i == len(prepared) - 1
         if not broker.dead and not last_bar and i >= strategy.warmup:
             ctx = Context(prepared, i, broker, cols=cols)
             strategy.on_bar(ctx)
-            pending = ctx.orders
+            # Before trade_start the strategy is only warming its state; its
+            # orders are dropped so the account stays flat at start_balance.
+            # The first surviving order is queued AT trade_start and fills at
+            # the next open, so equity[trade_start] == start_balance exactly.
+            if i >= trade_start:
+                pending = ctx.orders
 
     trades = build_trades(fills, end_price=closes[-1] if len(closes) else None,
                           broker=broker)

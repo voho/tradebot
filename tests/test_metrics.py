@@ -1,9 +1,12 @@
+import math
+
 import numpy as np
 import pytest
 
 from tradebot.broker import MarketSpec
 from tradebot.engine import run_backtest
-from tradebot.metrics import compute_metrics, max_drawdown_pct, sharpe_ratio
+from tradebot.metrics import (BARS_PER_YEAR, compute_metrics, max_drawdown_pct,
+                              sharpe_ratio)
 from tradebot.registry import get_strategy
 from tradebot.strategy import Context, Strategy
 
@@ -20,8 +23,41 @@ def test_max_drawdown_monotonic_is_zero():
     assert max_drawdown_pct(np.linspace(1, 2, 50)) == 0.0
 
 
+def test_max_drawdown_uses_the_running_peak_not_global_extremes():
+    """The trough must be measured against the peak that *preceded* it.
+
+    ``test_max_drawdown_known_series`` cannot tell the two formulas apart:
+    its global minimum happens to fall after its global maximum, so
+    ``(max - min) / max`` gives the same 33.33%. Put the trough first and
+    they diverge.
+    """
+    # peak-to-trough is 100 -> 20 = 80%; (max - min) / max would say 90%
+    assert max_drawdown_pct(np.array([100.0, 20.0, 60.0, 200.0, 100.0])) \
+        == pytest.approx(80.0)
+    # deepest drop is the first one (100 -> 50), not the later 150 -> 90
+    assert max_drawdown_pct(np.array([100.0, 50.0, 150.0, 90.0, 120.0])) \
+        == pytest.approx(50.0)
+
+
 def test_sharpe_of_flat_curve_is_zero():
     assert sharpe_ratio(np.full(100, 500.0)) == 0.0
+
+
+def test_sharpe_is_annualized_to_5m_bars():
+    """Drop the annualization and every reported Sharpe is ~750x too small.
+
+    A flat curve returns 0.0 either way, so the existing test cannot see
+    the factor at all — and a Sharpe of 0.002 still reads as "a number".
+    """
+    rng = np.random.default_rng(0)
+    equity = 1_000.0 * np.cumprod(1.0 + rng.normal(2e-5, 5e-4, 20_000))
+    step = np.diff(equity) / equity[:-1]
+    per_bar = step.mean() / step.std(ddof=1)
+
+    assert BARS_PER_YEAR == pytest.approx(365.25 * 24 * 12)
+    assert sharpe_ratio(equity) == pytest.approx(
+        per_bar * math.sqrt(BARS_PER_YEAR), rel=1e-9)
+    assert abs(sharpe_ratio(equity)) > 10 * abs(per_bar)
 
 
 class OneRoundTrip(Strategy):

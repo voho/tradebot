@@ -2,7 +2,7 @@ import math
 
 import pytest
 
-from tradebot.broker import MarketSpec, PaperBroker
+from tradebot.broker import REBALANCE_DEADBAND, MarketSpec, PaperBroker
 from tradebot.orders import Order, Side
 
 
@@ -192,3 +192,87 @@ def test_equity_definition():
     qty = b.pos
     assert b.equity(105.0) == pytest.approx(1_000.0 + qty * 5.0)
     assert not math.isnan(b.equity(100.0))
+
+
+def test_liquidation_price_short():
+    """Mirror of test_liquidation_price_long — the short branch had no test.
+
+    Its ``(1 + mm)`` divisor could be deleted with a fully green suite,
+    which silently mis-prices liquidation for every short on 5x futures.
+    """
+    b = fut_broker(balance=1_000.0, lev=5.0, fee=0.0)
+    b.execute(Order(target=-1.0), ts=0, price=100.0)
+    assert b.pos < 0
+    p_liq = b.liquidation_price()
+    assert 119.0 < p_liq < 121.0  # 5x short: ~20% adverse move
+    eq = b.equity(p_liq)
+    maint = b.market.maintenance_margin_rate * abs(b.pos) * p_liq
+    assert eq == pytest.approx(maint, rel=1e-9)
+
+
+def test_short_liquidation_triggers_on_the_bar_high():
+    b = fut_broker(balance=1_000.0, lev=5.0)
+    b.execute(Order(target=-1.0), ts=0, price=100.0)
+    p_liq = b.liquidation_price()
+    assert b.check_liquidation(ts=1, o=101.0, h=p_liq - 0.5, l=100.0) is None
+    fill = b.check_liquidation(ts=2, o=101.0, h=p_liq + 0.5, l=100.0)
+    assert fill is not None and fill.kind == "liquidation"
+    assert b.dead and b.pos == 0.0 and b.cash >= 0.0
+
+
+def test_fee_is_a_fraction_of_notional_not_of_quantity():
+    """At a BTC-scale price the two formulas differ by ~50,000x.
+
+    Only one loose ``rel=1e-3`` round-trip assertion distinguished them
+    before, so pin the definition directly.
+    """
+    b = spot_broker(balance=1_000.0, fee=0.001)
+    f = b.execute(Order(target=1.0), ts=0, price=50_000.0)[0]
+    assert f.fee == pytest.approx(0.001 * f.qty * f.price, rel=1e-12)
+    assert f.fee > 0.9  # ~$1 on $1,000 of notional, not $2e-5 on the quantity
+    assert b.fees_paid == pytest.approx(f.fee)
+
+
+def test_rebalance_deadband_threshold_is_exact():
+    """Pin BOTH sides of the threshold, not just 'a tiny move does nothing'.
+
+    The deadband sets every sizing strategy's turnover, so widening it
+    silently changes trade counts, fees and every published balance.
+    """
+    assert REBALANCE_DEADBAND == pytest.approx(0.05)
+
+    b = fut_broker(balance=1_000.0, lev=5.0, fee=0.0)
+    b.execute(Order(target=1.0), ts=0, price=100.0)
+    pos = b.pos
+
+    inside = 1.0 - REBALANCE_DEADBAND * 0.8  # 4% of max notional: ignored
+    assert b.execute(Order(target=inside), ts=1, price=100.0) == []
+    assert b.pos == pytest.approx(pos)
+
+    outside = 1.0 - REBALANCE_DEADBAND * 1.2  # 6% of max notional: must trade
+    fills = b.execute(Order(target=outside), ts=2, price=100.0)
+    assert len(fills) == 1
+    assert abs(b.pos) < abs(pos)
+
+
+def test_deadband_never_blocks_a_close():
+    b = fut_broker(fee=0.0)
+    b.execute(Order(target=1.0), ts=0, price=100.0)
+    assert b.execute(Order(target=0.0), ts=1, price=100.0)
+    assert b.pos == 0.0
+
+
+def test_nan_target_is_rejected_not_clamped_to_max_short():
+    """NaN fails every comparison, so min/max would clamp it to a full short."""
+    b = fut_broker()
+    with pytest.raises(ValueError, match="finite"):
+        b.execute(Order(target=float("nan")), ts=0, price=100.0)
+    assert b.pos == 0.0
+
+
+def test_nan_qty_is_rejected_at_construction():
+    """`qty <= 0` lets NaN through; it would then poison cash and equity."""
+    with pytest.raises(ValueError, match="finite"):
+        Order(side=Side.BUY, qty=float("nan"))
+    with pytest.raises(ValueError, match="finite"):
+        Order(target=float("inf"))

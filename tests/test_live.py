@@ -2,16 +2,21 @@
 tradebot.live, must produce the same decisions the backtester acted on."""
 
 import math
+from pathlib import Path
 
 import numpy as np
 import pytest
 
 from tradebot.broker import MarketSpec
+from tradebot.data import load_dataset
 from tradebot.engine import run_backtest
 from tradebot.live import LiveAccount, compute_signal
 from tradebot.registry import available_strategies, get_strategy
+from tradebot.strategy import Context
 
 from conftest import make_ohlcv
+
+DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 
 
 def _wave(n=1_200, seed=9):
@@ -79,6 +84,64 @@ def test_live_signals_match_backtest_decisions(name, market):
                 pos_sign = new_sign
 
     assert got == expected
+
+
+@pytest.fixture(scope="module")
+def real_df():
+    df, label = load_dataset(DATA_DIR, "spot")
+    assert label != "SYNTHETIC", (
+        "the committed real dataset is missing - live parity would only be "
+        "checked on a fixture too short to wake most strategies")
+    return df
+
+
+@pytest.mark.parametrize("name", sorted(available_strategies()))
+def test_live_window_matches_batch_prepare_on_real_data(name, real_df):
+    """The incremental live window must decide exactly as the batch frame does.
+
+    This is the deployment risk the synthetic parity test above cannot
+    reach: 18 of 22 strategies have a warmup longer than that 1,200-bar
+    fixture, so their ``on_bar`` is never called there and the comparison
+    reduces to ``{} == {}``. Here every strategy is warm, and the orders
+    themselves are compared rather than only the sign changes — so a
+    strategy whose target drifts without crossing zero is still covered.
+    """
+    decisions = 25
+    strategy = get_strategy(name)
+    df = real_df.iloc[-(strategy.warmup + decisions + 1):]
+    market = MarketSpec.futures(leverage=5.0)
+    account = LiveAccount(position=0.0, equity_quote=10_000.0, market=market)
+
+    batch = get_strategy(name)
+    prepared = batch.prepare(df.copy())
+
+    for i in range(len(df) - decisions, len(df)):
+        ctx = Context(prepared, i, account)
+        batch.on_bar(ctx)
+        expected = [(o.side, o.qty, o.target) for o in ctx.orders]
+        got = [(o.side, o.qty, o.target)
+               for o in compute_signal(strategy, df.iloc[: i + 1], account)]
+        assert got == expected, (
+            f"{name}: live window and batch frame disagree at bar {i} "
+            f"({got} vs {expected}) - the deployed bot would trade "
+            "differently from the backtest that ranked it")
+
+
+def test_live_account_equity_matches_the_broker_definition():
+    """The parity contract in one assertion: equity is price-independent.
+
+    ``LiveAccount.equity()`` ignores its price argument because a live
+    account's equity is read from the venue, already marked. The broker's
+    must agree at the moment a position is opened, or every strategy that
+    sizes off ``ctx.equity`` decides differently live than in the backtest.
+    """
+    market = MarketSpec.futures(leverage=5.0)
+    account = LiveAccount(position=2.0, equity_quote=5_000.0, market=market)
+    assert account.equity(1.0) == account.equity(1e9) == 5_000.0
+    from tradebot.broker import PaperBroker
+
+    assert PaperBroker(market=market, start_balance=5_000.0).equity(100.0) \
+        == account.equity(100.0)
 
 
 def test_compute_signal_respects_warmup():

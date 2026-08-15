@@ -56,6 +56,31 @@ def test_liquidation_stops_trading():
     assert result.trades[-1].liquidated
 
 
+def test_intrabar_wick_liquidates_even_when_the_close_recovers():
+    """A 5x long must die on the wick, not survive because the bar closed up.
+
+    Every other liquidation test uses a bar whose *close* is already past
+    the liquidation price, so an engine that checked the close instead of
+    the high/low would pass them all — while overstating every leveraged
+    result in the comparison table.
+    """
+
+    class BuyOnce(Strategy):
+        name = "_test_buy_once_wick"
+
+        def on_bar(self, ctx: Context) -> None:
+            if ctx.i == 2 and not ctx.in_market:
+                ctx.order_target(1.0)
+
+    df = make_ohlcv([100.0] * 8)
+    df.iloc[5, df.columns.get_loc("low")] = 70.0  # 30% dip, closes back at 100
+
+    result = run_backtest(BuyOnce(), df, MarketSpec.futures(leverage=5.0), 1_000.0)
+    assert result.liquidated, "a wick past the liquidation price did not liquidate"
+    assert [f for f in result.fills if f.kind == "liquidation"]
+    assert result.final_balance < 100.0
+
+
 def test_gap_through_bankruptcy_liquidates_at_open_before_orders():
     """A gap past the bankruptcy price must floor the account at zero.
 
@@ -166,3 +191,75 @@ def test_all_registered_strategies_run_both_markets(name):
         assert len(result.equity) == len(df)
         assert np.isfinite(result.equity.to_numpy()).all()
         assert (result.equity >= -1e-6).all()  # equity can hit ~0, never negative
+
+
+def test_trade_start_keeps_the_account_flat_through_the_prefix(trend_df):
+    """Window resampling depends on this: no trading before ``trade_start``."""
+    cut = 20
+    result = run_backtest(get_strategy("buy_and_hold"), trend_df, MarketSpec.spot(),
+                          1_000.0, trade_start=cut)
+    assert (result.equity.iloc[:cut + 1] == 1_000.0).all()
+    assert all(f.ts > trend_df.index[cut] for f in result.fills)
+    # and it still trades afterwards
+    assert len(result.fills) == 1
+
+
+def test_trade_start_prevents_a_prefix_liquidation_from_scoring_the_window():
+    """A 5x long wiped out in the prefix must not carry a corpse into the window.
+
+    Without ``trade_start`` the account is liquidated before the measured
+    window opens, so the window reports a flat ~0% instead of the fresh
+    account's real result.
+    """
+    closes = [100.0] * 10 + [70.0] * 6 + [70.0 * 1.5**(k / 20) for k in range(1, 41)]
+    df = make_ohlcv(closes)
+    market = MarketSpec.futures(leverage=5.0)
+    eval_start = 20
+
+    naive = run_backtest(get_strategy("buy_and_hold"), df, market, 1_000.0)
+    assert naive.liquidated  # dies in the prefix, at bar ~10
+    assert naive.equity.iloc[eval_start] < 50.0  # a corpse, <5% of the account
+    # ...and the window would score it as a flat ~0%, not as the wipeout it is
+    assert naive.equity.iloc[-1] == pytest.approx(naive.equity.iloc[eval_start])
+
+    fresh = run_backtest(get_strategy("buy_and_hold"), df, market, 1_000.0,
+                         trade_start=eval_start)
+    assert not fresh.liquidated
+    assert fresh.equity.iloc[eval_start] == pytest.approx(1_000.0)
+    assert fresh.final_balance > 1_000.0
+
+
+def test_trade_start_still_warms_strategy_state():
+    """on_bar must keep being called through the prefix, only its orders drop."""
+
+    class CountingStrategy(Strategy):
+        name = "_test_counting"
+
+        def __init__(self) -> None:
+            self.seen = 0
+
+        def on_bar(self, ctx: Context) -> None:
+            self.seen += 1
+            ctx.order_target(1.0)
+
+    df = make_ohlcv([100.0] * 30)
+    strategy = CountingStrategy()
+    result = run_backtest(strategy, df, MarketSpec.spot(), 1_000.0, trade_start=25)
+    assert strategy.seen == len(df) - 1  # every bar but the last
+    assert all(f.ts > df.index[25] for f in result.fills)
+
+
+def test_non_finite_equity_raises_instead_of_reporting_zero():
+    """An all-NaN equity curve otherwise reports 0% drawdown and 0.00 Sharpe."""
+
+    class NanEquity(Strategy):
+        name = "_test_nan_equity"
+
+        def on_bar(self, ctx: Context) -> None:
+            if ctx.i == 5:
+                ctx.order_target(1.0)
+
+    df = make_ohlcv([100.0] * 20)
+    df.iloc[10, df.columns.get_loc("close")] = float("nan")
+    with pytest.raises(ValueError, match="non-finite"):
+        run_backtest(NanEquity(), df, MarketSpec.futures(leverage=5.0), 1_000.0)

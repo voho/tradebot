@@ -181,6 +181,10 @@ class PaperBroker:
         return pos1 - self.pos
 
     def _execute_target(self, target: float, ts, price: float) -> list[Fill]:
+        # A NaN would survive min/max (every comparison is False) and clamp to
+        # the low bound - a full-size SHORT on futures. Reject it instead.
+        if not math.isfinite(target):
+            raise ValueError(f"order target must be finite, got {target!r}")
         lo = -1.0 if self.market.allow_short else 0.0
         target = min(1.0, max(lo, target))
 

@@ -21,22 +21,26 @@ DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 BARS = 60_000  # must exceed the longest strategy warmup
 CUT = 15_000  # bars withheld from the truncated run
 
-LONG_WARMUP = sorted(
-    name for name, cls in available_strategies().items() if cls().warmup > 5_000
-)
+# Every registered strategy, not just the long-warmup ones: an audit found
+# that 12 strategies had no effective truncation coverage anywhere, because
+# they are inert inside the short synthetic fixture in test_engine.py.
+ALL_STRATEGIES = sorted(available_strategies())
 
 
 @pytest.fixture(scope="module")
 def real_slice():
     df, label = load_dataset(DATA_DIR, "spot")
-    if label == "SYNTHETIC":
-        pytest.skip("real dataset not present")
-    if len(df) < BARS:
-        pytest.skip("dataset too short")
+    # Fail rather than skip. A skipped causality suite is a green run that
+    # proves nothing, and load_dataset writes a synthetic CSV into data/ as
+    # a side effect, so the skip would hide its own cause.
+    assert label != "SYNTHETIC", (
+        "the committed real dataset is missing - the no-lookahead guarantees "
+        "in this module would be silently skipped")
+    assert len(df) >= BARS, f"dataset too short: {len(df)} < {BARS}"
     return df.iloc[-BARS:]
 
 
-@pytest.mark.parametrize("name", LONG_WARMUP)
+@pytest.mark.parametrize("name", ALL_STRATEGIES)
 def test_no_lookahead_on_real_data(name, real_slice):
     """Withholding the final bars must not change any earlier fill."""
     market = MarketSpec.spot()

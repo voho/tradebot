@@ -42,16 +42,29 @@ from tradebot.data import load_dataset  # noqa: E402
 from tradebot.engine import run_backtest  # noqa: E402
 from tradebot.metrics import compute_metrics, max_drawdown_pct  # noqa: E402
 from tradebot.strategy import Strategy  # noqa: E402
+from tradebot.window import run_period  # noqa: E402
 
 BARS_PER_DAY = 288
 FUTURES = MarketSpec.futures(leverage=5.0)
 SPOT = MarketSpec.spot()
 
+# Fixed, so the Monte Carlo window set does not silently re-roll when a
+# candidate with a different warmup joins the battery - runs across
+# sessions have to stay comparable.
+WINDOW_WARMUP = 100 * BARS_PER_DAY + 10
+
 DF, LABEL = load_dataset(ROOT / "data", "spot")
 
 
-def _full(make: callable, df: pd.DataFrame, market: MarketSpec) -> dict:
-    m = compute_metrics(run_backtest(make(), df, market, 1_000.0, data_label=LABEL))
+def _period(make: callable, market: MarketSpec, start=None, end=None) -> dict:
+    """Metrics over [start, end], warmed on the bars before ``start``.
+
+    Slicing the frame instead would leave a long-warmup strategy unable to
+    trade for its first 100 days while a zero-warmup benchmark trades from
+    day one - a handicap worth ~7.6% of the out-of-sample period.
+    """
+    m = compute_metrics(run_period(make(), DF, start, end, market=market,
+                                   start_balance=1_000.0, data_label=LABEL))
     return {"final": m.final_balance, "sharpe": m.sharpe,
             "dd": m.max_drawdown_pct, "trades": m.num_trades,
             "liq": m.liquidated}
@@ -59,7 +72,11 @@ def _full(make: callable, df: pd.DataFrame, market: MarketSpec) -> dict:
 
 def _window(make: callable, window: pd.DataFrame, eval_start: int,
             market: MarketSpec) -> dict:
-    result = run_backtest(make(), window, market, 1_000.0, data_label=LABEL)
+    # Bars before eval_start warm the strategy but cannot trade, so every
+    # window scores a fresh account rather than one already carrying a
+    # position (or already liquidated) from the prefix.
+    result = run_backtest(make(), window, market, 1_000.0, data_label=LABEL,
+                          trade_start=eval_start)
     equity = result.equity.to_numpy(dtype=float)
     base = equity[eval_start]
     if not np.isfinite(base) or base <= 0:
@@ -72,21 +89,22 @@ def _window(make: callable, window: pd.DataFrame, eval_start: int,
 def beta_test(candidates: dict[str, callable], market: MarketSpec = FUTURES,
               windows: int = 20, min_days: int = 120, max_days: int = 730,
               seed: int = 7, incumbent: str = "kelly_regime") -> pd.DataFrame:
-    ins, oos = DF.loc[:"2022-12-31"], DF.loc["2023-01-01":]
-
     print(f"=== full period · {market.name} · $1,000 ===", file=sys.stderr)
     rows = {}
     for name, make in candidates.items():
-        rows[name] = {"full": _full(make, DF, market),
-                      "is": _full(make, ins, market),
-                      "oos": _full(make, oos, market)}
+        rows[name] = {"full": _period(make, market),
+                      "is": _period(make, market, end="2022-12-31"),
+                      "oos": _period(make, market, start="2023-01-01")}
         f, i, o = rows[name]["full"], rows[name]["is"], rows[name]["oos"]
         print(f"{name:26s} full=${f['final']:>10,.0f} sharpe={f['sharpe']:5.2f} "
               f"DD={f['dd']:5.1f}% trades={f['trades']:4d} | "
               f"IS=${i['final']:>9,.0f} OOS=${o['final']:>8,.0f}", file=sys.stderr)
 
     # ---- Monte Carlo windows, identical windows for every candidate
-    warmup = max(make().warmup for make in candidates.values()) + 10
+    warmup = WINDOW_WARMUP
+    too_slow = [n for n, make in candidates.items() if make().warmup > warmup]
+    if too_slow:
+        raise SystemExit(f"warmup exceeds WINDOW_WARMUP={warmup}: {too_slow}")
     rng = np.random.default_rng(seed)
     specs = []
     for _ in range(windows):
@@ -160,7 +178,7 @@ def main() -> None:
     candidates: dict[str, callable] = {"kelly_regime": lambda: get_strategy("kelly_regime")}
     # Variants under test. Add a registered name here to put it through the
     # battery; the incumbent stays first so verdicts compare against it.
-    for name in ("kelly_regime_v2", "kelly_regime_v3"):
+    for name in ("kelly_regime_v2", "kelly_regime_v3", "kelly_regime_v4"):
         try:
             get_strategy(name)
         except KeyError:

@@ -9,9 +9,12 @@ length) and reports the distribution of outcomes.
 Design notes that make the comparison fair:
 
 - Every window is preceded by a **warmup prefix** long enough to satisfy
-  the slowest strategy (100-day regime anchors). The strategy trades
-  through the prefix, but performance is measured only from the window
-  start, so short windows are not penalised for a cold start.
+  the slowest strategy (100-day regime anchors). The prefix warms
+  indicators and internal state only: trading is disabled until the window
+  start (``trade_start``), so short windows are not penalised for a cold
+  start *and* every strategy enters the window flat, with the full
+  starting balance. Measuring a leveraged strategy that was already
+  liquidated inside its own prefix would score a corpse, not the window.
 - All strategies see the **identical** window, and buy-and-hold is
   evaluated alongside as the per-window benchmark - the honest question
   is not "did it make money" (BTC rose) but "did it beat holding, and how
@@ -50,14 +53,26 @@ from tradebot.registry import get_strategy  # noqa: E402
 from tradebot.report import BASELINE, GRID, INK, INK_2, MUTED, PAGE, SERIES, SURFACE  # noqa: E402
 
 BARS_PER_DAY = 288
-STRATEGIES = ["kelly_regime", "buy_and_hold", "champions_council"]
+# The top three by final balance, plus the benchmark every strategy must
+# beat and the structurally different survivor (champions_council) as a
+# contrast — the three leaders are variants of one another, so a council
+# built from unrelated members is the useful control.
+STRATEGIES = ["kelly_regime_v4", "kelly_regime_v3", "kelly_regime_v2",
+              "buy_and_hold", "champions_council"]
 BENCHMARK = "buy_and_hold"
 
 
 def evaluate(name: str, window: pd.DataFrame, eval_start: int,
              market: MarketSpec, balance: float = 1_000.0) -> dict:
-    """Backtest over ``window``; measure only from ``eval_start`` onward."""
-    result = run_backtest(get_strategy(name), window, market, balance)
+    """Backtest over ``window``; the account only opens at ``eval_start``.
+
+    Bars before ``eval_start`` warm the strategy's indicators and internal
+    state but cannot trade, so every window measures a **fresh** account
+    from the window start. Without that, a leveraged strategy could be
+    liquidated inside the prefix and the window would score a corpse.
+    """
+    result = run_backtest(get_strategy(name), window, market, balance,
+                          trade_start=eval_start)
     equity = result.equity.to_numpy(dtype=float)
     base = equity[eval_start]
     if not np.isfinite(base) or base <= 0:

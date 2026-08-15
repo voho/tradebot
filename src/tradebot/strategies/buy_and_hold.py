@@ -6,7 +6,7 @@ from tradebot.strategy import Context, Strategy
 
 @register
 class BuyAndHold(Strategy):
-    """Buy everything on the first bar and never trade again.
+    """Buy everything on the first tradable bar and never trade again.
 
     The idea: BTC has historically rewarded simply holding through both
     bull and bear markets. This is the benchmark every active strategy
@@ -20,5 +20,9 @@ class BuyAndHold(Strategy):
     warmup = 0
 
     def on_bar(self, ctx: Context) -> None:
-        if ctx.i == self.warmup and not ctx.in_market:
+        # Keyed on being flat rather than on bar 0, so a window that only
+        # opens the account partway in (``run_backtest(trade_start=...)``)
+        # still gets its entry. Once filled this never fires again, and a
+        # liquidated broker stops calling on_bar, so there is no re-entry.
+        if not ctx.in_market:
             ctx.order_target(1.0)

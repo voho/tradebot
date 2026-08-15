@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import enum
+import math
 from dataclasses import dataclass
 
 
@@ -30,9 +31,15 @@ class Order:
     def __post_init__(self) -> None:
         if (self.qty is None) == (self.target is None):
             raise ValueError("set exactly one of qty or target")
+        # NaN fails every comparison, so "qty <= 0" would let it through and
+        # silently poison the account; reject non-finite values explicitly.
+        if self.target is not None and not math.isfinite(self.target):
+            raise ValueError(f"target must be finite, got {self.target!r}")
         if self.qty is not None:
             if self.side is None:
                 raise ValueError("qty orders need an explicit side")
+            if not math.isfinite(self.qty):
+                raise ValueError(f"qty must be finite, got {self.qty!r}")
             if self.qty <= 0:
                 raise ValueError("qty must be positive")
 
