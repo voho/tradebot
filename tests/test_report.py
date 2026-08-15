@@ -54,31 +54,63 @@ def test_matrix_table_one_row_per_strategy_with_config_cells(tmp_path):
     table = matrix_table(metrics, out_dir=tmp_path)
     lines = table.splitlines()
 
-    # header: rank + strategy + one column per config + summary columns
-    assert lines[0] == ("| # | strategy | spot · $1K | spot · $1M "
-                        "| futures_5x · $1K | futures_5x · $1M "
+    # one column per MARKET, not per (market, balance): results are
+    # proportional to capital, so start balances are not separate columns
+    assert lines[0] == ("| # | strategy | spot | futures_5x "
                         "| trades | profit | max DD |")
     # header, separator, two strategy rows, blank line, legend
     assert len(lines) == 6
-    # ranked by best final balance: buy_and_hold first, with a rank number
-    assert lines[2].startswith("| 1 | [buy_and_hold](")
+    # ranked by best final balance: buy_and_hold first, with a medal badge
+    assert lines[2].startswith("| 🥇1 | [buy_and_hold](")
     assert "buy_and_hold.py)" in lines[2]
-    assert lines[3].startswith("| 2 | ")
+    assert lines[3].startswith("| 🥈2 | ")
 
-    # one balance per cell, best config bolded exactly once per row
+    # one balance per cell, best market bolded exactly once per row
     assert lines[2].count("**") == 2
     # the verbose per-cell stats moved to the detail tables
     for token in ("trades 3", "worst ", "<br>"):
         assert token not in lines[2]
-    assert lines[3].count(" !") == 2  # both futures configs liquidated
-    # summary columns describe the best config
-    assert lines[2].endswith("| 3 | $500.0K | 10% |")
+    # emoji encode the outcome redundantly alongside the numbers
+    assert lines[2].count("🟢") == 2  # profitable in both markets
+    assert "💀" in lines[3]  # the liquidated futures run
+    # summary columns describe the better market, at the $1K reference
+    assert lines[2].endswith("| 3 | 📈 $500 | 10% |")
+    assert "$1,000 start" in lines[-1]
 
 
-def test_matrix_table_missing_config_shows_dash():
+def test_matrix_table_flags_deep_drawdowns():
+    metrics = [_metrics("risky", 1_500.0), _metrics("calm", 1_400.0)]
+    metrics[0].max_drawdown_pct = 84.0
+    metrics[1].max_drawdown_pct = 12.0
+    table = matrix_table(metrics)
+    risky = next(line for line in table.splitlines() if "risky" in line)
+    calm = next(line for line in table.splitlines() if "calm" in line)
+    assert "84% ⚠️" in risky
+    assert "⚠️" not in calm
+
+
+def test_matrix_table_flags_scale_sensitive_strategies():
+    """A strategy whose return changes with account size gets a dagger."""
+    metrics = [
+        # proportional: same return at both start balances
+        _metrics("buy_and_hold", 1_500.0), _metrics("buy_and_hold", 1_500_000.0,
+                                                    balance=1_000_000.0),
+        # not proportional: min order size blocks rebalances on the small account
+        _metrics("universal_kelly", 1_300.0),
+        _metrics("universal_kelly", 1_010_000.0, balance=1_000_000.0),
+    ]
+    table = matrix_table(metrics)
+    rows = {line.split("|")[2].strip(): line for line in table.splitlines()
+            if line.startswith("| ")}
+    assert not any("†" in name for name in rows if "buy_and_hold" in name)
+    assert any("†" in name for name in rows if "universal_kelly" in name)
+    assert "minimum order size" in table
+
+
+def test_matrix_table_missing_market_shows_dash():
     metrics = [_metrics("buy_and_hold", 1_500.0),
                _metrics("macd_cross", 800.0),
-               _metrics("macd_cross", 900_000.0, "spot", 1_000_000.0)]
+               _metrics("macd_cross", 900.0, "futures_5x")]
     table = matrix_table(metrics)
     row = next(line for line in table.splitlines() if "buy_and_hold" in line)
-    assert row.count("—") == 1  # buy_and_hold missing the $1M config
+    assert row.count("—") == 1  # buy_and_hold has no futures run

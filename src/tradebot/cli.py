@@ -16,9 +16,9 @@ def main(argv: list[str] | None = None) -> int:
     p_run = sub.add_parser("run", help="run the strategy comparison matrix")
     p_run.add_argument("--data-dir", type=Path, default=Path("data"))
     p_run.add_argument("--out", type=Path, default=Path("reports"))
-    p_run.add_argument("--balances", type=float, nargs="+",
-                       default=[1_000.0, 1_000_000.0],
-                       help="starting balances in USD (default: 1000 1000000)")
+    p_run.add_argument("--balances", type=float, nargs="+", default=[1_000.0],
+                       help="starting balances in USD (default: 1000; results "
+                            "are proportional to capital, so one is usually enough)")
     p_run.add_argument("--markets", nargs="+", choices=["spot", "futures"],
                        default=["spot", "futures"])
     p_run.add_argument("--leverage", type=float, default=5.0,

@@ -144,6 +144,34 @@ holding in ~60%. This is the clearest evidence in the project that the
 value is in growth-optimal position sizing: same asset, same windows, same
 fees — the difference is entirely how much is held and when.
 
+## Does the starting balance matter?
+
+Almost never, which is why the framework now defaults to a single $1,000
+start. Across all 20 strategies on both markets, comparing a $1,000 run
+with a $1,000,000 run:
+
+- **15 of 40** strategy-market pairs returned percentages identical to
+  within 0.01pp — e.g. `kelly_regime` ended at $42,096 and $42,096,000.
+- **2 of 40** differed by more than 1pp, both of them `universal_kelly`.
+- The remaining ~0.5pp gaps were all *already-dead* strategies showing
+  −99.5% at $1K versus −100% at $1M.
+
+Every difference traces to the **$5 minimum order notional**, not to any
+property of the strategy:
+
+- A $1,000 account that has fallen to ~$5 can no longer place a legal
+  order, so it *freezes* just above zero; a $1M account grinds all the way
+  down. The small account is saved by the floor, not by skill.
+- `universal_kelly` rebalances in tiny increments. On a $1K account most
+  of those fall under the $5 minimum and are skipped, which accidentally
+  saves fees (20 trades and +22.7% on futures, versus 3,047 trades and
+  +0.4% at $1M). That is a real capital-scaling effect worth knowing, but
+  it is a statement about minimum order size, not about edge.
+
+Run `tradebot run --balances 1000 1000000` to reproduce; the comparison
+table flags any strategy whose return moves more than 1pp with account
+size.
+
 ## Known limitations
 
 - **No funding rates.** Perpetual futures pay/receive funding every 8

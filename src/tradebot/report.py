@@ -302,59 +302,104 @@ def _config_order(all_metrics: list[Metrics]) -> list[tuple[str, float]]:
     return sorted(configs, key=lambda c: (0 if c[0] == "spot" else 1, c[0], c[1]))
 
 
+SCALE_TOLERANCE_PCT = 1.0  # return gap that counts as "not scale-invariant"
+RANK_BADGES = {1: "🥇", 2: "🥈", 3: "🥉"}
+DEEP_DRAWDOWN_PCT = 50.0  # above this, flag the risk
+
+
+def _outcome_badge(m: Metrics) -> str:
+    """Emoji summarising a run: wiped out, profitable, or a loss."""
+    if m.liquidated:
+        return "💀"
+    if m.final_balance > m.start_balance:
+        return "🟢"
+    return "🔴"
+
+
 def matrix_table(all_metrics: list[Metrics], out_dir: str | Path | None = None) -> str:
-    """Scannable leaderboard: one row per strategy, one balance per cell.
+    """Scannable leaderboard: one row per strategy, one balance per market.
 
-    Columns are the (market, start balance) configs; each cell is the
-    balance after the run, with the strategy's best config in bold and a
-    liquidation marked ``!``. Trades, profit and best/worst trade live in
-    the per-config detail tables below the summary, so this table stays
-    readable at a glance. Rows are ranked by best final balance.
+    Results are almost perfectly proportional to the starting balance, so
+    showing every start balance as its own column is duplication. The
+    table reports the **smallest** start balance (the realistic retail
+    case) and marks with a dagger any strategy whose return at another
+    start balance differs by more than ``SCALE_TOLERANCE_PCT`` — which
+    happens only where the exchange minimum order size bites. Full
+    per-config numbers stay in the detail tables below.
+
+    Rows are ranked by best final balance; the strategy's best market is
+    bolded and a liquidation is marked ``!``.
     """
-    configs = _config_order(all_metrics)
     by_key = {(m.strategy, m.market, m.start_balance): m for m in all_metrics}
-    best_of = {
-        s: max((by_key[(s, mk, b)].final_balance
-                for (mk, b) in configs if (s, mk, b) in by_key), default=float("-inf"))
-        for s in {m.strategy for m in all_metrics}
-    }
-    strategies = sorted(best_of, key=lambda s: best_of[s], reverse=True)
+    markets = sorted({m.market for m in all_metrics},
+                     key=lambda mk: (0 if mk == "spot" else 1, mk))
+    ref_balance = min(m.start_balance for m in all_metrics)
+    ref = {(m.strategy, m.market): m for m in all_metrics
+           if m.start_balance == ref_balance}
 
-    header = ("| # | strategy | "
-              + " | ".join(f"{mk} · {_balance_label(b)}" for mk, b in configs)
+    strategies = sorted(
+        {m.strategy for m in all_metrics},
+        key=lambda s: max((ref[(s, mk)].final_balance for mk in markets
+                           if (s, mk) in ref), default=float("-inf")),
+        reverse=True,
+    )
+
+    def scale_sensitive(name: str) -> bool:
+        """True when another start balance changes the return materially."""
+        for mk in markets:
+            base = ref.get((name, mk))
+            if base is None:
+                continue
+            for (s, market, _bal), m in by_key.items():
+                if s == name and market == mk and abs(
+                        m.profit_pct - base.profit_pct) > SCALE_TOLERANCE_PCT:
+                    return True
+        return False
+
+    header = ("| # | strategy | " + " | ".join(markets)
               + " | trades | profit | max DD |")
-    sep = "|" + "|".join("---" for _ in range(len(configs) + 5)) + "|"
+    sep = "|" + "|".join("---" for _ in range(len(markets) + 5)) + "|"
     lines = [header, sep]
+    any_dagger = False
     for rank, name in enumerate(strategies, 1):
-        cells = [str(rank), _strategy_cell(name, out_dir)]
-        # exactly one config is marked best, even when balances tie
-        best_config = max(
-            (c for c in configs if (name, *c) in by_key),
-            key=lambda c: by_key[(name, *c)].final_balance,
-            default=None,
-        )
-        best = by_key[(name, *best_config)] if best_config else None
-        for mk, b in configs:
-            m = by_key.get((name, mk, b))
+        best_market = max((mk for mk in markets if (name, mk) in ref),
+                          key=lambda mk: ref[(name, mk)].final_balance, default=None)
+        best = ref.get((name, best_market)) if best_market else None
+        label = _strategy_cell(name, out_dir)
+        if scale_sensitive(name):
+            label += " †"
+            any_dagger = True
+        cells = [f"{RANK_BADGES.get(rank, '')}{rank}".strip(), label]
+        for mk in markets:
+            m = ref.get((name, mk))
             if m is None:
                 cells.append("—")
                 continue
             text = _money(m.final_balance)
-            if m.liquidated:
-                text += " !"
-            if (mk, b) == best_config:
-                text = f"**{text}**"  # the row's focus
-            cells.append(text)
+            if mk == best_market:
+                text = f"**{text}**"
+            cells.append(f"{_outcome_badge(m)} {text}")
         if best is None:
             cells += ["—", "—", "—"]
         else:
-            cells += [f"{best.num_trades:,}", _money(best.profit),
-                      f"{best.max_drawdown_pct:.0f}%"]
+            arrow = "📈" if best.profit > 0 else "📉"
+            dd = f"{best.max_drawdown_pct:.0f}%"
+            if best.max_drawdown_pct >= DEEP_DRAWDOWN_PCT:
+                dd += " ⚠️"
+            cells += [f"{best.num_trades:,}", f"{arrow} {_money(best.profit)}", dd]
         lines.append("| " + " | ".join(cells) + " |")
+
+    legend = (f"_Balances from a {_money(ref_balance)} start · bold = the "
+              "strategy's better market · 🟢 profit · 🔴 loss · 💀 liquidated · "
+              f"⚠️ drawdown over {DEEP_DRAWDOWN_PCT:.0f}%. Trades, profit and "
+              "max drawdown describe that market._")
+    if any_dagger:
+        legend += ("\n_† return differs by more than "
+                   f"{SCALE_TOLERANCE_PCT:g}pp at a larger starting balance — the "
+                   "exchange minimum order size blocks small rebalances on a "
+                   "small account. Everything else is proportional to capital._")
     lines.append("")
-    lines.append("_Bold = the strategy's best config · `!` = liquidated. "
-                 "Trades, profit and max drawdown describe that best config; "
-                 "per-config detail is in the tables below._")
+    lines.append(legend)
     return "\n".join(lines)
 
 TABLE_COLS = [

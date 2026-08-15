@@ -1,10 +1,11 @@
 # The strategies, best to worst
 
-Every registered strategy, ranked by final balance on its best config over
+Every registered strategy, ranked by final balance on its best market over
 2017–2026. Each section says **what it is**, **how it works**, and **what
-principles it rests on**. Balances below are from a **$1,000** start
-(the $1M runs are proportional); "spot" is 1x long-only, "futures" is 5x
-with shorting allowed. Full metrics: [../reports/comparison.md](../reports/comparison.md).
+principles it rests on**. Balances below are from a **$1,000** start —
+results scale proportionally with capital, so one start balance is enough;
+"spot" is 1x long-only, "futures" is 5x with shorting allowed. Full
+metrics: [../reports/comparison.md](../reports/comparison.md).
 Literature: [RESEARCH.md](RESEARCH.md). Robustness: [VALIDATION.md](VALIDATION.md).
 
 | # | strategy | spot | futures 5x | verdict |

@@ -24,7 +24,10 @@ from tradebot.report import (
 class RunConfig:
     data_dir: Path = Path("data")
     out_dir: Path = Path("reports")
-    balances: list[float] = field(default_factory=lambda: [1_000.0, 1_000_000.0])
+    # One start balance is enough: results are proportional to capital
+    # (verified across all strategies; the only exceptions came from the
+    # exchange minimum order size). Pass --balances to test more.
+    balances: list[float] = field(default_factory=lambda: [1_000.0])
     markets: list[str] = field(default_factory=lambda: ["spot", "futures"])
     leverage: float = 5.0
     spot_fee: float = 0.001
