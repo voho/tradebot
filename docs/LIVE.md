@@ -179,6 +179,83 @@ noise, monotone in the core fraction with no plateau, and it still loses
 out-of-sample. That is not an edge; it is a dial that points at
 buy-and-hold.
 
+### Fewer trades, or better trades? Both fail the same way
+
+Two obvious remedies, both tested, both failing the same out-of-sample
+check.
+
+First, **where the fees actually go** (`fee_study.py fills`). Of 1,056
+fills, only 174 are entries and 174 are exits — **708 are resizes inside
+an already-open position**, carrying **60% of all fees**. That is the
+volatility-targeting machinery, and on spot its upside is unreachable
+anyway because exposure caps at 1.0. So the obvious target is the resize,
+not the round trip.
+
+**Fewer trades.** Going fully binary — all-in or all-out, no resizes at
+all — does produce full-period winners: majority-vote binary returns
+$88.4K against holding's $65.8K, and with a 14-day minimum hold $79.2K.
+Both **lose out-of-sample** ($2.9K and $3.4K against holding's $3.8K).
+
+**Better trades.** Requiring *unanimous* anchor agreement instead of a
+majority — fewer, higher-conviction entries — is worse on every measure
+($20.2K full period, $1.8K out-of-sample). Conviction filtering removes
+the trades that carried the edge along with the ones that cost fees.
+
+Combined with the earlier deadband, hysteresis-band and decision-clock
+sweeps, that is four independent turnover-reduction mechanisms, all with
+the same signature: in-sample winners, out-of-sample losers.
+
+### Leverage: the one that works, and not for the reason you'd expect
+
+**Leverage does not make the fee cheaper.** Fees are charged on notional,
+so a levered position pays proportionally more of them — the drag scales
+with size exactly as the returns do. On the single full-history path,
+levered `kelly_regime_v4` never catches unlevered spot holding at 0.40%:
+
+| strategy's `max_leverage` | final | max DD | vs spot holding |
+|---|---|---|---|
+| 2x | $57.4K | 43.2% | −13% |
+| 3x | $59.2K | 43.9% | −10% |
+| **4x** | **$60.3K** | 43.9% | −8% |
+| 6x | $60.3K | 43.9% | −8% |
+
+It saturates around 4x — above that the volatility target rarely asks for
+more — and the whole 2–6x range lands within 5% of itself. A flat
+plateau, unlike every spot configuration above.
+
+**The advantage is in the distribution, not that one path.** Over the
+same 40 random windows the stress test uses, at 0.40%, fresh account each
+window:
+
+| config | median | worst | profitable | median DD | wipeouts |
+|---|---|---|---|---|---|
+| `kelly_regime_v4` cap 4x, 5x venue | **+94.3%** | **−21.3%** | **82.5%** | **27.5%** | **0/40** |
+| `kelly_regime_v4` cap 2x, 5x venue | +95.2% | −21.3% | 82.5% | 27.0% | **0/40** |
+| spot buy_and_hold | +50.8% | −51.0% | 72.5% | 52.7% | 0/40 |
+| **3x levered buy_and_hold** | +73.6% | **−99.8%** | 52.5% | 87.2% | **14/40** |
+
+Median window return roughly **doubles** against spot holding, the median
+drawdown **halves**, the worst window is less than half as bad, and it
+was never wiped out. It still only beats holding in ~50% of individual
+windows — holding's right tail is fat — so the gain is concentrated in
+the left tail, which is the same shape this family shows everywhere else.
+
+Three caveats that matter more than the table:
+
+- **Bitstamp is spot-only.** None of this is executable on the adapter in
+  this repo or on Bitstamp credentials; it needs a venue offering BTC
+  perpetuals.
+- **Levered buy-and-hold is not the alternative it looks like.** At 3x it
+  returned $194K on the full path — more than anything else here — and
+  wiped out in **14 of 40** windows with an 87% median drawdown. One path
+  flatters it enormously.
+- Part of the apparent gain from a higher-leverage *venue* is an artifact:
+  the broker's rebalance deadband is a fraction of `leverage × equity`, so
+  a bigger venue leverage silently widens it and cuts turnover (849 fills
+  at a 4x venue, 447 at 10x). The window medians are stable at ~95%
+  across venue settings, so the conclusion holds — but the single-path
+  numbers move for a reason that has nothing to do with leverage.
+
 ### What is actually on offer at 0.40%
 
 The strategy is **profitable** — $1,000 → $29,498 is +2,850% over nine

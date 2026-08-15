@@ -11,6 +11,8 @@ Four checks, run in order::
     python scripts/fee_study.py ceiling      # gross edge vs the fee drag
     python scripts/fee_study.py breakeven    # the fee each strategy tolerates
     python scripts/fee_study.py tiers        # would climbing the volume ladder fix it?
+    python scripts/fee_study.py fills        # where the fee money actually goes
+    python scripts/fee_study.py leverage     # does leverage beat the fee?
     python scripts/fee_study.py plateau      # is the parameter grid a plateau?
     python scripts/fee_study.py walkforward  # select in-sample, test out-of-sample
     python scripts/fee_study.py all
@@ -213,7 +215,55 @@ def walkforward() -> None:
           f"${hold_oos:,.0f}  ->  {best[1] / hold_oos - 1:+.1%}")
 
 
+def fills_by_kind() -> None:
+    """Where does the fee money actually go? Mostly not where you'd guess."""
+    result = run_backtest(get_strategy("kelly_regime_v4"), DF,
+                          MarketSpec.spot(fee_rate=BITSTAMP_TAKER), 1_000.0)
+    pos = 0.0
+    kinds = {"entry": [0, 0.0], "exit": [0, 0.0], "resize": [0, 0.0]}
+    for f in result.fills:
+        signed = f.qty if f.side.name == "BUY" else -f.qty
+        new = pos + signed
+        kind = ("entry" if abs(pos) < 1e-12
+                else "exit" if abs(new) < 1e-12 else "resize")
+        kinds[kind][0] += 1
+        kinds[kind][1] += f.fee
+        pos = new
+
+    total = sum(v[1] for v in kinds.values())
+    print(f"kelly_regime_v4 @ {BITSTAMP_TAKER:.2%} spot: {len(result.fills):,} fills, "
+          f"${total:,.0f} of fees on a ${result.final_balance:,.0f} account\n")
+    print(f"{'fill type':10s} {'count':>7s} {'fees':>12s}  share")
+    for kind, (n, fee) in kinds.items():
+        print(f"{kind:10s} {n:>7d} ${fee:>11,.0f}  {fee / total:>6.1%}")
+    print("\nMost fills are RESIZES inside an already-open position - the "
+          "volatility-targeting\nmachinery, whose upside spot cannot even use "
+          "because exposure caps at 1.0.")
+
+
+def leverage() -> None:
+    """Does leverage beat the fee? Not by making it cheaper - fees scale too."""
+    fee = BITSTAMP_TAKER
+    spot_hold = _full(lambda: get_strategy("buy_and_hold"), fee).final_balance
+    print(f"the real alternative is UNLEVERED spot holding: ${spot_hold:,.0f} "
+          f"@ {fee:.2%}\n")
+    print(f"{'cap':>5s} {'final $':>11s} {'DD%':>6s} {'sharpe':>7s} {'vs spot hold':>13s}")
+    from tradebot.strategies.kelly_regime_v4 import KellyRegimeV4
+    venue = MarketSpec.futures(leverage=10.0, fee_rate=fee)
+    for cap in (2.0, 3.0, 4.0, 6.0):
+        m = compute_metrics(run_backtest(KellyRegimeV4(max_leverage=cap), DF,
+                                         venue, 1_000.0))
+        print(f"{cap:>4.0f}x ${m.final_balance:>10,.0f} {m.max_drawdown_pct:>5.1f}% "
+              f"{m.sharpe:>7.2f} {m.final_balance / spot_hold - 1:>12.0%}")
+    print("\nOn this single full-history path leverage never catches unlevered\n"
+          "holding, because fees scale with notional exactly as returns do.\n"
+          "The advantage is in the DISTRIBUTION, not this path - see the stress\n"
+          "test in docs/LIVE.md: median window return roughly doubles and the\n"
+          "median drawdown halves.")
+
+
 COMMANDS = {"ceiling": ceiling, "breakeven": breakeven, "tiers": tiers,
+            "fills": fills_by_kind, "leverage": leverage,
             "plateau": plateau, "walkforward": walkforward}
 
 
