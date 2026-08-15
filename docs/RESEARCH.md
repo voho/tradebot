@@ -211,12 +211,49 @@ validation here leans on Monte Carlo windows rather than one path.
 4. **Deflate for trials.** Bailey & López de Prado (2014, JPM 40(5)) —
    every sweep in VALIDATION.md is a trial and inflates the observed
    Sharpe of whatever was selected.
+5. **Lookahead can hide inside `on_bar`, not just `prepare`.** A strategy
+   that keeps the frame handed to `prepare()` and indexes `i + 1` in
+   `on_bar` has perfect foresight and passes truncation, future-bar
+   perturbation *and* live parity. Built as a probe, it returned $3.7e23
+   from $1,000 at Sharpe 73 with a green suite.
+   `tests/test_causality_strict.py` now compares the *orders* a strategy
+   queues under two opposite tampers of the future.
+6. **A warmup prefix is not free.** Letting a strategy trade through the
+   prefix of a resampled window lets it be liquidated before the window
+   opens (19 of buy-and-hold's 23 stress-test liquidations were of this
+   kind), and slicing a frame to an out-of-sample date range leaves a
+   100-day-warmup strategy flat for 7.6% of it while a zero-warmup
+   benchmark trades from day one. Warm the state, withhold the trading:
+   `run_backtest(trade_start=...)` and `tradebot.window.run_period`.
 
 ## What shipped
 
-Only the convex vote response (`kelly_regime_v2`), and only as a separate
-strategy, with its failed out-of-sample check reported. See
+Three variants, each as a separate registered strategy so the incumbent's
+published record stays intact: the convex vote response
+(`kelly_regime_v2`, with its failed out-of-sample check reported),
+conditional volatility targeting (`kelly_regime_v3`), and the doubling
+anchor ladder (`kelly_regime_v4`, the current leader). See
 [VALIDATION.md](VALIDATION.md#beta-testing-variants-kelly_regime_v2).
+
+### Anchor timescales: a region, not a peak
+
+The last change was to the regime anchors themselves — 20/40/80 days
+instead of 30/50/100 — chosen as a **doubling ladder** rather than fitted.
+The multi-timescale prior comes from the heterogeneous-market hypothesis
+(Müller et al. 1997, J. Empirical Finance 4(2–3)) and its concrete form in
+Corsi's (2009, J. Financial Econometrics 7(2)) HAR model: agents act on
+distinct, roughly geometrically spaced horizons, so a cascade of fixed
+timescales beats estimating one correct lookback.
+
+What the evidence supports is narrower than the headline balance. Across
+nine anchor sets in the 18–28 day range, **every** variant cut max
+drawdown to 35–39% from v3's 41.8% — that reduction is the robust
+finding. The Sharpe spread over the same plateau (1.52–1.60) sits inside
+the ±0.2 noise floor from finding 2 below, so the return improvement is
+**not** established by this path. The plateau breaks sharply below ~18
+days (16/32/64 scores 1.46), which is the signature of a genuine region
+rather than a tuned peak — and, per finding 4, the sweep itself is a
+trial that inflates whatever it selected.
 
 ## Volatility & sizing: the second half of the round
 

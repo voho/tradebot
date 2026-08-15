@@ -8,9 +8,16 @@ results scale proportionally with capital, so one start balance is enough;
 metrics: [../reports/comparison.md](../reports/comparison.md).
 Literature: [RESEARCH.md](RESEARCH.md). Robustness: [VALIDATION.md](VALIDATION.md).
 
+The three `kelly_regime_v*` entries are variants of the leader and are
+described together in the [appendix](#appendix-the-variants); the numbered
+sections below cover the twenty distinct ideas.
+
 | # | strategy | spot | futures 5x | verdict |
 |---|---|---|---|---|
-| 1 | [kelly_regime](#1-kelly_regime) | $42.1K | **$108.2K** | best overall; survived every stress window |
+| — | [kelly_regime_v4](#kelly_regime_v4--promoted-and-what-it-is-honestly-good-for) | $66.8K | **$156.2K** | current leader; faster anchors, 35% max DD |
+| — | [kelly_regime_v3](#kelly_regime_v3--promoted) | $65.8K | **$139.5K** | conditional volatility targeting |
+| — | [kelly_regime_v2](#kelly_regime_v2--not-promoted) | $46.4K | **$122.0K** | convex vote response; not promoted |
+| 1 | [kelly_regime](#1-kelly_regime) | $42.1K | **$108.2K** | the base idea; survived every stress window |
 | 2 | [buy_and_hold](#2-buy_and_hold) | **$66.0K** | $18 (liquidated) | benchmark; unbeatable on spot, fatal on leverage |
 | 3 | [champions_council](#3-champions_council) | $19.3K | **$36.8K** | lowest drawdown of any profitable strategy |
 | 4 | [hedge_experts](#4-hedge_experts) | **$13.3K** | $258 | profitable on spot, over-trades on leverage |
@@ -31,9 +38,9 @@ Literature: [RESEARCH.md](RESEARCH.md). Robustness: [VALIDATION.md](VALIDATION.m
 | 19 | [tft_trend](#19-tft_trend) | $4.99 | $1.00 | fee death |
 | 20 | [attrition_reversion](#20-attrition_reversion) | $4.94 | $0.99 | fee death |
 
-> **The pattern in one line:** every strategy in the top six decides *how
-> much to hold*; every strategy in the bottom eight tries to predict *what
-> happens next*. On 5-minute bars, after fees, sizing wins and forecasting
+> **The pattern in one line:** every strategy that makes money decides
+> *how much to hold*; every strategy that tries to predict *what happens
+> next* loses. On 5-minute bars, after fees, sizing wins and forecasting
 > loses.
 
 ---
@@ -41,10 +48,12 @@ Literature: [RESEARCH.md](RESEARCH.md). Robustness: [VALIDATION.md](VALIDATION.m
 ## 1. `kelly_regime`
 
 **What it is.** A growth-optimal position sizer that only takes risk while
-the market's slow regime is bullish. The best strategy in the suite:
-**$1,000 → $108,221** on 5x futures where buy-and-hold is liquidated, at
-the highest Sharpe here (1.42), roughly half buy-and-hold's drawdown, and
-just 143 trades in nine years.
+the market's slow regime is bullish. The idea the whole leading family is
+built on: **$1,000 → $108,221** on 5x futures where buy-and-hold is
+liquidated, at Sharpe 1.42, roughly half buy-and-hold's drawdown, and just
+143 trades in nine years. The three promoted variants in the
+[appendix](#appendix-the-variants) change how it *sizes*, never what it
+predicts.
 
 **How it works.** Three slow anchors — the 30-, 50- and 100-day mean price
 — each vote "bull" when price sits 1% above them and "bear" 1% below,
@@ -81,7 +90,7 @@ benchmark — and on spot, still the best absolute return: **$66,044**.
 **How it works.** One order, no signal, no exits. On 5x futures the same
 instruction is fatal: the position is liquidated in the January 2017
 crash, ending at **$18**, and in the stress test it was wiped out in
-**23 of 40** random windows.
+**26 of 40** random windows, with a median window return of **−98%**.
 
 **Principles.** Not a game-theoretic strategy but the null hypothesis every
 other one must beat after fees. It encodes the empirical fact that BTC has

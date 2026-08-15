@@ -200,6 +200,13 @@ def charts(res: pd.DataFrame, out_dir: Path) -> list[Path]:
         ax.plot(lim, lim, color=BASELINE, linewidth=1.5, zorder=2)
         ax.annotate("above line = beat holding", (lim[1], lim[1]), fontsize=7,
                     color=MUTED, ha="right", va="bottom")
+        # On leverage a surviving hold can return +1,800% while a liquidated
+        # one returns -98%. On a linear axis that range crushes every point
+        # into the left edge, so the panel shows nothing. symlog keeps the
+        # diagonal meaningful and stays linear through zero.
+        if sub["return_pct"].max() > 500:
+            ax.set_xscale("symlog", linthresh=100)
+            ax.set_yscale("symlog", linthresh=100)
         ax.set_xlabel("buy_and_hold return %", color=MUTED, fontsize=9)
         ax.set_ylabel("strategy return %", color=MUTED, fontsize=9)
         ax.set_title("Head to head, same window", color=INK, fontsize=10, loc="left")

@@ -6,7 +6,7 @@ futures** from a **$1,000** start, and the results are ranked by **final
 balance** in one comparison table, with a chart per run (price + trades,
 balance curve, drawdown, results box).
 
-Results are proportional to capital — verified across all 20 strategies,
+Results are proportional to capital — verified across every strategy,
 where the only deviations came from the exchange minimum order size — so
 one start balance is the default. Test others with
 `tradebot run --balances 1000 1000000`.
@@ -40,9 +40,9 @@ resampled over 40 random windows
 (`python scripts/stress_test.py`, charts in
 [reports/stress/](reports/stress/), analysis in
 [docs/VALIDATION.md](docs/VALIDATION.md)). Headline: on 5x futures,
-leveraged buy-and-hold was **liquidated in 23 of 40 windows**, while
-`kelly_regime` and `champions_council` survived every one and stayed
-profitable in 80–88% of them.
+leveraged buy-and-hold was **liquidated in 26 of 40 windows** — its median
+window return is **−98%** — while every `kelly_regime` variant survived
+**all 40**, stayed profitable in 85–88% of them, and beat holding in 65%.
 
 <!-- comparison:begin -->
 _Period: 2017-01-01 to 2026-08-12 (1,010,889 x 5m bars) · data: real, spot (perp proxy)_
@@ -85,10 +85,10 @@ worst, with citations. The literature survey behind them is in
 parameter frontiers, Monte Carlo windows) is in
 [docs/VALIDATION.md](docs/VALIDATION.md).
 
-The one-line summary of all twenty results: **every strategy in the top six
-decides *how much* to hold; every strategy in the bottom eight tries to
-predict *what happens next*.** On 5-minute bars, after fees, sizing wins
-and forecasting loses.
+The one-line summary of all twenty-three results: **every strategy that
+makes money decides *how much* to hold; every strategy that tries to
+predict *what happens next* loses.** On 5-minute bars, after fees, sizing
+wins and forecasting loses.
 
 **Nothing is deleted.** Unprofitable strategies stay registered as
 documented negative results: knowing that the Kyle/VPIN flow followers,

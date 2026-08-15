@@ -100,10 +100,13 @@ editing defaults, so the comparison table stays a stable record.
 ## Monte Carlo window stress test
 
 A single full-history number cannot separate a robust edge from one lucky
-path, so the top three strategies were resampled over **40 random windows**
-(random start, random length between 133 and 681 days), each preceded by a
-warmup prefix so short windows are not penalised for a cold start. All
-strategies see identical windows. Reproduce with
+path, so the top three strategies — plus the benchmark and the
+structurally different `champions_council` as a control — were resampled
+over **40 random windows** (random start, random length between 133 and
+681 days). Each window is preceded by a warmup prefix that warms
+indicators **without trading**, so every strategy enters every window
+warm, flat and with the full $1,000, and short windows are not penalised
+for a cold start. All strategies see identical windows. Reproduce with
 `python scripts/stress_test.py --trials 40`; raw rows and the summary are
 in `reports/stress/`.
 
@@ -113,18 +116,20 @@ in `reports/stress/`.
 
 | strategy | median | mean | profitable | beat hold | worst | median DD | worst DD |
 |---|---|---|---|---|---|---|---|
-| `kelly_regime` | **+66.8%** | +87.1% | **82.5%** | 47.5% | **−23.0%** | **26.3%** | **45.3%** |
-| buy_and_hold | +49.4% | **+96.8%** | 72.5% | — | −50.8% | 52.7% | 84.1% |
-| `champions_council` | +57.4% | +62.1% | 77.5% | 40.0% | −20.5% | 23.5% | 33.6% |
+| `kelly_regime_v4` | **+82.1%** | +94.6% | 85.0% | 47.5% | **−15.2%** | 23.7% | 43.0% |
+| `kelly_regime_v3` | +75.6% | **+97.4%** | 82.5% | 50.0% | −23.6% | 23.3% | 47.2% |
+| `kelly_regime_v2` | +64.0% | +85.6% | **87.5%** | 47.5% | −23.7% | **23.1%** | 41.4% |
+| `champions_council` | +57.4% | +62.1% | 77.5% | 40.0% | −20.5% | 23.5% | **33.6%** |
+| buy_and_hold | +49.3% | +96.6% | 72.5% | — | −50.9% | 52.7% | 84.1% |
 
-The nuance worth stating plainly: `kelly_regime` has the **higher median**
-but buy-and-hold has the **higher mean**, and beats it in slightly more
-than half the windows. That is not a contradiction — the distributions
-differ in shape. Holding wins often, by a little, in bull windows (its best
-window returned +589% vs +354%); the regime filter wins rarely, by a lot,
-in the windows that contain a crash. You are trading away part of the right
-tail for a much better typical outcome and a far better left tail
-(worst window −23% vs −51%, worst drawdown 45% vs 84%).
+The nuance worth stating plainly: the allocators have the **higher
+median** but buy-and-hold has a comparable **mean**, and beats them in
+about half the windows. That is not a contradiction — the distributions
+differ in shape. Holding wins often, by a little, in bull windows (its
+best window returned +588% vs +318%); the regime filter wins rarely, by a
+lot, in the windows that contain a crash. On spot you are trading away
+part of the right tail for a much better typical outcome and a far better
+left tail (worst window −15% vs −51%, median drawdown 24% vs 53%).
 
 ### Futures (5x) — the decisive case
 
@@ -132,22 +137,33 @@ tail for a much better typical outcome and a far better left tail
 
 | strategy | median | profitable | beat hold | worst | worst DD | **liquidated** |
 |---|---|---|---|---|---|---|
-| `kelly_regime` | **+103.4%** | **87.5%** | 60.0% | **−25.8%** | 46.3% | **0%** |
-| buy_and_hold | +0.0% | 32.5% | — | −99.2% | 99.5% | **57.5%** |
-| `champions_council` | +88.6% | 80.0% | 57.5% | −20.1% | **37.1%** | **0%** |
+| `kelly_regime_v4` | **+116.3%** | 85.0% | 65.0% | **−16.5%** | **34.8%** | **0%** |
+| `kelly_regime_v3` | +105.6% | 85.0% | 65.0% | −19.7% | 41.8% | **0%** |
+| `kelly_regime_v2` | +97.6% | **87.5%** | 65.0% | −27.6% | 39.6% | **0%** |
+| `champions_council` | +88.6% | 80.0% | 65.0% | −20.1% | 37.1% | **0%** |
+| buy_and_hold | **−98.2%** | 35.0% | — | −98.2% | 99.9% | **65.0%** |
 
-**Leveraged buy-and-hold was liquidated in 23 of 40 windows.** Its median
-window return is exactly 0.0% because the median path is a wipeout, and it
-is profitable in barely a third of windows. Both game-theoretic allocators
-survived **every** window, stayed profitable in 80–88% of them, and beat
-holding in ~60%. This is the clearest evidence in the project that the
-value is in growth-optimal position sizing: same asset, same windows, same
-fees — the difference is entirely how much is held and when.
+**Leveraged buy-and-hold was liquidated in 26 of 40 windows, and its
+median window return is −98.2%** — the median path is a wipeout, not a
+disappointment. Every allocator survived **all 40**, stayed profitable in
+80–88% of them, and beat holding in 65%. This is the clearest evidence in
+the project that the value is in growth-optimal position sizing: same
+asset, same windows, same fees — the difference is entirely how much is
+held and when.
+
+> These numbers replace an earlier, materially different set. Under the
+> old harness strategies traded *through* the warmup prefix, so 19 of
+> buy-and-hold's 23 liquidations happened before the measured window even
+> opened; those windows then recorded a dead account drifting at 0%,
+> which is why its median used to read "exactly 0.0%" and its worst
+> drawdown looked *better* than it is. The corrected run makes leveraged
+> holding look considerably **worse**, not better. See
+> [Is the harness itself trustworthy?](#is-the-harness-itself-trustworthy)
 
 ## Does the starting balance matter?
 
 Almost never, which is why the framework now defaults to a single $1,000
-start. Across all 20 strategies on both markets, comparing a $1,000 run
+start. Across the twenty base strategies on both markets, comparing a $1,000 run
 with a $1,000,000 run:
 
 - **15 of 40** strategy-market pairs returned percentages identical to
@@ -292,6 +308,89 @@ not change earlier rows. `tests/test_causality_real.py` now also perturbs
 future bars (×3 on prices, ×7 on volume) and asserts every prepared
 column before the cut is bit-identical, which catches it directly. All 21
 strategies pass.
+
+## Is the harness itself trustworthy?
+
+Every number above is only as good as the engine that produced it, so the
+engine and the test suite were audited adversarially — by **injecting
+deliberate bugs and checking whether the suite noticed**. 26 mutants were
+planted across the engine, broker, metrics, data loader and strategies.
+
+**20 were caught. Six were completely silent**, and five more were held
+by a single assertion each. All are now fixed or covered:
+
+| silent bug | what it would have done | now caught by |
+|---|---|---|
+| liquidation checked on the **close** instead of the bar's high/low | wicks never liquidate → every leveraged result overstated | `test_intrabar_wick_liquidates_even_when_the_close_recovers` |
+| a strategy reading bar `i+1` inside `on_bar` | **perfect foresight**; the prototype returned $3.7e23 from $1,000 at Sharpe 73 with a fully green suite | `test_decisions_ignore_every_bar_after_the_decision_bar` |
+| `(1 + mm)` divisor dropped from the **short** liquidation price | every short on 5x futures mis-priced | `test_liquidation_price_short`, `test_short_liquidation_triggers_on_the_bar_high` |
+| `REBALANCE_DEADBAND` widened 10x | silently changes turnover, fees and every published balance | `test_rebalance_deadband_threshold_is_exact` |
+| Sharpe annualization factor removed | every Sharpe ~750x too small, still "looks like a number" | `test_sharpe_is_annualized_to_5m_bars` |
+| epoch-unit detection thresholds shifted | timestamps silently mis-parsed | (bounded by the round-trip tests; see limitations) |
+
+Two structural problems mattered more than any single mutant:
+
+**The causality guarantee only covered `prepare()`.** A strategy that
+keeps the frame handed to `prepare()` and indexes `i + 1` inside `on_bar`
+passed the truncation test, the future-bar perturbation test, *and* live
+parity. `tests/test_causality_strict.py` now compares the **orders** a
+strategy queues under two opposite tampers of the future, which catches
+it — and a self-check in that file asserts the detector still detects a
+deliberate peek, so the guard cannot rot into a no-op.
+
+**Much of the coverage was vacuous.** 16 of 22 strategies placed *zero*
+orders in the 2,000-bar synthetic truncation fixture and 18 of 22 placed
+zero in the 1,200-bar live-parity fixture, so those parametrized tests
+were asserting `[] == []` for most of the suite — 12 strategies had no
+effective truncation coverage anywhere. The truncation test now runs on
+the real slice for **every** registered strategy, live parity is checked
+on real data with every strategy warm, and
+`test_every_strategy_actually_trades_on_the_real_slice` fails loudly if a
+strategy ever goes inert again. `tests/test_causality_real.py` also now
+**fails** rather than skips when the dataset is missing — a skipped
+causality suite is a green run that guarantees nothing.
+
+**Determinism is clean.** Repeated full runs, reversed test order, and
+per-file isolation all produce identical results; all RNG is seeded, and
+nothing depends on wall-clock or network.
+
+### Two measurement biases found, and what they changed
+
+**1. Stress-test windows scored corpses.** Each Monte Carlo window is
+preceded by a 100-day warmup prefix, and strategies were *trading*
+through that prefix. On 5x futures, buy-and-hold was liquidated in 23 of
+40 windows — but **19 of those 23 liquidations happened inside the
+prefix**, before the measured window opened. The window then recorded a
+dead account drifting at 0%, which is why its median window return was
+"exactly 0.0%".
+
+`run_backtest(..., trade_start=N)` fixes it: bars before `N` still call
+`on_bar`, so indicators and internal state warm normally, but their
+orders are discarded — every window now opens **flat, warm, with the full
+$1,000**.
+
+The correction runs *against* the strategies this repo favours in one
+sense and hard against the benchmark in another. Leveraged buy-and-hold
+gets worse: 26 of 40 windows liquidated instead of 23, median −98.2%
+instead of 0.0%, worst drawdown 99.9% instead of 99.5% — because a fresh
+5x position is now actually opened inside each window rather than
+inherited already-dead. The allocators' numbers barely move, since none
+of them was ever liquidated in a prefix. The lesson is not that the old
+conclusion was wrong; it is that it was **right for a reason that was
+partly an artifact**, which is the more dangerous failure.
+
+**2. The out-of-sample split handicapped the strategies being tested.**
+`df.loc["2023-01-01":]` gives a 100-day-warmup strategy no history, so it
+sat flat for the first **7.6% of the out-of-sample period** while
+zero-warmup buy-and-hold traded from day one. `tradebot.window.run_period`
+now takes the warmup from the bars *before* the period and starts
+measuring at the period boundary, so every walk-forward comparison is
+warm-vs-warm.
+
+Neither bias was in the backtest engine's own accounting — the full-period
+comparison table is unaffected — but both were in the evidence used to
+argue that the leaders are robust, which is exactly where a bias does the
+most damage.
 
 ## Known limitations
 
