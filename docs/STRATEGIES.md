@@ -76,9 +76,12 @@ turns distributor, the Kelly fraction of a negative-drift bet is zero, so
 it stands flat rather than shorting an asset that has drifted upward for a
 decade.
 
-**Where it fails.** It lags in steady bulls (out-of-sample 2023–26 it
-returned +142% against buy-and-hold's +284%). Its edge is concentrated in
-the windows containing crashes.
+**Where it fails.** It lags badly in steady bulls. Out-of-sample 2023–26,
+on the same 5x futures, it returned **+325% against leveraged
+buy-and-hold's +1,418%** — nothing forces holding to de-lever when no
+crash arrives. Its entire edge is in the windows that contain one, which
+is why in-sample (2017–22) the same comparison is $25,486 against a
+liquidated $18.
 
 ---
 
@@ -487,7 +490,7 @@ short-gamma payoff paying fees on 7,221 round trips.
 
 Research rounds on the leader produced three registered variants. Two
 earned promotion, one did not. Full detail:
-[VALIDATION.md](VALIDATION.md#beta-testing-variants-kelly_regime_v2).
+[VALIDATION.md](VALIDATION.md#beta-testing-the-variants).
 
 ### `kelly_regime_v4` — PROMOTED, and what it is honestly good for
 
@@ -573,4 +576,4 @@ the beta-test harness declines to promote it. That shortfall is inside the
 ±0.2 Sharpe noise floor, and the effect is a plateau across gamma ∈
 [1.25, 4.0] rather than a spike, but the failed check is reported rather
 than buried. Full detail:
-[VALIDATION.md](VALIDATION.md#beta-testing-variants-kelly_regime_v2).
+[VALIDATION.md](VALIDATION.md#beta-testing-the-variants).

@@ -9,34 +9,51 @@ lucky regime, so the leading strategies were re-run on a split:
 - **Out-of-sample (OOS)**: 2023-01-01 → 2026-08 (380k bars) — a strong
   bull with one ~54% drawdown, and no multi-year bear.
 
-Starting balance $1,000, futures at 5x, spot at 1x.
+Starting balance $1,000, **futures at 5x**. Each strategy is warmed on
+the bars *before* its period (see
+[the harness section](#is-the-harness-itself-trustworthy)), so a 100-day
+anchor is not handicapped against a zero-warmup benchmark. Reproduce with
+`python scripts/experiment.py walkforward`.
 
 | strategy | IS futures | OOS futures | OOS max DD | verdict |
 |---|---|---|---|---|
-| buy_and_hold (spot ref) | $17.2K | $3.8K | 54% | benchmark; liquidates on 5x futures |
-| `kelly_regime` | $25.5K | $2.4K (+142%) | 41% | edge real, regime-dependent |
-| `champions_council` | $12.9K | $1.9K (+87%) | 29% | lower return, lowest drawdown |
+| buy_and_hold | **$18** (liquidated) | **$15.2K** (+1,418%) | 60% | dies in-sample, wins the bull outright |
+| `kelly_regime_v4` | $32.9K | $4.9K (+390%) | **33%** | best OOS of the family, lowest OOS drawdown |
+| `kelly_regime_v3` | **$33.0K** | $4.5K (+348%) | 39% | promoted |
+| `kelly_regime` | $25.5K | $4.2K (+325%) | 41% | the base idea; edge real, regime-dependent |
+| `champions_council` | $12.9K | $2.9K (+187%) | **29%** | lower return, lowest drawdown |
 
 ## What this actually says
 
-**The regime filter's edge is concentrated in bear markets.** In-sample —
-where two multi-year bears exist to be avoided — `kelly_regime` returns
-about 1.5x buy-and-hold. Out-of-sample, in an almost uninterrupted bull,
-it **lags** buy-and-hold on raw return (+142% vs +284%) while carrying
-noticeably less risk (41% vs 54% max drawdown). That is the classic
-trend-following payoff profile, and it is honest to state it plainly:
-*this family does not beat holding in a steady bull; it earns its keep by
-not participating in the collapses, and by surviving on leverage.*
+**The regime filter's edge is concentrated in bear markets, and the
+out-of-sample split says so bluntly.** In-sample — where the 2018 and 2022
+bears exist to be avoided — leveraged buy-and-hold is **liquidated**,
+ending at $18, while the regime-gated sizers return $25K–$33K. Reverse the
+regime and the result reverses with it: out-of-sample, in an almost
+uninterrupted bull with no early crash, leveraged buy-and-hold **beats
+every strategy here by a wide margin** (+1,418% against `kelly_regime_v4`'s
++390%), because nothing ever forces it to de-lever and its effective
+leverage falls as the account grows.
+
+That is the classic trend-following payoff profile, and it is worth
+stating without softening: *this family does not beat holding in a steady
+bull. It earns its keep by not being liquidated in the bears — which is
+the difference between $18 and $33,000 — and it charges roughly half the
+drawdown for that.* Anyone reading the full-period headline as "beats
+buy-and-hold" should read this section instead: the full period contains
+2018 and 2022, and that is where the entire gap comes from.
 
 **Leverage is where the difference compounds.** On 5x futures,
 buy-and-hold is liquidated in the January 2017 crash and ends at $18. The
 same market with regime-gated fractional-Kelly sizing ends the full
-period at $108K from $1K, never liquidating, at Sharpe 1.42 — the highest
-in the suite. Position sizing, not signal cleverness, produces that gap.
+period at $108K from $1K for the base strategy and $156K for
+`kelly_regime_v4`, never liquidating, at Sharpe 1.42–1.59. Position
+sizing, not signal cleverness, produces that gap.
 
-**Sizing beats prediction.** The three strategies that make money over the
-decade (`kelly_regime`, `hedge_experts`, `replicator_book`,
-`universal_kelly`) are all *allocators* — they decide how much to hold.
+**Sizing beats prediction.** Every strategy that makes money over the
+decade (the `kelly_regime` family, `champions_council`, `hedge_experts`,
+`replicator_book`, `universal_kelly`) is an *allocator* — it decides how
+much to hold.
 Every pure *predictor* in the suite (MACD/RSI baselines, the flow
 followers, the minority-game oracle, the fictitious-play state machine)
 loses after fees. On 5-minute BTC, the tradable game-theoretic content is
@@ -188,44 +205,62 @@ Run `tradebot run --balances 1000 1000000` to reproduce; the comparison
 table flags any strategy whose return moves more than 1pp with account
 size.
 
-## Beta testing variants: `kelly_regime_v2`
+## Beta testing the variants
 
-A second research round (ML/DL and game theory, see
-[RESEARCH.md](RESEARCH.md#improving-the-best-strategy)) proposed four ways
-to improve the leading strategy. Three of them — a walk-forward
-statistical jump model, Bayesian online changepoint detection, and
-meta-labeling with a walk-forward logistic model — **failed to beat the
-baseline** and are recorded there as negative results. The one that
-worked is not a new detector at all: it reshapes how the existing vote
-maps to exposure, `vote ** 1.75` instead of `vote`.
+Research rounds on the leading strategy (ML/DL and game theory, see
+[RESEARCH.md](RESEARCH.md#improving-the-best-strategy)) produced three
+registered variants and a longer list of failures. The failures are the
+more useful half and are recorded there: a walk-forward statistical jump
+model, Bayesian online changepoint detection, meta-labeling with a
+walk-forward logistic model, and — the counterintuitive one — a
+*genuinely better* volatility forecast, which made the strategy worse.
+
+Not one of the three that worked is a new detector. They change how the
+existing signal maps to exposure: a convex vote response (v2), conditional
+volatility targeting (v3), and a faster anchor ladder (v4). That is the
+same lesson the comparison table teaches at the suite level — sizing
+beats prediction — reappearing inside a single strategy.
 
 Run `python scripts/beta_test.py --windows 24` to reproduce. Futures 5x,
-$1,000 start:
+$1,000 start. **All three variants in one table**, since they were
+measured on identical splits and identical Monte Carlo windows:
 
-| metric | `kelly_regime` | `kelly_regime_v2` |
-|---|---|---|
-| full period | $108,221 | **$121,993** |
-| Sharpe | 1.42 | **1.49** |
-| max drawdown | 42.6% | **39.6%** |
-| trades | 143 | **113** |
-| in-sample (2017–22) | $25,486 | **$30,737** |
-| **out-of-sample (2023–26)** | **$2,422** | $2,336 |
-| Monte Carlo median window | +49.7% | **+54.6%** |
-| Monte Carlo worst window | −30.6% | **−22.6%** |
-| windows where it beats the baseline | — | 62.5% |
-| liquidations | 0% | 0% |
+| metric | `kelly_regime` | `kelly_regime_v2` | `kelly_regime_v3` | `kelly_regime_v4` |
+|---|---|---|---|---|
+| full period | $108,221 | $121,993 | $139,509 | **$156,170** |
+| Sharpe | 1.42 | 1.49 | 1.55 | **1.59** |
+| max drawdown | 42.6% | 39.6% | 41.8% | **35.3%** |
+| trades | **143** | 113 | 147 | 174 |
+| in-sample (2017–22) | $25,486 | $30,737 | **$32,971** | $32,925 |
+| **out-of-sample (2023–26)** | $4,246 | $3,969 | $4,481 | **$4,901** |
+| Monte Carlo median window | +49.7% | +54.6% | +64.3% | **+67.2%** |
+| Monte Carlo worst window | −30.5% | −22.4% | −28.8% | **−21.1%** |
+| Monte Carlo median drawdown | 32.7% | 29.4% | 26.8% | **23.9%** |
+| windows beating the baseline | — | 62.5% | **75.0%** | **75.0%** |
+| liquidations | 0% | 0% | 0% | 0% |
+| **verdict** | incumbent | no better (fails: oos) | **PROMOTE** | **PROMOTE** |
 
-**Nine of ten metrics improve, and it still fails the promotion rule.**
-The rule requires a candidate to beat the incumbent on the full period,
-*not degrade out-of-sample*, and win the median Monte Carlo window; v2
-lands 3.5% below on out-of-sample final balance, so the harness reports
-"no better (fails: oos)". Both are kept registered and both appear in the
-comparison table, with the caveat stated rather than buried.
+> The out-of-sample and Monte Carlo rows are ~75% higher than an earlier
+> published version of this table, because the split now warms each
+> strategy on the bars before the period instead of leaving a 100-day
+> anchor flat through the first 7.6% of it. **The verdicts did not
+> change** — v2 still fails out-of-sample, v3 and v4 still promote —
+> which is the useful part: the promotion decisions were robust to a bias
+> that moved the underlying numbers a great deal.
+
+### `kelly_regime_v2` — nine of ten metrics improve, and it still fails
+
+The promotion rule requires a candidate to beat the incumbent on the full
+period, *not degrade out-of-sample*, and win the median Monte Carlo
+window. v2 lands **6.5% below** on out-of-sample final balance, so the
+harness reports "no better (fails: oos)". It is kept registered and
+appears in the comparison table, with the caveat stated rather than
+buried.
 
 Reading it honestly: the out-of-sample shortfall is well inside the
 **±0.2 Sharpe noise floor** measured by paired stationary block bootstrap
 (30-day blocks, 2,000 resamples) — a single 3.6-year path cannot resolve
-a 3.5% difference. The research predicted this exact pattern in advance:
+a 6.5% difference. The research predicted this exact pattern in advance:
 shrinking partial-agreement states costs return in a market that sits at
 two-thirds agreement while drifting up, which describes 2023–2026. What
 argues for the change is not any single number but that return, Sharpe,
@@ -237,7 +272,7 @@ of the overfitting signature.
 `kelly_regime` keeps `vote_gamma=1.0` as its default, so the incumbent's
 published record is unchanged; v2 is a separate registered strategy.
 
-### `kelly_regime_v3` — the one that earned promotion
+### `kelly_regime_v3` — the first to earn promotion
 
 The sizing half of the research produced the clear winner. Instead of
 re-sizing continuously, it holds a **constant notional through normal
@@ -245,22 +280,35 @@ volatility** and switches to full inverse-volatility sizing only when
 volatility breaks out (high or low), latching that state until it
 retraces — the same hysteresis the regime gate uses, applied to risk.
 
-| metric | `kelly_regime` | `kelly_regime_v3` |
-|---|---|---|
-| full period | $108,221 | **$139,509** |
-| Sharpe | 1.42 | **1.55** |
-| max drawdown | 42.6% | **41.8%** |
-| in-sample (2017–22) | $25,486 | **$32,971** |
-| **out-of-sample (2023–26)** | $2,422 | **$2,568** |
-| Monte Carlo median window | +49.7% | **+64.3%** |
-| Monte Carlo median drawdown | 32.7% | **26.8%** |
-| windows where it beats the baseline | — | **75.0%** |
-| liquidations | 0% | 0% |
+It improves **every** metric in the table above, in both sub-periods and
+on both markets, and the harness promotes it. The parameter neighbourhood
+is flat (eight threshold combinations land at Sharpe 1.47–1.55) and it
+survives a 20bps slippage stress at Sharpe 1.42 — matching the
+*frictionless* incumbent.
 
-It improves **every** metric, in both sub-periods and on both markets,
-and the harness promotes it. The parameter neighbourhood is flat (eight
-threshold combinations land at Sharpe 1.47–1.55) and it survives a 20bps
-slippage stress at Sharpe 1.42 — matching the *frictionless* incumbent.
+### `kelly_regime_v4` — promoted, with the return claim withheld
+
+v3 on a doubling anchor ladder (20/40/80 days instead of 30/50/100), each
+anchor covering twice the horizon below it — the multi-timescale prior of
+Müller et al. (1997) and Corsi's (2009) HAR model, chosen for its
+structure rather than fitted. It leads on nine of the eleven metrics
+above, including the best out-of-sample balance, the shallowest full-period
+drawdown (35.3%), the shallowest out-of-sample drawdown (33%), and the
+best Monte Carlo left tail.
+
+**What the evidence supports is narrower than the headline.** Across nine
+anchor sets in the 18–28 day range, *every* variant cut max drawdown to
+35–39% from v3's 41.8%, and seven of nine scored Sharpe ≥ 1.52 — the
+**drawdown reduction is the robust finding**. The Sharpe spread over that
+same plateau (1.52–1.60) sits inside the ±0.2 noise floor, so the return
+improvement is **not** established by this path, and the $156K headline
+should be read as "did not get worse" rather than "is better". Below ~18
+days the plateau breaks sharply (16/32/64 scores 1.46), which is what
+makes this a region rather than a peak that was tuned to.
+
+Note also that v3 and v4 are within 0.15% of each other in-sample
+($32,971 vs $32,925); the entire separation is out-of-sample and in the
+tails.
 
 ### Why it works: BTC has an inverse leverage effect
 
@@ -306,8 +354,12 @@ The same round found that a daily-aggregated signal broadcast onto every
 a signal **passes** the truncation test, because truncating the tail does
 not change earlier rows. `tests/test_causality_real.py` now also perturbs
 future bars (×3 on prices, ×7 on volume) and asserts every prepared
-column before the cut is bit-identical, which catches it directly. All 21
-strategies pass.
+column before the cut is bit-identical, which catches it directly. Every
+registered strategy passes.
+
+That was the first of two blind spots. The second — lookahead hidden
+inside `on_bar` rather than `prepare`, which this test cannot see — is in
+the next section.
 
 ## Is the harness itself trustworthy?
 

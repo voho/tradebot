@@ -233,7 +233,7 @@ published record stays intact: the convex vote response
 (`kelly_regime_v2`, with its failed out-of-sample check reported),
 conditional volatility targeting (`kelly_regime_v3`), and the doubling
 anchor ladder (`kelly_regime_v4`, the current leader). See
-[VALIDATION.md](VALIDATION.md#beta-testing-variants-kelly_regime_v2).
+[VALIDATION.md](VALIDATION.md#beta-testing-the-variants).
 
 ### Anchor timescales: a region, not a peak
 
