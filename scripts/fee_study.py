@@ -10,6 +10,7 @@ Four checks, run in order::
 
     python scripts/fee_study.py ceiling      # gross edge vs the fee drag
     python scripts/fee_study.py breakeven    # the fee each strategy tolerates
+    python scripts/fee_study.py tiers        # would climbing the volume ladder fix it?
     python scripts/fee_study.py plateau      # is the parameter grid a plateau?
     python scripts/fee_study.py walkforward  # select in-sample, test out-of-sample
     python scripts/fee_study.py all
@@ -109,6 +110,54 @@ def breakeven() -> None:
         print(f"{tag:30s} " + "".join(f"${vals[f]:>10,.0f}" for f in FEES) + f"   {be}")
 
 
+BITSTAMP_TIERS = (
+    (0.0040, "< $10k/30d, entry taker"),
+    (0.0025, "~ $100k-$1M/30d"),
+    (0.0020, "> $1M/30d"),
+    (0.0012, "> $5M/30d, taker"),
+    (0.0003, "> $5M/30d, MAKER (limit orders)"),
+)
+
+
+def tiers() -> None:
+    """Would climbing the venue's volume ladder restore the edge?
+
+    Answer: it closes most of the gap and still misses. The break-even is
+    bisected rather than asserted, so it stays honest if the strategy or
+    the data changes.
+    """
+    def fin(name, fee):
+        return _full(lambda n=name: get_strategy(n), fee).final_balance
+
+    print("kelly_regime_v4 vs buy_and_hold by fee tier (spot, full period):\n")
+    print(f"{'fee':>7s}  {'30-day volume tier':32s} {'v4':>10s} {'holding':>10s}  verdict")
+    for fee, label in BITSTAMP_TIERS:
+        v4, hold = fin("kelly_regime_v4", fee), fin("buy_and_hold", fee)
+        verdict = (f"BEATS holding +{v4 / hold - 1:.0%}" if v4 > hold
+                   else f"loses {v4 / hold - 1:.0%}")
+        print(f"{fee:>6.2%}  {label:32s} ${v4:>9,.0f} ${hold:>9,.0f}  {verdict}")
+
+    lo, hi = 0.0001, 0.0040
+    for _ in range(14):
+        mid = (lo + hi) / 2
+        if fin("kelly_regime_v4", mid) > fin("buy_and_hold", mid):
+            lo = mid
+        else:
+            hi = mid
+    print(f"\nbreak-even taker fee: {lo:.3%}")
+    print("No Bitstamp TAKER tier reaches it; only the maker rate does, and that\n"
+          "is a change of order type - with fill risk this backtester does not\n"
+          "model - rather than a change of tier.")
+
+    result = run_backtest(get_strategy("kelly_regime_v4"), DF,
+                          MarketSpec.spot(fee_rate=BITSTAMP_TAKER), 1_000.0)
+    fills = len(result.fills)
+    years = (DF.index[-1] - DF.index[0]).days / 365.25
+    print(f"\nturnover reality check: {fills:,} fills over {years:.1f} years "
+          f"(~1 every {years * 365 / fills:.0f} days).")
+    print("The comparison table's trade count is round-trip EPISODES, not fills.")
+
+
 def plateau() -> None:
     """A real edge is a region; noise is scattered winners."""
     hold = _full(lambda: get_strategy("buy_and_hold"), BITSTAMP_TAKER).final_balance
@@ -164,7 +213,7 @@ def walkforward() -> None:
           f"${hold_oos:,.0f}  ->  {best[1] / hold_oos - 1:+.1%}")
 
 
-COMMANDS = {"ceiling": ceiling, "breakeven": breakeven,
+COMMANDS = {"ceiling": ceiling, "breakeven": breakeven, "tiers": tiers,
             "plateau": plateau, "walkforward": walkforward}
 
 

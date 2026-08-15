@@ -118,16 +118,45 @@ would need a gross edge of **2.98x**. The gap is not close, and slowing
 the strategy down to save fees shrinks the gross edge too — the two move
 together.
 
-**2. Break-even fee, full period, spot:**
+**2. The break-even fee is 0.104%, and no Bitstamp taker tier reaches it.**
 
-| strategy | beats holding below |
-|---|---|
-| `kelly_regime_v4` | **0.20%** taker |
-| `kelly_regime_v3` | **0.10%** taker |
-| raw 50-day regime filter, no vol targeting | **0.40%** taker (just barely: $64.9K vs $65.8K) |
+Bisected against holding on the full period, spot: `kelly_regime_v4`
+beats buy-and-hold below a **0.104%** taker fee and loses above it.
+Against Bitstamp's volume ladder:
 
-Bitstamp's schedule puts 0.10% taker at **$20M** of 30-day volume. At any
-tier a retail account will actually see, the return edge is gone.
+| 30-day volume | taker | `kelly_regime_v4` | vs holding |
+|---|---|---|---|
+| < $10k (entry) | 0.40% | $29.5K | −55% |
+| ~$100k–$1M | 0.25% | $44.4K | −33% |
+| > $1M | 0.20% | $50.8K | −23% |
+| **> $5M** | **0.12%** | **$63.2K** | **−4%** |
+| > $5M, **maker** | **0.03%** | **$80.9K** | **+22%** |
+
+Climbing tiers helps enormously — a −55% gap becomes −4% — and **still
+does not cross the line**. The top attainable taker rung sits just above
+break-even. The only rung that clears it is the *maker* fee, which is a
+change of order type, not of tier.
+
+Volume is not the obstacle it first appears. The comparison table's "174
+trades" counts round-trip *episodes*; the strategy actually places
+**1,056 fills** over the period, one every ~3 days, sustaining a median
+trailing-30-day volume of **2.1x account equity** with only 3% of days
+idle. So $5M of 30-day volume needs roughly a **$2.4M account** — large,
+but the turnover pattern would genuinely hold the tier rather than
+lapsing between bursts.
+
+Two things still stand in the way of the maker row. It needs that $2.4M
+*before* the volume qualifies you, and you pay entry rates while building
+it. And a strategy acting on a regime flip has to post a limit order and
+wait: fills stop being guaranteed, chasing a missed one can cost more
+than the fee saved, and **the backtester models none of that**. Treat
++22% as an upper bound on a path this repo has not validated.
+
+**The venue is the cheaper lever than the tier.** Binance spot's standard
+0.10% taker is already below break-even with no volume requirement at all
+($66.8K vs $66.0K, +1.1%), and 0.075% with the BNB discount gives +8.3%.
+Both are thin margins — but they are available at any account size, which
+$5M/30d is not.
 
 **3. The parameter grid has no plateau.** Sweeping the raw filter over
 8 lookbacks × 4 hysteresis bands at 0.40%, **10 of 32** configurations

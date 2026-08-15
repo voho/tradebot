@@ -244,12 +244,14 @@ contiguous backtest frame — checked bar for bar across 30 consecutive
 candles — that paging is lossless, and that neither adapter ever hands a
 strategy the forming candle.
 
-> ⚠️ **Fees decide this.** Every table here assumes a 0.10% taker fee. At
-> Bitstamp's 0.40% entry tier, on spot, **no strategy here beats
-> buy-and-hold** ($29.5K vs $65.8K for `kelly_regime_v4`) — it keeps a
-> better Sharpe and roughly half the drawdown, but not the return.
-> Tuning around it was tried and fails walk-forward: 28 of 32
-> configurations beat holding in-sample, **0 of 28** out-of-sample. See
+> ⚠️ **Fees decide this.** Every table here assumes a 0.10% taker fee,
+> and the break-even is **0.104%** — the published spot edge lives
+> entirely inside that margin. At Bitstamp's 0.40% entry tier no strategy
+> here beats buy-and-hold ($29.5K vs $65.8K for `kelly_regime_v4`);
+> climbing to its $5M/30d taker tier still misses by 4%. Tuning around it
+> fails walk-forward: 28 of 32 configurations beat holding in-sample,
+> **0 of 28** out-of-sample. Reproduce with `scripts/fee_study.py`;
+> analysis in
 > [docs/LIVE.md](docs/LIVE.md#read-this-before-trading-bitstamp-spot-at-the-entry-fee-tier).
 
 Setup, cold-start cost and the honest list of what live will *not* match:
