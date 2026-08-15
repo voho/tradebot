@@ -162,6 +162,114 @@ def test_warmup_requirement_is_documented_and_reachable(name):
     assert calls <= 40, f"{name} needs {calls} API calls to warm up"
 
 
+# ------------------------------------------------------------------ signing
+# These pin the Bitstamp v2 auth contract. It cannot be exercised against the
+# venue from CI, and every mistake in it fails the same way - "invalid
+# signature" - so the construction is asserted directly instead.
+
+def test_bitstamp_signed_message_has_the_exact_v2_layout():
+    ex = BitstampSpot(api_key="KEY", api_secret="SECRET")
+    msg = ex._signed_message("/api/v2/balance/", "foo=bar", "NONCE", "123")
+    assert msg == ("BITSTAMP KEYPOSTwww.bitstamp.net/api/v2/balance/"
+                   "application/x-www-form-urlencodedNONCE123v2foo=bar")
+
+
+def test_bitstamp_signature_is_lowercase_hex():
+    """Bitstamp compares the digest verbatim; upper-casing it fails every call."""
+    import hashlib
+    import hmac as _hmac
+
+    ex = BitstampSpot(api_key="KEY", api_secret="SECRET")
+    msg = ex._signed_message("/api/v2/balance/", "foo=bar", "NONCE", "123")
+    expected = _hmac.new(b"SECRET", msg.encode(), hashlib.sha256).hexdigest()
+    assert expected == expected.lower()
+
+    captured = {}
+
+    def fake_urlopen(req, timeout=None):
+        captured["headers"] = dict(req.headers)
+        captured["body"] = req.data.decode()
+
+        class R:
+            def read(self):
+                return b'{"btc_available": "0.5", "usd_available": "100.0"}'
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+        return R()
+
+    import tradebot.exchanges.bitstamp as bs
+
+    original = bs.urllib.request.urlopen
+    bs.urllib.request.urlopen = fake_urlopen
+    try:
+        bal = ex.fetch_balance("btcusd")
+    finally:
+        bs.urllib.request.urlopen = original
+
+    sig = captured["headers"]["X-auth-signature"]
+    assert sig == sig.lower() and len(sig) == 64
+    assert bal.base == 0.5 and bal.quote == 100.0
+
+
+def test_bitstamp_never_sends_an_empty_post_body():
+    """An empty body is rejected with API0020, so /balance/ must still send one."""
+    ex = BitstampSpot(api_key="KEY", api_secret="SECRET")
+    captured = {}
+
+    def fake_urlopen(req, timeout=None):
+        captured["body"] = req.data.decode()
+
+        class R:
+            def read(self):
+                return b"{}"
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+        return R()
+
+    import tradebot.exchanges.bitstamp as bs
+
+    original = bs.urllib.request.urlopen
+    bs.urllib.request.urlopen = fake_urlopen
+    try:
+        ex.fetch_balance("btcusd")
+    finally:
+        bs.urllib.request.urlopen = original
+    assert captured["body"], "empty POST body triggers Bitstamp API0020"
+
+
+def test_bitstamp_surfaces_an_error_body_instead_of_returning_it():
+    """Bitstamp reports failures inside a 200 response.
+
+    Unread, a rejected order returns as a successful OrderResult with an
+    empty id and the bot believes it holds a position it does not.
+    """
+    from tradebot.exchanges.bitstamp import _raise_for_error
+
+    with pytest.raises(RuntimeError, match="Minimum order size"):
+        _raise_for_error({"status": "error",
+                          "reason": {"__all__": ["Minimum order size is 10.0 USD."]}},
+                         "/api/v2/buy/market/btcusd/")
+    with pytest.raises(RuntimeError, match="API0004"):
+        _raise_for_error({"status": "error", "reason": "Invalid nonce",
+                          "code": "API0004"}, "/api/v2/balance/")
+    assert _raise_for_error({"btc_available": "1"}, "/x") == {"btc_available": "1"}
+
+
+def test_signed_calls_refuse_to_run_without_credentials():
+    with pytest.raises(RuntimeError, match="needs credentials"):
+        BitstampSpot().fetch_balance("btcusd")
+
+
 # ------------------------------------------------------------------- bot loop
 
 def test_bot_step_buys_then_holds_then_sells(real):

@@ -13,13 +13,32 @@ the backtest validated.
 
 ## Quick start
 
+There is a ready-made runner that keeps credentials in the environment
+and **dry-runs unless you pass `--live`**:
+
+```bash
+export BITSTAMP_API_KEY=...        # key needs the Trade permission
+export BITSTAMP_API_SECRET=...
+
+python scripts/live_bot.py --venue bitstamp --symbol btcusd --taker-fee 0.004
+python scripts/live_bot.py --venue bitstamp --symbol btcusd --taker-fee 0.004 --live
+```
+
+Public candles need no credentials, so the dry run works with nothing set
+— useful for confirming the strategy agrees with the backtest on live
+data before an account is involved. Run it once per closed 5m candle from
+cron or a systemd timer.
+
+Or drive it yourself:
+
 ```python
 from tradebot.bot import BotConfig, step
-from tradebot.exchanges import BinanceSpot          # or BitstampSpot
+from tradebot.exchanges import BitstampSpot         # or BinanceSpot
 from tradebot.registry import get_strategy
 
-exchange = BinanceSpot(api_key, api_secret, dry_run=True)   # dry run first
-config   = BotConfig(symbol="BTCUSDT", strategy="kelly_regime_v4")
+exchange = BitstampSpot(api_key, api_secret, dry_run=True)   # dry run first
+exchange.taker_fee = 0.004                                   # your real tier
+config   = BotConfig(symbol="btcusd", strategy="kelly_regime_v4")
 strategy = get_strategy(config.strategy)
 
 result = step(exchange, config, strategy)   # call once per closed candle
@@ -50,16 +69,56 @@ order without sending it. That default is covered by a test.
 Dependencies: **none** — both use `urllib` from the standard library, so
 a bot deploys with exactly what the backtester needs.
 
-**The fee difference matters more than the API difference.** Every
-result in this repo assumes a 0.10% taker fee. Bitstamp's entry tier is
-4x that, which is enough to change conclusions for anything that trades
-often. The leading strategies trade ~150 times in nine years, so they
-tolerate it; the losing high-turnover strategies would get worse. Set
-`taker_fee` to your actual tier — it feeds the strategy's own fee
-awareness through `MarketSpec`.
-
 Bitstamp is also the venue the committed dataset comes from, so
 backtest and live see the same price series with no venue basis.
+
+## Read this before trading Bitstamp spot at the entry fee tier
+
+**Every result in this repo assumes a 0.10% taker fee. At Bitstamp's
+0.40% entry tier, on spot, none of these strategies beat buy-and-hold.**
+
+Full period, spot, $1,000 start
+(`tradebot run --markets spot --spot-fee 0.004`):
+
+| strategy | @0.10% | @0.40% | max DD @0.40% | Sharpe @0.40% |
+|---|---|---|---|---|
+| buy_and_hold | $66.0K | **$65.8K** | 84.1% | 0.95 |
+| `kelly_regime_v4` | $66.8K | $29.5K | 48.7% | **1.18** |
+| `kelly_regime_v3` | $65.8K | $32.9K | — | — |
+| `kelly_regime_v2` | $46.4K | $22.1K | — | — |
+| `kelly_regime` | $42.1K | $19.6K | — | — |
+
+Buy-and-hold barely notices the fee — it trades **once**. The allocators
+lose more than half their return, because the 0.30pp of extra cost is
+paid on every rebalance and compounds across nine years.
+
+Widening the rebalance deadband recovers some of it and not enough
+(`KellyRegimeV4(deadband=...)`, spot @0.40%): 0.20 → $33.2K, 0.30 →
+$35.7K, 0.45 → $19.3K, 0.60 → $28.4K. Note that curve is not monotone —
+tuning the deadband to your fee tier is curve-fitting on one path, and
+the best value here still loses to holding.
+
+**What is still true at 0.40%:** the risk profile. `kelly_regime_v4`
+roughly halves the drawdown (48.7% vs 84.1%) and carries a better Sharpe
+(1.18 vs 0.95). You are paying return for a much smoother ride, which is
+a legitimate trade — just not the trade the headline numbers describe.
+
+**If you want the published edge, one of these has to change:**
+
+1. **A lower fee tier.** Bitstamp's taker fee falls with 30-day volume;
+   the results here need roughly 0.10% to hold.
+2. **Maker orders instead of market orders.** Maker fees are materially
+   lower, at the cost of fills that are no longer guaranteed — which the
+   backtester does not model.
+3. **A cheaper venue.** Binance spot is 0.10%, which is the assumption
+   every table in this repo was built on.
+4. **Leverage.** The strategies' real advantage is on 5x futures, where
+   the comparison is not "more return than holding" but "holding gets
+   liquidated in 26 of 40 random windows and this does not". That is out
+   of scope for this spot-only path.
+
+Set `taker_fee` to your actual tier either way — it feeds the strategy's
+own fee awareness through `MarketSpec`, so it is not cosmetic.
 
 ## Cold start: how much history a bot must fetch
 

@@ -16,6 +16,20 @@ from tradebot.exchanges.base import Balance, Exchange, OrderResult, normalize_ca
 
 BASE_URL = "https://www.bitstamp.net"
 STEPS = {1: 60, 3: 180, 5: 300, 15: 900, 30: 1800, 60: 3600, 240: 14400, 1440: 86400}
+CONTENT_TYPE = "application/x-www-form-urlencoded"
+
+
+def _raise_for_error(data, path: str):
+    """Bitstamp reports failures in a 200 body, so they must be read.
+
+    A rejected order otherwise returns as an ``OrderResult`` with an empty
+    id, and the bot carries on believing it holds a position it does not.
+    """
+    if isinstance(data, dict) and (data.get("status") == "error" or "error" in data):
+        reason = data.get("reason") or data.get("error")
+        code = data.get("code", "")
+        raise RuntimeError(f"bitstamp {path} failed: {code} {reason}".strip())
+    return data
 
 
 class BitstampSpot(Exchange):
@@ -25,8 +39,9 @@ class BitstampSpot(Exchange):
     live see the same price series - no basis, no venue mismatch.
 
     Public candles need no credentials. Trading needs an API key/secret
-    (Bitstamp's v2 auth: HMAC-SHA256 over a canonical string, with the
-    key id, a UUID nonce and a millisecond timestamp).
+    with the **Trade** permission (Bitstamp's v2 auth: HMAC-SHA256 over a
+    canonical string, with the key id, a UUID nonce and a millisecond
+    timestamp; the digest is compared verbatim, so it stays lowercase).
     ``dry_run=True`` is the default.
 
     Endpoints: ``GET /api/v2/ohlc/{pair}/`` (1000 candles max, ``step``
@@ -57,30 +72,50 @@ class BitstampSpot(Exchange):
         with urllib.request.urlopen(req, timeout=self.timeout) as resp:
             return json.loads(resp.read())
 
+    def _signed_message(self, path: str, body: str, nonce: str,
+                        timestamp: str) -> str:
+        """The exact string Bitstamp v2 expects to be HMAC-SHA256 signed.
+
+        Order is fixed and unforgiving::
+
+            "BITSTAMP " + key + method + host + path + query
+            + content-type + nonce + timestamp + "v2" + body
+
+        Kept as its own method so a test can pin it without a network call.
+        """
+        host = self.base_url.split("://", 1)[1]
+        return (f"BITSTAMP {self.api_key}POST{host}{path}"
+                f"{CONTENT_TYPE}{nonce}{timestamp}v2{body}")
+
     def _post_signed(self, path: str, payload: dict | None = None):
-        payload = payload or {}
-        body = urllib.parse.urlencode(payload)
+        if not self.api_key or not self.api_secret:
+            raise RuntimeError(
+                f"{path} needs credentials; construct BitstampSpot(api_key=..., "
+                "api_secret=...) with a key that has the Trade permission")
+        # Bitstamp rejects a genuinely empty POST body with API0020, so a
+        # request that takes no parameters still has to send one.
+        body = urllib.parse.urlencode(payload or {"foo": "bar"})
         nonce = str(uuid.uuid4())
         timestamp = str(int(time.time() * 1000))
-        content_type = "application/x-www-form-urlencoded"
-        host = self.base_url.split("://", 1)[1]
-        message = (f"BITSTAMP {self.api_key}POST{host}{path}"
-                   f"{'' if not body else ''}{content_type}{nonce}{timestamp}v2{body}")
+        message = self._signed_message(path, body, nonce, timestamp)
+        # Lowercase hex: Bitstamp compares the digest verbatim, so upper-casing
+        # it authenticates as garbage and every signed call fails.
         signature = hmac.new(self.api_secret.encode(), message.encode(),
-                             hashlib.sha256).hexdigest().upper()
+                             hashlib.sha256).hexdigest()
         headers = {
             "X-Auth": f"BITSTAMP {self.api_key}",
             "X-Auth-Signature": signature,
             "X-Auth-Nonce": nonce,
             "X-Auth-Timestamp": timestamp,
             "X-Auth-Version": "v2",
-            "Content-Type": content_type,
+            "Content-Type": CONTENT_TYPE,
             "User-Agent": "tradebot/0.1",
         }
         req = urllib.request.Request(f"{self.base_url}{path}", data=body.encode(),
                                      headers=headers, method="POST")
         with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-            return json.loads(resp.read())
+            data = json.loads(resp.read())
+        return _raise_for_error(data, path)
 
     # ------------------------------------------------------------- market data
 

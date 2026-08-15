@@ -237,11 +237,21 @@ config   = BotConfig(symbol="BTCUSDT", strategy="kelly_regime_v4")
 result   = step(exchange, config, get_strategy(config.strategy))
 ```
 
-CI proves the top-three strategies compute the **identical target** from
-paged exchange data and from the contiguous backtest frame, that paging
-is lossless, and that neither adapter ever hands a strategy the forming
-candle. Setup, fee differences, cold-start cost and the honest list of
-what live will *not* match: **[docs/LIVE.md](docs/LIVE.md)**.
+`scripts/live_bot.py` runs one cycle from environment credentials and
+dry-runs unless you pass `--live`. CI proves the top-three strategies
+compute the **identical target** from paged exchange data and from the
+contiguous backtest frame — checked bar for bar across 30 consecutive
+candles — that paging is lossless, and that neither adapter ever hands a
+strategy the forming candle.
+
+> ⚠️ **Fees decide this.** Every table here assumes a 0.10% taker fee. At
+> Bitstamp's 0.40% entry tier, on spot, **no strategy here beats
+> buy-and-hold** ($29.5K vs $65.8K for `kelly_regime_v4`) — it keeps a
+> better Sharpe and roughly half the drawdown, but not the return. See
+> [docs/LIVE.md](docs/LIVE.md#read-this-before-trading-bitstamp-spot-at-the-entry-fee-tier).
+
+Setup, cold-start cost and the honest list of what live will *not* match:
+**[docs/LIVE.md](docs/LIVE.md)**.
 
 For a custom venue, `tradebot.live` is the lower-level extraction point:
 
