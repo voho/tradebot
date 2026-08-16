@@ -109,24 +109,21 @@ test suite — no branches, no review gate.
 
 ## The strategies
 
-Where this leads next — funding harvest and funding as a positioning
-signal — is in **[docs/ALTERNATIVES.md](docs/ALTERNATIVES.md)**, ranked by
-evidence rather than by appeal. The cross-asset falsification test (does
-any of this work on ETH?) is in
-**[docs/CROSS_ASSET.md](docs/CROSS_ASSET.md)**: the drawdown reduction
-replicates on a second asset, the return shortfall replicates too. An
-assessment of Elliott waves against this repo's own evidence bar is in
-**[docs/ELLIOTT_WAVES.md](docs/ELLIOTT_WAVES.md)**. Untried research
-directions, argued from what actually constrains this project rather than
-from what sounds promising, are in
-**[docs/FRONTIER.md](docs/FRONTIER.md)**.
-
 Each strategy has its own section in **[docs/STRATEGIES.md](docs/STRATEGIES.md)** —
 what it is, how it works, and the principles it rests on — ordered best to
-worst, with citations. The literature survey behind them is in
-[docs/RESEARCH.md](docs/RESEARCH.md); robustness testing (walk-forward,
-parameter frontiers, Monte Carlo windows) is in
-[docs/VALIDATION.md](docs/VALIDATION.md).
+worst, with citations.
+
+Six documents, each with one job and one update trigger; nothing else is
+added, so the set stays readable:
+
+| doc | holds | updated when |
+|---|---|---|
+| [ROUTINE.md](docs/ROUTINE.md) | how a research session runs | the procedure changes |
+| [LEDGER.md](docs/LEDGER.md) | the diagnosis, everything tried, the ranked backlog | **every session** |
+| [RESEARCH.md](docs/RESEARCH.md) | literature, what was tried and why — including where this leads next (funding carry and funding as a positioning signal) | a research round produces a finding |
+| [VALIDATION.md](docs/VALIDATION.md) | how we know — walk-forward, Monte Carlo windows, measurement biases, funding, the ETH cross-asset test | a strategy is promoted or a bias is found |
+| [STRATEGIES.md](docs/STRATEGIES.md) | one section per registered strategy | a strategy is registered |
+| [LIVE.md](docs/LIVE.md) | running it for real: adapters, fee tiers, what live will not match | deployment facts change |
 
 The one-line summary of all twenty-five results: **every strategy that
 makes money decides *how much* to hold; every strategy that tries to

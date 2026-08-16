@@ -509,6 +509,54 @@ a perp. The signal the strategy trades and the cost it pays have a common
 cause, so the cost scales with the signal. Any strategy in this family
 inherits that, and an average-rate assumption will always understate it.
 
+## Cross-asset falsification: does any of this work on ETH?
+
+Every conclusion here rests on BTC 2017–2026. That sounds like 1.01M
+observations and is really about **three** independent regime events, so a
+filter fitted to those would look identical to one that works. This is the
+cheapest experiment that can tell the difference.
+
+Both series come from the **same venue** (Bitfinex, via
+[Zombie-3000/Bitfinex-historical-data](https://github.com/Zombie-3000/Bitfinex-historical-data))
+over the **same window** — 2016-03-09 → 2019-12-31, 376,878 5m bars each,
+covering the 2017 bull and the 2018 bear (BTC −84%, ETH −94%) — so period
+and venue are held constant and only the asset varies. BTC is the control.
+Rebuild with `python scripts/build_bitfinex_dataset.py --source <dir>`.
+$1,000 start, 0.10% spot / 0.05% futures, no funding.
+
+| market | asset | buy & hold | `kelly_regime_v4` | ratio | DD (v4) | DD (hold) |
+|---|---|---|---|---|---|---|
+| spot | BTC *(control)* | $17,477 | $10,174 | 0.58x | **40.1%** | 83.8% |
+| spot | ETH *(test)* | $11,550 | $5,482 | 0.47x | **36.5%** | 94.2% |
+| futures 5x | BTC *(control)* | $83,264 | $21,536 | 0.26x | **32.1%** | 85.2% |
+| futures 5x | ETH *(test)* | **$18** (liquidated) | $4,263 | 236x | **35.1%** | 99.3% |
+
+**The risk property transfers; the return property does not exist.** In
+all four cells the strategy roughly halves-to-thirds the drawdown. That is
+the same finding the BTC-only work reached from a completely different
+direction, now replicated on a second asset — the strongest evidence in
+this project that the mechanism is real rather than fitted. On return it
+loses to holding on both assets on spot (0.58x, 0.47x).
+
+The one cell where it wins enormously is the one where holding died:
+leveraged ETH buy-and-hold was liquidated to $18 in the 2018 bear. That is
+not a 236x edge, it is the difference between surviving and not — the same
+claim as the Monte Carlo test above, reproduced on a second asset. And the
+control behaves as it should: leveraged BTC holding *survived* this
+particular window and beat the strategy, because a position opened in
+early 2016 had multiplied enough before the 2018 bear that an 84% fall no
+longer reached its liquidation price. Same strategy, same period,
+different asset, opposite outcome — which is exactly how much a single
+path is worth.
+
+**Verdict: the sample-size objection is partly answered.** The drawdown
+reduction is not BTC-specific, which was the thing most at risk of being
+an artifact; the absence of return alpha is not BTC-specific either. What
+remains unanswered is that this window shares the 2018 bear with the main
+dataset, so the two tests are not fully independent, and 2020–2026 ETH was
+not reachable. A second bear on a second asset in a *different* period is
+still the missing experiment.
+
 ## Known limitations
 
 - **Funding is modelled but only partly measured.** The engine charges it
@@ -521,8 +569,9 @@ inherits that, and an average-rate assumption will always understate it.
   dataset was built (see README); the basis is small but the label
   `spot (perp proxy)` is carried through every report for a reason.
 - **One asset, one decade.** BTC 2017–2026 is a single, upward-drifting
-  sample path. Cross-asset (ETH) and cross-period validation would be the
-  next honest step before risking capital.
+  sample path. The ETH test above answers half of this; the missing
+  experiment is a second bear on a second asset in a *different* period,
+  since that test shares 2018 with the main dataset.
 - **Survivorship in the council.** `champions_council` selects members
   that already performed well on this data. Its OOS split is reported
   above precisely because its in-sample rank is not evidence.

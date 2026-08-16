@@ -324,3 +324,124 @@ two negative results that invert the textbook reading.
   gave −1.2pp drawdown for roughly zero cost. Klass & Nowicki (2005)
   predicted the former: the cushion rule is not optimal in discrete time
   and systematically sells low in a mean-reverting-drawdown asset.
+
+---
+
+# Where this leads next: funding
+
+Charging perpetual funding as a first-class cost (see
+[VALIDATION.md](VALIDATION.md#funding-the-cost-that-was-missing-and-what-it-does))
+established that this whole strategy family is structurally **short** a
+large, persistent premium. Two directions follow from that, and they are
+the best-evidenced untried work in the repo.
+
+## Harvest the premium instead of paying it
+
+Hold spot and short the perpetual against it, delta-neutral, and collect
+funding. Direction cancels; the return is the funding stream. This is the
+crypto cash-and-carry trade: He et al. (2024) derive the no-arbitrage
+relation between perp price, spot price and funding rate, and empirical
+work covering 2020–2025 reports a carry Sharpe around 6.45 driven mostly
+by the rate itself. Compounding the real Binance BTCUSDT series,
+2020–2023:
+
+| | |
+|---|---|
+| gross funding stream | **+82.0%** over 4.0 years = **+16.2%/yr** |
+| after 0.10% taker on both legs, quarterly rebalance | +14.6%/yr |
+| after 0.40% taker on both legs, quarterly rebalance | +9.8%/yr |
+| settlements where the payer flips (negative rate) | 13.5% |
+| worst 30-day run of the funding stream | **−1.31%** |
+
+A −1.31% worst month against a +16%/yr carry is a risk profile nothing
+else here approaches; `kelly_regime_v4` at its best has a 35% drawdown.
+
+**The reason to be careful is serious.** That same literature reports the
+Sharpe falling to 4.06 from 2024 and turning **negative in 2025** as the
+trade crowded — and the committed data stops at **2023**, precisely where
+the premium is said to have broken. This measurement covers the good years
+and none of the bad ones, which is the exact mistake the rest of this repo
+exists to avoid. Not modelled either: basis risk at entry and exit, margin
+and liquidation risk on the short perp leg, exchange and custody risk (the
+failure mode that actually destroyed carry desks in 2022), and borrow cost
+if the spot leg is financed. **Extend the series through 2026 and
+re-measure before anything else** — that single data fetch decides the
+direction.
+
+## Funding as a positioning signal, not just a cost
+
+Rich funding means crowded longs, and crowded positioning is a classic
+reversal condition. Unlike everything else tried here the signal is *not*
+derived from price — it is a direct observation of what other participants
+are paying to hold their positions. Forward spot return by funding
+quintile, 2020–2023 (rank-binned; Binance clamps the rate, so the middle
+quintiles share a value and read as one bucket):
+
+| horizon | Q1 (cheapest) | Q5 (richest) | spread |
+|---|---|---|---|
+| 1 day | +0.60% | −0.10% | +0.70pp |
+| 7 days | +3.02% | +0.30% | +2.72pp |
+| 14 days | +4.13% | +0.56% | +3.57pp |
+
+Controlling for momentum — mean 7-day forward return, funding tercile
+against trailing-7-day-return tercile:
+
+| | past low | past mid | past high |
+|---|---|---|---|
+| **funding low** | +2.83% | +1.74% | +2.16% |
+| **funding mid** | +0.55% | +1.36% | +3.24% |
+| **funding high** | **−1.68%** | **−1.54%** | +1.22% |
+
+Correlation between funding and trailing return is only **0.39**, so this
+is not simply a momentum proxy: high funding predicts *negative* forward
+returns unless price is also rising strongly.
+
+**Honest assessment: weaker than the quintile table suggests.** The middle
+quintiles are non-monotone (Q3 +3.06%, Q4 −1.02% at identical mean rates)
+— noise from splitting a tied cluster, and a warning about how much of the
+rest is noise too. Four years, one asset, and this repo's own record is
+that every apparent predictor died out-of-sample. The cheap way to use it
+is as a **gate** on the existing strategy (stand flat when funding is in
+its top decile): low turnover, and it directly targets the adverse timing
+that makes funding expensive. A standalone reversal signal means high
+turnover, which is where strategies here go to die.
+
+# Elliott waves: assessed and not pursued
+
+Asked whether Elliott Wave Theory, possibly with neural networks or game
+theory, could help. No — and the reason is methodological.
+
+**It is not falsifiable as practitioners use it.** This repo's guarantees
+rest on strategies being deterministic functions of past bars, which is
+what `tests/test_causality_strict.py` checks. Wave counts are subjective,
+disputed between analysts on identical data, and routinely **re-labelled
+after the fact** — the exact leak class that suite exists to catch, and
+that class is worth $3.7e23 (see finding 5 above). Reduced to a mechanical
+counter with fixed swing detection and no revision, it becomes a
+pattern-matching indicator over zigzag pivots, and this repo has twenty
+documented results on what happens to those after fees.
+
+**Its one quantitative component has been refuted.** Batchelor & Ramyar
+tested the Fibonacci retracement ratios and found no significant evidence
+of them in price data.
+
+**The 2024 neural-network result does not meet this repo's bar.**
+*ElliottAgents* (Applied Sciences 14(24)) reports 73.68% accuracy with
+backtesting against 57.89% without, on BTC/USD Oct 2022 – Sep 2024. Held
+to the standards enforced here: the sample is **19 cases** — 14/19 versus
+11/19, an improvement of three calls — over a monotonic $20K → $70K rise
+where `buy_and_hold` returned +1,418% on 5x futures, with no walk-forward
+split against a base rate of 28-in-sample-to-0-out-of-sample, scored on
+directional accuracy, which several strategies here prove says nothing
+about an equity curve.
+
+**And its useful kernel is already implemented.** Multi-timescale
+structure produced by crowd behaviour is the explicit foundation of
+`kelly_regime` (Cardaliaguet & Lehalle 2018) and of the doubling anchor
+ladder in `kelly_regime_v4` (Müller et al. 1997; Corsi 2009), in falsifiable
+form. Elliott's informal claims about self-similarity and reflexive
+expectations have rigorous relatives here already — including
+`minority_oracle`, a documented negative result. If pursued anyway, the
+honest way is a deterministic counter registered like any other strategy,
+published including "it lost"; the likely outcome is a twenty-sixth
+documented way to lose to fees.

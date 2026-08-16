@@ -26,9 +26,11 @@ Read, in this order:
 
 1. `README.md` — the comparison table and the two standing warnings
    (fees, funding).
-2. [`docs/LEDGER.md`](LEDGER.md) — everything already tried, and the
-   ranked backlog at the bottom.
-3. [`docs/FRONTIER.md`](FRONTIER.md) — the four binding constraints.
+2. [`docs/LEDGER.md`](LEDGER.md) — the standing diagnosis, everything
+   already tried, the ruled-out list, and the ranked backlog at the
+   bottom. This is the one file you must read in full.
+3. [`docs/RESEARCH.md`](RESEARCH.md) — only the section covering the
+   direction you are about to pick up.
 
 **Backlog first.** If the backlog has an item marked `NEXT` or `OPEN`
 that is not blocked, work that. Invent a new direction only when the
@@ -47,11 +49,12 @@ State the idea in one sentence, then answer all four. If any answer
 fails, discard the idea and pick another — this is a filter, not a
 formality.
 
-1. **Which constraint does it attack?** One of the four in
-   `FRONTIER.md`: information (one price series), effective sample size
-   (n≈3), no error control in the signal path, or costs that scale with
-   the signal. *"Another indicator" attacks none of them* — that is why
-   the bottom of the comparison table looks the way it does.
+1. **Which constraint does it attack?** One of the four in the standing
+   diagnosis at the top of `LEDGER.md`: information (one price series),
+   effective sample size (n≈3), no error control in the signal path, or
+   costs that scale with the signal. *"Another indicator" attacks none of
+   them* — that is why the bottom of the comparison table looks the way
+   it does.
 2. **Which ledger rows is it not a duplicate of?** Cite them by ID. If
    it is a variant of something already tried, say what is different and
    why that difference should matter.
@@ -227,6 +230,23 @@ ledger row saying which idea and why.
 ---
 
 ## Standing rules
+
+- **Do not create new documents.** There are six, and each has a single
+  update trigger. A finding goes in the file whose trigger it matches —
+  never in a new file named after the question that produced it, which is
+  how this repo accumulated eight and had to merge four back down.
+
+  | file | holds | updated when |
+  |---|---|---|
+  | [`ROUTINE.md`](ROUTINE.md) | this procedure | the procedure changes |
+  | [`LEDGER.md`](LEDGER.md) | diagnosis, everything tried, backlog | **every session** |
+  | [`RESEARCH.md`](RESEARCH.md) | literature, what was tried and why | a research round produces a finding |
+  | [`VALIDATION.md`](VALIDATION.md) | how we know — walk-forward, Monte Carlo, biases, funding, cross-asset | a strategy is promoted or a measurement bias is found |
+  | [`STRATEGIES.md`](STRATEGIES.md) | one section per registered strategy | a strategy is registered |
+  | [`LIVE.md`](LIVE.md) | running it for real, fees, what live will not match | deployment facts change |
+
+  The comparison table lives in `README.md` and is generated, never
+  hand-edited.
 
 - **Nothing is deleted.** Registered negative results stay registered.
 - **The table's futures column is an upper bound** until funding is

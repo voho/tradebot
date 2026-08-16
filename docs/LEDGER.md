@@ -14,10 +14,12 @@ Three sections and a backlog:
 - **[C. Ruled out](#c-ruled-out--do-not-re-try-without-new-evidence)** — do not re-try without new evidence.
 - **[D. Backlog](#d-backlog-ranked)** — ranked, with blockers.
 
-Backfilled 2026-08-16 from `STRATEGIES.md`, `RESEARCH.md`,
-`VALIDATION.md`, `ALTERNATIVES.md`, `CROSS_ASSET.md`, `ELLIOTT_WAVES.md`,
-`LIVE.md` and `FRONTIER.md`, which remain the long-form record. Balances
-are $1,000 start, full period, from the README comparison table.
+Backfilled 2026-08-16 from the full research record. The long form lives
+in [`RESEARCH.md`](RESEARCH.md) (what was tried and why),
+[`VALIDATION.md`](VALIDATION.md) (how we know), [`STRATEGIES.md`](STRATEGIES.md)
+(per-strategy detail) and [`LIVE.md`](LIVE.md) (running it for real);
+this file is the index over all four. Balances are $1,000 start, full
+period, from the README comparison table.
 
 ## The standing diagnosis
 
@@ -115,11 +117,11 @@ the most expensive repeated mistake in this table.
 | Recovering order flow from OHLCV | BVC/VPIN proxies are price transforms. Four strategies, four losses. | L-14, L-15, L-16, L-12 |
 | Tuning turnover to fit a fee tier | 28 of 32 in-sample, 0 of 28 out-of-sample. | R-12 |
 | Higher leverage as a fix for fees | Fees are charged on notional; leverage multiplies cost and return together. Changes the risk profile, not the sign. | R-13 |
-| Sentiment / social media | A lagged function of price — not orthogonal information — and revision-prone. | FRONTIER |
+| Sentiment / social media | A lagged function of price — not orthogonal information — and revision-prone. | diagnosis |
 | Higher-frequency execution | Turnover is the enemy at every fee tier available. | R-12, R-13 |
-| Elliott waves | Unfalsifiable as practised; its testable kernel already implemented. | R-18 |
-| Market making, AMM/LVR | Plausibly real; **not simulable** on bar-close fills with no order book. Ruled out on what can be checked, not on merit. | L-24, FRONTIER |
-| Options / volatility risk premium | Same — no options data, no way to validate here. | ALTERNATIVES |
+| Elliott waves | Unfalsifiable as practised; its testable kernel already implemented. | R-18, RESEARCH |
+| Market making, AMM/LVR | Plausibly real; **not simulable** on bar-close fills with no order book. Ruled out on what can be checked, not on merit. | L-24, B-11 |
+| Options / volatility risk premium | Same — no options data, no way to validate here. | — |
 
 ---
 
@@ -137,6 +139,7 @@ the most expensive repeated mistake in this table.
 | **B-08** | Second bear, second asset, different period (ETH 2020–2026) | N≈3 | OPEN | R-17 shares the 2018 bear with the main dataset, so the two tests are not independent. This closes that gap. |
 | **B-09** | Conformal prediction / adaptive conformal by betting | ERR | LOW | Mostly subsumed by B-01. Coverage guarantees degrade exactly when regimes shift, which is when they matter. |
 | **B-10** | Deterministic Elliott wave counter | — | LOW | Only as a documented negative result, per R-18. ZigZag pivots, mechanical impulse/corrective rules, no discretion. About a day, converts an unfalsifiable debate into a table row. |
+| **B-11** | Order-book / queue model in the simulator | — | LOW | The blocker behind market making (Avellaneda & Stoikov 2008, whose reservation-price and inventory-skew framework is the natural home of the no-trade band L-05 derived from scratch) and AMM liquidity provision / loss-versus-rebalancing. Neither can be simulated credibly on bar-close fills, so both are ruled out on what can be checked rather than on merit. Large piece of work; do not start it to justify a strategy. |
 
 ---
 
