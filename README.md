@@ -98,7 +98,10 @@ any of this work on ETH?) is in
 **[docs/CROSS_ASSET.md](docs/CROSS_ASSET.md)**: the drawdown reduction
 replicates on a second asset, the return shortfall replicates too. An
 assessment of Elliott waves against this repo's own evidence bar is in
-**[docs/ELLIOTT_WAVES.md](docs/ELLIOTT_WAVES.md)**.
+**[docs/ELLIOTT_WAVES.md](docs/ELLIOTT_WAVES.md)**. Untried research
+directions, argued from what actually constrains this project rather than
+from what sounds promising, are in
+**[docs/FRONTIER.md](docs/FRONTIER.md)**.
 
 Each strategy has its own section in **[docs/STRATEGIES.md](docs/STRATEGIES.md)** —
 what it is, how it works, and the principles it rests on — ordered best to
@@ -107,7 +110,7 @@ worst, with citations. The literature survey behind them is in
 parameter frontiers, Monte Carlo windows) is in
 [docs/VALIDATION.md](docs/VALIDATION.md).
 
-The one-line summary of all twenty-three results: **every strategy that
+The one-line summary of all twenty-five results: **every strategy that
 makes money decides *how much* to hold; every strategy that tries to
 predict *what happens next* loses.** On 5-minute bars, after fees, sizing
 wins and forecasting loses.
