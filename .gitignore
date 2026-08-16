@@ -10,6 +10,11 @@ venv/
 *.csv
 *.parquet
 !/data/btcusd_spot_5m.csv.gz
+# real Binance BTCUSDT perp funding, charged as a first-class cost
+!/data/btcusdt_perp_funding_8h.csv.gz
+# Bitfinex ETH/BTC 2016-2019, for the cross-asset falsification test
+!/data/ethusd_bitfinex_5m.csv.gz
+!/data/btcusd_bitfinex_5m.csv.gz
 !/data/btcusdt_perp_5m.csv
 !/data/btcusdt_spot_aligned_5m.csv
 /reports/*

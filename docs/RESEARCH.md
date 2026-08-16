@@ -228,7 +228,19 @@ validation here leans on Monte Carlo windows rather than one path.
    holding. A negative result worth the space, because "just trade less"
    is the first thing anyone tries. Detail in
    [LIVE.md](LIVE.md#can-it-be-tuned-to-beat-the-fee-no-and-the-attempt-is-instructive).
-7. **A warmup prefix is not free.** Letting a strategy trade through the
+7. **The deadband should be derived, not chosen.** For a Kelly sizer the
+   growth given up by holding exposure ``f`` instead of the desired
+   ``f*`` is ``(sigma^2/2)(f - f*)^2`` per unit time, while correcting it
+   costs ``fee*|Δf|``. Trading is worth it only when the first exceeds
+   the second, i.e. when ``|Δf| > 2*fee/(H*sigma^2)`` for a holding
+   horizon ``H`` — the classic transaction-cost no-trade band
+   (Constantinides 1986; Davis & Norman 1990) in the form this framework
+   needs. Implemented as `kelly_regime_ev`. Two consequences worth
+   recording: the hand-set 10% deadband is roughly **3x too narrow** at a
+   0.10% fee, and at 0.40% the band exceeds 1.0, meaning **no rebalance
+   is ever worth its cost** — an analytic derivation of the result
+   `scripts/fee_study.py` reached by brute force.
+8. **A warmup prefix is not free.** Letting a strategy trade through the
    prefix of a resampled window lets it be liquidated before the window
    opens (19 of buy-and-hold's 23 stress-test liquidations were of this
    kind), and slicing a frame to an out-of-sample date range leaves a
