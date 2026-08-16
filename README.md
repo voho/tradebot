@@ -35,6 +35,17 @@ regenerates the table and CI fails if a strategy is missing from it.
 Full metrics (win rate, drawdown, sharpe, fees, ...) live in
 [reports/comparison.md](reports/comparison.md).
 
+> 🚨 **The `futures_5x` column ignores funding, and that is worth 2–3x.**
+> Perpetuals settle funding every 8 hours; on real Binance data it was
+> positive at 86.5% of settlements and cost a constant long ~15% a year.
+> Charging it, `kelly_regime_v4`'s $156K becomes **$36K–$80K** depending
+> on the period assumed — a band that *straddles* spot buy-and-hold's
+> $66K. Worse, funding runs **+20%/yr while the strategy holds** against
+> +2.8% while it is flat, because the crowding that drives the signal is
+> what sets the rate. Read every futures figure below as an upper bound;
+> detail in [docs/VALIDATION.md](docs/VALIDATION.md#funding-the-cost-that-was-missing-and-what-it-does),
+> reproduce with `python scripts/funding_study.py all`.
+
 One full-history number can hide a lucky path, so the top three are also
 resampled over 40 random windows
 (`python scripts/stress_test.py`, charts in

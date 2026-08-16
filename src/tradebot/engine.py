@@ -50,6 +50,7 @@ class BacktestResult:
     df: pd.DataFrame  # the (prepared) OHLCV frame the run used
     liquidated: bool
     fees_paid: float
+    funding_paid: float = 0.0
 
     @property
     def final_balance(self) -> float:
@@ -78,6 +79,7 @@ def run_backtest(
     slippage_bps: float = 0.0,
     data_label: str = "",
     trade_start: int = 0,
+    funding: pd.Series | None = None,
 ) -> BacktestResult:
     """Backtest ``strategy`` over ``df``.
 
@@ -88,6 +90,13 @@ def run_backtest(
     resampling needs this: without it a leveraged strategy can be
     liquidated inside the data prefix and the window then measures a
     corpse rather than a fresh account.
+
+    ``funding`` is a series of perpetual funding rates indexed by
+    settlement time (8-hourly on most venues); each settlement is charged
+    on the position's notional at the bar containing it. Omitting it
+    models a **funding-free perp**, which is not a real instrument — on
+    BTC 2020-2023 funding cost a constant long about 15% a year — so read
+    any futures figure computed without it as an upper bound.
     """
     validate_ohlcv(df)
     prepared = strategy.prepare(df.copy())
@@ -104,6 +113,19 @@ def run_backtest(
     lows = prepared["low"].to_numpy(dtype=float)
     closes = prepared["close"].to_numpy(dtype=float)
     index = prepared.index
+
+    # Bucket each funding settlement onto the bar whose interval contains
+    # it, so a settlement is charged once and only inside the run's span.
+    bar_funding = None
+    if funding is not None and len(funding) and market.pays_funding:
+        rates = funding.sort_index()
+        rates = rates[(rates.index >= index[0]) & (rates.index <= index[-1])]
+        if len(rates):
+            slot = index.searchsorted(rates.index, side="right") - 1
+            bar_funding = {}
+            for pos_i, rate in zip(slot, rates.to_numpy(dtype=float)):
+                if pos_i >= 0:
+                    bar_funding[int(pos_i)] = bar_funding.get(int(pos_i), 0.0) + float(rate)
 
     equity = [0.0] * len(prepared)
     fills: list[Fill] = []
@@ -127,6 +149,14 @@ def run_backtest(
         liq = broker.check_liquidation(ts, opens[i], highs[i], lows[i])
         if liq is not None:
             fills.append(liq)
+
+        # Funding settles against the mark; charge it before recording
+        # equity so the cost shows up in the curve and can itself trigger
+        # the liquidation check on the following bar.
+        if bar_funding is not None:
+            rate = bar_funding.get(i)
+            if rate is not None:
+                broker.apply_funding(rate, closes[i])
 
         equity[i] = broker.equity(closes[i])
         if not math.isfinite(equity[i]):
@@ -162,6 +192,7 @@ def run_backtest(
         df=prepared,
         liquidated=broker.dead,
         fees_paid=broker.fees_paid,
+        funding_paid=broker.funding_paid,
     )
 
 

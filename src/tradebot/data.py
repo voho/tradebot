@@ -79,6 +79,27 @@ def save_ohlcv_csv(df: pd.DataFrame, path: str | Path) -> None:
     out.to_csv(path, index=False)
 
 
+FUNDING_FILE = "btcusdt_perp_funding_8h.csv.gz"
+
+
+def load_funding(data_dir: str | Path) -> pd.Series | None:
+    """Historical perpetual funding rates, or None when the file is absent.
+
+    Indexed by settlement time (8-hourly), values are the per-settlement
+    rate as a decimal: positive means longs pay shorts. Real Binance
+    BTCUSDT data, 2020-2023; see docs/VALIDATION.md for what it does to
+    the futures results and for the periods it does not cover.
+    """
+    path = Path(data_dir) / FUNDING_FILE
+    if not path.exists():
+        return None
+    df = pd.read_csv(path, parse_dates=["timestamp"], index_col="timestamp")
+    s = df["funding_rate"].astype(float).sort_index()
+    if s.index.tz is None:
+        s.index = s.index.tz_localize("UTC")
+    return s
+
+
 def load_dataset(data_dir: str | Path, kind: str) -> tuple[pd.DataFrame, str]:
     """Load 'perp' or 'spot' data; returns (df, source_label).
 

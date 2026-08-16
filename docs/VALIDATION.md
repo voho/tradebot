@@ -444,11 +444,79 @@ comparison table is unaffected — but both were in the evidence used to
 argue that the leaders are robust, which is exactly where a bias does the
 most damage.
 
+## Funding: the cost that was missing, and what it does
+
+Every futures figure above was originally computed on a **funding-free
+perp**, which is not a real instrument. Perpetuals settle funding every 8
+hours, charged on notional. Real Binance BTCUSDT funding is now committed
+(`data/btcusdt_perp_funding_8h.csv.gz`, 4,383 settlements, 2020–2023) and
+charged as a first-class cost by the engine. Reproduce with
+`python scripts/funding_study.py all`.
+
+**The rate is a persistent tax, not noise.** Positive at **86.5%** of
+settlements, costing a constant long **+14.97% a year**: +17.2% in 2020,
+**+30.6% in 2021**, +4.2% in 2022, +7.9% in 2023.
+
+### Measured, 2020–2023 (funding observed, not assumed)
+
+| strategy | funding-free | with funding | cost |
+|---|---|---|---|
+| `kelly_regime_v4` | $10,584 | **$7,108** | −33% |
+| `kelly_regime_v3` | $11,843 | $7,838 | −34% |
+| `kelly_regime` | $10,151 | $6,631 | −35% |
+| `champions_council` | $5,240 | $3,626 | −31% |
+| buy_and_hold (spot 1x) | — | **$5,934** | pays none |
+
+Over the window where the data is real, funding costs the leaders about a
+third of their terminal wealth — and they still clear unlevered spot
+holding, $7,108 against $5,934.
+
+### Full period: a band, not a number
+
+The funding history covers 2020–2023; 2017–2019 and 2024–2026 have to be
+assumed, so the honest output is a range:
+
+| assumption | `kelly_regime_v4` |
+|---|---|
+| no funding (**the published headline**) | $156,170 |
+| constant at the empirical mean | $80,126 |
+| **real 2020–23 + mean elsewhere** | **$50,326** |
+| constant at 2x mean (stress) | $35,783 |
+| *spot buy_and_hold benchmark* | *$66,044* |
+
+**The band straddles the benchmark.** The $156K headline is an artifact of
+a funding-free perp and is roughly **2–3x too high**; the comparison table
+still carries it because the table has no funding column, so read every
+futures figure in this repo as an upper bound.
+
+### Why it is worse than an average-rate estimate suggests
+
+The strategy dodges some of the bill — it is flat 34% of bars and holds
+only 0.73x notional on average while in market. But the rate it pays is
+not the average rate:
+
+| | mean funding rate | annualized |
+|---|---|---|
+| while the strategy **holds** | +0.000183 | **+20.05%** |
+| while the strategy is **flat** | +0.000025 | +2.78% |
+
+**Funding is 7x richer in exactly the regimes a trend follower wants to be
+long in.** That is not bad luck; it is the same mechanism the strategy is
+built on. `kelly_regime`'s grounding is Cardaliaguet & Lehalle's (2018)
+mean-field game of trade crowding — drift *is* the crowd's net flow — and
+the funding rate is precisely the price of standing on the crowded side of
+a perp. The signal the strategy trades and the cost it pays have a common
+cause, so the cost scales with the signal. Any strategy in this family
+inherits that, and an average-rate assumption will always understate it.
+
 ## Known limitations
 
-- **No funding rates.** Perpetual futures pay/receive funding every 8
-  hours; it is invisible in OHLCV and can meaningfully erode a
-  held-long leveraged position. Treat futures figures as an upper bound.
+- **Funding is modelled but only partly measured.** The engine charges it
+  as a first-class cost, and real rates are committed for 2020–2023 — but
+  2017–2019 and 2024–2026 are assumed, and **the comparison table has no
+  funding column at all**, so every futures figure in it remains an upper
+  bound roughly 2–3x too high. See
+  [the funding section](#funding-the-cost-that-was-missing-and-what-it-does).
 - **Spot data as a perp proxy.** No perp series was reachable when the
   dataset was built (see README); the basis is small but the label
   `spot (perp proxy)` is carried through every report for a reason.

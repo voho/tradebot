@@ -37,6 +37,8 @@ class MarketSpec:
     allow_short: bool = False
     maintenance_margin_rate: float = 0.005
     min_notional: float = 5.0  # exchange-style minimum order size (USD)
+    #: perpetual futures settle funding every 8h; spot never does
+    pays_funding: bool = False
 
     @staticmethod
     def spot(fee_rate: float = 0.001) -> "MarketSpec":
@@ -49,6 +51,7 @@ class MarketSpec:
             leverage=leverage,
             fee_rate=fee_rate,
             allow_short=True,
+            pays_funding=True,
         )
 
 
@@ -69,11 +72,38 @@ class PaperBroker:
     entry: float = field(init=False, default=0.0)
     dead: bool = field(init=False, default=False)  # liquidated: trading stops
     fees_paid: float = field(init=False, default=0.0)
+    funding_paid: float = field(init=False, default=0.0)
 
     def __post_init__(self) -> None:
         if self.start_balance <= 0:
             raise ValueError("start_balance must be positive")
         self.cash = float(self.start_balance)
+
+    # ---------------------------------------------------------------- funding
+
+    def apply_funding(self, rate: float, price: float) -> float:
+        """Settle one perpetual funding payment. Returns the cash flow.
+
+        A positive rate means longs pay shorts, which is the usual state:
+        on BTC 2020-2023 the rate was positive 86% of settlements, costing
+        a constant long ~15% a year. It is charged on the **notional**, so
+        a leveraged position pays leverage-times more of it — which is
+        exactly the position this repo's leading strategies hold.
+
+        Ignored on spot, where there is no funding to settle.
+        """
+        if not self.market.pays_funding or self.dead or self.pos == 0.0:
+            return 0.0
+        flow = -rate * self.pos * price
+        self.cash += flow
+        self.funding_paid -= flow  # positive = money out
+        if self.cash < 0.0:
+            # funding ate the margin: the position is gone, floor at zero
+            self.cash = 0.0
+            self.pos = 0.0
+            self.entry = 0.0
+            self.dead = True
+        return flow
 
     # ------------------------------------------------------------------ state
 
