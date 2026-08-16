@@ -89,6 +89,23 @@ _Period: 2017-01-01 to 2026-08-12 (1,010,889 x 5m bars) · data: real, spot (per
 _Balances from a $1,000 start · bold = the strategy's better market · 🟢 profit · 🔴 loss · 💀 liquidated · ⚠️ drawdown over 50%. Trades, profit and max drawdown describe that market._
 <!-- comparison:end -->
 
+## Research routine
+
+New work follows one procedure, written down in
+**[docs/ROUTINE.md](docs/ROUTINE.md)**: pick from the backlog, justify
+which of the four binding constraints the idea attacks, tune on data
+before 2023 only, then evaluate **once** on the holdout against a
+default-reject promotion bar — beat buy-and-hold out-of-sample after
+funding and at the real fee tier, by more than the ±0.2 Sharpe noise
+floor, and survive a falsification test chosen in advance.
+
+Everything already tried — 25 registered strategies, 25 research
+directions, the ruled-out list and the ranked backlog — is in
+**[docs/LEDGER.md](docs/LEDGER.md)**, which is read before a session
+starts and appended to when it ends. A documented negative result is a
+successful session; most of the value in this repo is the record of what
+does not work.
+
 ## The strategies
 
 Where this leads next — funding harvest and funding as a positioning
