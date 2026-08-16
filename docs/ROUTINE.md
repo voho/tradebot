@@ -14,6 +14,10 @@ convert one idea per session into a permanent, honest row in
 result is a successful day. This repo's most valuable output so far is a
 list of things that do not work.
 
+**The output of a run is a commit on `main`**, pushed, with a green test
+suite — not a branch and not a pull request. See
+[step 6](#step-6--land-it-on-main) for what must be in it.
+
 ---
 
 ## Step 0 — Load the memory
@@ -171,8 +175,54 @@ Then, by verdict:
 - **BLOCKED / PARKED** → ledger row with the blocker named and what
   would unblock it.
 
-Finally, **re-rank the backlog** at the bottom of the ledger, then
-commit and push.
+Finally, **re-rank the backlog** at the bottom of the ledger.
+
+---
+
+## Step 6 — Land it on `main`
+
+**A run ends with a commit on `main`, pushed. No branch, no pull
+request, no review gate.** This is a single-maintainer research repo; the
+evidence bar in step 4 is the review, and a PR waiting for a human just
+stops the next session from starting.
+
+```bash
+git add -A
+git commit          # one commit per session, message per the convention below
+pytest -q           # must be green BEFORE pushing
+git push -u origin main
+```
+
+Requirements before you push:
+
+- `pytest` passes, including `test_causality_strict.py` and
+  `test_readme_comparison.py`. **Never push a red suite** — CI runs on
+  `main` and a red `main` blocks every future session.
+- If a strategy was promoted, the full `tradebot run` has been re-run and
+  the regenerated README table, `reports/comparison.md`, `.csv` and
+  charts are in the same commit. CI fails if a registered strategy is
+  missing from the README table.
+- The commit message follows the repo's convention: a one-line summary of
+  *what was learned*, then prose explaining the reasoning and the
+  numbers. The git log is part of the research record — write it so the
+  finding survives without the diff.
+
+### What a run must leave behind
+
+A session is done when all of these are true. If it ends any other way,
+the verdict is `PARKED` and the ledger says so.
+
+| verdict | what is committed |
+|---|---|
+| **PROMOTED** | Registered strategy + docstring, regenerated README table and `reports/`, updated `STRATEGIES.md` and `VALIDATION.md`, ledger row in section A, backlog re-ranked. |
+| **NEGATIVE** | Ledger row in section B with the numbers that killed it, code under `experiments/`, and — if the failure generalises — a line in section C so it is not re-tried. |
+| **BLOCKED** | Ledger row naming the blocker and exactly what would unblock it, plus a backlog row. |
+| **PARKED** | Ledger row with the state of the work and the next concrete step, so tomorrow's session resumes instead of restarting. |
+
+Every one of those includes a pushed commit on `main`. **A run that
+changes nothing in the repository did not happen** — if an idea was
+rejected during step 1 before any code was written, that still earns a
+ledger row saying which idea and why.
 
 ---
 

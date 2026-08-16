@@ -104,7 +104,8 @@ directions, the ruled-out list and the ranked backlog — is in
 **[docs/LEDGER.md](docs/LEDGER.md)**, which is read before a session
 starts and appended to when it ends. A documented negative result is a
 successful session; most of the value in this repo is the record of what
-does not work.
+does not work. Each session ends with one commit on `main` and a green
+test suite — no branches, no review gate.
 
 ## The strategies
 
