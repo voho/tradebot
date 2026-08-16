@@ -89,6 +89,11 @@ _Balances from a $1,000 start · bold = the strategy's better market · 🟢 pro
 
 ## The strategies
 
+Where this leads next — funding harvest, funding as a positioning
+signal, and the cross-asset test that would falsify the whole thing — is
+in **[docs/ALTERNATIVES.md](docs/ALTERNATIVES.md)**, ranked by evidence
+rather than by appeal.
+
 Each strategy has its own section in **[docs/STRATEGIES.md](docs/STRATEGIES.md)** —
 what it is, how it works, and the principles it rests on — ordered best to
 worst, with citations. The literature survey behind them is in
