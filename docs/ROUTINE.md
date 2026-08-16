@@ -102,6 +102,28 @@ ev(MyStrategy(param=x), end="2022-12-31")      # train
   stable record.
 - **Count every configuration you evaluate.** That number goes in the
   ledger and into the deflated-Sharpe calculation. The fee study ran 32.
+
+### Iterate against an INNER split, never the holdout
+
+Iteration needs feedback, and "don't look at the holdout" leaves none —
+which in practice means the holdout gets looked at anyway. So split the
+training period and iterate against the inner half:
+
+| slice | dates | use |
+|---|---|---|
+| **inner-train** | 2017-01-01 → 2020-12-31 | fit, sweep, iterate freely |
+| **inner-validation** | 2021-01-01 → 2022-12-31 | select between variants |
+| *holdout* | *2023-01-01 →* | *do not touch in this step* |
+
+```python
+ev(MyStrategy(param=x), end="2020-12-31")                    # inner-train
+ev(MyStrategy(param=x), start="2021-01-01", end="2022-12-31")  # inner-validation
+```
+
+Inner-validation contains the 2021 top and the 2022 bear, so it is a
+real test with a real regime change in it. Select on it as often as you
+like — it is a training resource, and burning it costs nothing that the
+holdout has not already been protected from.
 - `pytest` must pass, including `test_causality_strict.py`. A result
   that looks too good is a bug report first: a one-day lookahead is
   worth +2.1 Sharpe, and an `i + 1` peek inside `on_bar` returned
@@ -109,13 +131,33 @@ ev(MyStrategy(param=x), end="2022-12-31")      # train
 
 ---
 
-## Step 4 — Evaluate once
+## Step 4 — Pre-register the decision, then evaluate
 
-Freeze the configuration. Then run the holdout **a single time**:
+Freeze the configuration. **Before running the holdout, write down the
+decision rule** — the exact thresholds that will promote or reject —
+into the ledger row. Then run it:
 
 ```python
-ev(MyStrategy(frozen), start=OOS_START)        # one shot
+ev(MyStrategy(frozen), start=OOS_START)        # holdout
 ```
+
+Why pre-registration rather than "look only once": *looking* is not what
+corrupts a holdout — **moving the goalposts after looking** is. A single
+evaluation with the rule invented afterwards is worth less than three
+evaluations against a rule fixed in advance. And a literal
+evaluate-once rule is not enforceable across a multi-session program:
+this holdout has already been read dozens of times (every OOS number in
+the ledger came from it), so treating it as pristine would be a
+comfortable fiction. Pre-registration is the discipline that still works
+after that has happened.
+
+**Increment the holdout counter** in the ledger row: how many times this
+holdout has been consulted across the whole project to date. That number
+is the trials count for deflated Sharpe at the program level, and it
+only goes up. When it gets large enough that nothing can clear the
+deflated bar, the honest conclusion is that this dataset is exhausted
+and only forward paper trading (B-06) can settle anything — which is the
+argument for starting that recorder now rather than later.
 
 Report all of:
 
@@ -128,10 +170,12 @@ Report all of:
 | path sensitivity | `scripts/beta_test.py --windows 24` / `stress_test.py` |
 | trials-adjusted significance | deflated Sharpe using the step-3 count |
 
-**If you go back to step 3 after seeing any of this, the holdout is
-burned.** Say so explicitly in the ledger row and downgrade the result to
-in-sample. This is the single rule that separates this routine from what
-produced 28-of-32 in-sample winners and 0-of-28 out-of-sample (R-15).
+**If you change the decision rule after seeing any of this, say so
+explicitly in the ledger row and downgrade the result to in-sample.**
+Going back to step 3 to fix a *bug* is fine and always was; going back
+to find a threshold that turns a rejection into a promotion is the thing
+that produced 28-of-32 in-sample winners and 0-of-28 out-of-sample
+(R-12). The difference is whether the target moved.
 
 ### The promotion bar — default is REJECT
 
@@ -175,6 +219,29 @@ Finally, **re-rank the backlog** at the bottom of the ledger, then
 commit and push.
 
 ---
+
+## Running directions in parallel
+
+The routine is written for one session, one idea. Several directions can
+be explored at once — but parallelism is a **multiple-testing
+multiplier**, not a free speedup, and it has to be paid for:
+
+- **The trials count is the total across all parallel branches**, not
+  per branch. Five directions each sweeping 8 configurations is 40
+  trials for deflated Sharpe, not 8. The single most likely way to
+  manufacture a fake winner here is to run many searches and report the
+  best one as though it were the only one.
+- **Every branch reports, including the dead ones.** Reporting only the
+  branch that worked *is* selection on the holdout, performed by the
+  operator rather than the code.
+- **Each branch owns disjoint files**, and none of them commits. A
+  parallel round is merged and committed once, by the operator, after
+  the verdicts are in.
+- **An independent skeptic re-runs each surviving claim** before it is
+  believed — reading the code rather than the report, re-deriving the
+  numbers, and hunting specifically for full-series fits (a scaler,
+  quantile, mean or std computed over the *whole* series and applied to
+  early rows is lookahead that the truncation test will not catch).
 
 ## Standing rules
 

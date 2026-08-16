@@ -153,8 +153,20 @@ one entry.
 
 Also record, in the row or a footnote beneath it:
 
-- **configs evaluated** in step 3 (for deflated Sharpe);
-- the **pre-registered falsification test** and its outcome;
-- whether the **holdout was burned** by returning to tuning after seeing
-  it — if so, the result is in-sample and must say so;
+- **configs evaluated** in step 3 (for deflated Sharpe) — and if the
+  round ran directions in parallel, the total across ALL branches, not
+  just this one;
+- the **pre-registered decision rule** (the thresholds fixed before the
+  holdout was read) and the **pre-registered falsification test**, with
+  their outcomes;
+- the **holdout counter**: how many times the 2023+ holdout has been
+  consulted across the project to date, this row included;
+- whether the **decision rule moved** after seeing the holdout — if so,
+  the result is in-sample and must say so;
 - the **next step**, which becomes a backlog row if the work continues.
+
+### Holdout consultations to date
+
+| as of | count | note |
+|---|---|---|
+| 08-16 | ~30 | Backfilled estimate. Every OOS figure in sections A and B came from reading the 2023+ holdout; it has never been pristine. Deflate program-level claims accordingly, and treat forward paper trading (B-06) as the only uncontaminated evidence still obtainable. |
