@@ -28,6 +28,20 @@ comparison table looks the way it does.
 
 ## 1. The regime detector and the position sizer are the same object
 
+> **BUILT, 2026-08-17 — see R-26 in [LEDGER.md](LEDGER.md).** The verdict
+> is NEGATIVE on the promotion bar and the section below was right about
+> why: it produced a risk improvement, not return alpha. It produced the
+> largest one in the project — out-of-sample drawdown 11.6% against the
+> incumbent's 27.8% and holding's 54.0%, deeper than the incumbent in
+> **0 of 40** Monte Carlo windows, and the property replicates on ETH.
+> The number worth remembering: honest anytime-valid evidence justifies
+> **0.27x** the exposure the heuristic gate takes, because the e-process
+> accumulates evidence at +0.79 nats a year against a noise standard
+> deviation of 3.33 — reaching the α=0.05 threshold on drift alone takes
+> **3.8 years**, and the dataset holds two to three such periods.
+> "Effective sample size ≈ 3" now has a units-carrying measurement.
+> Read the rest of this section as the case that was made in advance.
+
 **This is the one I would build.** It is original — a search of the
 trading literature turns up no established use — and it is not a
 metaphor: the mathematics is literally shared.
@@ -190,15 +204,23 @@ already in the repo:
 
 ## Ranking
 
-1. **E-process regime detection with unified Kelly sizing** — original,
-   theoretically sound, needs no new data, and is the only tool here
-   designed for a sample size of three.
-2. **Extend the funding series through 2026** — one data fetch that
-   opens or closes the carry direction outright.
-3. **Purged CV, deflated Sharpe, bootstrap intervals** — makes every
-   existing number more trustworthy for about a day of work.
-4. **On-chain, sign-corrected** — the only genuinely new information
-   channel, entered with the 141→4 base rate in mind.
+*Superseded by the backlog at the bottom of [LEDGER.md](LEDGER.md), which
+is re-ranked every session. Kept here as the reasoning that produced it.*
 
-The first is the interesting one. The second is the one most likely to
-change a decision.
+1. ~~**E-process regime detection with unified Kelly sizing**~~ — built,
+   R-26. Negative on return, and the strongest risk finding in the repo.
+2. **Extend the funding series through 2026** — one data fetch that
+   opens or closes the carry direction outright. Now blocked: every
+   exchange endpoint is refused by the network policy these sessions run
+   under, so this needs the operator rather than a session.
+3. **Purged CV, deflated Sharpe, bootstrap intervals** — makes every
+   existing number more trustworthy for about a day of work. Promoted to
+   next, and half-built by R-26.
+4. **On-chain, sign-corrected** — the only genuinely new information
+   channel, entered with the 141→4 base rate in mind. Also blocked on
+   network access.
+
+The first was the interesting one, and it delivered exactly what this
+section predicted it would: better calibration is a risk property. The
+second is still the one most likely to change a decision, and is now the
+thing to unblock rather than the thing to do.

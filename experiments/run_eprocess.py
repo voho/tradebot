@@ -28,9 +28,12 @@ sys.path.insert(0, str(ROOT))
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
+from dataclasses import replace  # noqa: E402
+
 from experiments.eprocess_regime import BARS_PER_YEAR, EProcessRegime  # noqa: E402
 from tradebot.broker import MarketSpec  # noqa: E402
 from tradebot.data import load_dataset, load_ohlcv_csv  # noqa: E402
+from tradebot.engine import run_backtest  # noqa: E402
 from tradebot.metrics import compute_metrics  # noqa: E402
 from tradebot.registry import get_strategy  # noqa: E402
 from tradebot.window import run_period  # noqa: E402
@@ -103,7 +106,6 @@ def inspect() -> None:
     # with the incumbent's latched anchor vote on the same bars.
     from tradebot.strategies.kelly_regime_v4 import KellyRegimeV4
     v4 = KellyRegimeV4()
-    v4_prepared = v4.prepare(DF.copy())
     votes = []
     for days in v4.horizons:
         anchor = DF["close"].rolling(int(days * 288)).mean()
@@ -120,7 +122,6 @@ def inspect() -> None:
     print(f"  vote open while evidence shut     {((both.gate == 0) & (both.vote > 0)).mean():.1%}")
     print(f"  mean exposure gate {both.gate.mean():.3f} vs vote {both.vote.mean():.3f}"
           f"  -> the e-process holds {both.gate.mean() / both.vote.mean():.2f}x the incumbent")
-    del v4_prepared
 
 
 # ----------------------------------------------------------------------- sweep
@@ -281,11 +282,199 @@ def eth() -> None:
                tag="  eprocess_regime (frozen)", count=False)
 
 
+def costs() -> None:
+    """The step-4 cost checks: the real fee tier, and funding on the futures side."""
+    from tradebot.data import load_funding
+
+    print("HOLDOUT 2023+ at Bitstamp's 0.40% entry taker tier (spot):")
+    for tier, label in ((0.001, "0.10% (table assumption)"), (0.004, "0.40% (entry tier)")):
+        market = MarketSpec.spot(fee_rate=tier)
+        print(f"  {label}")
+        for name in ("buy_and_hold", "kelly_regime_v4"):
+            ev(get_strategy(name), *OOS, market=market, tag=f"    {name}", count=False)
+        ev(EProcessRegime(**FROZEN), *OOS, market=market,
+           tag="    E1 eprocess_regime", count=False)
+
+    real = load_funding(ROOT / "data")
+    grid = pd.date_range(DF.index[0].ceil("8h"), DF.index[-1], freq="8h", tz="UTC")
+    filler = pd.Series(float(real.mean()), index=grid)
+    blended = pd.concat([filler[~filler.index.isin(real.index)], real]).sort_index()
+    print(f"\nHOLDOUT 2023+ with funding CHARGED (real through "
+          f"{real.index[-1]:%Y-%m}, mean {real.mean() * 3 * 365.25:+.1%}/yr assumed after):")
+    for name, strat in (("buy_and_hold", get_strategy("buy_and_hold")),
+                        ("kelly_regime_v4", get_strategy("kelly_regime_v4")),
+                        ("E1 eprocess_regime", EProcessRegime(**FROZEN))):
+        lo = int(DF.index.searchsorted(OOS[0]))
+        pre = min(lo, strat.warmup)
+        raw = run_backtest(strat, DF.iloc[lo - pre:], FUTURES, 1_000.0,
+                           trade_start=pre, funding=blended, data_label=LABEL)
+        trimmed = replace(raw, equity=raw.equity.iloc[pre:], df=raw.df.iloc[pre:])
+        m = compute_metrics(trimmed)
+        print(f"  {name:24s} final=${m.final_balance:>9,.0f} "
+              f"DD={m.max_drawdown_pct:>5.1f}% sharpe={m.sharpe:>5.2f} "
+              f"funding paid=${raw.funding_paid:>7,.0f}")
+
+
+def windows(trials: int = 40, seed: int = 42) -> None:
+    """Path sensitivity: is the drawdown reduction a property or one lucky path?
+
+    Same design as ``scripts/stress_test.py`` - random start, random
+    length, identical windows for every strategy, warmup prefix that
+    cannot trade - so the numbers are comparable with R-19.
+    """
+    from tradebot.metrics import max_drawdown_pct
+
+    contenders = [("buy_and_hold", get_strategy("buy_and_hold")),
+                  ("kelly_regime_v4", get_strategy("kelly_regime_v4")),
+                  ("E1 eprocess", EProcessRegime(**FROZEN))]
+    warmup = max(s.warmup for _, s in contenders) + 10
+    rng = np.random.default_rng(seed)
+    specs = []
+    for _ in range(trials):
+        length = int(rng.integers(90, 731) * 288)
+        specs.append((int(rng.integers(warmup, len(DF) - length)), length))
+
+    rows = []
+    for k, (start, length) in enumerate(specs, 1):
+        window = DF.iloc[start - warmup: start + length]
+        for mname, market in (("spot", SPOT), ("futures", FUTURES)):
+            for name, strat in contenders:
+                res = run_backtest(strat, window, market, 1_000.0,
+                                   trade_start=warmup, data_label=LABEL)
+                eq = res.equity.to_numpy(dtype=float)
+                base, seg = eq[warmup], eq[warmup:]
+                ok = np.isfinite(base) and base > 0
+                rows.append({"trial": k, "market": mname, "strategy": name,
+                             "return_pct": 100.0 * (seg[-1] / base - 1.0) if ok else -100.0,
+                             "max_dd_pct": max_drawdown_pct(seg) if ok else 100.0,
+                             "liquidated": res.liquidated})
+        print(f"[{k}/{trials}]", end=" ", flush=True, file=sys.stderr)
+    res = pd.DataFrame(rows)
+
+    print(f"\n{trials} random windows (90-730 days), identical across strategies:\n")
+    for mname in ("spot", "futures"):
+        print(f"  {mname}:")
+        sub = res[res.market == mname]
+        bench = sub[sub.strategy == "buy_and_hold"].set_index("trial")["return_pct"]
+        for name in ("buy_and_hold", "kelly_regime_v4", "E1 eprocess"):
+            g = sub[sub.strategy == name].set_index("trial")
+            beat = (g["return_pct"] > bench).mean()
+            print(f"    {name:16s} median return {g.return_pct.median():>+8.1f}%  "
+                  f"median DD {g.max_dd_pct.median():>5.1f}%  "
+                  f"worst DD {g.max_dd_pct.max():>5.1f}%  "
+                  f"P(DD>50%) {(g.max_dd_pct > 50).mean():>5.0%}  "
+                  f"beat hold {beat:>5.0%}  liq {g.liquidated.mean():>4.0%}")
+        # Paired, per window: the drawdown claim is a difference, not a level.
+        a = sub[sub.strategy == "E1 eprocess"].set_index("trial")["max_dd_pct"]
+        b = sub[sub.strategy == "kelly_regime_v4"].set_index("trial")["max_dd_pct"]
+        d = (a - b).dropna()
+        print(f"    paired DD difference (eprocess - v4): median {d.median():+.1f}pp, "
+              f"deeper in {(d > 0).mean():.0%} of windows\n")
+
+
+def _norm_cdf(x: float) -> float:
+    from math import erf, sqrt
+    return 0.5 * (1.0 + erf(x / sqrt(2.0)))
+
+
+def _norm_ppf(p: float) -> float:
+    """Acklam's rational approximation; good to ~1e-9, no SciPy dependency."""
+    a = [-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02,
+         1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00]
+    b = [-5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02,
+         6.680131188771972e+01, -1.328068155288572e+01]
+    c = [-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00,
+         -2.549732539343734e+00, 4.374664141464968e+00, 2.938163982698783e+00]
+    d = [7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00,
+         3.754408661907416e+00]
+    pl, ph = 0.02425, 1 - 0.02425
+    if p < pl:
+        q = (-2 * np.log(p)) ** 0.5
+        return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / \
+            ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1)
+    if p > ph:
+        q = (-2 * np.log(1 - p)) ** 0.5
+        return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / \
+            ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1)
+    q, r = p - 0.5, (p - 0.5) ** 2
+    return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q / \
+        (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1)
+
+
+def deflated() -> None:
+    """Deflated Sharpe (Bailey & Lopez de Prado 2014) on the holdout Sharpe.
+
+    R-25 has been open since the ledger was written: deflated Sharpe is
+    cited in RESEARCH.md and computed nowhere. This is the narrow version
+    - one strategy, this session's trial count - not the systematic
+    treatment B-04 still needs, but it is the first time the number exists.
+
+    SR* is the Sharpe the *best of N trials* would be expected to reach by
+    luck alone when the true Sharpe is zero; the deflated Sharpe is the
+    probability that the observed Sharpe beats that.
+    """
+    from math import e
+
+    gamma = 0.5772156649015329  # Euler-Mascheroni
+
+    # The trial set: every configuration this session searched over, scored
+    # on the split the selection was made on. Re-run, not re-counted.
+    trials = [kw for _, kw in _variants()]
+    base = dict(bet_halflife_days=20.0, gate=True, sizing="fixed")
+    for extra in ({}, dict(bet_halflife_days=10.0), dict(bet_halflife_days=15.0),
+                  dict(bet_halflife_days=30.0), dict(bet_halflife_days=40.0),
+                  dict(bet_halflife_days=90.0), dict(alpha=0.01), dict(alpha=0.20),
+                  dict(clip=3.0), dict(clip=8.0), dict(evidence_cap_mult=0.5),
+                  dict(evidence_cap_mult=2.0), dict(deadband=0.05),
+                  dict(deadband=0.20), dict(evidence_halflife_days=180.0)):
+        trials.append({**base, **extra})
+
+    sharpes = []
+    for kw in trials:
+        result = run_period(EProcessRegime(**kw), DF, *VALID, market=SPOT,
+                            start_balance=1_000.0, data_label=LABEL)
+        sharpes.append(compute_metrics(result).sharpe)
+    sharpes = np.array(sharpes)
+    n_trials = len(sharpes)
+    var_trials = float(sharpes.var(ddof=1))
+
+    # The observed side, in per-bar units.
+    result = run_period(EProcessRegime(**FROZEN), DF, *OOS, market=SPOT,
+                        start_balance=1_000.0, data_label=LABEL)
+    eq = result.equity.to_numpy(dtype=float)
+    rets = np.diff(eq) / np.maximum(eq[:-1], 1e-12)
+    n = len(rets)
+    sr = float(rets.mean() / rets.std(ddof=1))
+    z = (rets - rets.mean()) / rets.std(ddof=1)
+    skew, kurt = float((z ** 3).mean()), float((z ** 4).mean())
+
+    scale = np.sqrt(BARS_PER_YEAR)
+    sr_star = np.sqrt(var_trials / BARS_PER_YEAR) * (
+        (1 - gamma) * _norm_ppf(1 - 1.0 / n_trials)
+        + gamma * _norm_ppf(1 - 1.0 / (n_trials * e)))
+    denom = np.sqrt(1 - skew * sr + (kurt - 1) / 4.0 * sr ** 2)
+    dsr = _norm_cdf((sr - sr_star) * np.sqrt(n - 1) / denom)
+
+    print(f"trials searched this session (distinct configurations): {n_trials}")
+    print(f"  spread of trial Sharpes on inner-validation: sd={np.sqrt(var_trials):.3f} "
+          f"(annualized), range {sharpes.min():.2f}..{sharpes.max():.2f}")
+    print(f"\nholdout, spot, frozen config:")
+    print(f"  observed Sharpe          {sr * scale:>6.2f} (annualized)")
+    print(f"  skew {skew:+.2f}  kurtosis {kurt:.1f}  n={n:,} bars")
+    print(f"  SR* (expected best of {n_trials} by luck) {sr_star * scale:>6.2f}")
+    print(f"  deflated Sharpe (P(SR > SR*))            {dsr:>6.3f}")
+    print("\nProgram-level caveat: the trials count that matters is the total\n"
+          "across the whole project, not this session's, and the holdout has\n"
+          "been read dozens of times. Read this as a lower bound on the\n"
+          "deflation, not as a clean significance test.")
+
+
 if __name__ == "__main__":
     print(f"{len(DF):,} bars  {DF.index[0]:%Y-%m-%d} -> {DF.index[-1]:%Y-%m-%d}"
           f"  (data: {LABEL})", file=sys.stderr)
     cmds = {"inspect": inspect, "sweep": sweep, "neighbours": neighbours,
-            "causality": causality, "holdout": holdout, "eth": eth}
+            "causality": causality, "holdout": holdout, "eth": eth,
+            "costs": costs, "windows": windows, "deflated": deflated}
     choice = sys.argv[1] if len(sys.argv) > 1 else ""
     if choice in cmds:
         cmds[choice]()
