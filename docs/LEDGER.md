@@ -104,6 +104,67 @@ the most expensive repeated mistake in this table.
 | R-23 | Capital scaling | 08-15 | $1K vs $1M across every strategy | Results are proportional to capital; the only deviations came from the exchange minimum order size. One start balance is therefore sufficient. | SETTLED |
 | R-24 | Exchange adapter parity | 08-15 | Bar-for-bar over 30 consecutive candles, both adapters | Top-three strategies compute the identical target from paged exchange data and from the contiguous backtest frame; paging is lossless; neither adapter hands a strategy the forming candle. | SETTLED |
 | R-25 | Deflated Sharpe / purged CV / bootstrap CIs | — | Cited in `RESEARCH.md`, **never computed** | Every sweep here is a trial that inflates whatever it selected (R-12 ran 32). The comparison table reports points where it should report ranges. | **NOT DONE** → B-04 |
+| R-26 | E-process regime detection with unified Kelly sizing (Shafer 2021; Ramdas et al. 2023; Waudby-Smith & Ramdas 2024; Shin, Ramdas & Rinaldo 2024) | 08-17 | Three variants implemented in `experiments/eprocess_regime.py`, swept on the inner split | *(see the pre-registration and results below)* | — |
+
+### R-26 pre-registration — written and committed before the holdout was read
+
+**Idea.** `kelly_regime` answers "is the regime bullish?" with a latched
+moving-average vote and "how much do I hold?" with `target_vol/realized_vol`.
+Testing by betting says these are one question: the wealth of a betting
+martingale against the null *drift is zero* **is** the evidence, and the
+Kelly bet that grows it **is** the position.
+
+**Constraint attacked.** ERR (no error control anywhere in the signal
+path) and N≈3 (e-processes give non-asymptotic Type-I control valid at
+arbitrary stopping times — the only tool on the list that survives a
+sample size of three, and the only one that legitimises the optional
+stopping this project does constantly).
+
+**Not a duplicate of.** L-04/L-01/L-02/L-03 (heuristic latched vote,
+hand-set 1% band); R-01 (HMM — the smoothed state is not causal); R-02
+(jump models); and specifically **not R-03** (Bayesian online changepoint
+detection, which lost): BOCPD's run-length posterior collapses on
+*volatility* bursts, and in BTC large **up** moves are volatility bursts
+(R-10), so it fired with the wrong sign. Here volatility is the
+*denominator* of the bet — a volatility burst shrinks the position but
+does not destroy evidence. Only realized drift moves the e-process.
+
+**Simulable here?** Yes. One price series, causal, no new data.
+
+**Pre-registered failure modes** (named before any code ran): (a) the
+evidence process is a smoothed momentum indicator in disguise, so results
+sit inside the ±0.2 Sharpe noise floor of the incumbent; (b) evidence
+accumulated in the 2017 bull never decays and the gate degenerates to
+buy-and-hold; (c) a continuously-varying gate costs turnover and the fees
+eat it.
+
+**Frozen configuration.** E1 — evidence gate, incumbent sizer:
+`bet_halflife_days=20, alpha=0.05, clip=5, evidence_cap_mult=1.0,
+deadband=0.10, target_vol=0.55, max_leverage=2.0`, no evidence decay.
+Half-life 20d was selected on inner-validation and coincides with the
+18–28 day anchor region R-07 independently found robust; every other knob
+is at its a-priori default.
+
+**Decision rule — promote only if all four hold:**
+
+- **P1** on the 2023+ holdout, spot final balance beats `buy_and_hold`;
+- **P2** the improvement over `buy_and_hold` is either > +0.2 Sharpe, or a
+  drawdown improvement of ≥ 10 percentage points;
+- **P3** *(falsification)* on ETH — Bitfinex, the R-17 window, same venue
+  and period as its BTC control — the drawdown reduction replicates, i.e.
+  max drawdown is no worse than `kelly_regime_v4`'s + 5pp on **both** spot
+  and futures. If the risk property does not transfer to a second asset,
+  the error-control claim is dead;
+- **P4** the parameter neighbourhood is a plateau, not a peak.
+
+**Stated prediction before looking:** P1 fails. The e-process holds 0.32x
+the incumbent's mean exposure into a bull holdout, so it cannot out-return
+holding. Expected verdict NEGATIVE, with the drawdown reduction as the
+finding.
+
+**Secondary question, also fixed in advance** (not part of the promotion
+bar): does the evidence gate cut out-of-sample drawdown relative to
+`kelly_regime_v4`? That is the scientific result either way.
 
 ---
 
