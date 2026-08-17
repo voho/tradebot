@@ -242,6 +242,22 @@ multiplier**, not a free speedup, and it has to be paid for:
   numbers, and hunting specifically for full-series fits (a scaler,
   quantile, mean or std computed over the *whole* series and applied to
   early rows is lookahead that the truncation test will not catch).
+- **Dispatch a skeptic only after the primary reports ≥1 evaluated
+  configuration.** An adversarial re-run against an empty task cannot add
+  evidence about the direction. R-26 burned five skeptic sessions
+  re-measuring the same broken harness the first primary had already
+  diagnosed.
+- **A synthesis prompt must not contain a conditional naming the result
+  it expects.** State the question, not the hoped-for answer. R-27: a
+  prompt reading *"if X was found, say so first and plainly"* was handed
+  to a synthesizer whose inputs were empty. It refused; a compliant one
+  would have printed the headline as fact. Ask "what did the evidence
+  show?" and make "nothing" an explicitly acceptable answer.
+- **Not tested is not a negative result.** A negative needs a
+  measurement. A branch that produced no evaluated configuration goes
+  back on the backlog as untried, never into the ruled-out list —
+  mislabelling it there is worse than losing the round, because it stops
+  the idea being tried again.
 
 ## Standing rules
 
