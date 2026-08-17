@@ -28,7 +28,7 @@ comparison table looks the way it does.
 
 ## 1. The regime detector and the position sizer are the same object
 
-> **BUILT, 2026-08-17 — see R-26 in [LEDGER.md](LEDGER.md).** The verdict
+> **BUILT, 2026-08-17 — see R-28 in [LEDGER.md](LEDGER.md).** The verdict
 > is NEGATIVE on the promotion bar and the section below was right about
 > why: it produced a risk improvement, not return alpha. It produced the
 > largest one in the project — out-of-sample drawdown 11.6% against the
@@ -208,14 +208,14 @@ already in the repo:
 is re-ranked every session. Kept here as the reasoning that produced it.*
 
 1. ~~**E-process regime detection with unified Kelly sizing**~~ — built,
-   R-26. Negative on return, and the strongest risk finding in the repo.
+   R-28. Negative on return, and the strongest risk finding in the repo.
 2. **Extend the funding series through 2026** — one data fetch that
    opens or closes the carry direction outright. Now blocked: every
    exchange endpoint is refused by the network policy these sessions run
    under, so this needs the operator rather than a session.
 3. **Purged CV, deflated Sharpe, bootstrap intervals** — makes every
    existing number more trustworthy for about a day of work. Promoted to
-   next, and half-built by R-26.
+   next, and half-built by R-28.
 4. **On-chain, sign-corrected** — the only genuinely new information
    channel, entered with the 141→4 base rate in mind. Also blocked on
    network access.
