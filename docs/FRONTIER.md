@@ -172,6 +172,19 @@ alternatives get paid for providing something:
 
 ## 5. Fix the inference, not the model
 
+> **BUILT, 2026-08-17 — see R-29 in [LEDGER.md](LEDGER.md).** All three
+> items below are now computed, in `tradebot.inference` and
+> `scripts/inference.py`. This was the cheapest direction on the page and
+> it produced the most uncomfortable result: **10 of 96 adjacent pairs in
+> the comparison table are distinguishable at 95%, and none of them is in
+> the top eight.** By the table's own criterion — final balance —
+> `kelly_regime_v4` against buy-and-hold on spot is a coin flip (P=0.52).
+> No strategy's Sharpe clears a deflated bar out-of-sample, and neither
+> does buy-and-hold's. Cross-validating the table's own selection rule
+> over 45 purged folds, it beats holding in 6. The section below was
+> written as "unglamorous"; it turned out to be the round that reclassified
+> most of this repo's numbers as buckets rather than a ranking.
+
 Cheap, unglamorous, and it would raise the quality of every result
 already in the repo:
 
@@ -213,9 +226,9 @@ is re-ranked every session. Kept here as the reasoning that produced it.*
    opens or closes the carry direction outright. Now blocked: every
    exchange endpoint is refused by the network policy these sessions run
    under, so this needs the operator rather than a session.
-3. **Purged CV, deflated Sharpe, bootstrap intervals** — makes every
-   existing number more trustworthy for about a day of work. Promoted to
-   next, and half-built by R-28.
+3. ~~**Purged CV, deflated Sharpe, bootstrap intervals**~~ — built, R-29.
+   It did not make the existing numbers more trustworthy; it showed that
+   most of them were never distinguishable in the first place.
 4. **On-chain, sign-corrected** — the only genuinely new information
    channel, entered with the 141→4 base rate in mind. Also blocked on
    network access.
@@ -224,3 +237,12 @@ The first was the interesting one, and it delivered exactly what this
 section predicted it would: better calibration is a risk property. The
 second is still the one most likely to change a decision, and is now the
 thing to unblock rather than the thing to do.
+
+**What R-29 changes about this whole page.** Directions 1 and 5 are built,
+and between them they say the same thing from two sides: honest inference
+on this dataset licenses very little. The holdout has been read ~88 times
+and the leading strategy would need a 6.2-year track record to clear its
+own trials bar on the 3.6 years available. Adding a sixth direction that
+re-reads the same decade cannot fix that — only new, uncontaminated data
+can, which makes the forward paper-trading recorder (B-06) the highest
+item on merit and the network policy the thing standing in its way.

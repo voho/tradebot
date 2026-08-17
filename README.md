@@ -46,6 +46,19 @@ Full metrics (win rate, drawdown, sharpe, fees, ...) live in
 > detail in [docs/VALIDATION.md](docs/VALIDATION.md#funding-the-cost-that-was-missing-and-what-it-does),
 > reproduce with `python scripts/funding_study.py all`.
 
+> 🚨 **This is a ranking of point estimates, and the ordering is mostly
+> not real.** Testing every adjacent pair with a paired block bootstrap,
+> **10 of 96** steps down the ranking have a 95% interval excluding zero —
+> and **not one of them is in the top eight**. By the table's own
+> criterion (final balance), `kelly_regime_v4` against `buy_and_hold` on
+> spot over the full history is a **coin flip: P = 0.52**. Out-of-sample,
+> no strategy here clears a deflated-Sharpe bar against this project's 103
+> trials — and neither does buy-and-hold. What does survive is the
+> drawdown reduction, on the full history and on the futures holdout.
+> Read the table as buckets, not as a rank order; detail in
+> [docs/VALIDATION.md](docs/VALIDATION.md#how-much-of-the-comparison-table-is-signal),
+> reproduce with `python scripts/inference.py all`.
+
 One full-history number can hide a lucky path, so the top three are also
 resampled over 40 random windows
 (`python scripts/stress_test.py`, charts in
@@ -99,7 +112,7 @@ default-reject promotion bar — beat buy-and-hold out-of-sample after
 funding and at the real fee tier, by more than the ±0.2 Sharpe noise
 floor, and survive a falsification test chosen in advance.
 
-Everything already tried — 25 registered strategies, 26 research
+Everything already tried — 25 registered strategies, 29 research
 directions, the ruled-out list and the ranked backlog — is in
 **[docs/LEDGER.md](docs/LEDGER.md)**, which is read before a session
 starts and appended to when it ends. A documented negative result is a
@@ -166,6 +179,13 @@ on identical windows against buy-and-hold
 ([analysis](docs/VALIDATION.md)):
 
 ![stress test, futures](reports/stress/stress_futures.png)
+
+**Is the difference real?** — every strategy's paired difference from
+buy-and-hold on the holdout, with a 95% block-bootstrap interval. Grey =
+the interval contains zero, which is most of them
+([analysis](docs/VALIDATION.md#how-much-of-the-comparison-table-is-signal)):
+
+![interval forest plot, holdout](reports/inference/intervals_holdout.png)
 
 ## Data
 

@@ -320,6 +320,40 @@ def deflated_sharpe_ratio(sharpe: float, n_obs: int, skew: float,
                                       periods_per_year=periods_per_year)
 
 
+def deflation_breakeven_sd(sharpe: float, n_obs: int, skew: float,
+                           kurtosis: float, n_trials: int,
+                           target: float = 0.95, hi: float = 20.0,
+                           periods_per_year: float = DAYS_PER_YEAR) -> float:
+    """Largest trial dispersion at which this Sharpe still clears ``target``.
+
+    The deflated Sharpe depends on two things the analyst must supply: how
+    many configurations were searched, and **how spread out their Sharpes
+    were**. The second is the one nobody can pin down after the fact — a
+    narrow sweep around one idea and a scan across twenty-five unrelated
+    strategies give wildly different answers from the same data.
+
+    So rather than defend one estimate, invert the question: at what trial
+    dispersion does the claim stop surviving? That number can be compared
+    against searches this project actually ran. Returns 0.0 when the
+    Sharpe fails even against a zero-dispersion search.
+    """
+    if deflated_sharpe_ratio(sharpe, n_obs, skew, kurtosis, n_trials, 0.0,
+                             periods_per_year) < target:
+        return 0.0
+    lo = 0.0
+    if deflated_sharpe_ratio(sharpe, n_obs, skew, kurtosis, n_trials, hi,
+                             periods_per_year) >= target:
+        return float(hi)
+    for _ in range(60):
+        mid = (lo + hi) / 2.0
+        if deflated_sharpe_ratio(sharpe, n_obs, skew, kurtosis, n_trials, mid,
+                                 periods_per_year) >= target:
+            lo = mid
+        else:
+            hi = mid
+    return float((lo + hi) / 2.0)
+
+
 def min_track_record_length(sharpe: float, skew: float, kurtosis: float,
                             benchmark: float = 0.0, confidence: float = 0.95,
                             periods_per_year: float = DAYS_PER_YEAR) -> float:

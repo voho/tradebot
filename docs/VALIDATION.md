@@ -114,6 +114,135 @@ risk-adjusted profile and is *not* recommended despite the biggest
 headline number. Change these via constructor arguments rather than
 editing defaults, so the comparison table stays a stable record.
 
+## How much of the comparison table is signal?
+
+Every number above is a point estimate selected from a search. This
+section puts an interval on each one, deflates it by the number of trials
+this project has run, and cross-validates the *selection rule* the table
+embodies. The decision rules were written into
+[LEDGER.md](LEDGER.md#r-29-pre-registration--written-and-committed-before-any-statistic-was-read)
+and committed one commit before any of these numbers were read.
+Reproduce all of it with `python scripts/inference.py all`; raw rows in
+`reports/inference/`.
+
+**Method.** Stationary block bootstrap (Politis & Romano 1994), 30-day
+mean block, 2,000 resamples, on **daily** returns — a million
+autocorrelated 5m bars is not a million observations. Comparisons are
+**paired**: the identical resample is applied to both strategies, so a
+draw containing the 2022 bear contains it for both, and the market's own
+variance cancels instead of swamping the difference. The holdout is a
+fresh $1,000 account from 2023-01-01 (`run_period`), not a slice of the
+full run — slicing scores 5x `buy_and_hold` at a flat zero because it was
+liquidated in 2022, and comparing against a corpse is the R-22 mistake.
+
+**The machinery is falsified before it is used.** `inference.py selftest`
+checks that a strategy against itself returns exactly [0.00, 0.00], that
+`kelly_regime_v4` against `macd_cross` returns +3.74 [+2.37, +5.03], and
+that the deflated Sharpe **rejects** the best of 50 pure-noise trials
+(Sharpe 0.85 by luck alone, DSR 0.637) where the undeflated probabilistic
+Sharpe would have certified it. `tests/test_inference.py` covers the same
+guarantees on synthetic data with known answers.
+
+![interval forest plot, holdout](../reports/inference/intervals_holdout.png)
+
+### The ordering is mostly not distinguishable
+
+Testing every **adjacent** pair in the ranking — is each step down real? —
+gives **10 of 96** pairs whose 95% paired interval excludes zero:
+
+| period / market | distinguishable adjacent pairs |
+|---|---|
+| full / spot | 3 of 24 |
+| full / futures | 2 of 24 |
+| holdout / spot | 4 of 24 |
+| holdout / futures | 1 of 24 |
+
+And every one of those ten sits between two *losing* strategies
+(`universal_kelly` vs `harsanyi_crowd`, `game_council` vs
+`minority_oracle`, and so on). **Not one distinguishable step exists
+anywhere in the top eight** — the only part of the table anyone would act
+on. Read the table as a set of buckets, not as a rank order.
+
+### Against buy-and-hold, with an interval
+
+`kelly_regime_v4`, paired against `buy_and_hold` on identical resamples:
+
+| period / market | Δ Sharpe | 95% CI | Δ max drawdown | 95% CI |
+|---|---|---|---|---|
+| full / spot | +0.47 | **[+0.07, +0.87]** | −41.1pp | **[−54.8, −18.4]** |
+| holdout / spot | +0.18 | [−0.38, +0.70] | −27.1pp | [−35.8, **+1.9**] |
+| holdout / futures | −0.04 | [−0.59, +0.52] | −29.3pp | **[−41.0, −5.0]** |
+
+Bold intervals exclude zero. Three things follow, and none of them is
+comfortable:
+
+1. **The drawdown reduction is real on the full history and on the
+   futures holdout, and misses on the spot holdout by 1.9 percentage
+   points.** One-sided, the probability that v4 draws down deeper than
+   holding on the spot holdout is 0.045; two-sided at 95% it is not
+   established. The pre-registered rule (C2) required both spot intervals
+   to exclude zero, so the claim is downgraded here, in the README and in
+   the ledger. It is still the strongest claim in the repo — R-19's
+   40-window resample and R-17's ETH replication test the same property
+   differently and both stand.
+2. **The return advantage is not established out-of-sample at all.**
+3. **By the table's own criterion it is not established in-sample
+   either.** The table ranks by final balance; v4's full-period
+   log-growth advantage over holding on spot is +0.044, with
+   P(beats holding) = **0.52**. A coin flip.
+
+### Deflated Sharpe: nothing survives out-of-sample
+
+Bailey & López de Prado (2014), against **103 trials** counted from the
+ledger (32 fee-tier configurations, 24 e-process, 9 anchor sets, 7 ladder
+widths, 4 volatility estimators, 2 cushion variants, plus the 25
+registered strategies — a floor, not an estimate).
+
+The deflated Sharpe depends far more on how *dispersed* the trials were
+than on how many there were, and that quantity cannot be recovered after
+the fact. So two are reported. At the only dispersion this project has
+ever measured (0.223, R-28's 24 configurations → SR\* = 0.57):
+
+| | Sharpe | PSR>0 | DSR | min track record needed |
+|---|---|---|---|---|
+| `kelly_regime_v4`, full spot | 1.44 | 1.000 | **0.997** | 3.3y |
+| `kelly_regime_v4`, holdout spot | 1.21 | 0.991 | 0.896 | **6.2y** |
+| `buy_and_hold`, holdout spot | 1.03 | 0.976 | 0.812 | 12.4y |
+
+On the full history the leaders clear the 0.95 bar. **On the holdout not
+one strategy in the table clears it, and neither does buy-and-hold** —
+proving v4's holdout Sharpe against a 103-trial search would need 6.2
+years of data like it, and the holdout is 3.6. At the table's own Sharpe
+dispersion (2.60) SR\* = 6.60 and everything deflates to zero; that number
+is an upper bound on the deflation rather than an estimate, because most
+of the table was registered as *documented negative results* rather than
+entered as candidates. The column that settles it is `breakeven_sd` in
+`reports/inference/deflated.csv`: v4's full-period claim survives any
+search whose Sharpe spread is under **0.36** and dies above it.
+
+### Cross-validating the table's own selection rule
+
+The comparison table is a rule — "rank by final balance, take the top" —
+and that rule can be cross-validated even though nothing here is fitted.
+Combinatorially purged CV (López de Prado 2018): 10 contiguous groups, 2
+held out, **45 splits**, 100-day purge and embargo around each test fold,
+selecting on the purged training groups and scoring on the held-out ones.
+
+| | spot | futures |
+|---|---|---|
+| what the rule picks | `kelly_regime_ev_fast` ×22, `buy_and_hold` ×19, v4 ×2, v3 ×2 | `kelly_regime_v4` ×41, v3 ×4 |
+| beats holding out-of-fold | **6 of 45** (13%); 19 are ties where it picked holding itself → 6 of 26 contested | 41 of 45, but holding is liquidated and inert in **36 of them** |
+| always-`kelly_regime_v4` instead | 44% of folds, median −0.089 log | 91%, median +1.022 log |
+| selection shortfall vs hindsight | +0.490 log — the pick gives up 63% of what the best fold strategy made | +0.066 log |
+| train→test rank correlation | median 0.72, range −0.70..0.86 | median 0.40, range −0.79..0.74 |
+
+On spot, re-ranking the table inside each fold and holding the winner
+**loses to buy-and-hold in most folds**. That is R-12's
+28-in-sample/0-out-of-sample result reproduced one level up — at the level
+of choosing a strategy rather than tuning a parameter. The futures column
+cannot answer the question, because the benchmark is dead in four fifths
+of the folds.
+
 ## Monte Carlo window stress test
 
 A single full-history number cannot separate a robust edge from one lucky
@@ -523,6 +652,12 @@ inherits that, and an average-rate assumption will always understate it.
 - **One asset, one decade.** BTC 2017–2026 is a single, upward-drifting
   sample path. Cross-asset (ETH) and cross-period validation would be the
   next honest step before risking capital.
+- **The holdout is exhausted.** It has been consulted ~88 times across the
+  project (ledger, "Holdout consultations to date"), and the deflated
+  Sharpe says the leading strategy needs a 6.2-year track record to clear
+  a 103-trial bar on the 3.6 years available. No Sharpe-based claim from
+  this dataset is supportable any more. Drawdown still replicates; beyond
+  that, only forward paper trading can add evidence.
 - **Survivorship in the council.** `champions_council` selects members
   that already performed well on this data. Its OOS split is reported
   above precisely because its in-sample rank is not evidence.

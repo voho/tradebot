@@ -66,16 +66,20 @@ from tradebot.data import load_dataset  # noqa: E402
 from tradebot.engine import run_backtest  # noqa: E402
 from tradebot.inference import (  # noqa: E402
     annualized_sharpe, bootstrap_interval, cpcv_splits, daily_returns,
-    deflated_sharpe_ratio, expected_max_sharpe, fold_mask, group_bounds,
+    deflated_sharpe_ratio, deflation_breakeven_sd, expected_max_sharpe,
+    fold_mask, group_bounds,
     max_drawdown_from_returns, min_track_record_length, moments,
     paired_bootstrap, probabilistic_sharpe_ratio, purged_train_mask,
     stationary_bootstrap_indices, total_log_return,
 )
 from tradebot.registry import available_strategies, get_strategy  # noqa: E402
+from tradebot.window import run_period  # noqa: E402
 
 OUT = ROOT / "reports" / "inference"
-CACHE = OUT / "daily_returns.csv.gz"
+CACHE = {"full": OUT / "daily_returns.csv.gz",
+         "holdout": OUT / "daily_returns_holdout.csv.gz"}
 BENCHMARK = "buy_and_hold"
+INCUMBENT = "kelly_regime_v4"   # the table's current #1, as a fixed-rule control
 OOS_START = "2023-01-01"
 MARKETS = {"spot": MarketSpec.spot(), "futures": MarketSpec.futures(leverage=5.0)}
 
@@ -91,57 +95,82 @@ LEVEL = 0.95
 # Under-counting is the failure mode that matters, so this is a floor.
 PROJECT_TRIALS = 103
 
+# The Sharpe dispersion across R-28's 24 configurations on inner-validation -
+# the only trial dispersion this project has ever measured, and therefore the
+# only defensible "same search" estimate. See deflated() for why it matters
+# more than the trials count does.
+SD_TRIALS_NARROW = 0.223
+
 
 # ------------------------------------------------------------------- curves
 
-def build_curves(strategies: list[str], force: bool = False) -> pd.DataFrame:
+def build_curves(strategies: list[str], period: str,
+                 force: bool = False) -> pd.DataFrame:
     """Backtest every strategy on both markets; cache the daily returns.
 
-    One full-period run per (strategy, market). Every window below is a
-    *slice* of these returns rather than a fresh backtest, which is both
-    cheaper and warmup-correct by construction: the strategy is already
-    warm when a slice begins, so R-22's warmup-prefix bias cannot recur.
+    ``period="full"`` runs the whole 2017-2026 history. ``period="holdout"``
+    runs a **fresh $1,000 account from 2023-01-01**, warmed on the bars
+    before it, exactly as ``run_period`` does everywhere else in this repo.
+
+    The holdout is not a slice of the full run, and the difference is not
+    cosmetic: on 5x futures ``buy_and_hold`` is liquidated in 2022, so a
+    slice of the full run scores the benchmark's holdout at a flat zero —
+    a corpse — where a fresh account rides the 2023+ bull to $15.2K.
+    Measuring against a corpse is the R-22 mistake, and slicing is how it
+    would have come back.
     """
-    if CACHE.exists() and not force:
-        cached = pd.read_csv(CACHE, index_col=0, parse_dates=True)
+    cache = CACHE[period]
+    if cache.exists() and not force:
+        cached = pd.read_csv(cache, index_col=0, parse_dates=True)
         want = {f"{s}|{m}" for s in strategies for m in MARKETS}
         if want.issubset(cached.columns):
             return cached
-        print(f"cache is missing {len(want - set(cached.columns))} series; rebuilding",
-              file=sys.stderr)
+        print(f"{period} cache is missing {len(want - set(cached.columns))} "
+              f"series; rebuilding", file=sys.stderr)
 
     df, label = load_dataset(ROOT / "data", "spot")
     if label == "SYNTHETIC":
         raise SystemExit("real data required; refusing to publish intervals on synthetic")
-    print(f"{len(df):,} bars  {df.index[0]:%Y-%m-%d} -> {df.index[-1]:%Y-%m-%d}"
-          f"  (data: {label})", file=sys.stderr)
+    print(f"{period}: {len(df):,} bars  {df.index[0]:%Y-%m-%d} -> "
+          f"{df.index[-1]:%Y-%m-%d}  (data: {label})", file=sys.stderr)
 
     series: dict[str, pd.Series] = {}
     for i, name in enumerate(strategies, 1):
         for market_name, market in MARKETS.items():
             t0 = time.time()
-            result = run_backtest(get_strategy(name), df, market, 1_000.0,
-                                  data_label=label)
+            if period == "holdout":
+                result = run_period(get_strategy(name), df, OOS_START, None,
+                                    market=market, start_balance=1_000.0,
+                                    data_label=label)
+            else:
+                result = run_backtest(get_strategy(name), df, market, 1_000.0,
+                                      data_label=label)
             series[f"{name}|{market_name}"] = daily_returns(result.equity)
-            print(f"[{i}/{len(strategies)}] {name:22s} {market_name:8s} "
+            print(f"[{period} {i}/{len(strategies)}] {name:22s} {market_name:8s} "
                   f"{time.time() - t0:5.1f}s", file=sys.stderr)
     out = pd.DataFrame(series).sort_index()
     OUT.mkdir(parents=True, exist_ok=True)
-    out.to_csv(CACHE)
+    out.to_csv(cache)
     return out
 
 
-def _slice(curves: pd.DataFrame, period: str) -> pd.DataFrame:
-    if period == "holdout":
-        return curves.loc[OOS_START:]
-    if period == "train":
-        return curves.loc[:"2022-12-31"]
-    return curves
+def dead_tail_pct(rets: np.ndarray) -> float:
+    """Share of the period after the account's last non-zero day.
+
+    A strategy that is flat 30% of the time because its gate is shut is
+    doing its job; one whose *last* 40% of days are all zeros is a corpse,
+    and every statistic computed over that tail is measuring the corpse.
+    Only the terminal run counts.
+    """
+    nonzero = np.flatnonzero(rets != 0.0)
+    if len(nonzero) == 0:
+        return 100.0
+    return 100.0 * (len(rets) - 1 - int(nonzero[-1])) / len(rets)
 
 
 # ----------------------------------------------------------------- selftest
 
-def selftest(curves: pd.DataFrame, **_) -> bool:
+def selftest(curves: dict[str, pd.DataFrame], **_) -> bool:
     """Pre-registered falsification of the machinery, before any claim.
 
     Named in advance (see the R-29 row in ``docs/LEDGER.md``): if any of
@@ -150,8 +179,9 @@ def selftest(curves: pd.DataFrame, **_) -> bool:
     rng = np.random.default_rng(0)
     checks: list[tuple[str, bool, str]] = []
 
-    v4 = curves["kelly_regime_v4|spot"].to_numpy()
-    dead = curves["macd_cross|spot"].to_numpy()
+    full = curves["full"]
+    v4 = full["kelly_regime_v4|spot"].to_numpy()
+    dead = full["macd_cross|spot"].to_numpy()
     idx = stationary_bootstrap_indices(len(v4), MEAN_BLOCK, N_BOOT, rng)
 
     # 1. A series against itself must be indistinguishable from itself.
@@ -207,12 +237,13 @@ def _table(rows: list[dict], name: str) -> pd.DataFrame:
     return frame
 
 
-def bootstrap(curves: pd.DataFrame, strategies: list[str],
-              periods=("full", "holdout"), **_) -> pd.DataFrame:
+def bootstrap(curves: dict[str, pd.DataFrame], strategies: list[str],
+              **_) -> pd.DataFrame:
     """Intervals on every headline, and the paired comparison against holding."""
     rows = []
+    periods = tuple(curves)
     for period in periods:
-        window = _slice(curves, period)
+        window = curves[period]
         n = len(window)
         idx = stationary_bootstrap_indices(n, MEAN_BLOCK, N_BOOT,
                                            np.random.default_rng(7))
@@ -241,7 +272,7 @@ def bootstrap(curves: pd.DataFrame, strategies: list[str],
                     # remaining days are exactly zero. Those days are not
                     # "flat and calm" — they are a corpse, and they flatter
                     # every volatility-based statistic computed over them.
-                    "inert_days_pct": 100.0 * float((r == 0.0).mean()),
+                    "dead_tail_pct": dead_tail_pct(r),
                     "sharpe": sharpe.stat_a,
                     "sharpe_lo": own_sharpe.lo, "sharpe_hi": own_sharpe.hi,
                     "d_sharpe": sharpe.diff.point,
@@ -278,16 +309,18 @@ def bootstrap(curves: pd.DataFrame, strategies: list[str],
                       f"{row.d_max_dd_pp:>+6.1f} [{row.d_max_dd_lo:>+6.1f},"
                       f"{row.d_max_dd_hi:>+6.1f}]{dstar}")
             print("  * = the 95% interval excludes zero")
-            inert = sub[sub.inert_days_pct > 20.0]
+            inert = sub[sub.dead_tail_pct > 10.0]
             if len(inert):
-                print("  liquidated/inert (zero returns on >20% of days — every "
-                      "statistic below is measured partly on a corpse): "
-                      + ", ".join(f"{r.strategy} {r.inert_days_pct:.0f}%"
+                print("  dead before the period ended (>10% of days after the "
+                      "last non-zero return — the tail is a corpse, not a flat "
+                      "position): "
+                      + ", ".join(f"{r.strategy} {r.dead_tail_pct:.0f}%"
                                   for _, r in inert.iterrows()))
     return frame
 
 
-def ordering(curves: pd.DataFrame, strategies: list[str], **_) -> pd.DataFrame:
+def ordering(curves: dict[str, pd.DataFrame], strategies: list[str],
+             **_) -> pd.DataFrame:
     """How much of the table's ordering is distinguishable from noise?
 
     Every adjacent pair in the ranking, tested against the same paired
@@ -295,8 +328,9 @@ def ordering(curves: pd.DataFrame, strategies: list[str], **_) -> pd.DataFrame:
     places in that order that survive.
     """
     rows = []
-    for period in ("full", "holdout"):
-        window = _slice(curves, period)
+    periods = tuple(curves)
+    for period in periods:
+        window = curves[period]
         idx = stationary_bootstrap_indices(len(window), MEAN_BLOCK, N_BOOT,
                                            np.random.default_rng(7))
         for market in MARKETS:
@@ -315,7 +349,7 @@ def ordering(curves: pd.DataFrame, strategies: list[str], **_) -> pd.DataFrame:
                              "distinguishable": bool(res.significant)})
     frame = _table(rows, "ordering")
     print("\nADJACENT PAIRS IN THE RANKING — is each step down real?\n")
-    for period in ("full", "holdout"):
+    for period in periods:
         for market in MARKETS:
             sub = frame[(frame.period == period) & (frame.market == market)]
             k = int(sub.distinguishable.sum())
@@ -326,57 +360,97 @@ def ordering(curves: pd.DataFrame, strategies: list[str], **_) -> pd.DataFrame:
 
 # ----------------------------------------------------------------- deflated
 
-def deflated(curves: pd.DataFrame, strategies: list[str], **_) -> pd.DataFrame:
-    """Deflated Sharpe against the project's own trials count."""
+def deflated(curves: dict[str, pd.DataFrame], strategies: list[str],
+             **_) -> pd.DataFrame:
+    """Deflated Sharpe against the project's own trials count.
+
+    Two dispersion assumptions are reported side by side, because the
+    deflated Sharpe is far more sensitive to *how spread out* the trials
+    were than to how many there were, and this project's answer flips
+    between them:
+
+    - ``NARROW`` — 0.223, the Sharpe spread measured across R-28's 24
+      configurations on inner-validation. This is the only trial
+      dispersion this project has ever actually measured, and it is the
+      "same search" quantity Bailey & López de Prado intend.
+    - ``TABLE`` — the spread across all 25 registered strategies. It is an
+      upper bound rather than an estimate: most of that table was
+      registered *as documented negative results*, not entered as
+      candidates for promotion, so it overstates the search that produced
+      the winner.
+
+    The column that settles it is ``breakeven_sd``: the trial dispersion at
+    which the strategy stops clearing DSR 0.95. Compare that against a
+    search this project actually ran instead of arguing about which
+    assumption is right.
+    """
     rows = []
-    for period in ("full", "holdout"):
-        window = _slice(curves, period)
+    periods = tuple(curves)
+    for period in periods:
+        window = curves[period]
         n = len(window)
         for market in MARKETS:
             sharpes = {s: annualized_sharpe(window[f"{s}|{market}"].to_numpy())
                        for s in strategies}
-            sd_trials = float(np.std(list(sharpes.values()), ddof=1))
-            sr_star = expected_max_sharpe(PROJECT_TRIALS, sd_trials)
+            sd_table = float(np.std(list(sharpes.values()), ddof=1))
             for name in strategies:
                 r = window[f"{name}|{market}"].to_numpy()
                 skew, kurt = moments(r)
                 sr = sharpes[name]
                 rows.append({
                     "period": period, "market": market, "strategy": name,
-                    "days": n, "sharpe": sr, "skew": skew, "kurtosis": kurt,
+                    "days": n, "sharpe": sr, "skewness": skew, "kurt": kurt,
                     "psr_vs_zero": probabilistic_sharpe_ratio(sr, n, skew, kurt),
-                    "sd_trials": sd_trials, "n_trials": PROJECT_TRIALS,
-                    "sr_star": sr_star,
-                    "deflated_sharpe": deflated_sharpe_ratio(
-                        sr, n, skew, kurt, PROJECT_TRIALS, sd_trials),
+                    "n_trials": PROJECT_TRIALS,
+                    "sd_narrow": SD_TRIALS_NARROW, "sd_table": sd_table,
+                    "sr_star_narrow": expected_max_sharpe(PROJECT_TRIALS,
+                                                          SD_TRIALS_NARROW),
+                    "sr_star_table": expected_max_sharpe(PROJECT_TRIALS, sd_table),
+                    "dsr_narrow": deflated_sharpe_ratio(
+                        sr, n, skew, kurt, PROJECT_TRIALS, SD_TRIALS_NARROW),
+                    "dsr_table": deflated_sharpe_ratio(
+                        sr, n, skew, kurt, PROJECT_TRIALS, sd_table),
+                    "breakeven_sd": deflation_breakeven_sd(
+                        sr, n, skew, kurt, PROJECT_TRIALS),
                     "min_track_record_days": min_track_record_length(
-                        sr, skew, kurt, benchmark=sr_star),
+                        sr, skew, kurt,
+                        benchmark=expected_max_sharpe(PROJECT_TRIALS,
+                                                      SD_TRIALS_NARROW)),
                 })
     frame = _table(rows, "deflated")
-    for period in ("full", "holdout"):
+    for period in periods:
         for market in MARKETS:
             sub = frame[(frame.period == period) & (frame.market == market)]
             sub = sub.sort_values("sharpe", ascending=False)
             print(f"\n{period.upper()} / {market} — deflated against "
-                  f"{PROJECT_TRIALS} project trials "
-                  f"(SR* = {sub.sr_star.iloc[0]:.2f}, "
-                  f"trial sd = {sub.sd_trials.iloc[0]:.2f})")
+                  f"{PROJECT_TRIALS} project trials.  "
+                  f"SR* = {sub.sr_star_narrow.iloc[0]:.2f} at the narrow "
+                  f"dispersion ({SD_TRIALS_NARROW}), "
+                  f"{sub.sr_star_table.iloc[0]:.2f} at the table's "
+                  f"({sub.sd_table.iloc[0]:.2f})")
             print(f"  {'strategy':22s} {'Sharpe':>6s} {'skew':>6s} {'kurt':>6s} "
-                  f"{'PSR>0':>6s} {'DSR':>6s} {'min track record':>18s}")
+                  f"{'PSR>0':>6s} {'DSR-n':>6s} {'DSR-t':>6s} "
+                  f"{'break-even sd':>14s} {'min record':>11s}")
+            # Item access, not attributes: `skew`, `kurt` and friends are
+            # also pandas Series methods, and attribute access finds those.
             for _, row in sub.iterrows():
-                mtrl = row.min_track_record_days
+                mtrl = row["min_track_record_days"]
                 years = "never" if not np.isfinite(mtrl) else f"{mtrl / 365.25:.1f}y"
-                print(f"  {row.strategy:22s} {row.sharpe:>6.2f} {row.skew:>6.2f} "
-                      f"{row.kurtosis:>6.1f} {row.psr_vs_zero:>6.3f} "
-                      f"{row.deflated_sharpe:>6.3f} {years:>18s}")
-            print("  DSR >= 0.95 clears the trials bar; nothing else does.")
+                print(f"  {row['strategy']:22s} {row['sharpe']:>6.2f} "
+                      f"{row['skewness']:>6.2f} {row['kurt']:>6.1f} "
+                      f"{row['psr_vs_zero']:>6.3f} {row['dsr_narrow']:>6.3f} "
+                      f"{row['dsr_table']:>6.3f} {row['breakeven_sd']:>14.2f} "
+                      f"{years:>11s}")
+            print("  DSR >= 0.95 clears the trials bar. break-even sd = the "
+                  "trial dispersion at which it stops clearing it.")
     return frame
 
 
 # --------------------------------------------------------------------- CPCV
 
-def cpcv(curves: pd.DataFrame, strategies: list[str], n_groups: int = 10,
-         k_test: int = 2, purge: int = 100, **_) -> pd.DataFrame:
+def cpcv(curves: dict[str, pd.DataFrame], strategies: list[str],
+         n_groups: int = 10, k_test: int = 2, purge: int = 100,
+         **_) -> pd.DataFrame:
     """Cross-validate the *selection procedure*, not one strategy.
 
     The comparison table is a selection rule: "rank by final balance, take
@@ -386,10 +460,11 @@ def cpcv(curves: pd.DataFrame, strategies: list[str], n_groups: int = 10,
     any single strategy works, and has never been asked here.
     """
     rows = []
-    n = len(curves)
+    window = curves["full"]
+    n = len(window)
     bounds = group_bounds(n, n_groups)
     for market in MARKETS:
-        rets = {s: curves[f"{s}|{market}"].to_numpy() for s in strategies}
+        rets = {s: window[f"{s}|{market}"].to_numpy() for s in strategies}
         for test_groups in cpcv_splits(n_groups, k_test):
             train = purged_train_mask(n, bounds, test_groups, purge=purge,
                                       embargo=purge)
@@ -408,12 +483,19 @@ def cpcv(curves: pd.DataFrame, strategies: list[str], n_groups: int = 10,
                 "excess_vs_hold": oof[picked] - oof[BENCHMARK],
                 "best_possible_test_log": oof[best_oof],
                 "selection_shortfall": oof[best_oof] - oof[picked],
+                # The control: "always hold the table's #1" is a different
+                # rule from "re-rank the table in every fold", and the gap
+                # between them is what the ranking itself is worth.
+                "incumbent_test_log": oof[INCUMBENT],
+                "incumbent_excess_vs_hold": oof[INCUMBENT] - oof[BENCHMARK],
                 # On 5x futures buy_and_hold is liquidated early and its
                 # later folds are all zeros. Beating a corpse is not a
                 # result (R-22), so the flag travels with the row.
                 "hold_inert": bool((rets[BENCHMARK][test] == 0.0).all()),
+                # Spearman = Pearson on the ranks, computed that way to
+                # avoid a SciPy dependency the rest of the repo does without.
                 "rank_corr": float(pd.Series(scores).rank().corr(
-                    pd.Series(oof).rank(), method="spearman")),
+                    pd.Series(oof).rank())),
             })
     frame = _table(rows, "cpcv")
 
@@ -421,12 +503,23 @@ def cpcv(curves: pd.DataFrame, strategies: list[str], n_groups: int = 10,
           f"({n_groups} groups, {k_test} held out, {purge}-day purge + embargo)\n")
     for market in MARKETS:
         sub = frame[frame.market == market]
-        beat = (sub.excess_vs_hold > 0).mean()
         picks = sub.picked.value_counts()
+        # A fold where the rule picks the benchmark is a tie by
+        # construction, not a win. Counting those as "did not beat hold"
+        # understates the rule; counting them as wins would flatter it.
+        ties = int((sub.picked == BENCHMARK).sum())
+        wins = int((sub.excess_vs_hold > 0).sum())
+        contested = len(sub) - ties
         print(f"  {market}:")
         print(f"    in-fold winner picked:        "
               + ", ".join(f"{k} x{v}" for k, v in picks.items()))
-        print(f"    beats hold out-of-fold:       {beat:.0%} of splits")
+        print(f"    beats hold out-of-fold:       {wins}/{len(sub)} splits "
+              f"({wins / len(sub):.0%}); {ties} of those are ties where the "
+              f"rule picked hold itself, so {wins}/{contested} "
+              f"({wins / max(contested, 1):.0%}) of contested folds")
+        print(f"    always-{INCUMBENT}:  beats hold in "
+              f"{(sub.incumbent_excess_vs_hold > 0).mean():.0%} of splits, "
+              f"median {sub.incumbent_excess_vs_hold.median():+.3f} log")
         print(f"    median out-of-fold excess:    "
               f"{sub.excess_vs_hold.median():+.3f} log ({np.expm1(sub.excess_vs_hold.median()):+.1%})")
         print(f"    worst / best split:           "
@@ -449,7 +542,8 @@ def cpcv(curves: pd.DataFrame, strategies: list[str], n_groups: int = 10,
 
 # ------------------------------------------------------------------- charts
 
-def charts(curves: pd.DataFrame, strategies: list[str], **_) -> list[Path]:
+def charts(curves: dict[str, pd.DataFrame], strategies: list[str],
+           **_) -> list[Path]:
     """Forest plots: every strategy's difference from holding, with its interval.
 
     The comparison table is a list of point estimates in rank order, which
@@ -531,9 +625,12 @@ def main() -> None:
     strategies = args.strategies or sorted(available_strategies())
     if BENCHMARK not in strategies:
         strategies.append(BENCHMARK)
-    curves = build_curves(strategies, force=args.force)
+    curves = {period: build_curves(strategies, period, force=args.force)
+              for period in CACHE}
     if args.command == "curves":
-        print(f"cached {curves.shape[1]} series x {len(curves):,} days -> {CACHE}")
+        for period, frame in curves.items():
+            print(f"{period}: cached {frame.shape[1]} series x "
+                  f"{len(frame):,} days -> {CACHE[period]}")
         return
 
     if args.command in ("all", "selftest"):

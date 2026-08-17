@@ -24,6 +24,17 @@ venv/
 !/reports/stress/
 !/reports/stress/*.png
 !/reports/stress/*.csv
+# inference results are committed - they are what the README's warning cites.
+# The daily-return caches under it are regenerable intermediates and stay out.
+!/reports/inference/
+!/reports/inference/*.png
+!/reports/inference/bootstrap.csv
+!/reports/inference/ordering.csv
+!/reports/inference/deflated.csv
+!/reports/inference/cpcv.csv
+# ...and the caches stay ignored explicitly: a stale one would silently
+# produce numbers for a strategy that has since changed.
+/reports/inference/daily_returns*.csv.gz
 # a curated set of run charts is committed so the README renders on GitHub;
 # the other ~90 regenerate with `tradebot run`
 !/reports/charts/

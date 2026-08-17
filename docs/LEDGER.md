@@ -103,11 +103,11 @@ the most expensive repeated mistake in this table.
 | R-22 | Warmup-prefix bias | 08-15 | Audit | Letting a strategy trade the warmup prefix let it be liquidated *before* the window opened — **19 of buy-and-hold's 23 stress liquidations were this artifact**. Slicing to an OOS range left a 100-day-warmup strategy flat for 7.6% of it. Fixed by `run_backtest(trade_start=...)` / `tradebot.window.run_period`; verdicts survived, numbers moved ~75%. | **METHOD** |
 | R-23 | Capital scaling | 08-15 | $1K vs $1M across every strategy | Results are proportional to capital; the only deviations came from the exchange minimum order size. One start balance is therefore sufficient. | SETTLED |
 | R-24 | Exchange adapter parity | 08-15 | Bar-for-bar over 30 consecutive candles, both adapters | Top-three strategies compute the identical target from paged exchange data and from the contiguous backtest frame; paging is lossless; neither adapter hands a strategy the forming candle. | SETTLED |
-| R-25 | Deflated Sharpe / purged CV / bootstrap CIs | — | Cited in `RESEARCH.md`, **never computed** | Every sweep here is a trial that inflates whatever it selected (R-12 ran 32). The comparison table reports points where it should report ranges. | **NOT DONE** → B-04 |
+| R-25 | Deflated Sharpe / purged CV / bootstrap CIs | — | Cited in `RESEARCH.md`, **never computed** | Every sweep here is a trial that inflates whatever it selected (R-12 ran 32). The comparison table reports points where it should report ranges. | **CLOSED by R-29** |
 | R-26 | Parallel round on B-01, B-02/03, B-04, B-05, B-07 | 08-17 | 11 agent-sessions dispatched (5 build, 5 skeptic, 1 synthesis). Every one was blocked before executing a single call: the permission handler returned `updatedInput` with required parameters stripped, so `Bash`, `Read`, `Glob` and `Grep` all failed schema validation. Repo verified untouched afterwards. Fault has since cleared. | **0 trials, 0 configurations, 0 bars read.** The five directions were **NOT TESTED** and stay on the backlog as untried — filing them as negatives would stop a future agent trying them. Holdout counter unchanged (nothing was read). Project trials count unchanged. | **NULL ROUND** |
 | R-27 | Fabrication pressure in the operator's own prompt | 08-17 | The synthesis prompt for R-26 contained a conditional naming the hoped-for answer: *"If the inference agent found that most of the table's ordering is not distinguishable from noise, say so first and plainly."* The inference agent had run zero backtests. | The synthesizer refused and flagged it. Had it complied, a fabricated headline would have entered `docs/VALIDATION.md` — the file whose whole purpose is being trustworthy — indistinguishable from a real result to a later reader. Same failure class as L-14/L-15/L-16 (proxying order flow out of price) and R-21 (the $3.7e23 probe), but arriving through the *prompt* rather than the code. | **METHOD** — see ROUTINE.md |
 | R-28 | E-process regime detection with unified Kelly sizing (Shafer 2021; Ramdas et al. 2023; Waudby-Smith & Ramdas 2024; Shin, Ramdas & Rinaldo 2024) | 08-17 | Three variants in `experiments/eprocess_regime.py`, 24 configurations on the inner split, one frozen config on the holdout | **The deepest drawdown reduction in the project, and it still loses.** Holdout spot DD **11.6%** vs `kelly_regime_v4`'s 27.8% and holding's 54.0%; deeper than v4 in **0 of 40** Monte Carlo windows (median −14.0pp spot, −11.3pp futures). Return is 0.42x holding, so P1 fails. Anytime-valid evidence justifies only **0.27x** the incumbent's mean exposure. | **NEGATIVE** — but the risk finding is the strongest in the repo |
-| R-29 | Trials-aware inference: block-bootstrap intervals, deflated Sharpe, combinatorially purged CV (Politis & Romano 1994; Bailey & López de Prado 2014; López de Prado 2018) | 08-17 | `src/tradebot/inference.py` + `scripts/inference.py`, applied to all 25 registered strategies on both markets | *(results below the pre-registration)* | *(pending)* |
+| R-29 | Trials-aware inference: block-bootstrap intervals, deflated Sharpe, combinatorially purged CV (Politis & Romano 1994; Bailey & López de Prado 2014; López de Prado 2018) | 08-17 | `src/tradebot/inference.py` + `scripts/inference.py`, applied to all 25 registered strategies on both markets: 96 paired comparisons, 100 deflated Sharpes, 45 CPCV splits | **10 of 96 adjacent pairs in the ranking are distinguishable at 95%, and not one of them is in the top eight.** The table's *final-balance* claim for `kelly_regime_v4` over holding on spot is a coin flip (P=0.52). The drawdown claim survives on the full history (−41.1pp [−54.8, −18.4]) and on the futures holdout, but **not** on the spot holdout (−27.1pp [−35.8, **+1.9**]). Cross-validating the table's own selection rule: it beats holding in **6 of 45** folds. | **METHOD** — the ordering is mostly noise, and now says so |
 
 ### R-28 pre-registration — written and committed before the holdout was read
 
@@ -385,6 +385,145 @@ the decision rules above were committed before any number was read. The
 counter still goes up, because the counter measures exposure and not
 intent.
 
+### R-29 results — the self-test passed, and then almost nothing else did
+
+**Self-test first**, because the rest is void without it. All four
+pre-registered checks pass: a strategy against itself returns exactly
+[0.00, 0.00]; `kelly_regime_v4` against `macd_cross` returns +3.74
+[+2.37, +5.03] with P=1.00; the deflated Sharpe rejects the best of 50
+noise trials (Sharpe 0.85 by luck, DSR **0.637**) where the undeflated PSR
+would have certified it; all 45 CPCV splits are disjoint and purged.
+Reproduce with `python scripts/inference.py selftest`.
+
+**One correction found while building it, worth more than a footnote.**
+The first version computed the holdout by *slicing* the full-period daily
+returns. That is wrong for exactly one reason and it is the R-22 reason: on
+5x futures `buy_and_hold` is liquidated in 2022, so its sliced holdout is a
+flat line of zeros, and every strategy was being scored against a **corpse**
+— which made the entire futures holdout column look like a landslide win.
+The published numbers use a fresh $1,000 account from 2023-01-01 via
+`run_period`, as the rest of the repo does. Flipping that one choice moved
+`kelly_regime_v4`'s holdout futures ΔSharpe from **+1.33 (interval
+excludes zero)** to **−0.04 (indistinguishable)**. A `dead_tail_pct` column
+now travels with every row so the failure cannot recur silently.
+
+**C1 — the table's ordering. FAILS, and worse than predicted.**
+
+| period / market | adjacent pairs distinguishable at 95% |
+|---|---|
+| full / spot | **3** of 24 |
+| full / futures | **2** of 24 |
+| holdout / spot | **4** of 24 |
+| holdout / futures | **1** of 24 |
+
+**10 of 96, and every one of them is between two losing strategies** —
+`universal_kelly` vs `harsanyi_crowd`, `game_council` vs `minority_oracle`,
+`camouflage_flow` vs `game_switch`. Not one distinguishable step exists
+anywhere in the top eight, which is the only part of the table anyone would
+act on. The ordering that the README presents as a ranking is, in its
+decision-relevant region, noise. Per the pre-registered rule (below 50%),
+the README gets a standing warning.
+
+**C2 — the project's one robust finding. FAILS on the letter of the rule,
+and this is the result I got wrong.** The prediction written above was that
+C2 would hold. Paired ΔmaxDD against `buy_and_hold`, `kelly_regime_v4`:
+
+| period / market | Δ max drawdown vs holding | 95% interval | P(deeper than holding) |
+|---|---|---|---|
+| full / spot | **−41.1pp** | [−54.8, −18.4] | 0.000 |
+| holdout / spot | −27.1pp | [−35.8, **+1.9**] | 0.045 |
+| holdout / futures | **−29.3pp** | [−41.0, −5.0] | 0.009 |
+| full / futures | −65.1pp | [−70.7, +52.7] | 0.316 |
+
+The rule required the spot interval to exclude zero on **both** the full
+period and the holdout. It misses by **1.9 percentage points** on the
+holdout. So: the drawdown reduction is established on the full history and
+on the futures holdout, and on 3.6 years of spot holdout alone it is not —
+one-sided evidence at 95.5%, two-sided at 90%, which is the honest way to
+say it. The full-period futures interval is wide and useless for a
+different reason: `buy_and_hold` there is a corpse for 99.7% of its days,
+so resampling sometimes compares against an account that cannot draw down
+because it has nothing left.
+
+Downgraded accordingly wherever it is stated. Note what did *not* change:
+R-19's 40-window resample (deeper than v4 in 0 of 40) and R-17's ETH
+replication are different tests of the same property and both still stand.
+The honest summary is that the drawdown property is the *strongest* claim
+in this repo and it is still not a 95% claim on the holdout alone.
+
+**C3 — return claims. Nothing survives out-of-sample.** Deflated Sharpe
+against 103 project trials, at the only trial dispersion this project has
+measured (0.223, R-28's 24 configurations → SR* = 0.57):
+
+| | Sharpe | PSR>0 | DSR | break-even trial sd | min track record |
+|---|---|---|---|---|---|
+| `kelly_regime_v4`, full spot | 1.44 | 1.000 | **0.997** | 0.36 | 3.3y |
+| `kelly_regime_v4`, holdout spot | 1.21 | 0.991 | **0.896** | 0.15 | **6.2y** |
+| `buy_and_hold`, holdout spot | 1.03 | 0.976 | 0.812 | 0.07 | 12.4y |
+| `champions_council`, holdout spot | 0.95 | 0.969 | 0.773 | 0.04 | 17.4y |
+
+On the full history the leaders clear the bar; **on the holdout not one
+strategy in the table does, and neither does buy-and-hold.** Proving
+`kelly_regime_v4`'s holdout Sharpe against a 103-trial search needs **6.2
+years** of data like it; the holdout is 3.6. And the whole calculation
+hinges on a quantity nobody can pin down after the fact — the *dispersion*
+of the trials, not their count. At the table's own dispersion (2.60,
+inflated because most of the table was registered as documented negatives
+rather than entered as candidates) SR* = 6.60 and every DSR is 0.000. That
+is why `breakeven_sd` is reported: v4's full-period claim survives any
+search whose Sharpe spread is under 0.36, and dies above it.
+
+The sharpest single number is not a Sharpe at all. The table ranks by
+**final balance**, and on the full period `kelly_regime_v4`'s log-growth
+advantage over holding on spot is **+0.044 with P(beats holding) = 0.52**.
+By its own ranking criterion, the #1 strategy against the benchmark is a
+coin flip.
+
+**C4 — is the table useful to someone choosing from it? FAILS.**
+Combinatorially purged CV, 10 groups, 2 held out, 45 splits, 100-day purge
+and embargo, selecting by growth on the purged training groups:
+
+| | spot | futures |
+|---|---|---|
+| what the rule picks | `kelly_regime_ev_fast` x22, `buy_and_hold` x19, v4 x2, v3 x2 | `kelly_regime_v4` x41, v3 x4 |
+| beats holding out-of-fold | **6 of 45** (13%); 19 are ties where it picked holding itself, so 6 of 26 contested (23%) | 41 of 45 — but holding is liquidated and inert in **36 of them** |
+| always-`kelly_regime_v4` instead | beats holding in 44%, median −0.089 log | 91%, median +1.022 log |
+| selection shortfall vs hindsight | +0.490 log (the pick gives up 63% of what the best fold strategy made) | +0.066 log |
+| train→test rank correlation | median 0.72, range −0.70..0.86 | median 0.40, range −0.79..0.74 |
+
+On spot, re-ranking the table inside each fold and holding the winner loses
+to buy-and-hold in most folds — R-12's 28-in-sample/0-out-of-sample result
+reproduced one level up, at the level of *strategy selection* rather than
+parameter tuning. The futures column cannot answer the question at all,
+because the benchmark is dead in four fifths of the folds; restricted to
+the nine folds where it is alive the picked strategy wins all nine, which
+is a statement about surviving leverage, not about ranking.
+
+**Scoreboard against the predictions written before looking:** C1 predicted
+to fail — correct, and by more than expected. C2 predicted to hold —
+**wrong**. C3 predicted to fail for everything — half right; it fails
+everywhere out-of-sample and clears on the full history at the narrow
+dispersion. C4 predicted a coin flip — wrong, it is clearly negative on
+spot.
+
+**Configurations evaluated: 0.** This round fit nothing and selected
+nothing; it re-measured strategies that were already frozen. The trials
+count it *contributes* is zero, and the trials count it *applies* is 103.
+
+**Holdout counter: ~88** (~38 before, +50 this row: 25 strategies × 2
+markets, each a fresh 2023+ account). That is by far the largest single
+increment in the project, and it is the last one that should ever be spent
+this way — every strategy in the table has now been measured against the
+holdout with intervals attached, so there is nothing further to learn from
+it by looking again. Read together with C3, the conclusion the routine
+anticipated has arrived: **this dataset is exhausted for Sharpe-based
+claims**, and only forward paper trading (B-06) can add evidence.
+
+**Next step → B-12.** The intervals are computed but not *displayed*: the
+README table still reports points. Wiring `reports/inference/bootstrap.csv`
+into `tradebot run` so the comparison table carries its own error bars is
+the change that makes this permanent rather than a one-session document.
+
 ---
 
 ## C. Ruled out — do not re-try without new evidence
@@ -413,6 +552,17 @@ single-threaded and carried it to a verdict.** Read the two together: the
 null round is why several items below still look untouched, and it is not
 evidence about any of them.
 
+**Re-ranked again 08-17 after R-29.** B-04 is done and its answer reorders
+everything below it: the comparison table's ordering is mostly not
+distinguishable from noise, no strategy's Sharpe survives deflation
+out-of-sample, and the holdout is now exhausted (counter ~88). That makes
+**B-06 the highest-value item in the backlog on merit** — forward paper
+trading is the only uncontaminated evidence this project can still
+generate — and it is blocked on network access, which is the single thing
+worth asking the operator for. Everything still actionable from inside a
+session is now either display work (B-12) or a further re-reading of a
+dataset that has stopped answering.
+
 Two things changed the order. R-28 answered B-01. And a connectivity check
 found that **every exchange endpoint is blocked by the network policy
 these sessions run under** — Binance, Bitstamp, Kraken and Coinbase all
@@ -427,7 +577,8 @@ remains actionable is computation on the data already here.
 | ID | item | attacks | status | note |
 |---|---|---|---|---|
 | ~~B-01~~ | ~~E-process regime detection with unified Kelly sizing~~ | ERR, N≈3 | **DONE → R-28** | NEGATIVE on the promotion bar, and the strongest risk result in the project: 0 of 40 windows deeper than the incumbent. (R-26's null round listed this as untried; R-28 is the round that actually ran it.) Follow-up split out as B-11. |
-| **B-04** | Purged CV, deflated Sharpe, block-bootstrap CIs on every headline | ERR | **NEXT** | Now half-built: R-28 computed the project's first deflated Sharpe (0.859 on 24 trials) and the paired-window comparison in `experiments/run_eprocess.py` is most of a bootstrap harness. Promoting both into `scripts/` and applying them to the comparison table is a day's work on data already committed, and it is the prerequisite for the routine's step 4 to be mechanical. Given the ±0.2 noise floor most of the table's ordering is probably not significant, and it should say so. |
+| ~~B-04~~ | ~~Purged CV, deflated Sharpe, block-bootstrap CIs on every headline~~ | ERR | **DONE → R-29** | The guess was right: 10 of 96 adjacent pairs distinguishable, none of them in the top eight. Also closes R-25. `tradebot.inference` is now a permanent module with 27 tests; step 4 of the routine can be mechanical from here. |
+| **B-12** | Put the intervals *in* the comparison table | ERR | **NEXT** | R-29 computes an interval for every row and writes it to `reports/inference/bootstrap.csv`, and the README still prints points. Wire it into `tradebot run` so the table ships error bars and a "distinguishable from buy_and_hold?" column. Small, and it is what stops the ordering being re-read as a ranking by the next session — including by a future agent reading this repo cold. |
 | **B-11** | Matched-risk frontier: e-process gate vs latched vote at equal realized volatility | ERR, SIZE | **OPEN** | R-28 measured one point on an exposure/evidence trade-off and compared it with the incumbent at a *different* point, so "better risk, worse return" is partly a tautology. The real question is which gate delivers more return at the same drawdown. Warning already in hand: do **not** do it by raising `evidence_cap_mult` — that keeps stale evidence alive and drawdown grows superlinearly (49% DD, −22% on inner-validation at cap 2). Needs no new data. |
 | **B-05** | Funding as a gate on the existing strategy (stand flat in the top decile) | COST | **OPEN** | Actionable: uses the committed 2020–2023 funding file, no fetch. The low-turnover way to use R-16, and it directly targets the adverse timing in R-14. Higher-turnover standalone reversal use is where strategies go to die (R-12). |
 | **B-02** | Extend the funding series through 2026 | COST | **BLOCKED (network)** | Still the single cheapest item that could change a decision — the literature says the carry premium broke in 2024–25 and our data stops in 2023 — but Binance is unreachable from these sessions. Needs the operator. |
@@ -470,4 +621,5 @@ Also record, in the row or a footnote beneath it:
 | as of | count | note |
 |---|---|---|
 | 08-16 | ~30 | Backfilled estimate. Every OOS figure in sections A and B came from reading the 2023+ holdout; it has never been pristine. Deflate program-level claims accordingly, and treat forward paper trading (B-06) as the only uncontaminated evidence still obtainable. |
+| 08-17 | ~88 | R-29: every registered strategy (25) on both markets, as a fresh 2023+ account, to attach an interval to each. No selection was made on any of it and the decision rules were committed first — but 50 consultations is 50 consultations. The finding that matters: at ~88 program-level reads, and with `kelly_regime_v4`'s holdout Sharpe needing a **6.2-year** track record to clear a 103-trial bar it has 3.6 years of, **no Sharpe-based claim from this dataset is supportable any more**. Judge on drawdown, which still replicates, and treat B-06 (forward paper trading) as the only remaining source of evidence. |
 | 08-17 | ~38 | R-28: three configurations × two markets, plus two cost re-runs. The ETH falsification test and the 40-window resample do not read the 2023+ BTC holdout. At 24 trials in a single session the deflated Sharpe was already 0.859; at ~38 program-level consultations, treat any Sharpe-based claim from this dataset as unsupportable and judge on drawdown, which is the property that has repeatedly replicated. |
