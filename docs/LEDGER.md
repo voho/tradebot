@@ -107,6 +107,7 @@ the most expensive repeated mistake in this table.
 | R-26 | Parallel round on B-01, B-02/03, B-04, B-05, B-07 | 08-17 | 11 agent-sessions dispatched (5 build, 5 skeptic, 1 synthesis). Every one was blocked before executing a single call: the permission handler returned `updatedInput` with required parameters stripped, so `Bash`, `Read`, `Glob` and `Grep` all failed schema validation. Repo verified untouched afterwards. Fault has since cleared. | **0 trials, 0 configurations, 0 bars read.** The five directions were **NOT TESTED** and stay on the backlog as untried — filing them as negatives would stop a future agent trying them. Holdout counter unchanged (nothing was read). Project trials count unchanged. | **NULL ROUND** |
 | R-27 | Fabrication pressure in the operator's own prompt | 08-17 | The synthesis prompt for R-26 contained a conditional naming the hoped-for answer: *"If the inference agent found that most of the table's ordering is not distinguishable from noise, say so first and plainly."* The inference agent had run zero backtests. | The synthesizer refused and flagged it. Had it complied, a fabricated headline would have entered `docs/VALIDATION.md` — the file whose whole purpose is being trustworthy — indistinguishable from a real result to a later reader. Same failure class as L-14/L-15/L-16 (proxying order flow out of price) and R-21 (the $3.7e23 probe), but arriving through the *prompt* rather than the code. | **METHOD** — see ROUTINE.md |
 | R-28 | E-process regime detection with unified Kelly sizing (Shafer 2021; Ramdas et al. 2023; Waudby-Smith & Ramdas 2024; Shin, Ramdas & Rinaldo 2024) | 08-17 | Three variants in `experiments/eprocess_regime.py`, 24 configurations on the inner split, one frozen config on the holdout | **The deepest drawdown reduction in the project, and it still loses.** Holdout spot DD **11.6%** vs `kelly_regime_v4`'s 27.8% and holding's 54.0%; deeper than v4 in **0 of 40** Monte Carlo windows (median −14.0pp spot, −11.3pp futures). Return is 0.42x holding, so P1 fails. Anytime-valid evidence justifies only **0.27x** the incumbent's mean exposure. | **NEGATIVE** — but the risk finding is the strongest in the repo |
+| R-29 | Trials-aware inference: block-bootstrap intervals, deflated Sharpe, combinatorially purged CV (Politis & Romano 1994; Bailey & López de Prado 2014; López de Prado 2018) | 08-17 | `src/tradebot/inference.py` + `scripts/inference.py`, applied to all 25 registered strategies on both markets | *(results below the pre-registration)* | *(pending)* |
 
 ### R-28 pre-registration — written and committed before the holdout was read
 
@@ -298,6 +299,91 @@ volatility and ask which delivers more return per unit of drawdown.
 Note the warning already in hand: raising exposure through
 `evidence_cap_mult` is **not** the way to do it — the drawdown grows
 superlinearly because the cap lets stale evidence persist.
+
+### R-29 pre-registration — written and committed before any statistic was read
+
+**Idea.** Every headline in this repo is a point estimate selected from a
+search, reported without an interval or a trials adjustment. B-04 has been
+on the backlog since the ledger was written and R-25 recorded the gap
+exactly: deflated Sharpe, purged CV and bootstrap confidence intervals are
+*cited* in `RESEARCH.md` and computed nowhere. Build the three, apply them
+to the comparison table, and let the answer be whatever it is.
+
+**Constraint attacked.** ERR — but in the *reporting* path rather than the
+signal path. R-12 is the reason this matters: 28 of 32 configurations beat
+holding in-sample and 0 of 28 out-of-sample, which is what selection
+without error control produces. Also N≈3: an interval is the honest way to
+say a decade of bars is three regime observations.
+
+**Not a duplicate of.** R-20 measured the ±0.2 Sharpe noise floor for one
+pair of strategies and never applied it to the table. R-19 resamples
+*paths* (40 random windows) for five strategies, which answers a different
+question from an interval on a statistic. R-28 computed one deflated
+Sharpe, for one strategy, against one session's 24 trials, on bar-level
+observations. R-25 is the row that says none of this was done.
+
+**Simulable here?** Yes — pure computation on committed data, no fetch.
+
+**Method, fixed in advance.** Stationary bootstrap (Politis & Romano 1994),
+30-day mean block, 2,000 resamples, on **daily** returns — a million
+autocorrelated 5m bars is not a million observations, and 30 days is the
+block length that measured the noise floor in R-20. Comparisons are
+**paired**: the same resample indices are applied to both strategies, so a
+draw that happens to contain the 2022 bear contains it for both. Deflated
+Sharpe uses the project's own trials count (a floor of **103**, counted
+from the ledger in `scripts/inference.py`), not one session's.
+
+**Pre-registered self-test — if any of these four fails, the round is void
+and nothing is written into `VALIDATION.md`:**
+
+1. a strategy paired against *itself* must return an interval containing
+   zero;
+2. `kelly_regime_v4` against `macd_cross` ($66.8K against $4.99) must
+   return an interval excluding zero — a test that cannot see that gap
+   cannot see anything;
+3. the deflated Sharpe must **refuse** to certify the best of 50 pure-noise
+   trials (DSR < 0.95) while the undeflated PSR certifies it;
+4. every CPCV split must have disjoint train and test sets with the purge
+   and embargo actually removing the neighbourhood of the test fold.
+
+**Pre-registered decision rules.** These are interpretation rules, not
+promotion rules — nothing is being promoted. They are written down first
+because the temptation in a measurement round is to decide afterwards
+which numbers count.
+
+- **C1 (the table's ordering).** Report the fraction of *adjacent* pairs in
+  the ranking whose 95% paired interval excludes zero. If it is **below
+  50%**, the README comparison table gets a standing warning that its
+  ordering is mostly not statistically distinguishable, in the same voice
+  as the fee and funding warnings.
+- **C2 (the project's one robust finding).** "Regime-gated sizing cuts
+  drawdown" is upheld only if `kelly_regime_v4`'s paired ΔmaxDD against
+  `buy_and_hold` has a 95% interval **strictly below zero on spot, on both
+  the full period and the holdout**. If either interval straddles zero,
+  the finding is downgraded to "not established" in the README, the
+  ledger and `VALIDATION.md`.
+- **C3 (return claims).** No strategy may be described anywhere in the docs
+  as beating buy-and-hold on return unless its deflated Sharpe is ≥ 0.95
+  **or** its paired return interval against holding excludes zero.
+- **C4 (is the table useful to someone choosing from it?).** The selection
+  rule the table embodies — "rank by growth, take the top" — is judged
+  useful only if the out-of-fold winner beats `buy_and_hold` in **more
+  than 50%** of the CPCV folds on spot.
+
+**Stated predictions before looking.** C2 holds — the drawdown property is
+the one thing that has replicated on a second asset (R-17), a second
+strategy family (R-28) and 40 resampled windows (R-19). C1 fails, and
+badly: most adjacent pairs will be indistinguishable. C3 fails for every
+strategy in the table, including the three at the top. C4 is a coin flip,
+and the interesting quantity is the *selection shortfall* — how much of the
+top-of-table return is hindsight.
+
+**Holdout accounting.** This round re-reads the 2023+ holdout for 25
+strategies on 2 markets. No selection is performed on it: every
+configuration involved was frozen and registered in an earlier session, and
+the decision rules above were committed before any number was read. The
+counter still goes up, because the counter measures exposure and not
+intent.
 
 ---
 
