@@ -1,4 +1,36 @@
-# Walk-forward validation & honest caveats
+# How strategies are compared — validation & honest caveats
+
+## The comparison protocol
+
+One protocol, one benchmark, applied identically to every registered
+strategy:
+
+- **The comparison run.** `tradebot run` backtests every strategy on the
+  full 2017–2026 history, on **spot** (1x, 0.10% taker) and **5x
+  futures** (0.05% taker), from a **$1,000** start, and ranks by **final
+  balance**. The output is the README table and
+  [../reports/comparison.md](../reports/comparison.md); CI fails if a
+  registered strategy is missing from it.
+- **The benchmark is `buy_and_hold` on spot.** Every performance claim
+  in this repo is stated against it. Leveraged buy-and-hold is *not* a
+  benchmark — it is a stress case: liquidated on the full history and in
+  26 of 40 random windows.
+- **Point estimates are read as buckets, not a ranking.** Every headline
+  carries a paired block-bootstrap interval, a trials-deflated Sharpe
+  and a cross-validated selection check (see
+  [How much of the comparison table is signal?](#how-much-of-the-comparison-table-is-signal)),
+  and the measured **±0.2 Sharpe noise floor** binds any single-path
+  comparison.
+- **Promotion is decided elsewhere.** A new strategy is judged by the
+  pre-registered holdout protocol in [ROUTINE.md](ROUTINE.md) — train
+  before 2023, evaluate once against a rule fixed in advance, default
+  reject — not by its position in the full-period table.
+
+The rest of this document is the evidence behind that protocol: the
+walk-forward split, the intervals and deflation, the Monte Carlo stress
+windows, the ETH replication, the harness audit, and funding.
+
+## Walk-forward validation
 
 The comparison table ranks strategies on the **whole** 2017–2026 history.
 That single number hides whether an edge is real or an artifact of one
@@ -133,15 +165,18 @@ draw containing the 2022 bear contains it for both, and the market's own
 variance cancels instead of swamping the difference. The holdout is a
 fresh $1,000 account from 2023-01-01 (`run_period`), not a slice of the
 full run — slicing scores 5x `buy_and_hold` at a flat zero because it was
-liquidated in 2022, and comparing against a corpse is the R-22 mistake.
+liquidated back in January 2017, and comparing against a corpse is the
+R-22 mistake.
 
 **The machinery is falsified before it is used.** `inference.py selftest`
-checks that a strategy against itself returns exactly [0.00, 0.00], that
-`kelly_regime_v4` against `macd_cross` returns +3.74 [+2.37, +5.03], and
+checks that a strategy against itself returns an interval of exactly
+[0.00, 0.00], that `kelly_regime_v4` against `macd_cross` returns an
+interval excluding zero (in the committed run: +3.74 [+2.37, +5.03]), and
 that the deflated Sharpe **rejects** the best of 50 pure-noise trials
-(Sharpe 0.85 by luck alone, DSR 0.637) where the undeflated probabilistic
-Sharpe would have certified it. `tests/test_inference.py` covers the same
-guarantees on synthetic data with known answers.
+(in the committed run: Sharpe 0.85 by luck alone, DSR 0.637) where the
+undeflated probabilistic Sharpe would have certified it.
+`tests/test_inference.py` covers the same guarantees on synthetic data
+with known answers.
 
 ![interval forest plot, holdout](../reports/inference/intervals_holdout.png)
 
@@ -157,11 +192,14 @@ gives **10 of 96** pairs whose 95% paired interval excludes zero:
 | holdout / spot | 4 of 24 |
 | holdout / futures | 1 of 24 |
 
-And every one of those ten sits between two *losing* strategies
-(`universal_kelly` vs `harsanyi_crowd`, `game_council` vs
-`minority_oracle`, and so on). **Not one distinguishable step exists
-anywhere in the top eight** — the only part of the table anyone would act
-on. Read the table as a set of buckets, not as a rank order.
+Eight of those ten sit in the losing tail (`universal_kelly` vs
+`harsanyi_crowd`, `game_council` vs `minority_oracle`, and so on); the
+other two are steps at the boundary of the profitable block —
+`champions_council` vs `universal_kelly` on full/futures and
+`champions_council` vs `hedge_experts` on the spot holdout. **Not one of
+the ten separates two of the table's top eight from each other** — the
+leaders, the only part of the table anyone would act on. Read the table
+as a set of buckets, not as a rank order.
 
 ### Against buy-and-hold, with an interval
 
@@ -233,7 +271,7 @@ selecting on the purged training groups and scoring on the held-out ones.
 | what the rule picks | `kelly_regime_ev_fast` ×22, `buy_and_hold` ×19, v4 ×2, v3 ×2 | `kelly_regime_v4` ×41, v3 ×4 |
 | beats holding out-of-fold | **6 of 45** (13%); 19 are ties where it picked holding itself → 6 of 26 contested | 41 of 45, but holding is liquidated and inert in **36 of them** |
 | always-`kelly_regime_v4` instead | 44% of folds, median −0.089 log | 91%, median +1.022 log |
-| selection shortfall vs hindsight | +0.490 log — the pick gives up 63% of what the best fold strategy made | +0.066 log |
+| selection shortfall vs hindsight | +0.490 log — the best fold strategy made 63% more than the pick | +0.066 log |
 | train→test rank correlation | median 0.72, range −0.70..0.86 | median 0.40, range −0.79..0.74 |
 
 On spot, re-ranking the table inside each fold and holding the winner
@@ -248,8 +286,8 @@ of the folds.
 A single full-history number cannot separate a robust edge from one lucky
 path, so the top three strategies — plus the benchmark and the
 structurally different `champions_council` as a control — were resampled
-over **40 random windows** (random start, random length between 133 and
-681 days). Each window is preceded by a warmup prefix that warms
+over **40 random windows** (random start, random length drawn from
+90–730 days; this run drew 133–681). Each window is preceded by a warmup prefix that warms
 indicators **without trading**, so every strategy enters every window
 warm, flat and with the full $1,000, and short windows are not penalised
 for a cold start. All strategies see identical windows. Reproduce with
@@ -306,11 +344,93 @@ held and when.
 > holding look considerably **worse**, not better. See
 > [Is the harness itself trustworthy?](#is-the-harness-itself-trustworthy)
 
+## Does any of this generalize? The ETH falsification test
+
+Every conclusion above rests on BTC 2017–2026. That sounds like 1.01M
+observations and is really about **three** independent regime events, so
+a filter fitted to those would look identical to one that works. Running
+the existing strategy on a second asset is the cheapest experiment that
+can tell the difference (ledger row R-17).
+
+### Design
+
+Both series come from the **same venue** (Bitfinex, via
+[Zombie-3000/Bitfinex-historical-data](https://github.com/Zombie-3000/Bitfinex-historical-data))
+over the **same window**, so period and venue are held constant and only
+the asset varies. BTC is the control: the strategy is known to work on
+BTC elsewhere, so if the pipeline is sound it should behave sensibly here
+too.
+
+- Window: **2016-03-09 → 2019-12-31**, 376,878 5m bars each
+- Rebuild with `python scripts/build_bitfinex_dataset.py --source <dir>`
+- Covers the 2017 bull and the 2018 bear (BTC −84%, ETH −94%)
+- It does **not** cover 2020–2026; that data is not reachable from here
+
+### Result
+
+$1,000 start, 0.10% spot / 0.05% futures fees, no funding.
+
+**Spot (1x):**
+
+| asset | buy & hold | `kelly_regime_v4` | ratio | DD (v4) | DD (hold) |
+|---|---|---|---|---|---|
+| BTC *(control)* | $17,477 | $10,174 | **0.58x** | **40.1%** | 83.8% |
+| ETH *(test)* | $11,550 | $5,482 | **0.47x** | **36.5%** | 94.2% |
+
+**Futures (5x):**
+
+| asset | buy & hold | `kelly_regime_v4` | ratio | DD (v4) | DD (hold) |
+|---|---|---|---|---|---|
+| BTC *(control)* | $83,264 | $21,536 | 0.26x | **32.1%** | 85.2% |
+| ETH *(test)* | **$18** (liquidated) | $4,263 | **236x** | **35.1%** | 99.3% |
+
+### What it says
+
+**The risk property transfers; the return property does not exist.** In
+all four cells the strategy roughly halves-to-thirds the drawdown — BTC
+83.8%→40.1%, ETH 94.2%→36.5%, and on leverage 85.2%→32.1% and
+99.3%→35.1%. That is the same finding the BTC-only work reached from a
+completely different direction, now replicated on a second asset. It is
+the strongest evidence in this project that the mechanism is real rather
+than fitted.
+
+**On return it loses to holding on both assets on spot**, 0.58x and
+0.47x. Consistent with everything else here: there is no return alpha,
+on either asset.
+
+**The one cell where it wins enormously is the one where holding died.**
+Leveraged ETH buy-and-hold was liquidated to $18 in the 2018 bear; the
+strategy finished at $4,263. That is not a 236x edge, it is the
+difference between surviving and not — the same claim as the BTC stress
+test above (holding liquidated in 26 of 40 windows), reproduced on a
+second asset.
+
+**And the control behaves as it should.** Leveraged BTC holding *survived*
+this particular window and beat the strategy 0.26x, because a position
+opened in early 2016 had multiplied enough before the 2018 bear that a
+84% fall no longer reached its liquidation price. Same strategy, same
+period, different asset, opposite outcome — which is exactly how much a
+single path is worth, and why the ETH cell should not be quoted as a 236x
+edge either.
+
+### Verdict
+
+The sample-size objection is **partly answered**. The drawdown reduction
+is not BTC-specific, which was the thing most at risk of being an
+artifact. The absence of return alpha is also not BTC-specific.
+
+What remains unanswered: this window shares the 2018 bear with the main
+dataset, so the two tests are not fully independent, and 2020–2026 ETH
+was not reachable. A second bear on a second asset in a *different*
+period is still the missing experiment (backlog item B-08 in
+[LEDGER.md](LEDGER.md)).
+
 ## Does the starting balance matter?
 
 Almost never, which is why the framework now defaults to a single $1,000
-start. Across the twenty base strategies on both markets, comparing a $1,000 run
-with a $1,000,000 run:
+start. Across the twenty strategies registered at the time of the
+measurement (R-23; before the `kelly_regime` variants were added), on
+both markets, comparing a $1,000 run with a $1,000,000 run:
 
 - **15 of 40** strategy-market pairs returned percentages identical to
   within 0.01pp — e.g. `kelly_regime` ended at $42,096 and $42,096,000.
@@ -506,8 +626,8 @@ by a single assertion each. All are now fixed or covered:
 | a strategy reading bar `i+1` inside `on_bar` | **perfect foresight**; the prototype returned $3.7e23 from $1,000 at Sharpe 73 with a fully green suite | `test_decisions_ignore_every_bar_after_the_decision_bar` |
 | `(1 + mm)` divisor dropped from the **short** liquidation price | every short on 5x futures mis-priced | `test_liquidation_price_short`, `test_short_liquidation_triggers_on_the_bar_high` |
 | `REBALANCE_DEADBAND` widened 10x | silently changes turnover, fees and every published balance | `test_rebalance_deadband_threshold_is_exact` |
-| Sharpe annualization factor removed | every Sharpe ~750x too small, still "looks like a number" | `test_sharpe_is_annualized_to_5m_bars` |
-| epoch-unit detection thresholds shifted | timestamps silently mis-parsed | (bounded by the round-trip tests; see limitations) |
+| Sharpe annualization factor removed | every Sharpe ~324x too small, still "looks like a number" | `test_sharpe_is_annualized_to_5m_bars` |
+| epoch-unit detection thresholds shifted | timestamps silently mis-parsed | `tests/test_data.py::test_load_epoch_units` and the round-trip tests |
 
 Two structural problems mattered more than any single mutant:
 
@@ -638,6 +758,77 @@ a perp. The signal the strategy trades and the cost it pays have a common
 cause, so the cost scales with the signal. Any strategy in this family
 inherits that, and an average-rate assumption will always understate it.
 
+### The other side of the trade: harvesting the premium (measured, 2020–2023)
+
+If this strategy family is structurally short a large, persistent
+premium, the obvious response is to take the other side: hold spot,
+short the perpetual against it, delta-neutral, and collect funding
+(ledger rows R-15 / B-03). Compounding the real Binance BTCUSDT funding
+series:
+
+| | |
+|---|---|
+| gross funding stream | **+82.0%** over 4.0 years = **+16.2%/yr** |
+| after 0.10% taker on both legs, quarterly rebalance | +14.6%/yr |
+| after 0.40% taker on both legs, quarterly rebalance | +9.8%/yr |
+| settlements where the payer flips (negative rate) | 13.5% |
+| worst 30-day run of the funding stream | **−1.31%** |
+
+A −1.31% worst month against a +16%/yr carry is a risk profile nothing
+else in this repo comes close to — `kelly_regime_v4` at its best has a
+35% drawdown. This is the crypto cash-and-carry trade, with a real
+literature: He et al. (2024) derive the no-arbitrage relation between
+perp price, spot price and funding rate, and empirical work covering
+2020–2025 reports a carry Sharpe around 6.45 driven mostly by the
+funding rate itself.
+
+**The reason to be careful, and it is a serious one.** That same
+literature reports the Sharpe falling to **4.06 from 2024 and turning
+negative in 2025** as the trade crowded. The committed data stops at
+**2023** — precisely where the premium is said to have broken — so this
+measurement covers the good years and none of the bad ones. The numbers
+above also do *not* model basis risk at entry and exit, margin and
+liquidation risk on the short perp leg, exchange and custody risk (the
+failure mode that actually destroyed carry desks in 2022), or borrow
+costs. Extending the funding series through 2026 decides this direction
+outright; it is backlog item B-02 and blocked on network access.
+
+### Funding as a positioning signal, not just a cost (measured, 2020–2023)
+
+Rich funding means crowded longs, and unlike anything else tried here
+the signal is *not* derived from price (ledger rows R-16 / B-05).
+Forward spot return by funding quintile (rank-binned; Binance clamps the
+rate, so the middle quintiles share a value and should be read as one
+bucket):
+
+| horizon | Q1 (cheapest) | Q5 (richest) | spread |
+|---|---|---|---|
+| 1 day | +0.60% | −0.10% | +0.70pp |
+| 7 days | +3.02% | +0.30% | +2.72pp |
+| 14 days | +4.13% | +0.56% | +3.57pp |
+
+Controlling for momentum — mean 7-day forward return, funding tercile
+against trailing-7-day-return tercile:
+
+| | past low | past mid | past high |
+|---|---|---|---|
+| **funding low** | +2.83% | +1.74% | +2.16% |
+| **funding mid** | +0.55% | +1.36% | +3.24% |
+| **funding high** | **−1.68%** | **−1.54%** | +1.22% |
+
+Correlation between funding and trailing return is only **0.39**, so this
+is not simply a momentum proxy: high funding predicts *negative* forward
+returns unless price is also rising strongly.
+
+**Honest assessment: weaker than the tables suggest.** The middle
+quintiles are non-monotone (Q3 +3.06%, Q4 −1.02% at identical mean
+rates) — noise from splitting a tied cluster, and a warning about how
+much of the rest is noise too. Four years, one asset, and this repo's
+track record is that every apparent predictor died out-of-sample. The
+low-turnover way to use it — a gate that stands flat when funding is in
+its top decile — is backlog item B-05; the high-turnover standalone
+reversal use is where strategies go to die (R-12).
+
 ## Known limitations
 
 - **Funding is modelled but only partly measured.** The engine charges it
@@ -650,8 +841,10 @@ inherits that, and an average-rate assumption will always understate it.
   dataset was built (see README); the basis is small but the label
   `spot (perp proxy)` is carried through every report for a reason.
 - **One asset, one decade.** BTC 2017–2026 is a single, upward-drifting
-  sample path. Cross-asset (ETH) and cross-period validation would be the
-  next honest step before risking capital.
+  sample path. The ETH test above replicates the drawdown reduction (and
+  the absence of return alpha) on a second asset, but it shares the 2018
+  bear with the main dataset; a second bear on a second asset in a
+  different period (B-08) is still missing before risking capital.
 - **The holdout is exhausted.** It has been consulted ~88 times across the
   project (ledger, "Holdout consultations to date"), and the deflated
   Sharpe says the leading strategy needs a 6.2-year track record to clear

@@ -20,11 +20,11 @@ list of things that do not work.
 
 Read, in this order:
 
-1. `README.md` — the comparison table and the two standing warnings
-   (fees, funding).
-2. [`docs/LEDGER.md`](LEDGER.md) — everything already tried, and the
+1. `README.md` — the comparison table and the three standing warnings
+   (fees, funding, and that the table's ordering is mostly noise).
+2. [`docs/LEDGER.md`](LEDGER.md) — everything already tried, the four
+   binding constraints (the standing diagnosis at the top), and the
    ranked backlog at the bottom.
-3. [`docs/FRONTIER.md`](FRONTIER.md) — the four binding constraints.
 
 **Backlog first.** If the backlog has an item marked `NEXT` or `OPEN`
 that is not blocked, work that. Invent a new direction only when the
@@ -43,8 +43,9 @@ State the idea in one sentence, then answer all four. If any answer
 fails, discard the idea and pick another — this is a filter, not a
 formality.
 
-1. **Which constraint does it attack?** One of the four in
-   `FRONTIER.md`: information (one price series), effective sample size
+1. **Which constraint does it attack?** One of the four in the
+   [`LEDGER.md`](LEDGER.md) standing diagnosis: information (one price
+   series), effective sample size
    (n≈3), no error control in the signal path, or costs that scale with
    the signal. *"Another indicator" attacks none of them* — that is why
    the bottom of the comparison table looks the way it does.
@@ -55,7 +56,7 @@ formality.
    fills, no order book, no queue model. If not, today's job is to build
    the missing simulation capability and record *that* — do **not**
    proxy it out of OHLCV. `camouflage_flow`, `stealth_trend` and
-   `flow_regime` are what that costs (L-05, L-06, L-11).
+   `flow_regime` are what that costs (L-14, L-15, L-16).
 4. **What would make it fail?** Name the outcome now, before any code.
 
 Recency is not a criterion. Prefer recent work, but testability beats
@@ -127,7 +128,7 @@ holdout has not already been protected from.
 - `pytest` must pass, including `test_causality_strict.py`. A result
   that looks too good is a bug report first: a one-day lookahead is
   worth +2.1 Sharpe, and an `i + 1` peek inside `on_bar` returned
-  $3.7e23 with a fully green suite (R-24).
+  $3.7e23 with a fully green suite (R-21).
 
 ---
 
@@ -183,7 +184,7 @@ Promote only if **all** hold:
 
 - beats `buy_and_hold` out-of-sample, after real costs (funding charged
   on futures, the venue's actual taker tier on spot);
-- the improvement exceeds the **±0.2 Sharpe noise floor** (R-25), or is
+- the improvement exceeds the **±0.2 Sharpe noise floor** (R-20), or is
   a drawdown/tail improvement, which this repo has repeatedly found to
   be the property that actually replicates;
 - survives its pre-registered falsification test;
@@ -217,6 +218,73 @@ Then, by verdict:
 
 Finally, **re-rank the backlog** at the bottom of the ledger, then
 commit and push.
+
+---
+
+## The mechanics: registering a strategy
+
+The scaffold creates `src/tradebot/strategies/<name>.py` with a working
+EMA-cross template, auto-discovered on the next run:
+
+```bash
+tradebot new my_strategy
+pytest                                        # no-lookahead check runs for it automatically
+tradebot run --strategies my_strategy buy_and_hold --max-bars 100000   # quick compare
+```
+
+Or write the file by hand:
+
+```python
+# src/tradebot/strategies/my_strategy.py
+import pandas as pd
+from tradebot.indicators import ema
+from tradebot.registry import register
+from tradebot.strategy import Context, Strategy
+
+@register
+class MyStrategy(Strategy):
+    """One-line description shown in reports."""
+
+    name = "my_strategy"   # unique
+    warmup = 100           # bars skipped before the first on_bar call
+
+    def prepare(self, df: pd.DataFrame) -> pd.DataFrame:
+        # Called once with the full OHLCV frame. Add indicator columns.
+        # MUST be causal (row i may only use rows <= i): rolling / ewm /
+        # shift are fine. A framework test verifies this for every
+        # registered strategy.
+        df["fast"] = ema(df["close"], 20)
+        df["slow"] = ema(df["close"], 100)
+        return df
+
+    def on_bar(self, ctx: Context) -> None:
+        # Called at every bar close; orders fill at the NEXT bar open.
+        if ctx.bar["fast"] > ctx.bar["slow"] and not ctx.in_market:
+            ctx.order_target(1.0)      # fully long (fraction of equity x leverage)
+        elif ctx.bar["fast"] < ctx.bar["slow"] and ctx.position > 0:
+            ctx.close_position()       # or ctx.order_target(-1.0) to short (futures)
+```
+
+That's it — `tradebot run` picks it up, tests it on the whole matrix,
+ranks it in the comparison table and refreshes the README table. `ctx`
+also offers `history(n)`, `equity`, `position`, `can_short`, and raw
+`buy(qty)` / `sell(qty)`. `ctx.bar` / `ctx.prev` are fast mapping-style
+views (`bar["rsi"]`).
+
+Two rules are CI-enforced for every registered strategy (GitHub Actions
+runs the suite on each push/PR):
+
+- it **must have a docstring** describing the idea (first line lands in
+  the comparison table and `tradebot list`), and
+- it **must appear in the README comparison table** — run the full
+  `tradebot run` after adding a strategy, commit the regenerated
+  README + reports, and CI stays green.
+
+Registration is the *end* of the routine, not a shortcut past it: a
+strategy is registered either because it was **PROMOTED**, or because it
+is a documented negative result instructive enough to earn a table row
+(step 5). Experiments that are neither live in `experiments/` or
+`scripts/experiment.py`.
 
 ---
 

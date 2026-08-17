@@ -72,6 +72,43 @@ a bot deploys with exactly what the backtester needs.
 Bitstamp is also the venue the committed dataset comes from, so
 backtest and live see the same price series with no venue basis.
 
+## Custom venues and 3Commas
+
+For a venue without a ready-made adapter, `tradebot.live` is the
+lower-level extraction point:
+
+```python
+from tradebot.broker import MarketSpec
+from tradebot.live import LiveAccount, compute_signal
+from tradebot.registry import get_strategy
+
+strategy = get_strategy("kelly_regime_v4")
+
+# on every CLOSED 5m candle (never feed the forming one):
+candles = fetch_ohlcv_window()          # same columns as the backtest data
+account = LiveAccount(position=btc_position,      # signed, 0 = flat
+                      equity_quote=equity_usd,
+                      market=MarketSpec.spot())    # or .futures(leverage=5)
+orders = compute_signal(strategy, candles, account)
+```
+
+The returned orders are venue-agnostic; the adapter is a few lines:
+
+- **Bitstamp / Binance** (REST or websocket loop): for a `target` order
+  `f`, desired notional = `equity_quote x leverage x f`; place a market
+  order for the delta between that and the current position. `qty`
+  orders map 1:1. (`tradebot.fetch` already shows the Binance klines
+  pagination needed for the candle window.)
+- **3Commas** (signal bots): `target > 0` → send the bot's start/long
+  webhook signal, `target == 0` → close signal, `target < 0` → short
+  signal; position sizing stays configured in the bot.
+
+The timing contract is identical to the backtest — decide on bar close,
+act at the next open — and `tests/test_live.py` proves parity: walking
+the data bar-by-bar through `compute_signal` reproduces exactly the
+decisions the backtester filled, for every registered strategy on both
+markets.
+
 ## Read this before trading Bitstamp spot at the entry fee tier
 
 **Every result in this repo assumes a 0.10% taker fee. At Bitstamp's
@@ -231,7 +268,7 @@ window:
 |---|---|---|---|---|---|
 | `kelly_regime_v4` cap 4x, 5x venue | **+94.3%** | **−21.3%** | **82.5%** | **27.5%** | **0/40** |
 | `kelly_regime_v4` cap 2x, 5x venue | +95.2% | −21.3% | 82.5% | 27.0% | **0/40** |
-| spot buy_and_hold | +50.8% | −51.0% | 72.5% | 52.7% | 0/40 |
+| spot buy_and_hold | +48.8% | −51.0% | 72.5% | 52.7% | 0/40 |
 | **3x levered buy_and_hold** | +73.6% | **−99.8%** | 52.5% | 87.2% | **14/40** |
 
 Median window return roughly **doubles** against spot holding, the median
@@ -320,8 +357,9 @@ This is the check that matters, and it runs in CI
    backtests, and it is tested directly.
 4. **The bot loop behaves.** It refuses to trade without enough history,
    respects its rebalance deadband (no order when already at target),
-   never targets outside [0, 1] on spot, and never sells more base than
-   it holds.
+   and never targets outside [0, 1] on spot. (A fourth property — never
+   selling more base than the account holds — is enforced by a clamp in
+   `bot.py` itself rather than asserted by a test.)
 
 ## What live will *not* match
 

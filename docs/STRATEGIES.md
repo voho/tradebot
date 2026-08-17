@@ -1,25 +1,33 @@
 # The strategies, best to worst
 
-Every registered strategy, ranked by final balance on its best market over
-2017–2026. Each section says **what it is**, **how it works**, and **what
-principles it rests on**. Balances below are from a **$1,000** start —
-results scale proportionally with capital, so one start balance is enough;
-"spot" is 1x long-only, "futures" is 5x with shorting allowed. Full
-metrics: [../reports/comparison.md](../reports/comparison.md).
+Every registered strategy — all twenty-five — ordered as in the README
+comparison table (final balance on the best market over 2017–2026). Each
+section says **what it is**, **how it works**, and **what principles it
+rests on**. Balances below are from a **$1,000** start — results scale
+proportionally with capital, so one start balance is enough; "spot" is 1x
+long-only, "futures" is 5x with shorting allowed. Full metrics:
+[../reports/comparison.md](../reports/comparison.md).
 Literature: [RESEARCH.md](RESEARCH.md). Robustness: [VALIDATION.md](VALIDATION.md).
 
-The three `kelly_regime_v*` entries are variants of the leader and are
-described together in the [appendix](#appendix-the-variants); the numbered
-sections below cover the twenty distinct ideas.
+Read the order as buckets, not a ranking: most adjacent steps are not
+statistically distinguishable
+([VALIDATION.md](VALIDATION.md#how-much-of-the-comparison-table-is-signal)).
+
+The five `kelly_regime_*` variant entries (v2/v3/v4 and the two `ev`
+strategies) are variants of the leader and are described together in the
+[appendix](#appendix-the-variants); the numbered sections below cover the
+twenty distinct ideas.
 
 | # | strategy | spot | futures 5x | verdict |
 |---|---|---|---|---|
 | — | [kelly_regime_v4](#kelly_regime_v4--promoted-and-what-it-is-honestly-good-for) | $66.8K | **$156.2K** | current leader; faster anchors, 35% max DD |
 | — | [kelly_regime_v3](#kelly_regime_v3--promoted) | $65.8K | **$139.5K** | conditional volatility targeting |
 | — | [kelly_regime_v2](#kelly_regime_v2--not-promoted) | $46.4K | **$122.0K** | convex vote response; not promoted |
-| 1 | [kelly_regime](#1-kelly_regime) | $42.1K | **$108.2K** | the base idea; survived every stress window |
+| 1 | [kelly_regime](#1-kelly_regime) | $42.1K | **$108.2K** | the base idea; 0 liquidations in every resample |
+| — | [kelly_regime_ev](#kelly_regime_ev--kelly_regime_ev_fast--the-derived-no-trade-band) | $40.9K | **$108.0K** | the no-trade band, derived instead of chosen |
+| — | [kelly_regime_ev_fast](#kelly_regime_ev--kelly_regime_ev_fast--the-derived-no-trade-band) | **$71.1K** | $70.8K | same rule, 1-day horizon; best spot balance from 34 trades |
 | 2 | [buy_and_hold](#2-buy_and_hold) | **$66.0K** | $18 (liquidated) | benchmark; unbeatable on spot, fatal on leverage |
-| 3 | [champions_council](#3-champions_council) | $19.3K | **$36.8K** | lowest drawdown of any profitable strategy |
+| 3 | [champions_council](#3-champions_council) | $19.3K | **$36.8K** | lowest drawdown of the high-return strategies |
 | 4 | [hedge_experts](#4-hedge_experts) | **$13.3K** | $258 | profitable on spot, over-trades on leverage |
 | 5 | [replicator_book](#5-replicator_book) | **$2,330** | $10.58 | modest but real edge on spot |
 | 6 | [universal_kelly](#6-universal_kelly) | **$1,276** | $1,227 | tiny gains, remarkable 7% max drawdown |
@@ -30,13 +38,13 @@ sections below cover the twenty distinct ideas.
 | 11 | [flow_regime](#11-flow_regime) | $447 | $0.80 | combination did not rescue its members |
 | 12 | [game_council](#12-game_council) | $284 | $2.00 | can only allocate among losers |
 | 13 | [minority_oracle](#13-minority_oracle) | $53 | $3.83 | honest negative result |
-| 14 | [rsi_reversion](#14-rsi_reversion) | $4.85 | $0.77 | baseline; fee death |
-| 15 | [game_switch](#15-game_switch) | $5.00 | $1.00 | fee death |
-| 16 | [regret_grid](#16-regret_grid) | $5.00 | $1.00 | fee death |
-| 17 | [macd_rsi](#17-macd_rsi) | $4.96 | $0.94 | baseline; fee death |
-| 18 | [macd_cross](#18-macd_cross) | $4.99 | $1.00 | baseline; fee death |
-| 19 | [tft_trend](#19-tft_trend) | $4.99 | $1.00 | fee death |
-| 20 | [attrition_reversion](#20-attrition_reversion) | $4.94 | $0.99 | fee death |
+| 14 | [game_switch](#14-game_switch) | $5.00 | $1.00 | fee death |
+| 15 | [regret_grid](#15-regret_grid) | $5.00 | $1.00 | fee death |
+| 16 | [tft_trend](#16-tft_trend) | $4.99 | $1.00 | fee death |
+| 17 | [macd_cross](#17-macd_cross) | $4.99 | $1.00 | baseline; fee death |
+| 18 | [macd_rsi](#18-macd_rsi) | $4.96 | $0.94 | baseline; fee death |
+| 19 | [attrition_reversion](#19-attrition_reversion) | $4.94 | $0.99 | fee death |
+| 20 | [rsi_reversion](#20-rsi_reversion) | $4.85 | $0.77 | baseline; fee death |
 
 > **The pattern in one line:** every strategy that makes money decides
 > *how much to hold*; every strategy that tries to predict *what happens
@@ -107,8 +115,9 @@ down 84%.
 
 **What it is.** A council that allocates across the strategies that
 actually make money, then applies its own risk control: **$36,773** on
-futures with the lowest drawdown of any profitable strategy (37%, and 29%
-out-of-sample).
+futures with the lowest drawdown of the high-return strategies (37%, and
+29% out-of-sample; `universal_kelly`'s 7% is lower still, on a fraction
+of the return).
 
 **How it works.** It runs `kelly_regime`, `hedge_experts`,
 `replicator_book` and `universal_kelly`, plus buy-and-hold and a flat
@@ -134,7 +143,7 @@ explicit out-of-sample split in VALIDATION.md.
 ## 4. `hedge_experts`
 
 **What it is.** A no-regret blend of ten ordinary technical signals:
-**$13,275** on spot. Notably, it beat every hand-built game-theoretic
+**$13,277** on spot. Notably, it beat every hand-built game-theoretic
 predictor without predicting anything itself.
 
 **How it works.** Ten experts each emit a position: vol-scaled momentum at
@@ -180,7 +189,7 @@ Price (1973) ESS anchor: when nothing is fit, the book goes flat.
 ## 6. `universal_kelly`
 
 **What it is.** Cover's universal portfolio on one asset: **$1,276** on
-spot — small gains, but a **7.2% maximum drawdown**, by far the smoothest
+spot — small gains, but a **7.4% maximum drawdown**, by far the smoothest
 equity curve in the suite.
 
 **How it works.** It tracks the hypothetical wealth of 41 fixed exposures
@@ -352,22 +361,7 @@ over 12 bars — and loosening it produced trading that loses.
 
 ---
 
-## 14. `rsi_reversion`
-
-**What it is.** The classic oversold-bounce baseline: **$4.85** on spot
-from 4,464 trades.
-
-**How it works.** Buy when RSI(14) drops below 30, exit when it recovers
-past 55; mirror on the short side (RSI > 70) on futures.
-
-**Principles.** Mean reversion: sharp moves overshoot and snap back. It
-wins 57% of its trades and still loses almost everything, because it pays
-$4,882 in fees on a $1,000 account and its losses in trending markets are
-larger than its many small wins — "oversold" keeps getting more oversold.
-
----
-
-## 15. `game_switch`
+## 14. `game_switch`
 
 **What it is.** Fictitious play against the market: **$5.00** on spot.
 
@@ -387,7 +381,7 @@ means are non-stationary and tiny relative to fees.
 
 ---
 
-## 16. `regret_grid`
+## 15. `regret_grid`
 
 **What it is.** Regret matching over a grid of positions: **$5.00** on
 spot.
@@ -404,42 +398,11 @@ approachability theorem; von Neumann (1928) and Freund & Schapire (1999)
 add that no-regret play earns at least the zero-sum game value. It is
 parameter-free and elegant — and on 5m bars the per-bar payoffs are so
 noisy that it rebalances constantly, converting a sound guarantee into
-10,834 trades.
+3,461 trades.
 
 ---
 
-## 17. `macd_rsi`
-
-**What it is.** Trend filter plus pullback timing: **$4.96** on spot.
-
-**How it works.** Only take RSI pullback recoveries in the direction of the
-MACD trend — long when the histogram is positive and RSI crosses back up
-through 45; mirrored short. Exit when the trend flips or RSI reaches 75.
-
-**Principles.** Combining a trend filter with a reversion trigger is meant
-to cover each indicator's weakness. It does produce fewer, better-timed
-trades than either alone (2,454 vs 4,301) — and still loses, because the
-problem is not entry quality but that 5-minute signals cannot pay 0.1%
-round trips thousands of times.
-
----
-
-## 18. `macd_cross`
-
-**What it is.** The textbook MACD crossover: **$4.99** on spot from 4,301
-trades.
-
-**How it works.** Long when the MACD line (12/26 EMA difference) crosses
-above its 9-period signal line, flat (spot) or short (futures) on the
-cross below.
-
-**Principles.** Momentum: the crossover marks a shift in short-horizon
-trend early. On 5-minute bars it fires constantly in chop; at $1,269 of
-fees per $1,000 of capital, the fee bill alone is larger than the account.
-
----
-
-## 19. `tft_trend`
+## 16. `tft_trend`
 
 **What it is.** Axelrod's tit-for-tat played against the trend:
 **$4.99** on spot.
@@ -462,10 +425,42 @@ protect.
 
 ---
 
-## 20. `attrition_reversion`
+## 17. `macd_cross`
+
+**What it is.** The textbook MACD crossover: **$4.99** on spot from 4,301
+trades.
+
+**How it works.** Long when the MACD line (12/26 EMA difference) crosses
+above its 9-period signal line, flat (spot) or short (futures) on the
+cross below.
+
+**Principles.** Momentum: the crossover marks a shift in short-horizon
+trend early. On 5-minute bars it fires constantly in chop; at $1,269 of
+fees per $1,000 of capital, the fee bill alone is larger than the account.
+
+---
+
+## 18. `macd_rsi`
+
+**What it is.** Trend filter plus pullback timing: **$4.96** on spot.
+
+**How it works.** Only take RSI pullback recoveries in the direction of the
+MACD trend — long when the histogram is positive and RSI crosses back up
+through 45; mirrored short. Exit when the trend flips or RSI reaches 75.
+
+**Principles.** Combining a trend filter with a reversion trigger is meant
+to cover each indicator's weakness. It does produce fewer, better-timed
+trades than either alone (2,454 vs 4,301) — and still loses, because the
+problem is not entry quality but that 5-minute signals cannot pay 0.1%
+round trips thousands of times.
+
+---
+
+## 19. `attrition_reversion`
 
 **What it is.** Market-maker-style reversion with a war-of-attrition exit:
-**$4.94** on spot, and the highest win rate in the suite (58.6%).
+**$4.94** on spot, despite a 58.6% win rate — one of the highest in the
+suite.
 
 **How it works.** Fair value is a 1-day EMA of typical price, shifted
 *against* current inventory to form a reservation price. It fades
@@ -482,15 +477,31 @@ war of attrition: the evolutionarily stable rule quits when cumulative
 waiting cost matches the prize, and Fudenberg & Tirole (1986) add that
 non-reversion is *itself* information about the opponent's strength. It
 wins most of its trades and still loses, which is the signature of a
-short-gamma payoff paying fees on 7,221 round trips.
+short-gamma payoff paying fees on 2,930 trades.
+
+---
+
+## 20. `rsi_reversion`
+
+**What it is.** The classic oversold-bounce baseline: **$4.85** on spot
+from 4,464 trades.
+
+**How it works.** Buy when RSI(14) drops below 30, exit when it recovers
+past 55; mirror on the short side (RSI > 70) on futures.
+
+**Principles.** Mean reversion: sharp moves overshoot and snap back. It
+wins 57% of its trades and still loses almost everything, because it pays
+$4,882 in fees on a $1,000 account and its losses in trending markets are
+larger than its many small wins — "oversold" keeps getting more oversold.
 
 ---
 
 ## Appendix: the variants
 
-Research rounds on the leader produced three registered variants. Two
-earned promotion, one did not. Full detail:
-[VALIDATION.md](VALIDATION.md#beta-testing-the-variants).
+Research rounds on the leader produced five registered variants: v2, v3
+and v4 from the beta-test round (two earned promotion, one did not), and
+the two `ev` strategies from deriving the no-trade band analytically.
+Full detail: [VALIDATION.md](VALIDATION.md#beta-testing-the-variants).
 
 ### `kelly_regime_v4` — PROMOTED, and what it is honestly good for
 
@@ -558,7 +569,7 @@ anchors, same fractional-Kelly volatility target, same cap and deadband.
 partial values are the *transitional* states — a fast anchor has flipped
 while a slow one has not — where drift is near zero and volatility is
 elevated. Raising the vote to a power above 1 shrinks those states toward
-flat (⅓ becomes 0.19, ⅔ becomes 0.59) while leaving full agreement at 1.
+flat (⅓ becomes 0.15, ⅔ becomes 0.49) while leaving full agreement at 1.
 
 **Principles.** Growth-optimal (Kelly) exposure scales with expected drift
 over variance, and that relationship is convex in agreement rather than
@@ -571,9 +582,45 @@ fractional-Kelly prescription under parameter uncertainty (MacLean, Thorp
 **Result and the honest caveat.** It improves the full period ($121,993 vs
 $108,221), Sharpe (1.49 vs 1.42), drawdown (39.6% vs 42.6%), turnover
 (113 vs 143 trades), the Monte Carlo median window and the Monte Carlo
-worst window — but it lands **3.5% below the incumbent out-of-sample**, so
+worst window — but it lands **6.5% below the incumbent out-of-sample**, so
 the beta-test harness declines to promote it. That shortfall is inside the
 ±0.2 Sharpe noise floor, and the effect is a plateau across gamma ∈
 [1.25, 4.0] rather than a spike, but the failed check is reported rather
 than buried. Full detail:
 [VALIDATION.md](VALIDATION.md#beta-testing-the-variants).
+
+### `kelly_regime_ev` / `kelly_regime_ev_fast` — the derived no-trade band
+
+**What they are.** `kelly_regime_v4` with the fixed 10% rebalance
+deadband replaced by one *derived* from expected profit: rebalance only
+when the expected growth gained exceeds the fee it costs.
+`kelly_regime_ev` ($40.9K spot / **$108.0K** futures) uses the measured
+3.3-day fill spacing as its horizon; `kelly_regime_ev_fast` (**$71.1K**
+spot — the best spot balance in the table, from just 34 trades) is the
+same rule at a 1-day horizon, registered so the sensitivity of the one
+free parameter is visible in the comparison table rather than argued
+about in a docstring.
+
+**How it works.** For a Kelly sizer the growth given up by holding
+exposure `f` instead of the desired `f*` is `(σ²/2)(f − f*)²` per unit
+time; correcting it costs `fee·|Δf|`. Trading is worth it only when the
+first exceeds the second, i.e. when `|Δf| > 2·fee/(H·σ²)` for holding
+horizon `H` — the classic transaction-cost no-trade band (Constantinides
+1986; Davis & Norman 1990). The band is not tuned; it falls out of the
+fee, the volatility and the horizon. A full exit is always allowed, since
+standing flat removes the whole position's risk when the regime gate asks
+for it.
+
+**What it says about fees.** At a 0.10% fee the derived band is ~3x the
+hand-set 10% — the fixed deadband was too narrow, and turnover, not
+signal, was the binding cost on spot. At a 0.40% fee the band exceeds
+1.0: **no rebalance is ever worth its cost**, and the growth-optimal
+policy collapses to buy-and-hold — an analytic derivation of what
+`scripts/fee_study.py` found by brute force (ledger rows L-05, L-06;
+methodology finding 7 in [RESEARCH.md](RESEARCH.md)).
+
+**The honest caveat.** The drawdown is a genuine region (30–38% for
+every horizon from 1 to 5 days), but the *return* over the same sweep
+swings 3x between adjacent horizon values, and the measured 3.3-day
+default happens to sit near the in-sample best. Read these as a turnover
+and drawdown result, not a return result.

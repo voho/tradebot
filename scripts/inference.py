@@ -113,7 +113,7 @@ def build_curves(strategies: list[str], period: str,
     before it, exactly as ``run_period`` does everywhere else in this repo.
 
     The holdout is not a slice of the full run, and the difference is not
-    cosmetic: on 5x futures ``buy_and_hold`` is liquidated in 2022, so a
+    cosmetic: on 5x futures ``buy_and_hold`` is liquidated in early 2017, so a
     slice of the full run scores the benchmark's holdout at a flat zero —
     a corpse — where a fresh account rides the 2023+ bull to $15.2K.
     Measuring against a corpse is the R-22 mistake, and slicing is how it

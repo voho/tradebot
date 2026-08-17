@@ -44,7 +44,7 @@ def test_sharpe_of_flat_curve_is_zero():
 
 
 def test_sharpe_is_annualized_to_5m_bars():
-    """Drop the annualization and every reported Sharpe is ~750x too small.
+    """Drop the annualization and every reported Sharpe is ~324x too small.
 
     A flat curve returns 0.0 either way, so the existing test cannot see
     the factor at all — and a Sharpe of 0.002 still reads as "a number".

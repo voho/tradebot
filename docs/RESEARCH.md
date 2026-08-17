@@ -2,7 +2,8 @@
 
 Literature survey behind the game-theoretic strategies in
 `src/tradebot/strategies/`. Four areas were researched; each strategy's
-docstring carries its own citations, and the mapping is at the bottom.
+docstring carries its own citations, and the mapping is in the
+[Strategy → grounding map](#strategy--grounding-map) below.
 All input is 5m OHLCV bars only (no order book), so each mechanism below
 is stated together with its bar-visible footprint.
 
@@ -271,7 +272,7 @@ What the evidence supports is narrower than the headline balance. Across
 nine anchor sets in the 18–28 day range, **every** variant cut max
 drawdown to 35–39% from v3's 41.8% — that reduction is the robust
 finding. The Sharpe spread over the same plateau (1.52–1.60) sits inside
-the ±0.2 noise floor from finding 2 below, so the return improvement is
+the ±0.2 noise floor from finding 2 above, so the return improvement is
 **not** established by this path. The plateau breaks sharply below ~18
 days (16/32/64 scores 1.46), which is the signature of a genuine region
 rather than a tuned peak — and, per finding 4, the sweep itself is a

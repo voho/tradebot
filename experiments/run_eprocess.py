@@ -266,8 +266,8 @@ def eth() -> None:
     """Pre-registered falsification: does the mechanism survive on ETH?
 
     Same venue (Bitfinex), same window, only the asset varies - the design
-    of R-17 / docs/CROSS_ASSET.md, so the incumbent's numbers there are
-    the comparison.
+    of R-17 (the ETH falsification test in docs/VALIDATION.md), so the
+    incumbent's numbers there are the comparison.
     """
     for asset, path in (("BTC (control)", "btcusd_bitfinex_5m.csv.gz"),
                         ("ETH (test)", "ethusd_bitfinex_5m.csv.gz")):
