@@ -14,10 +14,11 @@ import pytest
 
 from tradebot.inference import (
     DAYS_PER_YEAR, annualized_sharpe, bootstrap_interval, cpcv_splits,
-    daily_returns, deflated_sharpe_ratio, expected_max_sharpe, group_bounds,
-    max_drawdown_from_returns, min_track_record_length, moments, norm_cdf,
-    norm_ppf, paired_bootstrap, probabilistic_sharpe_ratio, purged_train_mask,
-    stationary_bootstrap_indices, fold_mask, total_log_return,
+    daily_returns, deflated_sharpe_ratio, expected_max_sharpe, fold_mask,
+    group_bounds, max_drawdown_from_returns, min_track_record_length, moments,
+    norm_cdf, norm_ppf, paired_bootstrap, probabilistic_sharpe_ratio,
+    purged_train_mask,
+    stationary_bootstrap_indices, total_log_return,
 )
 
 

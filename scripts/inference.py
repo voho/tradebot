@@ -7,7 +7,7 @@ R-25 noted that deflated Sharpe, purged CV and bootstrap intervals were
 cited in the docs and computed nowhere. This script computes them, using
 :mod:`tradebot.inference`.
 
-Four commands, in the order they should be read:
+Six commands, in the order they should be read:
 
 ``selftest``
     Falsify the machinery before trusting its output. A strategy against
@@ -25,11 +25,18 @@ Four commands, in the order they should be read:
     Deflated Sharpe (Bailey & López de Prado 2014) for every strategy,
     against the number of trials this project has actually run.
 
+``ordering``
+    The table's claim is an *order*. This tests every adjacent pair in it
+    and counts how many steps down the ranking survive a 95% interval.
+
 ``cpcv``
     Combinatorially purged cross-validation of the *selection procedure*
     itself: "rank the table on the training groups, hold the winner on the
     test groups". 45 out-of-fold splits, purged and embargoed, versus the
     single walk-forward number the repo has been quoting.
+
+``charts``
+    Forest plots of the same intervals, into ``reports/inference/``.
 
 Usage::
 
@@ -58,11 +65,11 @@ from tradebot.broker import MarketSpec  # noqa: E402
 from tradebot.data import load_dataset  # noqa: E402
 from tradebot.engine import run_backtest  # noqa: E402
 from tradebot.inference import (  # noqa: E402
-    DAYS_PER_YEAR, annualized_sharpe, cpcv_splits, daily_returns,
-    deflated_sharpe_ratio, expected_max_sharpe, group_bounds,
+    annualized_sharpe, bootstrap_interval, cpcv_splits, daily_returns,
+    deflated_sharpe_ratio, expected_max_sharpe, fold_mask, group_bounds,
     max_drawdown_from_returns, min_track_record_length, moments,
     paired_bootstrap, probabilistic_sharpe_ratio, purged_train_mask,
-    stationary_bootstrap_indices, fold_mask, total_log_return,
+    stationary_bootstrap_indices, total_log_return,
 )
 from tradebot.registry import available_strategies, get_strategy  # noqa: E402
 
@@ -219,6 +226,14 @@ def bootstrap(curves: pd.DataFrame, strategies: list[str],
                                       indices=idx, level=LEVEL)
                 growth = paired_bootstrap(r, bench, total_log_return,
                                           indices=idx, level=LEVEL)
+                # The marginal interval, from the same resamples. It is a
+                # different object from the paired one and much wider: most
+                # of a strategy's Sharpe uncertainty is the market's, which
+                # is exactly what the pairing cancels.
+                own_sharpe = bootstrap_interval(r, annualized_sharpe,
+                                                indices=idx, level=LEVEL)
+                own_dd = bootstrap_interval(r, max_drawdown_from_returns,
+                                            indices=idx, level=LEVEL)
                 rows.append({
                     "period": period, "market": market, "strategy": name,
                     "days": n,
@@ -228,12 +243,12 @@ def bootstrap(curves: pd.DataFrame, strategies: list[str],
                     # every volatility-based statistic computed over them.
                     "inert_days_pct": 100.0 * float((r == 0.0).mean()),
                     "sharpe": sharpe.stat_a,
-                    "sharpe_lo": sharpe.diff.lo + sharpe.stat_b,
-                    "sharpe_hi": sharpe.diff.hi + sharpe.stat_b,
+                    "sharpe_lo": own_sharpe.lo, "sharpe_hi": own_sharpe.hi,
                     "d_sharpe": sharpe.diff.point,
                     "d_sharpe_lo": sharpe.diff.lo, "d_sharpe_hi": sharpe.diff.hi,
                     "p_sharpe_beats_hold": sharpe.p_positive,
                     "max_dd_pct": dd.stat_a,
+                    "max_dd_lo": own_dd.lo, "max_dd_hi": own_dd.hi,
                     "d_max_dd_pp": dd.diff.point,
                     "d_max_dd_lo": dd.diff.lo, "d_max_dd_hi": dd.diff.hi,
                     "p_dd_deeper_than_hold": dd.p_positive,
@@ -249,16 +264,18 @@ def bootstrap(curves: pd.DataFrame, strategies: list[str],
             print(f"\n{period.upper()} / {market} — {sub.days.iloc[0]:,} days, "
                   f"{N_BOOT:,} stationary-bootstrap resamples, "
                   f"{MEAN_BLOCK:.0f}-day mean block")
-            print(f"  {'strategy':22s} {'Sharpe':>6s} {'ΔSharpe vs hold (95% CI)':>28s} "
-                  f"{'P>hold':>7s} {'maxDD':>6s} {'ΔmaxDD vs hold (95% CI)':>28s}")
+            print(f"  {'strategy':22s} {'Sharpe (95% CI)':>22s} "
+                  f"{'ΔSharpe vs hold':>25s} {'P>hold':>7s} "
+                  f"{'maxDD':>6s} {'ΔmaxDD vs hold':>25s}")
             for _, row in sub.iterrows():
                 star = "*" if row.d_sharpe_lo > 0 or row.d_sharpe_hi < 0 else " "
                 dstar = "*" if row.d_max_dd_lo > 0 or row.d_max_dd_hi < 0 else " "
                 print(f"  {row.strategy:22s} {row.sharpe:>6.2f} "
-                      f"{row.d_sharpe:>+9.2f} [{row.d_sharpe_lo:>+6.2f},"
+                      f"[{row.sharpe_lo:>+5.2f},{row.sharpe_hi:>+5.2f}] "
+                      f"{row.d_sharpe:>+6.2f} [{row.d_sharpe_lo:>+6.2f},"
                       f"{row.d_sharpe_hi:>+6.2f}]{star} "
                       f"{row.p_sharpe_beats_hold:>7.2f} {row.max_dd_pct:>5.1f}% "
-                      f"{row.d_max_dd_pp:>+9.1f} [{row.d_max_dd_lo:>+6.1f},"
+                      f"{row.d_max_dd_pp:>+6.1f} [{row.d_max_dd_lo:>+6.1f},"
                       f"{row.d_max_dd_hi:>+6.1f}]{dstar}")
             print("  * = the 95% interval excludes zero")
             inert = sub[sub.inert_days_pct > 20.0]
@@ -430,13 +447,82 @@ def cpcv(curves: pd.DataFrame, strategies: list[str], n_groups: int = 10,
     return frame
 
 
+# ------------------------------------------------------------------- charts
+
+def charts(curves: pd.DataFrame, strategies: list[str], **_) -> list[Path]:
+    """Forest plots: every strategy's difference from holding, with its interval.
+
+    The comparison table is a list of point estimates in rank order, which
+    is the most confident possible way to present them. This is the same
+    information drawn honestly — an interval per strategy, and a vertical
+    line at "no different from buy-and-hold".
+    """
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    from tradebot.report import (BASELINE, CRITICAL, GOOD, GRID, INK, MUTED,
+                                 PAGE, SURFACE)
+
+    frame = pd.read_csv(OUT / "bootstrap.csv")
+    paths = []
+    for period in frame.period.unique():
+        fig, axes = plt.subplots(1, 4, figsize=(19, 8), sharey=True)
+        fig.patch.set_facecolor(PAGE)
+        sharpe_cols = ("d_sharpe", "d_sharpe_lo", "d_sharpe_hi", True)
+        dd_cols = ("d_max_dd_pp", "d_max_dd_lo", "d_max_dd_hi", False)
+        panels = [("spot", *sharpe_cols, "Δ Sharpe vs buy_and_hold"),
+                  ("spot", *dd_cols, "Δ max drawdown (pp)"),
+                  ("futures", *sharpe_cols, "Δ Sharpe vs buy_and_hold"),
+                  ("futures", *dd_cols, "Δ max drawdown (pp)")]
+        order = frame[(frame.period == period) & (frame.market == "spot")] \
+            .sort_values("d_sharpe")["strategy"].tolist()
+        for ax, (market, col, lo_col, hi_col, more_is_better, title) in zip(axes, panels):
+            sub = frame[(frame.period == period) & (frame.market == market)]
+            sub = sub.set_index("strategy").loc[order]
+            lo, hi = sub[lo_col], sub[hi_col]
+            y = np.arange(len(sub))
+            # "Good" points the other way for drawdown: less is better.
+            better = (sub[col] > 0) if more_is_better else (sub[col] < 0)
+            excludes_zero = (lo > 0) | (hi < 0)
+            colors = [GOOD if b and s else CRITICAL if (not b) and s else MUTED
+                      for b, s in zip(better, excludes_zero)]
+            ax.set_facecolor(SURFACE)
+            for side in ("top", "right", "left"):
+                ax.spines[side].set_visible(False)
+            ax.spines["bottom"].set_color(BASELINE)
+            ax.grid(True, axis="x", color=GRID, linewidth=1.0)
+            ax.hlines(y, lo, hi, color=colors, linewidth=2.4, alpha=0.55)
+            ax.scatter(sub[col], y, s=34, color=colors, zorder=3,
+                       edgecolors=SURFACE, linewidths=1.2)
+            ax.axvline(0.0, color=INK, linewidth=1.2)
+            ax.set_yticks(y)
+            ax.set_yticklabels(sub.index, fontsize=8, color=MUTED)
+            ax.tick_params(colors=MUTED, labelsize=8, length=0)
+            ax.set_title(f"{market} · {title}", color=INK, fontsize=10, loc="left")
+        n_days = int(frame[frame.period == period].days.iloc[0])
+        fig.suptitle(
+            f"Is the difference real?  ·  {period} ({n_days:,} days)  ·  "
+            f"paired stationary bootstrap, {MEAN_BLOCK:.0f}-day blocks, "
+            f"{N_BOOT:,} resamples  ·  grey = interval contains zero",
+            color=INK, fontsize=12, x=0.02, ha="left")
+        fig.tight_layout(rect=(0, 0, 1, 0.95))
+        path = OUT / f"intervals_{period}.png"
+        fig.savefig(path, dpi=110, bbox_inches="tight", facecolor=PAGE)
+        plt.close(fig)
+        paths.append(path)
+        print(f"chart: {path}", file=sys.stderr)
+    return paths
+
+
 # --------------------------------------------------------------------- main
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("command", nargs="?", default="all",
                     choices=["all", "curves", "selftest", "bootstrap",
-                             "ordering", "deflated", "cpcv"])
+                             "ordering", "deflated", "cpcv", "charts"])
     ap.add_argument("--strategies", nargs="+", default=None,
                     help="default: every registered strategy")
     ap.add_argument("--force", action="store_true", help="rebuild the curve cache")
@@ -454,7 +540,7 @@ def main() -> None:
         if not selftest(curves) and args.command == "all":
             raise SystemExit("self-test failed; refusing to report statistics")
     for name, fn in (("bootstrap", bootstrap), ("ordering", ordering),
-                     ("deflated", deflated), ("cpcv", cpcv)):
+                     ("deflated", deflated), ("cpcv", cpcv), ("charts", charts)):
         if args.command in ("all", name):
             fn(curves, strategies=strategies)
     print(f"\nwritten to {OUT}", file=sys.stderr)
