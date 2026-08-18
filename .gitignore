@@ -6,6 +6,9 @@ __pycache__/
 .pytest_cache/
 .venv/
 venv/
+# Claude Code harness scratch state (background-agent worktrees, etc.),
+# not project deliverables.
+/.claude/
 /data/*
 *.csv
 *.parquet
