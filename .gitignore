@@ -6,6 +6,8 @@ __pycache__/
 .pytest_cache/
 .venv/
 venv/
+# environment-generated lockfile; the project pins deps via pyproject.toml
+uv.lock
 /data/*
 *.csv
 *.parquet
