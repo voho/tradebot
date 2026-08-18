@@ -1182,7 +1182,183 @@ it will not be kind.
 
 ---
 
-## C. Ruled out — do not re-try without new evidence
+### R-33 pre-registration — written and committed before the holdout was read
+
+**Idea, in one sentence.** Backlog B-05: leave `kelly_regime_v4`'s vote and
+sizer untouched, and use the committed real Binance BTCUSDT funding series
+(`data/btcusdt_perp_funding_8h.csv.gz`, EXACTLY 2020-01-01..2023-12-31,
+8-hourly) as a gate on its output — two variants run in parallel, one
+literal-conservative, one more principled-novel, per the routine's
+parallelism rules (every branch reports, disjoint files, no branch
+commits, the operator merges once).
+
+- **Conservative** (`experiments/funding_gate_conservative.py`,
+  `FundingDecileGate`): force flat whenever currently-known funding sits at
+  or above its own trailing rolling percentile. The literal backlog text
+  ("stand flat in the top decile").
+- **Novel** (`experiments/funding_gate_novel.py`, `FundingCrowdKelly`):
+  continuously shrink exposure by causally-smoothed funding cost relative
+  to an a-priori ceiling — `mult = clip(1 - funding_annualized/ceiling, 0,
+  1)`, re-latched through the strategy's own deadband. Grounded in Merton
+  (1971)'s continuous-time result that a levered position's growth-optimal
+  fraction shrinks with a financing cost (`f* = f0·(1 − c/mu)`), by analogy
+  rather than a direct fit since this project's sizer never estimates `mu`
+  directly; MacLean, Thorp & Ziemba (2010) — already this repo's standing
+  citation for fractional Kelly — motivate smooth rather than thresholded
+  shrinkage as the standard response to a noisy input.
+
+**Constraint attacked.** COST, as the backlog frames it (R-14: funding runs
+~+20%/yr while the strategy holds vs +2.8%/yr flat — a cost that scales
+with exactly the crowding the vote is chasing). **Correction found during
+step 3, recorded here rather than smoothed over:** the conservative
+branch's own measurement shows spot final balance and drawdown improve by
+almost as much as futures despite spot never paying funding at all (funding
+paid on futures drops 85.6% while final balance improves ~15% — the ratio
+doesn't match a pure cost-avoidance story). The dominant channel is more
+likely R-16's finding that the top funding decile predicts negative 14-day
+forward returns — a genuine, non-price-derived directional signal (R-16
+measured only 0.39 correlation with trailing return, so this is not the
+proxy-from-price mistake that killed L-14/L-15/L-16) — with pure funding
+COST-avoidance as a real but smaller contributor. So this round attacks
+**COST primarily, INFO secondarily**, and the write-up below reports both
+channels rather than defaulting to the backlog's original framing.
+
+**Not a duplicate of.** L-05/`kelly_regime_ev` (COST, but the *fee* is a
+per-trade cost with a derived no-trade band; funding is a continuously
+accruing *holding* cost — a different derivation, spelled out in
+`funding_gate_novel.py`'s docstring). R-14 (a study, not a strategy — this
+integrates its finding into a mechanism). R-16 (measured the funding→
+forward-return relationship; this is the first round that trades on it).
+L-12/`harsanyi_crowd` (a crowding haircut from trend age and volume decay,
+never from the funding rate itself). Neither variant touches the vote or
+sizer that L-01..L-04/R-06/R-07 already explored.
+
+**Simulable here?** Only inside the funding-covered window. Both classes
+are built to be **provably bit-identical to `kelly_regime_v4`** outside
+2020-01-01..2023-12-31 (verified: max |target diff| = 0.0 over all bars
+outside that window, independently re-checked by the operator) — no
+synthetic backfilling, no assumed rates, per the standing rule "never
+proxy unavailable data out of price" (extended here to funding). The direct
+consequence, stated before any holdout number is read: **the 2023+ holdout
+only overlaps the mechanism's active window for its first year
+(2023-01-01..2023-12-31) — roughly 2.6 of the holdout's 3.6 years are
+bit-identical to the baseline by construction.** Any full-holdout comparison
+against `kelly_regime_v4` is therefore diluted by construction, and any
+comparison against `buy_and_hold` over the full holdout mostly re-asks a
+question this project already answered for `kelly_regime_v4` itself (R-29).
+The primary test below is restricted to the covered sub-window for exactly
+this reason.
+
+**What would make each fail — named before any code ran.** Conservative:
+the vote gate already dodges most top-decile funding on its own, so the
+extra gate is a near no-op on futures and a pure return-drag on spot (where
+funding is never charged). Novel: a smooth shrink converges to behaving
+like the hard threshold anyway once matched on average exposure, buying
+nothing for the extra complexity; or the EWM smoothing lags enough that it
+either fires too late (funding has already spiked and the crowd has already
+turned) or too often (whipsaws on noise), and the mechanism ends up worse
+on turnover than the literal threshold it was designed to avoid whipsawing.
+Both: 2020's one-way COVID-recovery rally is a regime where elevated
+funding did *not* precede a reversal — the novel branch's own inner-train
+number already shows this (it gives back more return than it saves in
+funding there) — so a holdout year that resembles 2020 more than 2021-2022
+kills both mechanisms for the same reason.
+
+**Configurations evaluated in step 3: 39** (conservative: 12-point grid +
+9-point neighbourhood = 21; novel: full 18-point grid). Per ROUTINE.md's
+parallelism rule this is a total across both branches, not per branch.
+
+**Frozen configurations**, selected on inner-validation (2021-2022, the
+only inner split with full funding coverage) as the primary criterion,
+inner-train (2017-2020, funding coverage only from its final year) checked
+for consistency but not used to select:
+
+| variant | frozen config | inner-validation vs `kelly_regime_v4` (both markets, funding charged) |
+|---|---|---|
+| conservative | `funding_percentile_threshold=0.90, funding_lookback_days=90` | spot Sharpe 0.14→0.80, DD 33.2%→21.2%; futures Sharpe −0.06→0.81, DD 34.7%→23.6% |
+| novel | `funding_ewm_halflife_days=3.0, cost_ceiling=0.20, floor_mult=0.0` | spot final $998→$1,024, DD 33.2%→22.6%; futures final $887→$1,018 (+14.8%), DD 34.7%→22.6%, funding paid −85.6%, fills −40% |
+
+Both sit inside a real plateau on inner-validation (conservative: th
+0.88-0.92 × lb 60-120d all clear the noise floor; novel: every `hl∈{3,10}`
+config beats baseline futures return, `hl=30` is where the plateau breaks —
+consistent with this project's repeated finding that slow smoothing
+degrades a signal, e.g. R-07's 18-day break). Both clear the ±0.2 Sharpe /
+10pp-drawdown noise floor by a wide margin on inner-validation alone.
+
+**Method, fixed in advance.** R-29/R-30/R-31/R-32's paired stationary block
+bootstrap: 30-day mean block, 2,000 resamples, daily returns, identical
+resample indices for both arms of a pair — kept identical to every prior
+round rather than adapted to this round's shorter window, even though a
+~365-day daily series gives noticeably fewer effective blocks than the
+3.6-year holdout prior rounds used. That is a predicted source of wide,
+likely-inconclusive intervals, not a reason to change the method
+after seeing it not work.
+
+**Pre-registered decision rules.**
+
+- **D1 (the mechanism question, primary).** Paired Δ log growth
+  (variant − `kelly_regime_v4`) on the funding-covered holdout sub-window
+  **2023-01-01..2023-12-31 only** — the only period either variant can
+  differ from the incumbent — both markets, real funding charged on
+  futures for both arms. Established only if the interval **excludes zero
+  in the same direction on both markets**. Reported for each variant
+  separately; nothing here is selection between them (both are frozen and
+  both get scored).
+- **D2 (the standard promotion bar, secondary).** The full ROUTINE.md
+  Step-4 bar over the **entire** 2023+ holdout, paired against
+  `buy_and_hold` on spot: beats holding after real costs, exceeds the
+  noise floor or cuts drawdown ≥10pp, survives D3, sits on a plateau
+  (already shown in step 3). Predicted to be **uninformative by
+  construction** given the dilution named above — reported anyway, for
+  completeness and because a future reader should not have to re-derive
+  why it says nothing.
+- **D3 (falsification, chosen now).** No second asset is available — the
+  committed funding series is BTC/Binance-only, so R-17's ETH design
+  cannot run here. Substituted: a Monte Carlo window resample (the R-19/
+  R-28 design, `scripts/stress_test.py`'s method) restricted to windows
+  falling **entirely inside the funding-covered range**
+  (2020-01-01..2023-12-31, so the mechanism is live for the whole window;
+  this necessarily includes the 2023 holdout months inside its sample),
+  30 windows (fewer than the standard 40 — the sampling universe here is
+  4 years, not 9), 60-180 day lengths, seed 42, paired against
+  `kelly_regime_v4` on both markets, funding charged on futures. Falsified
+  if the variant is not distinguishably different from, or is worse than,
+  the incumbent in a majority of windows.
+- **P (promotion).** Default reject. A variant is a promotion candidate
+  only if D1 is established, D2 passes on the *undiluted* sub-window
+  reasoning (i.e. D1's own window, not the diluted full-holdout number),
+  and D3 does not falsify. Given the structural dilution named above, D2's
+  literal full-holdout numbers are not, by themselves, grounds for
+  rejecting a variant that passes D1 and D3 — but neither can this round
+  promote anything on a single calendar year of holdout alone without
+  saying so plainly.
+
+**Stated predictions before looking.**
+
+1. **D1 is underpowered rather than clearly positive or negative** — one
+   year of daily returns is a thin sample for a 30-day-block bootstrap,
+   and I expect wide intervals more often than a clean established result,
+   on the same logic as R-29's finding that even the full 3.6-year holdout
+   cannot support a Sharpe-based claim against this project's trials count.
+2. **D2 is uninformative**, by construction — predicted above, not a
+   finding.
+3. **D3 leans toward the novel variant being more consistent than the
+   conservative one**, because the continuous shrink cannot whipsaw at a
+   rank boundary the way a hard 90th-percentile cutoff can, but I expect
+   the difference between the two variants to itself sit inside the noise
+   floor rather than be a clean win for either.
+4. **Both variants likely fail full promotion this round** — a single
+   funding-covered holdout year is a worse-powered test than the
+   already-exhausted 3.6-year BTC holdout this project's R-29 declared
+   unable to support Sharpe-based claims. The honest, most likely outcome
+   is `NOT ESTABLISHED` for both, with the inner-validation plateau
+   standing as the actual (in-sample) finding — a documented negative or
+   inconclusive result being exactly as valuable to this project as a win.
+
+**Holdout counter going into this round: ~124** (per R-32's accounting).
+This round's D1 and D3 both read the 2023 portion of the 2023+ holdout;
+D2 reads the full holdout. The increment is recorded in the results
+section below once every run is complete.
 
 | what | why | ref |
 |---|---|---|
