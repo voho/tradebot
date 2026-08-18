@@ -166,7 +166,21 @@ class FundingGatedKellyV4(KellyRegimeV4):
         gate_settled = pd.Series(state, index=f.index)
         # Backward as-of join onto the bar grid: each bar sees the last
         # settlement AT OR BEFORE its own timestamp, never a later one.
-        gate_on_bars = gate_settled.reindex(index, method="ffill").fillna(False).to_numpy()
+        # `tolerance` bounds how stale that fill may be (real settlements
+        # are exactly 8h apart, confirmed by inspection: zero gaps in
+        # 4,383 rows) -- WITHOUT it, `reindex(..., method="ffill")` would
+        # carry the last known state forward FOREVER past the funding
+        # series' real end (2023-12-31), latching the gate on or off for
+        # 2024-2026 by accident rather than by design. Found by inspecting
+        # holdout output where a funding-free run (no gate activity
+        # possible after 2023) still showed large multi-year divergence
+        # from the ungated incumbent. Beyond `tolerance`, reindex returns
+        # NaN, which `fillna(False)` turns into gate=OFF -- the same
+        # "not enough real data here" default used before the first
+        # settlement and on funding=None (ETH).
+        gate_on_bars = gate_settled.reindex(
+            index, method="ffill", tolerance=pd.Timedelta("9h")
+        ).fillna(False).to_numpy()
         return np.where(gate_on_bars, self.haircut, 1.0)
 
     def prepare(self, df: pd.DataFrame) -> pd.DataFrame:
