@@ -291,4 +291,152 @@ Default is REJECT. The falsification test (ETH, funding=None, "survive"
 ETH, spot and futures, final balance/drawdown/trade count identical to
 6 significant figures (`python experiments/funding_gate.py falsify`).
 
-<!-- Sections 6-9 appended below after the holdout (step 4) is run. Not one number below this line was read before the text above it was written. -->
+## 6. Holdout results, and a bug found in the middle of step 4 (full disclosure)
+
+**Timeline, stated plainly because it matters for trusting this section:**
+section 5 (frozen config + decision rule, word for word) was written and
+saved to this file *before* `holdout()` was run for the first time. That
+first run produced numbers that did not make sense on their own terms:
+the "funding-free futures, full holdout (2023→2026)" row showed a large,
+multi-year divergence between the gated and ungated strategies (fills
+83 vs 328, final $2,734 vs $4,901) — but by this design's own stated
+behaviour (section 2/5), the gate cannot be active at all past
+2023-12-31 (no real funding data exists there), so a *funding-free* run
+over 2024-2026 should have been close to a no-op versus the ungated
+incumbent, not a 40%+ divergence. That contradiction was investigated
+immediately (not rationalized away), and traced to a real bug:
+`pd.Series.reindex(index, method="ffill")` with no `tolerance` carries
+the *last known settlement state forward forever*, so once the real
+funding series ended on 2023-12-31, whatever gate state happened to be
+latched that day stayed latched through 2026 by accident, not by
+design. Fixed with `tolerance=pd.Timedelta("9h")` (settlements are
+exactly 8h apart with zero gaps across all 4,383 rows, confirmed by
+inspection), so any bar more than 9h past the last real settlement
+reverts to gate=OFF — the same "not enough real data here" default
+already used before the first settlement and on `funding=None` (ETH).
+
+**This was a bug fix, not a decision-rule change or a re-selection.**
+The frozen configuration and decision rule in section 5 are untouched;
+the same `FROZEN` dict was re-run through the same `holdout()` function
+after the fix. Per ROUTINE.md: *"Going back to step 3 to fix a bug is
+fine and always was; going back to find a threshold that turns a
+rejection into a promotion is the thing that produced 28-of-32 in-sample
+winners and 0-of-28 out-of-sample (R-12)."* No threshold moved. Both
+runs' numbers are reported below for transparency — reporting only the
+second (correct) run without mentioning the first would look identical
+to exactly the goalpost-moving this repo's discipline exists to prevent.
+The causality self-check (section 4) was also re-run after the fix and
+still PASSes — the bug was a wrong *default*, never a leak of future
+information into a past decision, so causality was never actually at
+risk, only the funding-free multi-year holdout numbers were.
+
+**First run (buggy, discarded):** funding-free futures full-OOS: gated
+$2,734 (+173.4%, DD 26.9%) vs ungated $4,901 (+390.1%, DD 33.0%); spot:
+gated $2,103 (+110.3%, DD 23.9%) vs ungated $3,373 (+237.3%, DD 27.8%).
+Both numbers are artifacts of the stale-latch bug and are **not used**
+in the verdict below.
+
+**Second run (correct, used for the verdict):**
+
+| market | strategy | final | Δ vs start | DD | sharpe | funding paid |
+|---|---|---|---|---|---|---|
+| spot (2023→2026, 0.10% taker) | `buy_and_hold` | $3,839 | +283.9% | 54.0% | 1.03 | — |
+| spot | `kelly_regime_v4` (ungated) | $3,373 | +237.3% | 27.8% | 1.22 | — |
+| spot | `funding_gated_kelly_v4` (FROZEN) | $3,488 | +248.8% | 27.8% | 1.25 | — |
+| futures 5x, funding-free (2023→2026) | `buy_and_hold` | $15,176 | +1417.6% | 60.3% | 1.44 | — |
+| futures 5x, funding-free | `kelly_regime_v4` (ungated) | $4,901 | +390.1% | 33.0% | 1.36 | — |
+| futures 5x, funding-free | `funding_gated_kelly_v4` (FROZEN) | $5,177 | +417.7% | 33.0% | 1.40 | — |
+| futures 5x, **funding CHARGED**, real series only (2023-01-01 → 2023-12-31, the only slice the mechanism could actually fire in) | `buy_and_hold` | $8,040 | +704.0% | 48.7% | 2.74 | $731 |
+| futures 5x, funding charged, 2023 only | `kelly_regime_v4` (ungated) | $2,393 | +139.3% | 28.4% | 2.14 | $152 |
+| futures 5x, funding charged, 2023 only | `funding_gated_kelly_v4` (FROZEN) | $2,537 | +153.7% | 28.4% | 2.28 | $137 |
+
+**9 holdout backtest calls in this (second, used) run** — `buy_and_hold`,
+`kelly_regime_v4`, `funding_gated_kelly_v4` on each of 3 market/cost
+configurations. See section 9 for the full session count including the
+discarded first run.
+
+**Falsification test (pre-registered, ran in step 3, unaffected by the
+bug — it never touches 2023+ dates): PASS.** `FundingGatedKellyV4` with
+`funding=None` reproduces `kelly_regime_v4` to 6 significant figures on
+both BTC and ETH Bitfinex data (2016-2019), spot and 5x futures —
+final balance, drawdown, sharpe and fill count identical, matching
+ledger row R-17's numbers exactly. This confirms the wiring degrades
+gracefully with no funding data; it says nothing about whether the
+funding mechanism itself works, which ETH cannot test.
+
+## 7. Verdict against the pre-registered decision rule
+
+Applying section 5's rule, exactly as written, to section 6's numbers
+(the corrected run):
+
+- **"beats `buy_and_hold` out-of-sample after real costs"** — **FAILS**,
+  on all three cells, not narrowly:
+  - spot: $3,488 vs $3,839 (gated loses by 35pp of return)
+  - futures funding-free: $5,177 vs $15,176 (gated loses by a factor of
+    ~2.9x)
+  - futures funding-charged (2023, real costs): $2,537 vs $8,040 (gated
+    loses by a factor of ~3.2x)
+
+  This matches the standing project-level finding (R-30: **0 of 24
+  strategies in the comparison table are distinguishably better than
+  holding** on the criterion the table ranks by) — 2023-2026 was a
+  strong, comparatively low-drawdown bull run, exactly the regime where
+  a volatility-targeted, partially-hedged strategy under-participates
+  relative to a fully-invested benchmark, gated or not.
+
+- **"the improvement exceeds ±0.2 Sharpe OR is a drawdown/tail
+  improvement"** (read against the more informative comparator, ungated
+  `kelly_regime_v4`, since the rule already failed against
+  `buy_and_hold`) — **ALSO FAILS**: Sharpe moves by +0.03 (spot), +0.04
+  (futures funding-free) and +0.14 (futures funding-charged) — all
+  inside the ±0.2 noise floor (R-20) — and **max drawdown is bit-identical
+  to the ungated incumbent in all three cells** (27.8% / 33.0% / 28.4%).
+  The gate saved $15 of funding out of $152 (2023 only) and did not
+  touch the drawdown that defines the period.
+
+- **falsification test** — PASS (section 6).
+
+- **parameter neighbourhood is a plateau** — largely PASS (section 3d):
+  flat across `percentile`, `exit_percentile`, `haircut`,
+  `min_settlements`; the one real sensitivity is `lookback_days`
+  (expanding vs. 365-day rolling, a ~$116 swing on inner-validation),
+  which is a genuine, disclosed soft spot in the selection rather than a
+  sharp peak — closer to a shallow ridge than a plateau on that one axis.
+
+**All four conditions must hold; the first two do not. Verdict: NEGATIVE.**
+
+## 8. One-line lesson
+
+A gate built entirely from a non-price, real-but-time-bounded data
+series can still misbehave outside that series' support — not through
+lookahead (the causality check is blind to this class of bug by design)
+but through an unbounded forward-fill silently treating "no more real
+data" as "assume the last known state forever"; bound every asof-merge
+explicitly (`tolerance=`) rather than trusting a bare `.fillna()` at the
+start alone to cover both ends of the data's real range.
+
+## 9. Holdout-counter contribution
+
+**18 scored backtest calls** (via `ev()`/`ev_funding()`, i.e. calls that
+ran the full engine and computed P&L/Sharpe/drawdown) touched a date
+on or after 2023-01-01 this session: 9 in the first (buggy, discarded)
+`holdout()` run, 9 in the second (corrected, used-for-verdict) run —
+`buy_and_hold`, `kelly_regime_v4`, `funding_gated_kelly_v4` x 3 market/
+cost configurations, twice.
+
+**Separately, for full disclosure and not included in the 18 above:**
+the causality self-check (section 4) processed a 300,000-bar slice of
+the main dataset that spans roughly 2023-10 through 2026-08-12 (needed
+to exercise the real-funding boundary the bug lived at), run twice
+(before/after the fix). It calls `.prepare()` and `on_bar()` directly
+through `PaperBroker`/`Context` — never `run_backtest`/`run_period`,
+never `compute_metrics` — so it produces no P&L, Sharpe, drawdown or
+strategy comparison and could not have informed any tuning decision; it
+only compares raw order-decision equality across three tampered copies
+of the same frame. Listed here rather than silently omitted because it
+did touch bars timestamped in the holdout period, even though it
+measured nothing about performance there.
+
+Total this session, both categories: **18 scored + 2 non-scored
+(order-decision-only) touches of the holdout period.**
+
