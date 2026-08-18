@@ -91,9 +91,15 @@ LEVEL = 0.95
 # configurations (R-12/R-13), 24 e-process configurations (R-28), 9 anchor
 # sets (R-07), 7 ladder widths (R-06), 4 volatility estimators (R-09), 2
 # drawdown-cushion variants (R-11), plus the 25 registered strategies
-# themselves — each of which is a configuration someone chose to keep.
-# Under-counting is the failure mode that matters, so this is a floor.
-PROJECT_TRIALS = 103
+# themselves — each of which is a configuration someone chose to keep
+# (= 103, R-29's original count), plus R-31's 36-configuration matched-risk
+# frontier, R-32's parallel 33-configuration replication, and R-33's
+# 39-configuration funding-gate sweep (21 conservative + 18 novel).
+# Under-counting is the failure mode that matters, so this is a floor, and
+# it must be bumped every time a round adds to it rather than left stale —
+# R-33 found this one three rounds behind (R-31/R-32 ran without updating
+# it) and corrected it in the same commit that discovered the gap.
+PROJECT_TRIALS = 211
 
 # The Sharpe dispersion across R-28's 24 configurations on inner-validation -
 # the only trial dispersion this project has ever measured, and therefore the
