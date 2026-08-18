@@ -277,12 +277,121 @@ def causality() -> None:
     print(f"RESULT: {'PASS' if ok and worst_overall == 0.0 else ('PASS (nonzero tolerance)' if ok else 'FAIL')}")
 
 
+# -------------------------------------------------------------------- holdout
+#
+# STEP 4 ONLY. Run centrally by the operator after both branches of R-33
+# were frozen and the pre-registration was committed (docs/LEDGER.md).
+# Never run this before that commit exists in git history.
+
+FROZEN = {"decile_in": 0.85, "decile_out": 0.80, "funding_lookback_days": 90}
+HOLDOUT = ("2023-01-01", "2023-12-31")  # funding data ends 2023-12-31 - not 2026
+BITSTAMP_TAKER = 0.004
+
+
+def _period_with_equity(strategy, market, start, end, *, funding=None,
+                        balance: float = 1_000.0):
+    """Like _period, but also returns the trimmed equity curve for bootstrap."""
+    lo = int(DF.index.searchsorted(start))
+    hi = int(DF.index.searchsorted(end, side="right"))
+    pre = min(lo, strategy.warmup)
+    raw = run_backtest(strategy, DF.iloc[lo - pre: hi], market, balance,
+                       trade_start=pre, funding=funding, data_label=LABEL)
+    trimmed = (raw if pre == 0 else
+               replace(raw, equity=raw.equity.iloc[pre:], df=raw.df.iloc[pre:]))
+    return compute_metrics(trimmed), raw.funding_paid, trimmed.equity
+
+
+def holdout() -> None:
+    """Step 4: the pre-registered, one-time read of the 2023 holdout."""
+    from tradebot.inference import (annualized_sharpe, daily_returns,
+                                    deflated_sharpe_ratio, max_drawdown_from_returns,
+                                    moments, paired_bootstrap, total_log_return)
+
+    start, end = HOLDOUT
+    v4 = get_strategy("kelly_regime_v4")
+    hold = get_strategy("buy_and_hold")
+    gate = make_variant(FROZEN)
+
+    print(f"HOLDOUT {start} .. {end} (funding data ends 2023-12-31: this IS "
+          f"the full available holdout, not a slice of a longer one)\n")
+
+    equities = {}
+    print(f"{'tag':40s} {'spot@0.10%':>12s} {'spot@0.40%':>12s} "
+          f"{'fut-free':>10s} {'fut-paid':>10s} {'funding$':>9s}")
+    for name, strat in (("buy_and_hold", hold), ("kelly_regime_v4", v4),
+                        ("frozen_gate(0.85/0.80/90d)", gate)):
+        m_spot, _, eq_spot = _period_with_equity(strat, SPOT, start, end)
+        m_spot40, _, _ = _period_with_equity(
+            strat, MarketSpec.spot(fee_rate=BITSTAMP_TAKER), start, end)
+        m_fut_free, _, _ = _period_with_equity(strat, FUTURES, start, end)
+        m_fut_paid, fp, eq_fut_paid = _period_with_equity(
+            strat, FUTURES, start, end, funding=REAL_FUNDING)
+        print(f"{name:40s} ${m_spot.final_balance:>10,.0f} "
+              f"${m_spot40.final_balance:>10,.0f} "
+              f"${m_fut_free.final_balance:>8,.0f} "
+              f"${m_fut_paid.final_balance:>8,.0f} ${fp:>7,.0f}")
+        equities[name] = {"spot": eq_spot, "fut_paid": eq_fut_paid}
+        equities[name]["spot_sharpe"] = m_spot.sharpe
+        equities[name]["spot_dd"] = m_spot.max_drawdown_pct
+        equities[name]["spot_final"] = m_spot.final_balance
+        equities[name]["spot40_final"] = m_spot40.final_balance
+        equities[name]["fut_paid_sharpe"] = m_fut_paid.sharpe
+        equities[name]["fut_paid_dd"] = m_fut_paid.max_drawdown_pct
+
+    print("\n-- P1/P2: gate vs buy_and_hold, spot, 0.10% --")
+    g, h = equities["frozen_gate(0.85/0.80/90d)"], equities["buy_and_hold"]
+    print(f"  P1 gate beats hold: {g['spot_final'] > h['spot_final']} "
+          f"(${g['spot_final']:,.0f} vs ${h['spot_final']:,.0f})")
+    d_sharpe = g["spot_sharpe"] - h["spot_sharpe"]
+    d_dd = h["spot_dd"] - g["spot_dd"]  # positive = gate's DD is shallower
+    print(f"  Delta Sharpe (gate-hold) = {d_sharpe:+.3f}  "
+          f"(needs > +0.20 noise floor to pass on Sharpe)")
+    print(f"  Delta max DD  (hold-gate) = {d_dd:+.1f}pp  "
+          f"(positive = gate shallower; needs >= +10pp to pass on DD)")
+    print(f"  P2: {'PASS' if d_sharpe > 0.20 or d_dd >= 10.0 else 'FAIL'}")
+
+    print("\n-- P3 falsification: 0.40% Bitstamp taker tier, spot --")
+    g_ratio = g["spot40_final"] / g["spot_final"]
+    v4e = equities["kelly_regime_v4"]
+    v4_ratio = v4e["spot40_final"] / v4e["spot_final"]
+    print(f"  gate degradation ratio  final(0.40%)/final(0.10%) = {g_ratio:.4f}")
+    print(f"  v4   degradation ratio  final(0.40%)/final(0.10%) = {v4_ratio:.4f}")
+    print(f"  P3 (gate not worse than v4's own degradation): "
+          f"{'PASS' if g_ratio >= v4_ratio else 'FAIL'}")
+
+    print("\n-- D1: paired bootstrap, gate - v4, funding-charged futures 5x --")
+    r_gate = daily_returns(equities["frozen_gate(0.85/0.80/90d)"]["fut_paid"])
+    r_v4 = daily_returns(equities["kelly_regime_v4"]["fut_paid"])
+    n = min(len(r_gate), len(r_v4))
+    r_gate, r_v4 = r_gate.to_numpy()[-n:], r_v4.to_numpy()[-n:]
+    growth = paired_bootstrap(r_gate, r_v4, total_log_return, mean_block=30.0,
+                              n_boot=2_000, seed=7)
+    dd = paired_bootstrap(r_gate, r_v4, lambda x: -max_drawdown_from_returns(x),
+                          mean_block=30.0, n_boot=2_000, seed=7)
+    print(f"  n daily obs = {n}")
+    print(f"  Delta log-growth (gate-v4): {growth.diff} P(>0)={growth.p_positive:.2f} "
+          f"established={growth.significant}")
+    print(f"  Delta (-maxDD) (gate-v4): {dd.diff} P(>0)={dd.p_positive:.2f} "
+          f"established={dd.significant}  "
+          f"[positive = gate drawdown shallower]")
+
+    print("\n-- Deflated Sharpe, gate spot holdout, this round's own trials --")
+    sk, ku = moments(daily_returns(equities["frozen_gate(0.85/0.80/90d)"]["spot"]).to_numpy())
+    sh = annualized_sharpe(daily_returns(equities["frozen_gate(0.85/0.80/90d)"]["spot"]).to_numpy())
+    n_obs = len(daily_returns(equities["frozen_gate(0.85/0.80/90d)"]["spot"]))
+    dsr_session = deflated_sharpe_ratio(sh, n_obs, sk, ku, n_trials=26, sd_trials=0.270)
+    dsr_project = deflated_sharpe_ratio(sh, n_obs, sk, ku, n_trials=198, sd_trials=0.270)
+    print(f"  holdout spot Sharpe={sh:.3f} n_obs={n_obs} skew={sk:.2f} kurt={ku:.2f}")
+    print(f"  DSR (this round's 26 trials, sd=0.270): {dsr_session:.3f}")
+    print(f"  DSR (project's 198 trials, sd=0.270 session-local): {dsr_project:.3f}")
+
+
 if __name__ == "__main__":
     print(f"{len(DF):,} bars  {DF.index[0]:%Y-%m-%d} -> {DF.index[-1]:%Y-%m-%d}"
           f"  (data: {LABEL})", file=sys.stderr)
     print(f"{len(REAL_FUNDING):,} funding settlements  "
           f"{REAL_FUNDING.index[0]} -> {REAL_FUNDING.index[-1]}", file=sys.stderr)
-    cmds = {"sweep": sweep, "causality": causality}
+    cmds = {"sweep": sweep, "causality": causality, "holdout": holdout}
     choice = sys.argv[1] if len(sys.argv) > 1 else ""
     if choice in cmds:
         cmds[choice]()
