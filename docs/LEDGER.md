@@ -114,6 +114,7 @@ the most expensive repeated mistake in this table.
 | R-29 | Trials-aware inference: block-bootstrap intervals, deflated Sharpe, combinatorially purged CV (Politis & Romano 1994; Bailey & López de Prado 2014; López de Prado 2018) | 08-17 | `src/tradebot/inference.py` + `scripts/inference.py`, applied to all 25 registered strategies on both markets: 96 paired comparisons, 100 deflated Sharpes, 45 CPCV splits | **10 of 96 adjacent pairs in the ranking are distinguishable at 95%, and none of them separates two of the table's top eight from each other.** The table's *final-balance* claim for `kelly_regime_v4` over holding on spot is a coin flip (P=0.52). The drawdown claim survives on the full history (−41.1pp [−54.8, −18.4]) and on the futures holdout, but **not** on the spot holdout (−27.1pp [−35.8, **+1.9**]). Cross-validating the table's own selection rule: it beats holding in **6 of 45** folds. | **METHOD** — the ordering is mostly noise, and now says so |
 | R-30 | Wire the intervals into the comparison table itself (backlog B-12) | 08-18 | `src/tradebot/evidence.py` reads R-29's `bootstrap.csv` into `tradebot run`: two verdict columns on the README table (Δ log growth and Δ max drawdown against `buy_and_hold`, each with its 95% paired interval and a ▲/≈/▼ mark), the full error bars in the per-market detail tables, the log-growth interval added to the bootstrap output — R-29 computed it and saved only the point — and a CI rule that a registered strategy with no measured interval fails the suite. 18 new tests. | **The column R-29 computed and discarded says more than the ones it kept.** On spot over the full history, **0 of 24 strategies are distinguishably better than `buy_and_hold` on log growth**, the criterion the table ranks by; 13 are distinguishably worse and the 11 indistinguishable ones are the entire profitable block. `kelly_regime_v4`'s +0.044 advantage is **[−2.60, +2.85]** — from a thirteenth of holding's final balance to seventeen times it. Everything R-29 published reproduced exactly. | **METHOD** — the warning now lives *in* the table, not beside it |
 | R-31 | Matched-risk frontier: e-process gate vs latched anchor vote at equal realized volatility (backlog B-11) | 08-18 | `experiments/matched_risk.py` — one sizer, one deadband, one warmup, one exposure knob, gate interchangeable. 36 configurations traced on both inner splits and both markets (144 backtests), exposures solved on inner-validation to within 2% of target volatility in both directions, then frozen; holdout scored with the R-29 paired block bootstrap | **Hold risk fixed and R-28's headline dissolves — both halves of it.** All 8 holdout intervals contain zero and the sign is unstable across cells; the one cell surviving the pre-registered validity gate gives −0.072 [−0.532, +0.379] on log growth. Three cells of four are **void**: the inner-validation exposure match did not survive into 2023+ (29% volatility gaps) or the spot notional cap truncated both arms differently (41% / 27% of bars). On ETH, with exposures re-matched, the e-process gate loses all four cells on return **and on drawdown** — so R-28's P3 replication was measured against an arm carrying 2.4x the risk. Equal-risk exposure ratio is itself regime-dependent: 2.2x in the bull, 4.7x in the bear. | **NEGATIVE** — the 0.27x exposure *was* the finding |
+| R-32 | The ungated control, and an independent second reading of B-11 | 08-18 | A parallel session ran the same backlog row the same day from the same base commit. Same design as R-31 (one sizer, gate interchangeable, exposure scaled by a scalar) plus a **third arm with no gate at all**; 33 configurations, 132 backtests, multipliers frozen on inner-validation | **Agrees with R-31 wherever the two overlap** — gates indistinguishable at matched risk, R-28's 0-of-40 inverted (deeper in 60%/62%), its fee advantage inverted, P1 failed — from an independent implementation, and its own holdout cells are **void** under R-31's validity rule (cap binds on 41%/36%/21% of spot bars; a 29% volatility gap on futures). What it adds: at matched risk the **ungated** arm is below both gated arms at every risk level in all four inner-split cells and loses 80–90% of 40 paired windows. **The gate is worth more than the choice of gate.** | **NEGATIVE** — and the parallel-branch report the routine requires |
 
 ### R-28 pre-registration — written and committed before the holdout was read
 
@@ -1038,6 +1039,147 @@ gates from no gate. (iii) P1 fails — the holdout is a bull and every gated
 arm averages under full exposure. (iv) R-28's "better risk, worse return"
 was exposure, not mechanism.
 
+### R-32 results — what the gate is worth, and R-31 replicated by an independent hand
+
+**Agreement with R-31 first, since that is most of this row's value.** Two
+implementations written without sight of each other, matching risk by
+different methods (R-31 solves for a target volatility; this branch
+interpolates a swept frontier), reach the same four conclusions: the two
+gates are **not distinguishable** at matched risk on the holdout (here
+Δ log growth −0.12 [−0.72, +0.50] spot, −0.26 [−1.25, +0.81] futures, all
+intervals containing zero on both axes); R-28's **0-of-40-windows**
+drawdown advantage **inverts** (here deeper in 60% of windows on spot and
+62% on futures, against R-31's 45–82%); the e-process gate's **fee**
+advantage inverts with it ($743 against the vote's $295 on the spot
+holdout, $1,956 against $977 at the 0.40% tier); and **P1 fails** ($2,911
+against holding's $3,839). One incidental cross-check: this branch's vote
+arm pins at spot's notional cap on **41.0%** of holdout bars — the same
+figure R-31 reports for its own vote arm, from different code.
+
+A validity check this branch ran and R-31 did not need: the `vote` arm is
+a reconstruction of the incumbent's gate on a plain sizer, and it lands on
+top of `kelly_regime_v4` — Δ log growth **−0.03 [−0.11, +0.05]**, Δ max
+drawdown −0.81pp.
+
+**R-31's validity gate, applied to this branch's cells — and it voids
+both holdout cells.** Honesty requires running the better instrument's
+rule against these numbers rather than only against its own:
+
+| cell | vote vol | other arms | max clamp | verdict under R-31's rule |
+|---|---|---|---|---|
+| spot | 0.32 | evidence 0.32, none 0.34 | **41.0% / 35.8% / 21.1%** | **VOID** — spot's 1.0-notional cap sets the position on a third of bars, differently for each arm |
+| futures | 0.41 | evidence 0.45, none **0.29** | 0.0% | **VOID** for the ungated comparison — a **29%** volatility gap between `none` and `vote`; the evidence/vote pair matches to 9% |
+
+So this branch's holdout table is a weaker instrument than R-31's, and the
+agreement above should be read as agreement *in direction*, resting on the
+inner splits and the window resample rather than on the single holdout
+path. Both branches reach the same place; only R-31's route is clean.
+
+**The arm R-31 did not run: no gate at all.** This is what the round adds
+to the record. On the inner splits, where matching is done *within* each
+split by interpolation rather than frozen across one, the ungated
+inverse-volatility arm sits **below both gated arms at every overlapping
+risk level, in all four cells**. The futures cells are the clean ones —
+the 5x notional cap never binds there (peak target 3.0 against a cap of
+5.0), so nothing is truncated:
+
+| matched realized vol | `none` | `vote` | `evidence` |
+|---|---|---|---|
+| inner-train futures, 0.30 | 1.94 | **2.52** | 2.19 |
+| inner-train futures, 0.95 | 3.35 | **5.79** | 5.34 |
+| inner-validation futures, 0.21 | −0.12 | **+0.10** | −0.06 |
+| inner-validation futures, 0.42 | −0.42 | −0.08 | **−0.02** |
+
+(log growth; spot agrees but carries the cap caveat). Across 40 identical
+random windows, paired, carrying the frozen exposures:
+
+| paired difference | Δ max DD | deeper in | Δ return | higher in |
+|---|---|---|---|---|
+| `vote` − `none`, spot | **−6.2pp** | 12% | **+20.0pp** | 80% |
+| `evidence` − `none`, spot | +0.4pp | 52% | +19.9pp | 65% |
+| `vote` − `none`, futures | +2.1pp | 60% | **+43.2pp** | 90% |
+| `evidence` − `none`, futures | +6.3pp | 62% | +75.3pp | 82% |
+| `evidence` − `vote`, spot | +4.8pp | 60% | −7.0pp | 38% |
+| `evidence` − `vote`, futures | +2.2pp | 62% | +6.3pp | 60% |
+
+At the same risk, gating on the latched vote returns a median **+20.0pp**
+per window more than not gating on spot while drawing down **6.2pp** less
+— better on both axes in 80% and 88% of windows — and **+43.2pp** in 90%
+of them on futures. The exposures here are frozen rather than re-matched
+per window, the same caveat R-31 attaches to its own window table, so this
+is evidence about direction and magnitude, not a certified interval. The
+holdout intervals for the same comparisons contain zero
+(`vote` − `none` spot: Δ growth +0.30 [−0.33, +0.93], Δ max DD −20.61
+[−28.78, +6.71]) — and that cell is void anyway.
+
+**The ordering of all three gates, and the falsification test.** Ranking
+by log growth per unit of realized volatility, `vote` > `evidence` >
+`none` in all four ETH/BTC cells (ETH spot 4.73 / 3.27 / 1.77; ETH futures
+5.16 / 3.73 / 2.25; the BTC control the same order), so P3 does not
+falsify the ordering. What it does falsify is the *transfer of the risk
+match*: on ETH the evidence arm realizes **0.64** volatility where it was
+matched to 0.32, and 69.3% drawdown against the vote arm's 36.3%. The
+multiplier that equalizes this gate's risk is a property of the asset and
+period it was fitted on, because the gate's duty cycle tracks the
+drift-to-noise ratio it measures. R-31 finds the same instability from the
+other side (2.2x in the bull, 4.7x in the bear).
+
+**P4 — not a plateau, and that is the same answer Q1 gives.** On
+inner-validation spot the comparison changes sign inside one grid step of
+the frozen multiplier (at matched volatility 0.33 the vote leads by 0.09
+log; at 0.38 the evidence arm leads by 0.06). Two interleaved frontiers,
+not two ordered ones. Assessed on inner-validation rather than the
+holdout: P1 already rejects, and spending 8 more consultations on a moot
+criterion is not a trade worth making.
+
+**Costs and deflation.** With funding charged on 5x futures the evidence
+arm keeps the one advantage that survives matching — **$2,925 at 33.9%
+drawdown paying $764** against the vote arm's $3,120 at 38.1% paying
+$1,283 — because its exposure is concentrated into fewer hours. This
+round's 33 configurations have an inner-validation daily-Sharpe dispersion
+of **0.222**, an independent reproduction of R-28's 0.223 from a search
+sharing none of its configurations, which matters because R-29's whole
+deflation rests on that quantity. Against the day's combined trials count
+(below): the vote arm's holdout Sharpe of 1.18 deflates to **0.879**, the
+evidence arm's 1.07 to **0.832**. Neither clears 0.95.
+
+**Verdict: NEGATIVE.** Q1 not established, P1 fails, decision rule
+untouched. The prediction scoreboard: (i) correct; (ii) **wrong at 95%**
+on the holdout — every interval contains zero, and both holdout cells are
+void besides — right in direction across 40 windows and all four inner
+cells; (iii) correct; (iv) correct, and stronger than predicted.
+
+**Lesson.** *The gate is worth more than the choice of gate.* Both gates
+beat no gate by ~20pp of median window return at equal risk and neither
+beats the other by anything measurable — the SIZE row of the standing
+diagnosis, one level down: a gate is a sizing decision, and the mechanism
+that produces it does not appear to matter much. Note what this does
+**not** say: the ungated arm here is a volatility-targeted one, not a
+de-levered `buy_and_hold`, so it is not an answer to **B-13**. It is a
+hint about it, and the hint is unfavourable — on the spot holdout the
+ungated arm at 0.72x holding's realized volatility gives up
+**−0.46 [−0.93, −0.01]** of log growth for only **−7.3pp
+[−12.4, +2.8]** of drawdown, which is the shape B-13 exists to measure
+properly.
+
+**Trials and holdout arithmetic for the day, across both branches.** The
+routine is explicit that the trials count is the total across parallel
+branches, not per branch: R-31's **36** plus this branch's **33** is
+**69**, so the count the project applies becomes 103 + 69 = **172** rather
+than either branch's own figure. **Holdout counter: ~124** — ~112 after
+R-31, +12 here (3 frozen arms × 2 markets, 3 spot fee-tier re-runs, 3
+funding-charged futures re-runs). Two sessions spending the holdout on the
+same question on the same day is exactly the cost the parallelism section
+of ROUTINE.md warns about, and it is worth recording that it happened by
+scheduling accident rather than by design.
+
+**Next step → B-13, then B-05**, agreeing with R-31. This branch adds one
+reason to prefer that order: the de-levered-benchmark question is the same
+arithmetic that dissolved R-28's finding, and the preview above suggests
+it will not be kind.
+
+![what a gate is worth at matched risk](../reports/gate_control/frontier.png)
+
 ---
 
 ## C. Ruled out — do not re-try without new evidence
@@ -1105,6 +1247,18 @@ recorder against a mock feed, so only the network policy — and not also
 the code — stands between this project and evidence it has not already
 spent.
 
+**Reconciled 08-18 after R-32.** Two sessions ran B-11 in parallel that
+day without knowing about each other, and both are recorded: R-31 is the
+primary result, R-32 the independent replication plus the ungated control
+R-31 did not run. The order above is unchanged — B-13 stays on top, and
+R-32's ungated arm gives an unfavourable preview of it — but two numbers
+are: the day's trials count is the **total across both branches** (36 + 33
+= **69**, so the project applies 103 + 69 = **172**), and the holdout
+counter is **~124**, not the ~112 either branch would report alone. Both
+branches were scheduled onto the same backlog row by accident, which is
+the cost ROUTINE.md's parallelism section describes, paid in holdout
+consultations.
+
 Two things changed the order. R-28 answered B-01. And a connectivity check
 found that **every exchange endpoint is blocked by the network policy
 these sessions run under** — Binance, Bitstamp, Kraken and Coinbase all
@@ -1121,7 +1275,7 @@ remains actionable is computation on the data already here.
 | ~~B-01~~ | ~~E-process regime detection with unified Kelly sizing~~ | ERR, N≈3 | **DONE → R-28**, qualified by R-31 | NEGATIVE on the promotion bar. It read as the strongest risk result in the project — 0 of 40 windows deeper than the incumbent — until B-11 compared the two at equal risk and found that number was about exposure, not about the gate. (R-26's null round listed this as untried; R-28 is the round that actually ran it.) |
 | ~~B-04~~ | ~~Purged CV, deflated Sharpe, block-bootstrap CIs on every headline~~ | ERR | **DONE → R-29** | The guess was right: 10 of 96 adjacent pairs distinguishable, none of them in the top eight. Also closes R-25. `tradebot.inference` is now a permanent module with 27 tests; step 4 of the routine can be mechanical from here. |
 | ~~B-12~~ | ~~Put the intervals *in* the comparison table~~ | ERR | **DONE → R-30** | The table now carries Δ growth and Δ max drawdown against `buy_and_hold`, each with a 95% interval, and a strategy without a measured interval fails CI. The by-product is the sharpest number in the project: **0 of 24 strategies are distinguishably better than holding on the criterion the table ranks by**, and v4's +0.044 edge is [−2.60, +2.85]. |
-| ~~B-11~~ | ~~Matched-risk frontier: e-process gate vs latched vote at equal realized volatility~~ | ERR, SIZE | **DONE → R-31** | Answered, negatively and usefully. At equal realized volatility the two gates are indistinguishable on the BTC holdout (all 8 intervals contain zero, sign unstable), three of four cells fail a pre-registered validity gate, and on ETH the e-process gate loses on **both** axes — so R-28's ETH drawdown replication was an artifact of carrying 2.4x less risk. The 0.27x exposure was the whole finding. |
+| ~~B-11~~ | ~~Matched-risk frontier: e-process gate vs latched vote at equal realized volatility~~ | ERR, SIZE | **DONE → R-31** | Answered, negatively and usefully. At equal realized volatility the two gates are indistinguishable on the BTC holdout (all 8 intervals contain zero, sign unstable), three of four cells fail a pre-registered validity gate, and on ETH the e-process gate loses on **both** axes — so R-28's ETH drawdown replication was an artifact of carrying 2.4x less risk. The 0.27x exposure was the whole finding. Also answered in parallel by **R-32**, which adds the arm neither the backlog row nor R-31 asked for: **no gate at all**, which loses to both gates at matched risk in every inner-split cell and in 80–90% of 40 paired windows. |
 | **B-05** | Funding as a gate on the existing strategy (stand flat in the top decile) | COST | **NEXT** | Actionable: uses the committed 2020–2023 funding file, no fetch. The low-turnover way to use R-16, and it directly targets the adverse timing in R-14. Higher-turnover standalone reversal use is where strategies go to die (R-12). |
 | **B-02** | Extend the funding series through 2026 | COST | **BLOCKED (network)** | Still the single cheapest item that could change a decision — the literature says the carry premium broke in 2024–25 and our data stops in 2023 — but Binance is unreachable from these sessions. Needs the operator. |
 | **B-03** | Funding harvest (delta-neutral spot vs short perp) | COST | BLOCKED on B-02 | +16.2%/yr with a −1.31% worst month is a risk profile nothing else here approaches — measured entirely in the good years. Unmodelled: basis risk, short-leg liquidation, exchange/custody risk, borrow cost. |
@@ -1168,3 +1322,4 @@ Also record, in the row or a footnote beneath it:
 | 08-18 | ~88 | R-30: **unchanged, and the reasoning is the point.** The bootstrap was re-run over the holdout to recover the log-growth interval, which looks like 50 fresh consultations and is not one: R-29 drew those exact resamples and computed that exact interval object, then persisted only two of its three fields. Every overlapping number came back bit-identical, which is the evidence. No new question was asked; a field was recovered from an answer already given. Read it as ~138 if you disagree — R-29's conclusion that no Sharpe-based claim from this dataset is supportable holds either way. |
 | 08-18 | ~112 | R-31: 12 matched-and-reference runs across two markets, 6 re-runs at the 0.40% taker tier, 6 with funding charged on futures. The ETH/BTC falsification cells and the 40-window resample do not read the 2023+ BTC holdout (the R-19/R-28 convention). Every configuration was frozen on inner-validation and the decision rule, the validity gate and the predictions were committed one commit ahead of the first holdout read — `git log` records it. Nothing here is offered as a Sharpe-based claim; the round's finding is that at matched risk there is no difference to claim. |
 | 08-17 | ~38 | R-28: three configurations × two markets, plus two cost re-runs. The ETH falsification test and the 40-window resample do not read the 2023+ BTC holdout. At 24 trials in a single session the deflated Sharpe was already 0.859; at ~38 program-level consultations, treat any Sharpe-based claim from this dataset as unsupportable and judge on drawdown, which is the property that has repeatedly replicated. |
+| 08-18 | ~124 | R-32: +12 on top of R-31's ~112 (3 frozen arms × 2 markets, 3 spot fee-tier re-runs, 3 funding-charged futures re-runs). The number that matters is not the increment but why it exists: **two sessions were scheduled onto the same backlog row on the same day and each spent the holdout on it independently**. Neither branch did anything wrong — both pre-registered, both froze before reading — but the day cost ~36 consultations and 69 trials for one question, and the project applies 103 + 69 = **172** trials from here. If parallel sessions are going to run, ROUTINE.md's rule that the trials count is the total across branches is the thing that keeps the arithmetic honest; this is the first time it has actually been needed. |

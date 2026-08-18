@@ -595,6 +595,48 @@ spot's 1.0-notional ceiling, so the two arms are not running the same
 sizer. It is the most flattering number in the round and it is not a
 result.
 
+### And what is a gate worth at all? The ungated control
+
+A second session ran B-11 in parallel the same day, from the same base
+commit and without sight of the first (ledger row **R-32**). It agrees
+with everything above from an independent implementation — the two gates
+indistinguishable at matched risk, the 0-of-40 windows inverting to
+60%/62%, the fee advantage inverting, P1 failing — and its own holdout
+cells are **void under the validity gate quoted above**, which is worth
+knowing: the rule catches a second round it was not written for.
+
+What it adds is a third arm neither B-11 nor R-31 asked for: **no gate at
+all**, pure inverse-volatility targeting, run at matched risk against the
+other two. On the inner splits, matched within each split rather than
+frozen across one, the ungated arm sits below both gated arms at **every
+overlapping risk level in all four cells**. The futures cells are the
+clean ones, since the 5x notional cap never binds there:
+
+| matched realized vol | `none` | `vote` | `evidence` |
+|---|---|---|---|
+| inner-train futures, 0.30 | 1.94 | **2.52** | 2.19 |
+| inner-train futures, 0.95 | 3.35 | **5.79** | 5.34 |
+| inner-validation futures, 0.21 | −0.12 | **+0.10** | −0.06 |
+| inner-validation futures, 0.42 | −0.42 | −0.08 | **−0.02** |
+
+_log growth at matched risk; spot agrees and carries the notional-cap caveat._
+
+Paired over 40 identical random windows carrying the frozen exposures, on
+spot the vote gate returns a median **+20.0pp** more than not gating **and**
+draws down **6.2pp** less — better on both axes in 80% and 88% of windows —
+and **+43.2pp** in 90% of them on futures. The holdout intervals for the
+same comparison contain zero, and that cell is void besides, so this is
+evidence about direction and magnitude rather than a certified interval.
+
+Taken with the rest of the section: **the gate is worth more than the
+choice of gate.** Which quantity opens it — a latched price vote or an
+anytime-valid e-process — is not distinguishable; having one is worth
+about 20 percentage points of window return at the same risk. Reproduce
+with `python experiments/run_gate_control.py {frontier,match,holdout,inference,eth,costs,windows,chart}`;
+chart and raw window rows in `reports/gate_control/`.
+
+![what a gate is worth at matched risk](../reports/gate_control/frontier.png)
+
 ## Does the starting balance matter?
 
 Almost never, which is why the framework now defaults to a single $1,000
