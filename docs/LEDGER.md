@@ -625,6 +625,128 @@ CI-enforced registration rule.
 generate evidence, and the ranked backlog below is unchanged by it except
 that the two remaining computation-only items are now the top of it.
 
+### R-31 pre-registration — written and committed before the holdout was read
+
+**Idea, in one sentence.** R-28 compared an e-process evidence gate with
+the incumbent's latched anchor vote at two *different* exposure levels and
+concluded "better risk, worse return"; hold the sizer, the deadband, the
+warmup and the exposure fixed, vary only which quantity opens the gate,
+and ask which gate delivers more return at the same realized volatility.
+
+**Constraint attacked.** ERR and SIZE. ERR because the question is whether
+anytime-valid error control in the signal path buys anything once its
+known side effect — holding less — has been removed by construction. SIZE
+because the exposure axis is exactly the "how much" question this
+project's only profitable strategies answer.
+
+**Which ledger rows it is not a duplicate of.** R-28 is the direct parent
+and named this as its next step (B-11): it measured *one* point on an
+exposure/evidence trade-off and compared it against the incumbent at a
+different point, so its headline is partly a tautology.
+L-04 / L-01 / L-02 / L-03 vary the vote and never touch the gate
+mechanism. R-11 and the leverage frontier in `VALIDATION.md` vary exposure
+with the gate held fixed — the mirror image of this round. Nothing here
+re-tries R-03 (BOCPD) or R-01 (HMM).
+
+**Simulable here?** Yes. One price series, causal, no new data, no fetch.
+
+**What would make it fail — named before any code ran.** (a) The two gates
+are the same object at different smoothings, so at matched risk their
+returns coincide inside the ±0.2 Sharpe noise floor and the round adds an
+interval rather than a finding. (b) Matching on volatility does not match
+on drawdown, so an apparent risk win survives only on the axis that was
+not matched. (c) The e-process arm needs several times the incumbent's
+exposure to reach its volatility, and on spot the 1.0-notional cap binds,
+so "same sizer" quietly stops being true at the top of the frontier.
+
+**Method, fixed in advance.** One `GatedKelly` class
+(`experiments/matched_risk.py`) with an interchangeable gate. The exposure
+knob `k` multiplies `target_vol`, `max_leverage` and `deadband` together;
+because `min(k·tv/vol, k·ml) == k·min(tv/vol, ml)` exactly, that rescales
+the position and changes nothing about its timing. `evidence_cap_mult`
+stays at **1.0** — R-28's explicit warning was that raising exposure
+through the cap keeps stale evidence alive and grows drawdown
+superlinearly. Exposures are solved on **inner-validation only**, to
+within 2% of the target realized volatility, in both directions. The
+holdout statistic is the R-29/R-30 paired stationary block bootstrap:
+30-day mean block, 2,000 resamples, daily returns, identical resample
+indices for both arms of a pair.
+
+**Frozen configuration.** Gate ∈ {`vote` (20/40/80-day latched anchors,
+1% band), `evidence` (bet half-life 20d, α=0.05, clip 5, cap 1.0)}; sizer
+`plain` (`min(target_vol/vol, max_leverage)`, the `kelly_regime` sizer and
+the one R-28's E1 used, so the numbers stay comparable); `target_vol=0.55`,
+`max_leverage=2.0`, `deadband=0.10`, `vol_span=8d`. The exposures solved
+on inner-validation, and frozen here:
+
+| market | direction | matched to vol | vote k | evidence k |
+|---|---|---|---|---|
+| spot | match-up | 0.325 | 1.000 | **4.696** |
+| spot | match-down | 0.087 | **0.262** | 1.000 |
+| futures 5x | match-up | 0.322 | 1.000 | **3.725** |
+| futures 5x | match-down | 0.136 | **0.372** | 1.000 |
+
+The `conditional` sizer (`kelly_regime_v3`'s extreme-only targeting) was
+swept on both inner splits and its matched exposures solved, but it is
+**deliberately not carried to the holdout**: at ~88 prior consultations
+the cheapest thing this project can do with the holdout is ask it fewer
+questions. Recording that here so it is a pre-registered economy and not
+a post-hoc choice of which arm to report.
+
+**V — validity gate, checked before any decision rule is read.** A cell is
+a matched comparison only if, *on the holdout*, the two arms' realized
+volatilities are within **20% of each other in relative terms** and the
+notional-cap clamp fraction is **below 1% for both arms**. Exposure is
+frozen on inner-validation; if the risk match does not survive into 2023+
+then the cell is not matched, and above the cap it is the market rather
+than the gate that is setting the position. Failing cells are reported and
+**voided**, not scored.
+
+**Pre-registered decision rules.**
+
+- **D1 (the B-11 question).** The e-process gate is better at matched risk
+  only if the paired Δ log growth (evidence − vote) interval **excludes
+  zero in the same direction in every valid cell** — both markets, both
+  matching directions. The same rule with the sign flipped declares the
+  vote better. Anything else is **not established**, which is the default.
+- **D2 (the axis that was not matched).** The same rule on Δ max drawdown,
+  reported whatever D1 says.
+- **D3 (falsification, chosen now).** ETH on Bitfinex over the R-17
+  window, exposures re-matched on ETH's own volatility. The **ordering**
+  must replicate: the gate that wins on the BTC holdout must win on ETH in
+  both directions. If it flips on a second asset, any D1 claim is dead.
+- **P (promotion).** Nothing is promoted from D1 alone. A gate that wins
+  D1 and D3 still faces the full ROUTINE bar before registration: beat
+  `buy_and_hold` on the spot holdout after real costs, exceed the ±0.2
+  Sharpe noise floor or cut drawdown by ≥10pp, and sit on a plateau in k.
+
+**Stated predictions before looking.**
+
+1. **D1 fails**, and the reason is already visible in the inner splits. At
+   matched volatility on spot the vote wins inner-train 2017–2020 ($15.4K
+   against roughly $10.2K at vol 0.379) and the e-process wins
+   inner-validation 2021–2022 (about $1,265 against $909 at vol 0.325).
+   Same asset, same sizer, same risk — what differs is *when* each arm is
+   on, so the ordering should track the regime. 2023+ is a bull, so I
+   predict the **vote wins the holdout**, and D1 therefore returns "not
+   established": a rule that reverses with the regime is not a finding
+   about gates.
+2. **D2**: the e-process arm keeps a drawdown advantage on at least one
+   market even at matched volatility, because it concentrates exposure
+   into fewer, longer holds rather than spreading it.
+3. **V is the condition most at risk.** The exposure that matched risk in
+   2021–22 need not match it in 2023+, and if it does not, this round's
+   answer is that the question cannot be asked of this dataset without
+   re-matching on the holdout — which would be selection on the holdout.
+
+**Configurations evaluated in step 3: 36** — the frontier grid, 2 sizers ×
+2 gates × 9 exposures, each scored on inner-train and inner-validation on
+both markets (144 backtests). A further **32 inner-validation backtests**
+were spent by the exposure solver; they select `k`, but on a criterion
+(equalize realized volatility) that is orthogonal to performance, so they
+are recorded separately rather than folded into the trials count. No
+holdout data has been read at the time of this commit.
+
 ---
 
 ## C. Ruled out — do not re-try without new evidence
