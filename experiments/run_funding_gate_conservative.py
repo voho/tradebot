@@ -176,13 +176,13 @@ def sweep() -> None:
     best = res_df.iloc[0]
     print(f"\nSelected on inner-validation (max variant-minus-v4 log-growth):")
     print(f"  decile_in={best.decile_in}  decile_out={best.decile_out}  "
-          f"funding_lookback_days={int(best.lookback)}")
+          f"funding_lookback_days={int(best.funding_lookback_days)}")
     print(f"  inner-validation log-growth: variant={best.valid_log_growth:+.4f}  "
           f"kelly_regime_v4={best.baseline_log_growth:+.4f}  "
           f"edge={best.edge:+.4f}")
 
     frozen = {"decile_in": float(best.decile_in), "decile_out": float(best.decile_out),
-              "funding_lookback_days": int(best.lookback)}
+              "funding_lookback_days": int(best.funding_lookback_days)}
     (OUT / "frozen.json").write_text(pd.Series(frozen).to_json(indent=2) + "\n")
     print(f"written: {OUT / 'frozen.json'}")
 
