@@ -11,6 +11,7 @@ from tradebot.broker import MarketSpec
 from tradebot.engine import BacktestResult, run_backtest
 from tradebot.metrics import Metrics, compute_metrics
 from tradebot.registry import available_strategies, get_strategy
+from tradebot.evidence import load_evidence, ordering_counts
 from tradebot.report import (
     comparison_report,
     overlay_chart,
@@ -94,7 +95,23 @@ def run_matrix(cfg: RunConfig) -> tuple[list[Metrics], list[BacktestResult]]:
     first_df = next(iter(datasets.values()))[0]
     period = (f"{first_df.index[0]:%Y-%m-%d} to {first_df.index[-1]:%Y-%m-%d} "
               f"({len(first_df):,} x 5m bars)")
-    md = comparison_report(all_metrics, cfg.out_dir, period=period)
+    # R-29's intervals, if they are on disk (backlog B-12). They describe
+    # the full 2017-2026 history, so a trimmed run gets none rather than a
+    # mismatched one; the per-market keys likewise only match a 5x futures
+    # run, because that is the leverage they were measured at.
+    evidence: dict = {}
+    ordering: dict = {}
+    if not cfg.max_bars:
+        evidence = load_evidence(cfg.out_dir)
+        ordering = ordering_counts(cfg.out_dir)
+        if not evidence:
+            print("no bootstrap intervals found under "
+                  f"{Path(cfg.out_dir) / 'inference'}; the comparison table "
+                  "will print point estimates only (run scripts/inference.py)",
+                  file=sys.stderr)
+
+    md = comparison_report(all_metrics, cfg.out_dir, period=period,
+                           evidence=evidence, ordering=ordering)
     print_comparison(all_metrics)
     print(f"\nreport: {md}\ncharts: {charts_dir}/", file=sys.stderr)
 
@@ -103,7 +120,8 @@ def run_matrix(cfg: RunConfig) -> tuple[list[Metrics], list[BacktestResult]]:
     full_run = set(names) >= set(available_strategies())
     real_data = all(m.data_label != "SYNTHETIC" for m in all_metrics)
     if full_run and real_data and not cfg.max_bars:
-        if update_readme(all_metrics, cfg.readme, period=period):
+        if update_readme(all_metrics, cfg.readme, period=period,
+                         evidence=evidence, ordering=ordering):
             print(f"updated comparison table in {cfg.readme}", file=sys.stderr)
     else:
         print("README comparison not updated (partial/synthetic/trimmed run)",

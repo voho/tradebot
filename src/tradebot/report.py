@@ -26,6 +26,8 @@ import inspect  # noqa: E402
 import os  # noqa: E402
 
 from tradebot.engine import BacktestResult  # noqa: E402
+from tradebot.evidence import (BETTER, CORPSE, SAME,  # noqa: E402
+                               WORSE, Evidence)
 from tradebot.metrics import Metrics  # noqa: E402
 
 # --- reference palette (light mode) -----------------------------------------
@@ -316,7 +318,17 @@ def _outcome_badge(m: Metrics) -> str:
     return "🔴"
 
 
-def matrix_table(all_metrics: list[Metrics], out_dir: str | Path | None = None) -> str:
+#: The market the promotion bar is stated against. README, ROUTINE and
+#: LEDGER all agree: leveraged buy-and-hold is not a benchmark but a stress
+#: case, and it gets liquidated — so "did it beat holding?" is a question
+#: about spot, and the verdict column answers it there whichever market a
+#: row's balance happens to be bolded in.
+BENCHMARK_MARKET = "spot"
+
+
+def matrix_table(all_metrics: list[Metrics], out_dir: str | Path | None = None,
+                 evidence: dict[tuple[str, str], Evidence] | None = None,
+                 ordering: dict[str, tuple[int, int]] | None = None) -> str:
     """Scannable leaderboard: one row per strategy, one balance per market.
 
     Results are almost perfectly proportional to the starting balance, so
@@ -329,6 +341,15 @@ def matrix_table(all_metrics: list[Metrics], out_dir: str | Path | None = None) 
 
     Rows are ranked by best final balance; the strategy's best market is
     bolded and a liquidation is marked ``!``.
+
+    When ``evidence`` is supplied (R-29's paired bootstrap intervals, see
+    :mod:`tradebot.evidence`) two columns are appended: the paired
+    difference from ``buy_and_hold`` in log growth and in max drawdown,
+    each with its interval. They sit *after* the observed numbers because
+    the divide is real — everything to their left happened on one path,
+    and only they say whether it is distinguishable from having done
+    nothing. Without evidence the table renders exactly as before: the
+    intervals are an enrichment, not a dependency.
     """
     by_key = {(m.strategy, m.market, m.start_balance): m for m in all_metrics}
     markets = sorted({m.market for m in all_metrics},
@@ -356,15 +377,26 @@ def matrix_table(all_metrics: list[Metrics], out_dir: str | Path | None = None) 
                     return True
         return False
 
-    header = ("| # | strategy | " + " | ".join(markets)
-              + " | trades | profit | max DD |")
-    sep = "|" + "|".join("---" for _ in range(len(markets) + 5)) + "|"
+    evidence = evidence or {}
+    # The evidence columns go last, after everything observed on this one
+    # path: left of the divide is what happened, right of it is whether it
+    # is distinguishable from having done nothing.
+    evidence_cols = ([f"growth vs hold ({BENCHMARK_MARKET})",
+                      f"max DD vs hold ({BENCHMARK_MARKET})"] if evidence else [])
+    columns = ["#", "strategy", *markets, "trades", "profit", "max DD",
+               *evidence_cols]
+    header = "| " + " | ".join(columns) + " |"
+    sep = "|" + "|".join("---" for _ in columns) + "|"
     lines = [header, sep]
     any_dagger = False
     for rank, name in enumerate(strategies, 1):
         best_market = max((mk for mk in markets if (name, mk) in ref),
                           key=lambda mk: ref[(name, mk)].final_balance, default=None)
         best = ref.get((name, best_market)) if best_market else None
+        # Pinned to the benchmark's market, not the row's bolded one: on
+        # 5x futures `buy_and_hold` is liquidated in early 2017, so a
+        # verdict there would be measured against a corpse (R-22).
+        ev = evidence.get((name, BENCHMARK_MARKET))
         label = _strategy_cell(name, out_dir)
         if scale_sensitive(name):
             label += " †"
@@ -387,6 +419,9 @@ def matrix_table(all_metrics: list[Metrics], out_dir: str | Path | None = None) 
             if best.max_drawdown_pct >= DEEP_DRAWDOWN_PCT:
                 dd += " ⚠️"
             cells += [f"{best.num_trades:,}", f"{arrow} {_money(best.profit)}", dd]
+        if evidence_cols:
+            cells += ([ev.growth_cell(), ev.drawdown_cell()] if ev
+                      else ["—", "—"])
         lines.append("| " + " | ".join(cells) + " |")
 
     legend = (f"_Balances from a {_money(ref_balance)} start · bold = the "
@@ -398,8 +433,65 @@ def matrix_table(all_metrics: list[Metrics], out_dir: str | Path | None = None) 
                    f"{SCALE_TOLERANCE_PCT:g}pp at a larger starting balance — the "
                    "exchange minimum order size blocks small rebalances on a "
                    "small account. Everything else is proportional to capital._")
+    if evidence:
+        legend += "\n\n" + _evidence_legend(evidence, ordering)
     lines.append("")
     lines.append(legend)
+    return "\n".join(lines)
+
+
+def _evidence_legend(evidence: dict[tuple[str, str], Evidence],
+                     ordering: dict[str, tuple[int, int]] | None) -> str:
+    """Explain the two evidence columns, and what they do *not* license.
+
+    A reader who sees a gold medal beside an interval containing zero
+    needs to be told, in the same place, that the medal is the weaker of
+    the two statements.
+    """
+    sample = next(iter(evidence.values()))
+    counted = [ev for (_, market), ev in evidence.items()
+               if market == BENCHMARK_MARKET and not ev.is_benchmark]
+    n_better = sum(ev.growth_distinguishable and ev.d_log_growth > 0
+                   for ev in counted)
+    lines = [
+        f"_The last two columns are the only ones that answer **\"is this "
+        f"difference real?\"** Both are paired differences against "
+        f"`buy_and_hold` on {BENCHMARK_MARKET} over the {sample.period} "
+        f"period ({sample.days:,} daily observations), each with a 95% "
+        f"stationary block-bootstrap interval — 30-day mean block, 2,000 "
+        f"resamples, the identical resample applied to both strategies so "
+        f"the market's own variance cancels instead of swamping the gap. "
+        f"{BETTER} / {WORSE} = the interval excludes zero and the strategy is "
+        f"better / worse; **{SAME} = it contains zero, so the difference from "
+        f"simply holding is not established**._",
+        "",
+        f"_**Growth**, not Sharpe, because final balance is what this table "
+        f"ranks by — and the two disagree. **{BENCHMARK_MARKET}**, because "
+        f"leveraged buy-and-hold is a stress case rather than a benchmark: it "
+        f"is liquidated in early 2017, and an account that cannot draw down "
+        f"further is not something to draw down less than (R-22). On this "
+        f"run **{n_better} of {len(counted)}** strategies are distinguishably "
+        f"better than holding on growth; the drawdown column is where the "
+        f"project's findings actually live._",
+    ]
+    if ordering:
+        counts = " · ".join(
+            f"**{k} of {n}** on {market}"
+            for market, (k, n) in sorted(
+                ordering.items(),
+                key=lambda kv: (0 if kv[0] == BENCHMARK_MARKET else 1, kv[0]))
+        )
+        lines += [
+            "",
+            f"_Adjacent steps down this ranking that survive the same test: "
+            f"{counts}. The order is a display convention, not a result — "
+            f"read the table as buckets._",
+        ]
+    lines += [
+        "",
+        "_Regenerate with `python scripts/inference.py`; the numbers live in "
+        "`reports/inference/bootstrap.csv`._",
+    ]
     return "\n".join(lines)
 
 TABLE_COLS = [
@@ -427,11 +519,23 @@ def _fmt(value, spec: str) -> str:
     return spec.format(value)
 
 
-def markdown_table(group: list[Metrics], out_dir: str | Path | None = None) -> str:
-    """One markdown table, sorted by final balance (primary criterion)."""
+EVIDENCE_COLS = ["Δ sharpe vs hold", "Δ max DD vs hold", "Δ log growth vs hold",
+                 "P(growth > hold)"]
+
+
+def markdown_table(group: list[Metrics], out_dir: str | Path | None = None,
+                   evidence: dict[tuple[str, str], Evidence] | None = None) -> str:
+    """One markdown table, sorted by final balance (primary criterion).
+
+    With ``evidence``, four paired-bootstrap columns are appended: this is
+    the detail table, so it carries the full error bars that the README's
+    summary compresses into one ``vs hold`` cell.
+    """
+    evidence = evidence or {}
     rows = sorted(group, key=lambda m: m.final_balance, reverse=True)
-    header = "| " + " | ".join(h for _, h, _ in TABLE_COLS) + " |"
-    sep = "|" + "|".join("---" for _ in TABLE_COLS) + "|"
+    extra = EVIDENCE_COLS if evidence else []
+    header = "| " + " | ".join([h for _, h, _ in TABLE_COLS] + extra) + " |"
+    sep = "|" + "|".join("---" for _ in range(len(TABLE_COLS) + len(extra))) + "|"
     lines = [header, sep]
     for m in rows:
         d = m.as_row()
@@ -439,6 +543,11 @@ def markdown_table(group: list[Metrics], out_dir: str | Path | None = None) -> s
         link = _source_path(m.strategy, out_dir)
         if link:
             cells[0] = f"[{m.strategy}]({link})"
+        if evidence:
+            ev = evidence.get((m.strategy, m.market))
+            cells += ([ev.sharpe_cell(), ev.drawdown_cell(), ev.growth_cell(),
+                       f"{ev.p_growth_beats_hold:.2f}"]
+                      if ev else ["—"] * len(EVIDENCE_COLS))
         lines.append("| " + " | ".join(cells) + " |")
     return "\n".join(lines)
 
@@ -448,7 +557,9 @@ README_END = "<!-- comparison:end -->"
 
 
 def update_readme(all_metrics: list[Metrics], readme_path: str | Path,
-                  period: str = "") -> bool:
+                  period: str = "",
+                  evidence: dict[tuple[str, str], Evidence] | None = None,
+                  ordering: dict[str, tuple[int, int]] | None = None) -> bool:
     """Splice the consolidated comparison table into the README.
 
     The table lands between the ``comparison:begin``/``end`` markers,
@@ -464,7 +575,8 @@ def update_readme(all_metrics: list[Metrics], readme_path: str | Path,
 
     labels = ", ".join(sorted({m.data_label for m in all_metrics}))
     head = f"_Period: {period} · data: {labels}_\n\n" if period else f"_Data: {labels}_\n\n"
-    table = matrix_table(all_metrics, out_dir=readme_path.parent)
+    table = matrix_table(all_metrics, out_dir=readme_path.parent,
+                         evidence=evidence, ordering=ordering)
     before = text.split(README_BEGIN)[0]
     after = text.split(README_END)[1]
     readme_path.write_text(
@@ -473,7 +585,9 @@ def update_readme(all_metrics: list[Metrics], readme_path: str | Path,
 
 
 def comparison_report(all_metrics: list[Metrics], out_dir: str | Path,
-                      period: str = "") -> Path:
+                      period: str = "",
+                      evidence: dict[tuple[str, str], Evidence] | None = None,
+                      ordering: dict[str, tuple[int, int]] | None = None) -> Path:
     """Write comparison.md + comparison.csv; return path to the markdown."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -485,8 +599,20 @@ def comparison_report(all_metrics: list[Metrics], out_dir: str | Path,
     parts.append(f"Data: {', '.join(sorted(data_labels))}  ")
     parts.append("Ranked by **final balance** (the primary comparison criterion); "
                  "rows ordered by each strategy's best config.")
+    if evidence:
+        parts.append("")
+        parts.append(
+            "Every comparison against `buy_and_hold` carries a 95% paired "
+            "block-bootstrap interval. A rank is not a result: see the legend "
+            "under the table for how much of this ordering survives that "
+            f"test. In the per-market detail tables below, {CORPSE} marks a "
+            "comparison made against a `buy_and_hold` account that was "
+            "liquidated early and inert for most of the period — on 5x "
+            "futures it dies in January 2017, so beating it there is a "
+            "statement about surviving leverage, not about edge (R-22).")
     parts.append("")
-    parts.append(matrix_table(all_metrics, out_dir))
+    parts.append(matrix_table(all_metrics, out_dir, evidence=evidence,
+                              ordering=ordering))
     parts.append("")
     parts.append("## Details per market and starting balance")
     parts.append("")
@@ -497,7 +623,8 @@ def comparison_report(all_metrics: list[Metrics], out_dir: str | Path,
     for (market, balance) in sorted(groups):
         parts.append(f"### {market} · start balance {_money(balance)}")
         parts.append("")
-        parts.append(markdown_table(groups[(market, balance)], out_dir))
+        parts.append(markdown_table(groups[(market, balance)], out_dir,
+                                    evidence=evidence))
         parts.append("")
 
     md_path = out_dir / "comparison.md"

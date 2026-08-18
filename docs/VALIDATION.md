@@ -229,6 +229,31 @@ comfortable:
    log-growth advantage over holding on spot is +0.044, with
    P(beats holding) = **0.52**. A coin flip.
 
+**How wide is that coin flip?** R-29 reported the point and the
+probability but not the interval. Adding it (R-30) makes the position
+much starker than "0.52" sounds:
+
+| period / market | Δ log growth vs holding | 95% CI |
+|---|---|---|
+| `kelly_regime_v4`, full / spot | +0.044 | [−2.60, +2.85] |
+| `kelly_regime_ev_fast`, full / spot | +0.107 | [−3.08, +3.29] |
+| `kelly_regime_v4`, holdout / spot | −0.129 | [−0.94, +0.74] |
+
+An interval of [−2.60, +2.85] in log growth spans everything from ending
+with **a thirteenth** of what holding made to ending with **seventeen
+times** it. That is the honest width of the table's headline claim over a
+decade of 5m bars, and it is why the ranking cannot be read as a ranking.
+
+Run across the whole table, on spot over the full history: **0 of 24
+strategies are distinguishably better than `buy_and_hold` on growth**, 13
+are distinguishably worse, and the remaining 11 — which is the entire
+profitable block — are indistinguishable from it. On the same rows the
+drawdown column gives **13 of 24 distinguishably shallower**. The two
+columns disagree by construction and that disagreement is the finding:
+`kelly_regime_v4`'s ΔSharpe of +0.47 [+0.07, +0.87] *does* exclude zero
+while its Δgrowth does not, because Sharpe rewards the volatility the
+strategy removes and final balance does not.
+
 ### Deflated Sharpe: nothing survives out-of-sample
 
 Bailey & López de Prado (2014), against **103 trials** counted from the
@@ -280,6 +305,42 @@ On spot, re-ranking the table inside each fold and holding the winner
 of choosing a strategy rather than tuning a parameter. The futures column
 cannot answer the question, because the benchmark is dead in four fifths
 of the folds.
+
+### The intervals ship inside the table
+
+Everything above was, until R-30, a document sitting beside a comparison
+table that still printed bare point estimates in rank order. A reader who
+saw the table and not this file got the confident version. So the
+intervals were wired into `tradebot run` itself
+(`src/tradebot/evidence.py`): every regeneration of the README table now
+reads `reports/inference/bootstrap.csv` and appends two columns — the
+paired difference from `buy_and_hold` in log growth and in max drawdown,
+each with its 95% interval and a ▲ / ≈ / ▼ verdict. The per-market detail
+tables in `reports/comparison.md` carry the Sharpe interval and
+P(growth > hold) as well.
+
+Three details are load-bearing rather than cosmetic:
+
+- **The verdict columns are pinned to spot**, whichever market a row's
+  balance is bolded in. On 5x futures `buy_and_hold` is liquidated in
+  January 2017 and inert for 99.7% of the full period, so seven
+  strategies show a growth interval excluding zero *against a corpse*.
+  Those never reach the summary table; they appear in the futures detail
+  table flagged ☠. This is the R-22 mistake in its natural habitat, and
+  the display refuses to make it.
+- **The columns sit after the observed numbers**, not among them.
+  Everything to their left happened on one path; only they say whether it
+  is distinguishable from having done nothing.
+- **A registered strategy without a measured interval fails CI**
+  (`tests/test_evidence.py`), for both markets and both periods. A new
+  row that entered the table as a bare point estimate beside rows
+  carrying error bars would read as the *stronger* number, which is the
+  reverse of the truth.
+
+The intervals themselves are unchanged from R-29 — the rebuild reproduced
+the self-test (+3.74 [+2.37, +5.03]; noise DSR 0.637) and the ordering
+counts (3 / 2 / 4 / 1 = 10 of 96) exactly, which is worth knowing about a
+pipeline whose whole job is to be trusted.
 
 ## Monte Carlo window stress test
 

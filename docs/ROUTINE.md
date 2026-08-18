@@ -204,10 +204,12 @@ falsification outcome, verdict, one-line lesson, next step.
 
 Then, by verdict:
 
-- **PROMOTED** → register the strategy, run the full `tradebot run`,
-  refresh the README table, `docs/STRATEGIES.md` and
-  `docs/VALIDATION.md`. CI fails if a registered strategy is missing
-  from the README table.
+- **PROMOTED** → register the strategy, run `python scripts/inference.py`
+  so it has an interval, then the full `tradebot run` to regenerate the
+  README table with that interval in it, and refresh
+  `docs/STRATEGIES.md` and `docs/VALIDATION.md`. CI fails if a
+  registered strategy is missing from either the README table or
+  `reports/inference/bootstrap.csv`.
 - **NEGATIVE** → ledger row plus code under `experiments/` (not
   auto-discovered), **unless** the negative is instructive enough to
   earn a table row the way `minority_oracle` and `game_switch` did.
@@ -230,6 +232,7 @@ EMA-cross template, auto-discovered on the next run:
 tradebot new my_strategy
 pytest                                        # no-lookahead check runs for it automatically
 tradebot run --strategies my_strategy buy_and_hold --max-bars 100000   # quick compare
+python scripts/inference.py                   # its interval; CI requires one
 ```
 
 Or write the file by hand:
@@ -271,14 +274,22 @@ also offers `history(n)`, `equity`, `position`, `can_short`, and raw
 `buy(qty)` / `sell(qty)`. `ctx.bar` / `ctx.prev` are fast mapping-style
 views (`bar["rsi"]`).
 
-Two rules are CI-enforced for every registered strategy (GitHub Actions
+Three rules are CI-enforced for every registered strategy (GitHub Actions
 runs the suite on each push/PR):
 
 - it **must have a docstring** describing the idea (first line lands in
-  the comparison table and `tradebot list`), and
+  the comparison table and `tradebot list`);
 - it **must appear in the README comparison table** — run the full
   `tradebot run` after adding a strategy, commit the regenerated
-  README + reports, and CI stays green.
+  README + reports, and CI stays green; and
+- it **must have a measured interval** in
+  `reports/inference/bootstrap.csv`, on both markets and both periods —
+  `python scripts/inference.py` writes it, and
+  `tests/test_evidence.py` fails without it (R-30). The point is that a
+  new row cannot enter the table as a bare point estimate beside rows
+  that carry error bars; that asymmetry is how a fresh number gets read
+  as a better one. Run the inference script **before** `tradebot run`, so
+  the regenerated table already carries the new row's interval.
 
 Registration is the *end* of the routine, not a shortcut past it: a
 strategy is registered either because it was **PROMOTED**, or because it

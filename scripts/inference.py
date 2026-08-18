@@ -283,7 +283,13 @@ def bootstrap(curves: dict[str, pd.DataFrame], strategies: list[str],
                     "d_max_dd_pp": dd.diff.point,
                     "d_max_dd_lo": dd.diff.lo, "d_max_dd_hi": dd.diff.hi,
                     "p_dd_deeper_than_hold": dd.p_positive,
+                    # Log growth is the table's own ranking criterion, so
+                    # its interval is the one the comparison table prints
+                    # (B-12). It disagrees with the Sharpe interval more
+                    # often than one would like, which is the point.
                     "d_log_growth": growth.diff.point,
+                    "d_log_growth_lo": growth.diff.lo,
+                    "d_log_growth_hi": growth.diff.hi,
                     "p_growth_beats_hold": growth.p_positive,
                 })
     frame = _table(rows, "bootstrap")
@@ -297,17 +303,21 @@ def bootstrap(curves: dict[str, pd.DataFrame], strategies: list[str],
                   f"{MEAN_BLOCK:.0f}-day mean block")
             print(f"  {'strategy':22s} {'Sharpe (95% CI)':>22s} "
                   f"{'ΔSharpe vs hold':>25s} {'P>hold':>7s} "
-                  f"{'maxDD':>6s} {'ΔmaxDD vs hold':>25s}")
+                  f"{'maxDD':>6s} {'ΔmaxDD vs hold':>25s} "
+                  f"{'Δlog growth vs hold':>25s}")
             for _, row in sub.iterrows():
                 star = "*" if row.d_sharpe_lo > 0 or row.d_sharpe_hi < 0 else " "
                 dstar = "*" if row.d_max_dd_lo > 0 or row.d_max_dd_hi < 0 else " "
+                gstar = "*" if row.d_log_growth_lo > 0 or row.d_log_growth_hi < 0 else " "
                 print(f"  {row.strategy:22s} {row.sharpe:>6.2f} "
                       f"[{row.sharpe_lo:>+5.2f},{row.sharpe_hi:>+5.2f}] "
                       f"{row.d_sharpe:>+6.2f} [{row.d_sharpe_lo:>+6.2f},"
                       f"{row.d_sharpe_hi:>+6.2f}]{star} "
                       f"{row.p_sharpe_beats_hold:>7.2f} {row.max_dd_pct:>5.1f}% "
                       f"{row.d_max_dd_pp:>+6.1f} [{row.d_max_dd_lo:>+6.1f},"
-                      f"{row.d_max_dd_hi:>+6.1f}]{dstar}")
+                      f"{row.d_max_dd_hi:>+6.1f}]{dstar} "
+                      f"{row.d_log_growth:>+6.2f} [{row.d_log_growth_lo:>+6.2f},"
+                      f"{row.d_log_growth_hi:>+6.2f}]{gstar}")
             print("  * = the 95% interval excludes zero")
             inert = sub[sub.dead_tail_pct > 10.0]
             if len(inert):
