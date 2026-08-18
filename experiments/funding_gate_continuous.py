@@ -430,15 +430,6 @@ def main() -> None:
     with pd.option_context("display.width", 220, "display.max_columns", 20, "display.max_rows", 200):
         print(results.round(4).to_string(index=False))
 
-    csv_path = ROOT / "reports" / "funding_gate_continuous_sweep.csv"
-    try:
-        csv_path.parent.mkdir(parents=True, exist_ok=True)
-        results.to_csv(csv_path, index=False)
-        print(f"\n(sweep results also written to {csv_path} for convenience; "
-              "not required by the task, harmless to leave/delete)")
-    except OSError:
-        pass
-
     print("\n" + "=" * 90)
     print("byte-identical-to-v4 check (2018-2019, well outside funding coverage)")
     print("=" * 90)
