@@ -572,10 +572,136 @@ none of this) rather than on the raw Sharpe.
 
 ## Step 4 — path sensitivity (40 random windows)
 
-[Filled in below once the `windows` command completed.]
+R-19/R-31 design: 40 random windows (90–730 days), identical windows
+across every strategy, carrying the frozen spot exposures (`windows`):
+
+| market / pair | Δ median return (bs − ref) | bs higher in | Δ median DD (bs − ref) | bs deeper in |
+|---|---|---|---|---|
+| spot / vs vote, up | −11.8pp | 25% | −1.9pp | 32% |
+| spot / vs vote, down | −2.9pp | 32% | +1.8pp | 62% |
+| spot / vs evidence, up | −6.0pp | 30% | −0.1pp | 45% |
+| spot / vs evidence, down | −8.1pp | 22% | +1.0pp | 55% |
+| futures / vs vote, up | **+26.8pp** | **75%** | +3.9pp | 68% |
+| futures / vs vote, down | −5.9pp | 28% | +2.7pp | 72% |
+| futures / vs evidence, up | −3.1pp | 38% | **−4.1pp** | **25%** |
+| futures / vs evidence, down | −13.0pp | 30% | **−4.0pp** | **35%** |
+
+**No consistent winner.** On spot, `bayes_stein` loses on median return in
+all four pairs (higher in only 22–32% of windows) and is deeper on
+drawdown in two of four. On futures the picture reverses direction
+depending on *which* reference and *which* direction: `bayes_stein` wins
+median return 75% of the time against `vote`/match-up (the one clearly
+favourable cell in the whole table) while also drawing down more often
+there (68%); against `evidence` it loses return most of the time but is
+*shallower* on drawdown in 65–75% of windows. This is the same shape as
+R-31/R-32's own window tables — directionally noisy, no cell clean enough
+to read as a path-level finding — and it corroborates rather than
+contradicts the interval result above: eight paired comparisons, eight
+different signs and magnitudes, no stable ordering. Given the interval
+result already governs the decision (Q1/Q2), this table is read as
+supporting evidence, not a separate claim (the same convention R-31/R-32
+used for their own window tables).
 
 ---
 
 ## Verdict
 
-[Filled in after the windows section above is complete.]
+**Configurations evaluated this session: 45** (27 frontier + 18 plateau,
+per the R-28 convention of counting a diagnostic neighbourhood separately
+from the primary sweep but adding both to the trials tally). Combined
+with the project total after R-32 (103 + 36 + 33 = 172), the running total
+this row leaves the project at **217**.
+
+**Holdout counter.** This row reads the 2023+ holdout 8 times for the
+matched pairs (`holdout`) across two markets, plus `interval`'s bootstrap
+(reused resamples of runs already computed, not new consultations, same
+accounting convention R-30 established), plus 6 re-runs at the 0.40%
+spot tier and 8 at the funding-charged futures tier (`costs`) — **~22
+consultations this row**. The falsification test (`eth`) and the
+window resample (`windows`) do not touch the 2023+ BTC holdout, per the
+R-19/R-28/R-31 convention. Taking R-32's last recorded figure of ~124 as
+the base, this row leaves the project's holdout counter at **~146**.
+
+**Scoreboard against the pre-registered decision rules:**
+
+| rule | result |
+|---|---|
+| **Q1** (Δ log growth, matched risk) established? | **NO** — 8/8 intervals contain zero |
+| **Q2** (Δ max drawdown, matched risk) established? | **NO** — 8/8 intervals contain zero (point estimate leans "bs deeper" in all 8, but none clears its bar) |
+| **V** (validity gate) | 4/8 cells VOID (all of spot); 4/8 VALID (all of futures) |
+| **P1** (beats `buy_and_hold` on spot holdout) | **FAIL** — best matched spot cell is $2,086 against $3,839, and every spot cell is void besides |
+| **P2** (+0.2 Sharpe or ≥10pp DD vs hold) | moot, gated by P1 |
+| **P3** (ETH falsification, ordering replicates) | **FAIL** on the strict pre-registered reading — 5/8 orderings hold, one reverses outright (futures vs-vote-up drawdown), two flip on narrow, plausibly-noise margins |
+| **P4** (plateau in span / z_clip) | **PASS** — flat neighbourhood in span 15–60d; z_clip inert throughout |
+| Causality probe | **PASS** — 0.0 max column difference before the cut, all three spans |
+| Deflated Sharpe (this session's 45 trials / project's 217) | **0.920 / 0.862** — neither clears 0.95 |
+
+**Promotion bar:** requires Q1 or Q2 established in every valid cell
+**and** P1–P4 all pass. **Not reached — P1 fails outright and Q1/Q2 are
+not established even where V permits scoring them.**
+
+### Verdict: **NEGATIVE**
+
+The pre-registered prediction was correct in its main claim: at matched
+realized risk, `bayes_stein` is statistically indistinguishable from both
+`vote` and `evidence` on the 2023+ holdout (Q1/Q2, 8/8 intervals contain
+zero), matching R-31/R-32's finding that gate *mechanism* does not appear
+to be the thing that matters once exposure is controlled for. This row
+adds three things to that finding rather than only reproducing it:
+
+1. **The mechanism is genuinely, measurably different** — not just on
+   paper. The gate-memory probe (failure mode (d), the one prediction
+   this row made that was specific to Bayes-Stein rather than borrowed
+   from R-28/R-31) confirms it directly: at the frozen 20-day span,
+   `bayes_stein`'s confidence signal has the lowest day-to-day
+   persistence and the shortest "open" episodes of all three gates
+   (autocorrelation 0.929 vs `vote`'s 0.951 and `evidence`'s 0.983;
+   median open-run 3 days vs 6 for both references), exactly the
+   behavioral signature a no-accumulator estimator should have and the
+   e-process should not. This is a real, positive, measured finding
+   inside an otherwise negative row.
+2. **That same property is actively harmful, not neutral, once realistic
+   costs are charged.** No latch means no discount on turnover: at the
+   project's own 0.10% fee assumption `bayes_stein` is merely worse
+   (inside noise); at Bitstamp's real 0.40% entry tier it **collapses** —
+   final balance falls a further 61–75%, drawdown roughly doubles or
+   triples, Sharpe turns negative in every one of the four spot cells —
+   while `vote` and `evidence`, matched to the identical realized
+   volatility, both stay profitable with positive Sharpe. This is a
+   *new* instance of the L-06/R-12 turnover lesson landing on a mechanism
+   that had never been tested against it: continuity in the confidence
+   signal is not free, and the incumbent's latch was quietly buying
+   something (turnover discipline) that this design gave up in exchange
+   for a property (no accumulation lag) the holdout ended up not
+   rewarding.
+3. **The one holdout-favourable drawdown result does not survive a
+   second asset**, the same shape R-31 found for R-28's headline: the
+   futures `vs vote, match-up` cell is the row's best-looking valid
+   number for `bayes_stein` on the BTC control (24.4% DD vs `vote`'s
+   36.0% in the ETH/BTC-window replication), and it **reverses** on ETH
+   (43.9% vs 36.1%) — P3 fails on exactly this cell.
+
+Taken together this is a clean, informative negative: a genuinely
+different statistical mechanism for treating parameter uncertainty in the
+signal path (empirical-Bayes shrinkage vs. R-28's anytime-valid testing),
+implemented and verified to behave differently from its predecessor, that
+still lands in the same place R-31/R-32 already mapped — indistinguishable
+at matched risk — and that additionally demonstrates a distinct new way
+to lose (turnover) that neither of the ledger's two prior gates
+exhibited. Per ROUTINE.md, this is exactly the kind of session the
+routine is built to produce: nothing is promoted, and the record is
+better for having tried.
+
+### Next step, if this line is picked up again
+
+The natural follow-up this row's own data points to is a **latched or
+hysteresis-banded version of the shrinkage confidence** — e.g. only
+update `conf` when the shrinkage-implied position moves by more than a
+band, or apply the deadband in *confidence* space in addition to
+*position* space — which would test whether the turnover collapse in the
+costs section is a fixable implementation detail or an intrinsic property
+of continuous confidence-weighting. That is a new, disjoint experiment
+(a different sizer/deadband interaction, not a different gate), not a
+rerun of this one, and it should be pre-registered and costed against the
+0.40% tier from the start rather than discovered there as this row
+discovered it.
