@@ -516,18 +516,28 @@ def sweep() -> None:
     print(f"\nconfigurations evaluated in sweep(): {N_EVALUATED}")
 
 
-# selected on inner-validation, see the report for the reasoning
-FROZEN_RISK = "semidev"
-FROZEN = dict(risk="semidev", vol_span_days=8.0, floor_frac=0.40, target_vol=0.55,
-              deadband=0.10, max_leverage=2.0)
+# Selected on inner-validation: of all 21 step-3 configurations, this is the
+# only one that beats kelly_regime_v4 on return, Sharpe AND drawdown
+# SIMULTANEOUSLY on both markets in inner-validation (spot $1,123/DD24.1%/
+# Sharpe0.35 vs v4's $998/33.2%/0.14; futures $1,238/DD21.3%/Sharpe0.53 vs
+# v4's $1,064/32.3%/0.25). See the report for why this selection is treated
+# with suspicion rather than celebrated: it badly underperforms v4 on
+# inner-train (the opposite split), the exact split-disagreement pattern
+# R-28/R-31 traced to lower average exposure suiting a bear/chop validation
+# window rather than to a genuine risk-discrimination advantage. The
+# neighbourhood check below is what decides which story is right.
+FROZEN_RISK = "cdar"
+FROZEN = dict(risk="cdar", cdar_window_days=60, cdar_alpha=0.10, target_dd=0.12,
+              floor_dd=0.03, deadband=0.10, max_leverage=2.0)
 
 
 def neighbours() -> None:
     """Plateau check: vary one knob at a time around the frozen selection."""
     grid = [("frozen", {})]
-    grid += [(f"vol_span={s:g}d", dict(vol_span_days=s)) for s in (4.0, 6.0, 12.0, 16.0, 24.0)]
-    grid += [(f"floor_frac={f:g}", dict(floor_frac=f)) for f in (0.20, 0.30, 0.50, 0.60)]
-    grid += [(f"target_vol={t:g}", dict(target_vol=t)) for t in (0.40, 0.45, 0.65)]
+    grid += [(f"cdar_window={w}d", dict(cdar_window_days=w)) for w in (20, 30, 45, 75, 90)]
+    grid += [(f"cdar_alpha={a:g}", dict(cdar_alpha=a)) for a in (0.05, 0.15, 0.20, 0.30)]
+    grid += [(f"target_dd={t:g}", dict(target_dd=t)) for t in (0.08, 0.10, 0.15, 0.18, 0.22)]
+    grid += [(f"floor_dd={f:g}", dict(floor_dd=f)) for f in (0.0, 0.01, 0.05)]
     grid += [(f"deadband={d:g}", dict(deadband=d)) for d in (0.05, 0.15, 0.20)]
     grid += [(f"max_leverage={m:g}", dict(max_leverage=m)) for m in (1.5, 3.0)]
     for mname, market in MARKETS:
