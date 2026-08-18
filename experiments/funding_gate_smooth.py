@@ -298,7 +298,10 @@ TRAIN = ("2020-01-01", "2020-12-31")
 VALID = ("2021-01-01", "2022-12-31")
 HOLDOUT = ("2023-01-01", "2023-12-31")  # ONE year only - see module docstring
 
-OUT = ROOT / "reports" / "funding_gate_smooth"
+# Deliberately no reports/ output directory: this file is one branch of a
+# parallel round (backlog B-05) and, per the task, owns exactly one file
+# (itself) with no side effects on any other path in the repo. Every
+# command below prints its table to stdout instead of writing a CSV.
 
 N_EVALUATED = 0          # distinct (midpoint, floor) configs scored in step 3
 HOLDOUT_READS = 0        # every run that touches 2023 data, counted honestly
@@ -394,10 +397,7 @@ def sweep() -> pd.DataFrame:
                              "vol": vol, "trades": m.num_trades,
                              "funding_paid": res.funding_paid})
     out = pd.DataFrame(rows)
-    OUT.mkdir(parents=True, exist_ok=True)
-    out.to_csv(OUT / "sweep.csv", index=False)
     print(f"\nconfigurations evaluated (distinct midpoint x floor, step 3): {N_EVALUATED}")
-    print(f"written: {OUT / 'sweep.csv'}")
 
     val = out[(out.split == "inner-validation") & (out.strategy == "funding_gate_smooth")]
     best = val.sort_values("final", ascending=False).iloc[0]
@@ -549,10 +549,7 @@ def holdout() -> pd.DataFrame:
                          "trades": m.num_trades, "funding_paid": res.funding_paid,
                          "fees_paid": m.fees_paid, "liquidated": m.liquidated})
     out = pd.DataFrame(rows)
-    OUT.mkdir(parents=True, exist_ok=True)
-    out.to_csv(OUT / "holdout.csv", index=False)
-    print(f"\nwritten: {OUT / 'holdout.csv'}")
-    print(f"holdout reads so far (this process): {HOLDOUT_READS}")
+    print(f"\nholdout reads so far (this process): {HOLDOUT_READS}")
     return out
 
 
@@ -591,10 +588,7 @@ def fees() -> pd.DataFrame:
         rows.append({"fee_tier": tier, "label": label, "strategy": "P1_ranking_holds",
                      "final": float(wins), "max_dd": np.nan, "sharpe": np.nan, "vol": np.nan})
     out = pd.DataFrame(rows)
-    OUT.mkdir(parents=True, exist_ok=True)
-    out.to_csv(OUT / "fees.csv", index=False)
-    print(f"\nwritten: {OUT / 'fees.csv'}")
-    print(f"holdout reads so far (this process): {HOLDOUT_READS}")
+    print(f"\nholdout reads so far (this process): {HOLDOUT_READS}")
     return out
 
 
