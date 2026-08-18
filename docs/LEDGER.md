@@ -968,6 +968,76 @@ R-19/R-28 convention. Consistent with R-29: nothing here is offered as a
 Sharpe-based claim, and every number above is reported with its interval
 or explicitly as a point on one path.
 
+### R-32 pre-registration — frozen on a parallel branch, before either branch's holdout was read
+
+**Two sessions ran B-11 on the same day, from the same base commit
+(`42729da`), without knowing about each other.** R-31 above is the primary
+record: it landed first, and its exposure solver and validity gate are the
+better instrument. This row is the other branch. It is kept because the
+routine's rule for parallel work is that **every branch reports, including
+the dead ones** — reporting only the branch that worked is selection
+performed by the operator — and because this branch ran an arm R-31 did
+not: **a third gate that is no gate at all**.
+
+The text of this section is as it was frozen on that branch (commit
+`b815e1b`, one commit ahead of its own results, per step 4), with the row
+renumbered from R-31 to R-32 on merge and this paragraph added. Neither
+branch's numbers were seen by the other before both were frozen; the
+merge happened afterwards, and what it changed is recorded in the results
+section rather than edited into the pre-registration.
+
+**Idea.** Hold everything except the regime gate fixed — one
+inverse-volatility sizer, one deadband, one exposure cap, one fee model —
+and move each gate along its *own* risk axis with a scalar multiplier on
+the position, then compare the frontiers at matched realized risk. Three
+gates: **`none`** (no gate, pure inverse-volatility targeting — never
+measured in this project before), **`vote`** (the incumbent's latched
+20/40/80-day anchors), **`evidence`** (R-28's e-process).
+
+**Constraint attacked.** ERR and SIZE.
+
+**Method.**
+
+    target_t = min(multiplier * gate_t * min(target_vol / vol_t, max_lev),
+                   exposure_cap)
+
+with everything but the gate pinned to the incumbent's shipped values
+(`target_vol=0.55`, `max_lev=2.0`, `deadband=0.10`, `exposure_cap=3.0`).
+Exposure is raised by the **multiplier only**, never by
+`evidence_cap_mult` — R-28's warning, respected by both branches
+independently.
+
+**Configurations evaluated in step 3: 33** — 3 gates × 11 multipliers
+(0.25 … 16), each scored on inner-train and inner-validation on both
+markets (132 backtests).
+
+**Frozen configuration**, selected on inner-validation only: per market,
+the multiplier at which each gate's realized volatility equals the vote
+arm's at its own scale (spot 0.327, futures 0.322), read off the sweep by
+linear interpolation — `none` ×0.61 / ×0.48, `vote` ×1.00 / ×1.00,
+`evidence` ×7.83 / ×3.25.
+
+**Pre-registered failure modes.** (a) the frontiers coincide inside the
+±0.2 Sharpe noise floor; (b) matching is impossible because the e-process
+gate's realized volatility saturates; (c) the fixed absolute deadband
+bites the low-exposure arm harder and the comparison measures turnover
+policy rather than gate quality.
+
+**Decision rule.** **Q1**: the paired difference between the evidence and
+vote arms in log growth and max drawdown on the holdout, 95% stationary
+block bootstrap, 30-day mean block, 2,000 resamples, identical indices —
+established only if the interval excludes zero. **Q2**: the same test for
+each gate against the ungated arm. **Promotion bar** (default reject):
+**P1** holdout spot final balance beats `buy_and_hold`; **P2** > +0.2
+Sharpe or ≥ 10pp of drawdown; **P3** *(falsification)* the ordering of the
+three gates replicates on ETH (Bitfinex, the R-17 window, BTC control);
+**P4** the multiplier neighbourhood is a plateau.
+
+**Predictions.** (i) Q1's interval contains zero. (ii) Q2 separates both
+gates from no gate. (iii) P1 fails — the holdout is a bull and every gated
+arm averages under full exposure. (iv) R-28's "better risk, worse return"
+was exposure, not mechanism.
+
 ---
 
 ## C. Ruled out — do not re-try without new evidence
