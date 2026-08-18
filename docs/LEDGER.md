@@ -1182,6 +1182,246 @@ it will not be kind.
 
 ---
 
+### R-33 pre-registration — written and committed before the holdout was read
+
+**Idea, in one sentence.** Backlog item B-05: gate `kelly_regime_v4`'s
+existing exposure by the funding rate, so the strategy stands down exactly
+when it is paying the richest, most-crowded-long funding — tested as two
+independent variants built by two parallel sessions in disjoint files: a
+literal binary decile gate (conservative) and a momentum-conditioned
+continuous fade (novel).
+
+**Constraint attacked.** COST, nominally — R-14 measured that funding runs
++20.05%/yr while `kelly_regime_v4` holds a position against +2.78%/yr
+while flat, because the crowding the strategy's own trend vote exploits is
+exactly what sets the rate. R-16 separately found the crowding is not just
+a cost but a signal: forward spot returns sorted by funding decile show
+the richest decile has 14-day forward return of only +0.56% against the
+cheapest decile's +4.13%. (An independent skeptic pass on the conservative
+variant's Step-3 result found this framing needs a caveat before the
+holdout is even read — see below.)
+
+**Not a duplicate of.** L-05 (analytic fee-EV deadband — transaction
+fees, not funding). R-14 measured the funding cost but built nothing. R-16
+measured the funding-as-signal quintile/tercile tables but explicitly
+left it as an "OPEN hypothesis" (its own verdict) rather than a strategy.
+B-05 has been on the backlog, unactioned, since the 08-17 restructure. Not
+R-28/R-31/R-32 (evidence-gate vs latched-vote comparison at matched risk —
+a different axis of the same `kelly_regime` family; this round doesn't
+touch the vote/sizer mechanism at all, only multiplies an unmodified v4
+target by a funding-driven factor).
+
+**Simulable here?** Yes, with a real scope constraint stated up front: the
+committed funding file (`data/btcusdt_perp_funding_8h.csv.gz`, real
+Binance BTCUSDT perp, 8-hourly) covers **exactly 2020-01-01 through
+2023-12-31** — one year short of the project's usual 2023-2026 holdout,
+and starting three years after the usual 2017 inner-train start. This
+round therefore uses a narrower split than `ROUTINE.md`'s default table:
+**inner-train 2020-01-01→2020-12-31** (one year, thin — the COVID crash
+and recovery, a single regime), **inner-validation 2021-01-01→2022-12-31**
+(2021 top + 2022 bear, matching project convention), **holdout
+2023-01-01→2023-12-31 only** (one year, not 3.6) — the same window
+R-14/R-15/R-16 already worked in. A one-year holdout is a weaker
+instrument than the rest of this project's table and every number below
+must be read that way.
+
+**What would make it fail — named before any code ran.**
+(a) The gate rarely fires because the existing vote's own ~35%-flat time
+already avoids most of the richest-funding bars, so the round measures
+noise around a redundant mechanism.
+(b) The added state costs enough extra turnover that fees eat whatever
+funding it saves (R-12, L-16, L-19's failure mode).
+(c) Funding is richest in exactly the bull runs `kelly_regime_v4` wants to
+be long in (R-14), so a *blind* decile gate cuts genuine trend exposure
+along with the crowded cost — the conservative variant is exposed to this
+directly; the novel variant exists specifically to test whether
+conditioning the fade on trailing momentum avoids it.
+(d) One year of daily holdout observations (~365) is far short of what
+R-29 showed is needed to clear a trials-adjusted Sharpe bar (v4's holdout
+Sharpe needed 6.2 years against 103 trials, and has 3.6) — any headline
+return claim from this round is underpowered by construction; the honest
+instrument here is the mechanism/drawdown read, not a Sharpe claim.
+
+**Method, fixed in advance.** Two disjoint experiment files
+(`experiments/funding_gate_conservative.py`,
+`experiments/funding_gate_novel.py`), each wrapping `kelly_regime_v4`
+unchanged and multiplying its `target` column by a funding-driven gate
+array computed causally — a `.reindex(..., method="ffill")` join of the
+settlement-indexed funding series onto bar timestamps (the most recently
+*settled* rate is always known at the current bar) followed by a causal
+`.rolling(window).rank(pct=True)` percentile on the raw 8-hourly series,
+never an expanding or full-series statistic. Each variant was tuned on
+inner-train only, selected on inner-validation only, by the same
+criterion: maximize (variant − `kelly_regime_v4`) log-growth on
+**funding-charged futures 5x**, inner-validation period. Neither building
+session read any date on or after 2023-01-01.
+
+**Conservative variant — `FundingGateConservative`.** Binary stand-flat
+gate, entered when the rolling percentile rank of the lagged funding rate
+crosses `decile_in` and held until it drops back below `decile_out <
+decile_in` (latching hysteresis, the idiom `kelly_regime_v3` already uses
+for its volatility-extreme gate). Swept `decile_in ∈ {0.85, 0.90, 0.95}`,
+`decile_out ∈ {decile_in-0.05, decile_in-0.10}`, `funding_lookback_days
+∈ {90, 180}` — **12 configurations**, all 12 beat `kelly_regime_v4` on the
+selection criterion (v4 itself had a losing 2021-22: log-growth −0.1202).
+**Frozen: `decile_in=0.85, decile_out=0.80, funding_lookback_days=90`**
+(inner-validation edge +0.3386, the widest margin in the grid).
+
+**Novel variant — `FundingMomentumGate`.** Continuous multiplicative
+fade, `discount = 1 − fade_strength·funding_excess·(1−momentum_shield)`,
+where `funding_excess` ramps 0→1 above a funding-percentile threshold and
+`momentum_shield` ramps 0→1 as a trailing-7-day-return percentile clears a
+second threshold — so the fade only bites when funding is rich **and**
+trailing momentum is weak, directly operationalizing R-16's
+momentum-controlled table (funding-high/momentum-high forward return was
+still +1.22%, not negative) rather than the conservative variant's
+univariate cut. Swept `funding_threshold ∈ {0.85, 0.90}`,
+`momentum_threshold ∈ {0.40, 0.50, 0.60}`, `fade_strength ∈ {0.5, 1.0}`
+(12 configs) plus 2 spot-checks (`funding_ewm_span=6`,
+`momentum_days=14`) — **14 configurations**. **Result: 0 of 14 beat
+`kelly_regime_v4` on either inner-train or inner-validation** — the best
+case (`funding_threshold=0.85, momentum_threshold=0.50,
+fade_strength=1.0`) is a near-tie on inner-validation (edge −0.0003, i.e.
+it loses by less than the others, not a win). Diagnostics on the frozen
+config confirm the mechanism is doing the narrow thing it was designed to
+do (funding≥0.85 fires 12.8% of bars, momentum shield fully engages 47.5%
+of bars, the two overlap — fade genuinely active — on only 2.8%) rather
+than degenerating to always-on or never-on; it simply doesn't pay off
+on either training period measured here.
+
+**Decision, taken at Step 3, before any holdout data was touched by
+either building session: the novel variant is NEGATIVE and is not carried
+to the holdout.** Losing on 14 of 14 configurations on both inner splits,
+with no exception, is the same shape of signal R-31 used to drop its
+`conditional` sizer arm before spending a holdout consultation on it
+("the cheapest thing this project can do with the holdout is ask it fewer
+questions"). Only the conservative variant's frozen configuration goes to
+the 2023 holdout below.
+
+**Independent skeptic pass on the conservative variant (dispatched after
+the primary reported ≥1 evaluated configuration, per ROUTINE.md's
+parallel-round rule), completed before the holdout was read.** Findings:
+
+1. **Reproduction: exact match**, from an independently written script
+   that did not import the building session's helpers — inner-validation,
+   futures 5x funding-charged: gate $1,244.15 vs the claimed $1,244;
+   v4 $886.75 vs the claimed $887.
+2. **No bug found.** The percentile is a genuine trailing
+   `rolling(window, min_periods=window).rank(pct=True)` on the raw
+   settlement series (causal by construction, confirmed at the exact
+   270-settlement window edge), and the funding→bar-frequency join never
+   pulls a future settlement.
+3. **The mechanism claim needs correcting before it goes in this ledger
+   as a COST finding: only ~16% of the edge is funding-cost avoidance;
+   ~84% is price-timing.** Re-running the frozen config funding-**free**
+   on the same inner-validation period still shows an edge of $301.82
+   against the funding-charged edge of $357.40 — most of the gap survives
+   with the funding cost entirely switched off. The gate is functioning
+   mostly as a second regime/timing filter that happens to correlate with
+   rich funding (consistent with R-16's own finding that funding
+   correlates only 0.39 with trailing return — apparently more than that
+   weak correlation alone would predict from cost-avoidance), not
+   primarily as "stand flat to avoid the crowded-long cost." **This round
+   is recorded as attacking COST nominally and SIZE/timing in practice**,
+   and any registration write-up must say so rather than crediting COST
+   for an effect that is mostly something else.
+4. **Fee/turnover sanity: consistent, no artifact.** 109 trades (vs v4's
+   52) cost $70.52 in fees against v4's $23.44 — a $47.08 delta, small
+   against the $357 balance gap and already netted into the reported
+   final balances. The gate itself latches 167 times over the two-year
+   window (83 flat-entries), a plausible count for a decile-hysteresis
+   band over two years of 8-hourly settlements.
+5. **A real, previously-unnoticed gap in the causality self-check, found
+   and closed.** The building session's hand-rolled probe tampered OHLCV
+   and checked `funding_gate`/`funding_pct`/`funding_lag`/`target` for
+   bit-identity before the cut — but those first three columns are
+   computed entirely from `self.funding` and `df.index`, neither of which
+   the OHLCV tamper touches, so they are bit-identical **by construction,
+   regardless of whether the percentile pipeline has a lookahead bug**.
+   The check as written could never fail on the one component it was
+   built to test. The skeptic wrote an extension tampering `self.funding`
+   itself (multiplied/divided after cuts measured in settlements,
+   including exactly at the 270-settlement window edge): **PASS, max
+   |diff| = 0.0** at every cut. This closes the gap; the mechanism is
+   causal. Filed as a **METHOD** note: an object passed by reference into
+   `prepare()` and left untouched by a tamper that only mutates `df` will
+   pass any bit-identity check trivially — a causality probe for a
+   strategy with an external causal input must tamper that input too, not
+   only the OHLCV frame.
+
+**Pre-registered falsification test, chosen now.** ETH is not available
+(the committed funding data is BTC-only; the Bitfinex ETH file used for
+R-17/R-31's falsification carries no funding series), so the usual
+second-asset test is not on the table this round. Instead: **does the
+conservative variant survive Bitstamp's 0.40% entry taker tier**
+(`scripts/fee_study.py`'s convention), re-run on the 2023 holdout only.
+This targets failure mode (b) directly — the gate adds turnover on top of
+v4's own trades, so if that turnover is what produces the apparent edge,
+a higher fee tier should erase it faster than it erases v4's own.
+**Falsification rule:** compute the variant's fee-tier degradation ratio,
+`final_balance(0.40%) / final_balance(0.10%)`, on the 2023 holdout; the
+test fails to falsify only if this ratio is not worse than
+`kelly_regime_v4`'s own degradation ratio on the identical window.
+
+**Pre-registered decision rules — promotion bar (ROUTINE.md's standard
+bar, default reject), applied to the conservative variant only.**
+
+- **P1** 2023 holdout spot final balance beats `buy_and_hold` spot (real
+  0.10% taker).
+- **P2** the improvement over `buy_and_hold` spot exceeds the **±0.2
+  Sharpe noise floor** (R-20), or cuts max drawdown vs `buy_and_hold`
+  spot by **≥10 percentage points**, on the holdout.
+- **P3** *(falsification, above)* survives the 0.40% tier by the stated
+  rule.
+- **P4** the inner-validation neighbourhood around the frozen
+  configuration is a plateau (read off the 12-configuration table above —
+  8 of 12 configs show a positive edge over v4 exceeding +0.09 log-growth,
+  so this is a region, not a lone spike, though the 90-day-lookback
+  configs dominate the 180-day ones at every matched decile pair, which
+  is itself worth reading as a real sensitivity rather than noise).
+
+Promotion requires all four; anything else is NEGATIVE.
+
+**Mechanism claim, reported regardless of promotion: D1** — paired
+stationary block bootstrap (`tradebot.inference`, 30-day mean block,
+2,000 resamples, identical indices), Δ log-growth and Δ max-drawdown of
+(conservative variant − `kelly_regime_v4`), on the 2023 holdout's daily
+returns, funding charged on futures 5x — established only if the interval
+excludes zero. Given finding 3 above, this should be read as a
+timing/SIZE claim, not a COST claim, whichever way it comes out.
+
+**Stated predictions, before the holdout was read.**
+1. **P1 is close to a coin flip.** 2023 was a recovery year for BTC
+   (roughly $16.5K→$42K); a strategy that stands down during rich-funding
+   stretches risks giving up some of a strong single-direction year — the
+   same failure shape R-28 hit with a differently-motivated gate. Given
+   the skeptic finding that the mechanism is mostly timing rather than
+   cost-avoidance, this prediction is if anything **more** likely to fail
+   than it looked before the skeptic pass, since a timing filter tuned on
+   2020-2022 has no special reason to time 2023 well.
+2. **D1 likely contains zero** — one year, ~365 daily observations, is
+   short even by this project's own standard for detecting anything
+   outside the noise floor (R-20, R-29).
+3. **Funding paid in dollar terms should still be lower** than v4's on
+   the 2023 window regardless of what price does — that part of the
+   mechanism (the gate fires on rich funding by construction) doesn't
+   depend on the direction of the year, only the ~16% share of the
+   inner-validation edge attributable to it.
+
+**Configurations evaluated in step 3: 26** (12 conservative + 14 novel).
+Inner-validation Sharpe dispersion across all 26 (the trial dispersion
+this round actually measured): **sd = 0.270**. Trials count this round
+contributes to the project total: **26**, applied on top of the existing
+floor of **172** (103 + R-31's 36 + R-32's 33) → project applies **198**
+trials from here.
+
+**Holdout counter: to be incremented below**, once the 2023-only holdout
+is read (this round's consultations are 2023-01-01→2023-12-31 only, a
+narrower single-year read than the project's usual 2023-2026 window, but
+the counter counts consultations, not years).
+
+---
+
 ## C. Ruled out — do not re-try without new evidence
 
 | what | why | ref |
