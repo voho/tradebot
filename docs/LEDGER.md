@@ -1182,6 +1182,214 @@ it will not be kind.
 
 ---
 
+### R-33 pre-registration — written and committed before the holdout was read
+
+**Idea, in one sentence.** R-16 found that rich funding (top quintile,
+and non-monotonically but directionally the top decile) predicts negative
+forward spot returns and is not simply a momentum proxy (correlation with
+trailing return 0.39); R-14 found `kelly_regime_v4` pays funding at
+**+20%/yr while holding versus +2.8%/yr while flat** because the same
+crowding the strategy detects late is what sets the rate — so use the one
+piece of information in this project that is not derived from price to
+derate exposure exactly when it is both least profitable and most
+expensive to hold. Two variants, run in parallel branches: a **conservative**
+gate (literally B-05's wording — stand flat in the top funding decile) and
+a **novel** one (derive the adjustment from the Kelly formula itself,
+rather than threshold it).
+
+**Constraint attacked.** COST primarily (R-14's finding, in units: funding
+is 7x richer while the strategy holds than while it is flat) and SIZE
+secondarily — this is a sizing derate, never a new direction signal, which
+matters because L-12's recorded lesson is exactly that a crowding signal
+used as *direction* loses and the same intuition later worked as *sizing*
+input inside `kelly_regime` itself.
+
+**Which ledger rows this is not a duplicate of.** R-14 measured the cost
+and took no action on it. R-15 is a different strategy entirely
+(delta-neutral cash-and-carry, blocked on data past 2023 — B-02/B-03).
+R-16 found the predictive relationship and built nothing. L-12
+(`harsanyi_crowd`) used a structurally similar crowding proxy (trend
+age × volume-efficiency decay) but as part of a *direction* signal on a
+belief margin, and it lost — this round uses funding purely as a
+multiplicative haircut on an already-decided direction, the slot
+`harsanyi_crowd`'s own crowding term and this project's one robust
+mechanism (`kelly_regime`'s vote-scaled sizing) both occupy. R-28/R-31/R-32
+(e-process gate, matched-risk frontier) vary the *regime* signal derived
+from price; this round adds an orthogonal, non-price signal on top of the
+unchanged `kelly_regime_v4` regime and sizing, so it is not a re-run of
+that question. Not a re-try of anything in section C.
+
+**Simulable here?** Yes, with a real constraint stated up front: the
+committed funding file (`data/btcusdt_perp_funding_8h.csv.gz`) covers only
+**2020-01-01 → 2023-12-31**. No fetch is used (B-05 is explicitly
+actionable without network access), but this means the slice of the
+project's official `OOS_START = 2023-01-01` holdout with *real* funding
+data is exactly **one year** — 2023 alone. That is a serious sample-size
+limitation on top of the project's usual N≈3 problem, and it is reported
+honestly below regardless of which way the result goes, not discovered
+after looking.
+
+**Redefined split, forced by data availability (not a re-definition of the
+project's split, a narrower window inside it):**
+
+| slice | dates | use |
+|---|---|---|
+| inner-train | 2020-01-01 → 2021-12-31 | design, no fitting beyond what is stated below |
+| inner-validation | 2022-01-01 → 2022-12-31 | plateau/neighbourhood check only |
+| holdout | 2023-01-01 → 2023-12-31 | step 4, pre-registered, touched once |
+
+Both variants are measured on **futures 5x, with real funding charged**
+(`run_backtest(..., funding=REAL)`, the `_period()` pattern from
+`scripts/funding_study.py`), against `kelly_regime_v4` on the same market
+with the same funding series, and against `buy_and_hold` on **spot**
+(pays no funding) — the standing overall bar. `kelly_regime_v4` with real
+funding already beats spot holding over 2020-2023 ($7,108 vs $5,934, per
+`docs/VALIDATION.md`); the question is whether either variant beats
+*that*, not just the benchmark.
+
+**What would make each variant fail — named before any code ran.**
+
+- **Conservative (decile gate):** (a) turnover at the decile boundary
+  costs more in fees than the crowding-derate saves — the R-12 pattern,
+  "add a filter" being the first and most-tried fix in this project's
+  history; (b) `VALIDATION.md` already flags that Binance clamps the rate
+  so middle quantiles tie — a percentile gate on a partially-quantized
+  series can chatter at the threshold even with hysteresis.
+- **Novel (carry-adjusted Kelly):** the R-08 failure mode, verbatim: R-08
+  found a *genuinely better* volatility forecast made the strategy worse
+  because it de-levered more promptly into BTC's high-vol, high-forward-
+  Sharpe states (R-10, the inverse leverage effect). Funding is highest
+  exactly when price is trending up hardest, i.e. exactly the states R-10
+  found carry the best forward Sharpe — so a mechanically correct carry
+  adjustment could easily repeat R-08's result: right calculation, wrong
+  direction for *this* asset's known anomaly. This is the single most
+  likely failure mode of this whole round and is named first for that
+  reason, not found after looking.
+- **Both:** with one year of real holdout data, even a genuine effect may
+  not clear a 95% interval — the honest prediction is a directionally
+  suggestive, not-established result, in the shape of R-31/R-32.
+
+**Method, fixed in advance — one-sided by design.** Both variants only
+ever *reduce* exposure relative to `kelly_regime_v4`, never increase it —
+deliberately, because R-09's lesson ("a drop-in swap silently raises
+effective leverage") is a standing warning against any change that could
+raise it. Both use only *settled* funding: the 8-hourly rate is shifted
+one settlement before use and forward-filled onto bars, so a bar can only
+see funding that has already been charged, never the rate about to apply.
+Before enough settlement history exists for a variant's own trailing
+window (see below), it defaults to **no derate** (open gate /
+`effective_target_vol = target_vol`) rather than guessing.
+
+- **Conservative — `FundingDecileGate`** (`experiments/funding_gate_conservative.py`).
+  A trailing 180-day rank (matching the `anchor_span_days=180` already in
+  v3/v4, for architectural consistency, not fitted) of the settled funding
+  rate gives a causal percentile in [0, 1]. Multiplicative haircut on
+  `kelly_regime_v4`'s target, applied **only when the target is long**
+  (funding when short is not the relationship R-16 measured): shut
+  (multiplier 0) when percentile ≥ **0.90**; reopen (multiplier 1) only
+  once percentile ≤ **0.75** — a hysteresis band in the same spirit as
+  every latch already in this codebase (`b_in`/`b_out`, `high_in`/`high_out`),
+  sized generously because the rate series is partly quantized.
+- **Novel — `CarryAdjustedKelly`** (`experiments/funding_gate_carry_kelly.py`).
+  Derived, not thresholded: a Kelly sizer's target notional is
+  `target_vol / vol`; the standard treatment of a financing cost in a
+  Kelly framework subtracts it from the excess-return numerator before
+  dividing by variance (`f* = (μ − r_f) / σ²`), and `target_vol` here
+  already stands in for the Sharpe numerator (`target_vol / vol` is
+  `Sharpe / vol`, i.e. `μ/σ²` in the shipped sizer's own units — see
+  R-28's aside that full Kelly makes the vol target equal the estimated
+  Sharpe ratio). So: `funding_ann_t` = a 30-day-halflife EWM of the
+  settled annualized rate (`rate × 3 × 365.25`, `funding_study.py`'s own
+  convention), **clamped to ≥ 0** so a negative rate (shorts paying) never
+  *boosts* exposure past the incumbent's own tuned target — only ever a
+  cost, never a subsidy, by design; then
+  `effective_target_vol_t = max(0, target_vol − funding_ann_t / vol_t)`,
+  substituted for `target_vol` in **both** branches of `kelly_regime_v3`'s
+  conditional-volatility sizer (the `full` and `steady` terms), leaving
+  every other mechanism — the anchor vote, the hysteresis, the deadband,
+  the cap — untouched. No threshold, no hysteresis parameter: the object
+  itself is continuous.
+
+**Falsification / stress tests, chosen now (ETH is not available — no ETH
+funding series is committed, so the standard cross-asset falsification
+cannot run this round; substituted with what the data does support):**
+
+1. **Causality, by hand** (`causality()`, the `run_eprocess.py` /
+   `run_matched_risk.py` two-opposite-tampers pattern) — required, since
+   neither variant is registered and gets none of
+   `test_causality_strict.py`'s automatic coverage.
+2. **Fee-tier robustness**: does the ranking (variant vs `kelly_regime_v4`)
+   hold at Bitstamp's 0.40% taker tier, per `fee_study.py`'s convention.
+3. **A funding-window mini-resample**: random ~6-month windows drawn from
+   inside 2020-2023 only (the span where funding is real), paired across
+   variant and baseline, identical windows — the closest available analog
+   to the standard 40-window Monte Carlo, sized down because the usable
+   history is four years, not nine.
+4. **Plateau, not peak (P4)**: a small neighbourhood on inner-validation
+   only — decile thresholds {0.85, 0.90, 0.95} for the conservative gate,
+   EWM halflife {14d, 30d, 60d} for the novel one — reported, not selected
+   from; the frozen configuration above was fixed by design/citation, not
+   by this sweep.
+
+**Decision rule — fixed before the 2023 holdout is read. Default reject.**
+A variant is a promotion candidate only if **all** hold on the 2023
+holdout (futures 5x, real funding charged):
+
+- **P1** final balance (equivalently log growth) beats `kelly_regime_v4`
+  **on the same market with the same funding series** — the improvement
+  claim is against the incumbent, not only against the standing
+  buy-and-hold bar;
+- **P2** still beats `buy_and_hold` (spot, no funding) — the project's
+  standing overall bar, which `kelly_regime_v4` alone already clears in
+  this window;
+- **P3** the improvement over `kelly_regime_v4` exceeds the ±0.2 Sharpe
+  noise floor, or is a drawdown improvement ≥ 10pp — the standard
+  promotion bar, unchanged;
+- **P4** the neighbourhood above is a plateau, not a peak;
+- **Given the one-year holdout**, additionally report a stationary block
+  bootstrap on the 2023 daily returns (10-day mean block — shorter than
+  the project's usual 30-day block because the whole window is 365 days —
+  2,000 resamples, paired, identical indices for variant vs incumbent).
+  If the interval on log growth and on max-drawdown both exclude zero,
+  the result is **established**; if either straddles zero, the result is
+  reported as **directionally suggestive, not established**, and is not
+  promoted regardless of the point estimate. Nothing about this weakens
+  P1-P4; it only prevents a one-year point estimate from being read as
+  more than it is.
+
+**Stated predictions, before looking.** (1) The conservative gate reduces
+funding paid and modestly reduces drawdown, but its P1 margin is inside
+the noise floor once fees from the added decile-crossing turnover are
+counted — expect *directionally* positive, *not established*. (2) The
+novel carry-adjusted sizer is the one actually at risk of failing outright
+in the R-08 direction: expect it to reduce funding cost by more than the
+gate (it is smoother and derates continuously rather than snapping to
+zero) but also to give back more return than it saves, because rich
+funding this data has already shown coincides with strong up-trends
+(R-10). (3) Neither variant beats `kelly_regime_v4` by enough to promote,
+and the honest headline is the same shape as R-31/R-32: a real, named
+mechanism that does not clear this project's own bar on the data
+available. (4) Both variants beat `kelly_regime_v4` on **funding paid**
+specifically (mechanically likely, since both only ever reduce notional
+when funding is rich) — that number is expected to be the least
+disputable part of the round.
+
+**Configurations evaluated, running count.** 0 at the time of this commit
+— this pre-registration is written and committed before any inner-train
+number is read, let alone the holdout. Each branch reports its own count
+at step 5; per ROUTINE.md's parallelism section the trials figure that
+matters is the total across both.
+
+**Dispatch.** Two disjoint files, two independent sessions, neither
+commits: `experiments/funding_gate_conservative.py` /
+`experiments/run_funding_gate_conservative.py` for the conservative
+branch, `experiments/funding_gate_carry_kelly.py` /
+`experiments/run_funding_gate_carry_kelly.py` for the novel branch. Both
+branches report regardless of outcome, per ROUTINE.md ("every branch
+reports, including the dead ones").
+
+---
+
 ## C. Ruled out — do not re-try without new evidence
 
 | what | why | ref |
