@@ -1180,6 +1180,101 @@ it will not be kind.
 
 ![what a gate is worth at matched risk](../reports/gate_control/frontier.png)
 
+### R-33 pre-registration — written and committed before the holdout was read
+
+**Idea, one sentence.** `kelly_regime_v4` pays funding whenever it holds a
+leveraged long, and R-14 showed that cost is adversely timed (funding runs
++20%/yr while the strategy holds vs +2.8%/yr flat, because the crowding
+that drives the trend signal is what sets the rate). B-05: use the known
+funding rate as a real-time cost input to the sizer, cutting exposure when
+carry is richest, instead of ignoring it as the shipped strategy does.
+
+**Constraint attacked.** COST — costs that scale with the signal.
+
+**Not a duplicate of.** L-05/L-06 (EV-derived no-trade band for the
+*taker fee* on rebalancing — different cost, different mechanism). R-14
+(measured the funding cost and its adverse timing; never modified a
+strategy). R-15 (funding harvest — a market-neutral carry strategy,
+blocked on B-02). R-16 (used funding as a *directional return predictor*
+via quintile sort — a forecasting use, the class of idea the standing
+diagnosis says loses; B-05 uses funding as a SIZE/cost input instead, the
+low-turnover reading of R-16 the backlog row itself calls for).
+
+**Simulable here?** Yes, with a caveat stated up front.
+`data/btcusdt_perp_funding_8h.csv.gz` is committed, real Binance
+BTCUSDT, 2020-01-01 -> 2023-12-31, no fetch. That window fixes the split
+for this experiment only, and it is thinner than the rest of the
+project's already-thin N≈3:
+
+| slice | dates | use |
+|---|---|---|
+| inner-train | 2020-01-01 -> 2021-12-31 | fit, sweep (COVID crash + 2020-21 bull) |
+| inner-validation | 2022-01-01 -> 2022-12-31 | select between variants (2022 bear) |
+| holdout | 2023-01-01 -> 2023-12-31 | touch once, after freezing (2023 recovery) — one regime, one year |
+
+**What would make it fail, named now.** (a) Standing down in high-funding
+periods gives up more price upside than the funding it saves — in a
+strong bull, funding is high *and* price keeps rising (R-16: high
+funding predicts negative forward returns only *unless* price is also
+rising) — net final balance worse than ungated v4. (b) The threshold is a
+tuned peak, not a plateau. (c) One year of holdout, one regime, cannot
+support any claim beyond a point estimate — likely REJECT/PARKED on
+power alone regardless of sign, a legitimate, informative outcome.
+
+**Evaluation convention, binding on both variants.** Futures 5x only
+(funding does not apply to spot). Both the candidate AND the
+`kelly_regime_v4` comparison arm are run WITH real funding charged
+(`run_backtest(..., funding=REAL)`) — the question is whether the gate
+helps given the cost is real, not whether v4 beats holding (already
+litigated in R-14/R-29/R-30). $1,000 start, 0.05% futures taker,
+warmed on bars before each window (`funding_study.py::_period` pattern).
+Primary comparison is candidate vs `kelly_regime_v4` (both
+funding-charged); the standing ROUTINE.md bar against `buy_and_hold` is
+also reported.
+
+**Falsification tests, chosen now, one per variant.**
+- Conservative (hard decile gate): Monte Carlo path sensitivity over the
+  funding-covered window (R-19 design, windows restricted to
+  2020-01-01..2023-12-31). Kill condition: candidate worse than ungated
+  v4 on BOTH return and drawdown in a majority of windows.
+- Novel (continuous cost-of-carry-adjusted exposure): 0.40% taker fee
+  stress restricted to the funding-covered window, candidate vs ungated
+  v4 (not vs holding — R-13 already closed that). Kill condition: the
+  candidate's edge over ungated v4 inverts sign from 0.10% to 0.40% fees
+  — the improvement would be turnover-timing / fee arbitrage, not a
+  genuine cost-of-carry effect.
+
+**Pre-registered holdout decision rule, fixed before either branch
+reports.** Applies independently to each frozen candidate, vs
+`kelly_regime_v4` (funding-charged), both on 2023-01-01..2023-12-31:
+
+- **P1** final balance beats funding-charged `kelly_regime_v4` on
+  futures 5x.
+- **P2** the improvement exceeds the ±0.2 Sharpe noise floor (R-20), OR
+  is a drawdown improvement ≥ 10pp, **AND** the same direction of
+  improvement was already present on inner-validation (2022) — required
+  here, beyond the project's usual bar, because a single-regime one-year
+  holdout cannot carry the weight the rest of the project puts on
+  out-of-sample evidence.
+- **P3** survives its falsification test above.
+- **P4** the threshold/knob neighbourhood is a plateau: sweep the decile
+  threshold ±10pp (conservative) or the cost-scaling constant at
+  0.5x/2x (novel) on inner-validation; the sign of the improvement must
+  not flip.
+- Also reported for completeness (not expected to bind, since nothing
+  has cleared it since 2023 per R-29/R-30): beats `buy_and_hold` on the
+  spot holdout after real costs, the standing ROUTINE.md bar.
+
+If both candidates pass, the one with the larger P2 margin on the
+holdout is registered; if neither passes, the round is NEGATIVE.
+
+**Stated prediction before looking.** P1 passes for at least one variant
+(funding IS adversely timed, R-14 already showed the mechanism exists),
+but P2's inner-validation corroboration requirement and the one-regime
+holdout will likely keep this from a clean PROMOTED — expect NEGATIVE or
+a qualified REGISTERED result with the small-sample caveat stated
+explicitly.
+
 ---
 
 ## C. Ruled out — do not re-try without new evidence
