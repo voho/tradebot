@@ -1,0 +1,82 @@
+{
+  "spot/plain": {
+    "vote_vol_at_k1": 0.3247379596495937,
+    "evidence_vol_at_k1": 0.0873681066529397,
+    "up": {
+      "vote_k": 1.0,
+      "vote_vol": 0.3247379596495937,
+      "evidence_k": 4.695849491365095,
+      "evidence_vol": 0.3227433613021182,
+      "target_vol": 0.3247379596495937,
+      "iterations": 5
+    },
+    "down": {
+      "evidence_k": 1.0,
+      "evidence_vol": 0.0873681066529397,
+      "vote_k": 0.2616272292634795,
+      "vote_vol": 0.0871025619226585,
+      "target_vol": 0.0873681066529397,
+      "iterations": 3
+    }
+  },
+  "spot/conditional": {
+    "vote_vol_at_k1": 0.2906349452888523,
+    "evidence_vol_at_k1": 0.091196621690569,
+    "up": {
+      "vote_k": 1.0,
+      "vote_vol": 0.2906349452888523,
+      "evidence_k": 4.682684608625476,
+      "evidence_vol": 0.28532287583808597,
+      "target_vol": 0.2906349452888523,
+      "iterations": 5
+    },
+    "down": {
+      "evidence_k": 1.0,
+      "evidence_vol": 0.091196621690569,
+      "vote_k": 0.29445522445246924,
+      "vote_vol": 0.08976857722220055,
+      "target_vol": 0.091196621690569,
+      "iterations": 3
+    }
+  },
+  "futures/plain": {
+    "vote_vol_at_k1": 0.3219255963194233,
+    "evidence_vol_at_k1": 0.1358607319854199,
+    "up": {
+      "vote_k": 1.0,
+      "vote_vol": 0.3219255963194233,
+      "evidence_k": 3.7245798557868737,
+      "evidence_vol": 0.32256907170900684,
+      "target_vol": 0.3219255963194233,
+      "iterations": 4
+    },
+    "down": {
+      "evidence_k": 1.0,
+      "evidence_vol": 0.1358607319854199,
+      "vote_k": 0.3716259999097138,
+      "vote_vol": 0.13626060095570405,
+      "target_vol": 0.1358607319854199,
+      "iterations": 3
+    }
+  },
+  "futures/conditional": {
+    "vote_vol_at_k1": 0.2868068892923459,
+    "evidence_vol_at_k1": 0.1314536408172434,
+    "up": {
+      "vote_k": 1.0,
+      "vote_vol": 0.2868068892923459,
+      "evidence_k": 3.188057992723821,
+      "evidence_vol": 0.28693518883304125,
+      "target_vol": 0.2868068892923459,
+      "iterations": 5
+    },
+    "down": {
+      "evidence_k": 1.0,
+      "evidence_vol": 0.1314536408172434,
+      "vote_k": 0.41842103073840964,
+      "vote_vol": 0.1308038337072566,
+      "target_vol": 0.1314536408172434,
+      "iterations": 4
+    }
+  }
+}

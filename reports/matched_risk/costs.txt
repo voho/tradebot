@@ -1,0 +1,24 @@
+1,010,889 bars  2017-01-01 -> 2026-08-12  (data: real)
+HOLDOUT 2023+ spot, at both taker tiers (sizer=plain):
+  0.10% (table assumption)
+      buy_and_hold               final=$      3,839 vol=0.469 DD= 54.0% sharpe= 1.03 fills=    1 fees=$       1 clamp= 0.0%
+      kelly_regime_v4            final=$      3,373 vol=0.317 DD= 27.8% sharpe= 1.22 fills=  332 fees=$     310 clamp=40.7%
+      match-up vote k=1.00       final=$      3,277 vol=0.315 DD= 26.7% sharpe= 1.20 fills=  349 fees=$     295 clamp=41.0%
+      match-up evidence k=4.70   final=$      3,736 vol=0.306 DD= 22.3% sharpe= 1.34 fills=   91 fees=$     101 clamp=26.6%
+      match-down vote k=0.26     final=$      1,559 vol=0.104 DD=  9.6% sharpe= 1.24 fills=  413 fees=$      60 clamp= 0.0%
+      match-down evidence k=1.00 final=$      1,607 vol=0.140 DD= 11.6% sharpe= 1.01 fills=  363 fees=$      50 clamp= 1.3%
+  0.40% (Bitstamp entry tier)
+      buy_and_hold               final=$      3,827 vol=0.469 DD= 54.0% sharpe= 1.03 fills=    1 fees=$       4 clamp= 0.0%
+      kelly_regime_v4            final=$      2,445 vol=0.317 DD= 34.1% sharpe= 0.94 fills=  332 fees=$   1,027 clamp=40.7%
+      match-up vote k=1.00       final=$      2,373 vol=0.314 DD= 33.0% sharpe= 0.92 fills=  349 fees=$     977 clamp=41.0%
+      match-up evidence k=4.70   final=$      3,399 vol=0.306 DD= 23.6% sharpe= 1.26 fills=   91 fees=$     381 clamp=26.6%
+      match-down vote k=0.26     final=$      1,361 vol=0.103 DD= 12.3% sharpe= 0.88 fills=  413 fees=$     224 clamp= 0.0%
+      match-down evidence k=1.00 final=$      1,435 vol=0.140 DD= 12.4% sharpe= 0.79 fills=  363 fees=$     189 clamp= 1.3%
+
+HOLDOUT 2023+ futures 5x with funding CHARGED (real through 2023-12, mean +15.0%/yr after):
+  buy_and_hold                   final=$        0 DD=100.0% sharpe= 0.28 funding paid=$    999  LIQUIDATED
+  kelly_regime_v4                final=$    3,133 DD= 37.8% sharpe= 1.03 funding paid=$  1,190
+  match-up vote k=1.00           final=$    3,120 DD= 38.1% sharpe= 1.00 funding paid=$  1,283
+  match-up evidence k=3.72       final=$    2,787 DD= 42.9% sharpe= 0.80 funding paid=$    874
+  match-down vote k=0.37         final=$    1,597 DD= 18.0% sharpe= 0.92 funding paid=$    264
+  match-down evidence k=1.00     final=$    1,614 DD= 15.6% sharpe= 0.94 funding paid=$    178

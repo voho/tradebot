@@ -35,6 +35,13 @@ venv/
 # ...and the caches stay ignored explicitly: a stale one would silently
 # produce numbers for a strategy that has since changed.
 /reports/inference/daily_returns*.csv.gz
+# matched-risk round (R-31). Small, and docs/VALIDATION.md cites the rows
+# directly - the frozen exposures in particular are the pre-registration's
+# receipt, so they belong in git rather than in a regenerable cache.
+!/reports/matched_risk/
+!/reports/matched_risk/*.csv
+!/reports/matched_risk/*.json
+!/reports/matched_risk/*.txt
 # a curated set of run charts is committed so the README renders on GitHub;
 # the other ~90 regenerate with `tradebot run`
 !/reports/charts/

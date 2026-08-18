@@ -486,6 +486,115 @@ was not reachable. A second bear on a second asset in a *different*
 period is still the missing experiment (backlog item B-08 in
 [LEDGER.md](LEDGER.md)).
 
+> ⚠️ **And one more, added after ledger row R-31.** Every drawdown
+> comparison on this page — including this one — is against a
+> **fully-invested** `buy_and_hold`, while the strategy holds
+> substantially less. R-31 showed that exactly this mismatch turned a
+> risk-level difference into what looked like a mechanism finding for the
+> e-process gate, and that the finding evaporated when exposure was
+> equalized. The same test has **not** been run on `kelly_regime_v4`
+> against a de-levered hold at matched realized volatility. Until it is,
+> read every "cuts drawdown versus holding" figure here as including an
+> unknown amount of "holds less than holding". That is backlog item B-13,
+> and it is now the cheapest experiment that could change what this
+> project believes about itself.
+
+## Comparing at matched risk, and what it costs a finding
+
+Two strategies at different exposure levels cannot be compared on return
+or on drawdown, because both quantities scale with exposure. Every
+comparison in this document that holds exposure fixed is fine; the one
+that did not was the e-process round (ledger R-28), which measured a
+regime gate that — correctly calibrated — justified only **0.27x** the
+incumbent's mean notional, and then reported that it drew down less. That
+is arithmetic, not evidence.
+
+Ledger row **R-31** re-ran it controlled. One strategy class
+(`experiments/matched_risk.py`) with one sizer, one deadband, one warmup
+and one exposure knob; the only thing that varies is which quantity opens
+the gate — the incumbent's latched 20/40/80-day anchor vote, or the
+e-process's accumulated betting evidence. The exposure knob `k` scales
+`target_vol`, `max_leverage` and `deadband` together, which rescales the
+position exactly and changes nothing about its timing. Exposures were
+solved on inner-validation to within 2% of a target realized volatility,
+in both directions (lever the e-process up to the vote; de-lever the vote
+down to the e-process), and frozen before the holdout was read.
+
+**The equal-risk exposure ratio is itself regime-dependent.** Matching
+the vote's realized volatility on spot needs the e-process at k=2.16 over
+2017–2020 and k=4.70 over 2021–2022 — it shuts down hardest exactly when
+the vote does not. Which is why the frozen exposures had to be checked
+rather than assumed on the holdout, and why three of four cells failed:
+
+| cell | vote vol | e-process vol | gap | max clamp | verdict |
+|---|---|---|---|---|---|
+| spot / match-up | 0.315 | 0.306 | 2.6% | **41.0%** | void — spot's 1.0-notional cap truncates both arms differently |
+| spot / match-down | 0.104 | 0.140 | **29.9%** | 1.3% | void — the risk match did not survive out of sample |
+| futures / match-up | 0.394 | 0.527 | **29.0%** | 0.0% | void — same |
+| futures / match-down | 0.153 | 0.153 | 0.2% | 0.0% | **valid** |
+
+### At matched risk the two gates are indistinguishable
+
+Paired stationary block bootstrap on the 2023+ holdout — same method as
+above, 30-day blocks, 2,000 resamples, identical resamples for both arms,
+1,319 daily observations:
+
+| cell | Δ log growth (e-process − vote) | 95% CI | Δ max DD | 95% CI |
+|---|---|---|---|---|
+| spot / match-up *(void)* | +0.131 | [−0.400, +0.691] | −4.7pp | [−19.9, +7.1] |
+| spot / match-down *(void)* | +0.030 | [−0.300, +0.463] | +1.7pp | [−6.3, +9.6] |
+| futures / match-up *(void)* | −0.125 | [−1.307, +1.441] | +7.3pp | [−14.2, +27.0] |
+| **futures / match-down (valid)** | **−0.072** | **[−0.532, +0.379]** | **−1.9pp** | **[−13.4, +5.4]** |
+
+Eight intervals, eight containing zero, and the sign is not stable across
+cells. Whatever separates an anytime-valid evidence gate from a latched
+moving-average vote, this dataset cannot see it once they carry the same
+risk.
+
+### The ETH replication was a risk-level artifact
+
+This is the part worth carrying forward. R-28's falsification test
+reported that the e-process cut ETH's spot drawdown to **19.5%** against
+`kelly_regime_v4`'s 36.5% — the drawdown property replicating on a second
+asset, which is the strongest form of evidence this project has. R-31
+reproduces that 19.5% exactly. But it was measured against an arm
+carrying **2.4x** the volatility. Re-match the exposures on ETH's own
+volatility and the ordering **reverses in all four cells**:
+
+| ETH cell | matched vol | vote | e-process | Δ DD |
+|---|---|---|---|---|
+| spot / match-up | 0.377 | $5,186 (DD **36.3%**) | $4,010 (DD 40.0%) | +3.7pp |
+| spot / match-down | 0.171 | $2,379 (DD **17.1%**) | $1,944 (DD 19.5%) | +2.4pp |
+| futures / match-up | 0.428 | $7,330 (DD **36.1%**) | $3,565 (DD 53.2%) | +17.1pp |
+| futures / match-down | 0.232 | $2,345 (DD **27.6%**) | $2,079 (DD 36.9%) | +9.3pp |
+
+The BTC control over the same window keeps the e-process ahead on
+drawdown by 5–10pp, as it is everywhere on BTC. So the mechanism's risk
+advantage is BTC-specific after all, which is precisely the artifact the
+ETH test exists to catch.
+
+The 40-window resample says the same thing from a third direction: R-28's
+"deeper than `kelly_regime_v4` in **0 of 40** windows" becomes deeper in
+**45–82%** of the same windows once the e-process arm carries comparable
+exposure.
+
+**The general rule this establishes**, and the reason the section exists:
+*a risk-reduction claim is only a claim about the mechanism if the
+comparison is made at equal risk.* Reproduce all of it with
+`python experiments/run_matched_risk.py {parity,frontier,match,holdout,interval,eth,costs,windows}`;
+raw rows in `reports/matched_risk/`.
+
+**A methodological note that cost nothing and saved the round.** The
+pre-registration in [LEDGER.md](LEDGER.md) fixed a *validity gate* — the
+two arms' holdout volatilities within 20% of each other and neither
+pinned against the market's notional cap — before any result was read.
+Without it the headline would have been spot / match-up, where the
+e-process arm beats the incumbent's gate on return, drawdown and fees at
+once. That cell is void because 41% and 27% of its bars are clamped at
+spot's 1.0-notional ceiling, so the two arms are not running the same
+sizer. It is the most flattering number in the round and it is not a
+result.
+
 ## Does the starting balance matter?
 
 Almost never, which is why the framework now defaults to a single $1,000

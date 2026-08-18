@@ -1,0 +1,23 @@
+
+40 random windows (90-730 days), identical across strategies:
+
+  spot:
+    buy_and_hold           median return    +49.3%  median DD  52.7%  worst DD  84.1%  beat hold    0%  liq   0%
+    kelly_regime_v4        median return    +82.1%  median DD  23.7%  worst DD  43.0%  beat hold   48%  liq   0%
+    match-up vote          median return    +75.2%  median DD  25.0%  worst DD  39.3%  beat hold   42%  liq   0%
+    match-up evidence      median return    +98.7%  median DD  22.2%  worst DD  47.2%  beat hold   57%  liq   0%
+    match-down vote        median return    +23.0%  median DD   7.8%  worst DD  10.6%  beat hold   30%  liq   0%
+    match-down evidence    median return    +36.5%  median DD   9.9%  worst DD  17.0%  beat hold   40%  liq   0%
+    paired match-up (evidence − vote): return median +6.7pp, evidence higher in 55%;  DD median -1.9pp, evidence deeper in 45%
+    paired match-down (evidence − vote): return median +7.8pp, evidence higher in 72%;  DD median +2.0pp, evidence deeper in 72%
+
+  futures:
+    buy_and_hold           median return    -98.2%  median DD  98.6%  worst DD  99.9%  beat hold    0%  liq  65%
+    kelly_regime_v4        median return   +116.3%  median DD  23.6%  worst DD  34.8%  beat hold   65%  liq   0%
+    match-up vote          median return   +106.4%  median DD  26.0%  worst DD  36.5%  beat hold   65%  liq   0%
+    match-up evidence      median return   +226.6%  median DD  41.0%  worst DD  59.8%  beat hold   70%  liq   0%
+    match-down vote        median return    +23.1%  median DD   6.5%  worst DD  13.1%  beat hold   65%  liq   0%
+    match-down evidence    median return    +43.7%  median DD  12.2%  worst DD  25.2%  beat hold   65%  liq   0%
+    paired match-up (evidence − vote): return median +70.8pp, evidence higher in 72%;  DD median +14.9pp, evidence deeper in 78%
+    paired match-down (evidence − vote): return median +8.6pp, evidence higher in 75%;  DD median +4.9pp, evidence deeper in 82%
+

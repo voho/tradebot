@@ -1,0 +1,6 @@
+inner-train 2017-2020 / spot, matched to vol 0.379
+   vote     k=1.000  final=$    15,381 vol=0.379 DD= 39.3%
+   evidence k=2.161  final=$    10,029 vol=0.374 DD= 31.9%
+inner-validation 2021-2022 / spot, matched to vol 0.325
+   vote     k=1.000  final=$       909 vol=0.325 DD= 38.1%
+   evidence k=4.696  final=$     1,233 vol=0.323 DD= 32.8%

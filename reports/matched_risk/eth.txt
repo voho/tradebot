@@ -1,0 +1,33 @@
+1,010,889 bars  2017-01-01 -> 2026-08-12  (data: real)
+
+BTC (control)  396,449 bars  2016-01-01 -> 2019-12-31
+  spot:
+    --- match-up: matched to vol 0.371
+      vote k=1.000               final=$      8,778 vol=0.371 DD= 37.9% sharpe= 1.74 fills=  526 fees=$     567 clamp=16.2%
+      evidence k=2.224           final=$      7,792 vol=0.364 DD= 27.6% sharpe= 1.68 fills=  199 fees=$     132 clamp=10.3%
+    --- match-down: matched to vol 0.202
+      vote k=0.498               final=$      3,920 vol=0.203 DD= 23.0% sharpe= 1.88 fills=  515 fees=$     158 clamp= 0.0%
+      evidence k=1.000           final=$      3,898 vol=0.202 DD= 14.4% sharpe= 1.89 fills=  401 fees=$      82 clamp= 1.2%
+  futures:
+    --- match-up: matched to vol 0.423
+      vote k=1.000               final=$     18,367 vol=0.423 DD= 36.0% sharpe= 2.04 fills=  263 fees=$     450 clamp= 0.0%
+      evidence k=1.892           final=$      9,982 vol=0.419 DD= 33.0% sharpe= 1.67 fills=  145 fees=$     101 clamp= 0.0%
+    --- match-down: matched to vol 0.237
+      vote k=0.480               final=$      4,002 vol=0.232 DD= 21.3% sharpe= 1.70 fills=  172 fees=$      44 clamp= 0.0%
+      evidence k=1.000           final=$      3,897 vol=0.237 DD= 20.1% sharpe= 1.64 fills=   65 fees=$      20 clamp= 0.0%
+
+ETH (test)  342,929 bars  2016-03-09 -> 2019-12-31
+  spot:
+    --- match-up: matched to vol 0.377
+      vote k=1.000               final=$      5,186 vol=0.377 DD= 36.3% sharpe= 1.53 fills=  452 fees=$     363 clamp= 1.2%
+      evidence k=2.314           final=$      4,010 vol=0.376 DD= 40.0% sharpe= 1.32 fills=   59 fees=$      51 clamp= 0.2%
+    --- match-down: matched to vol 0.171
+      vote k=0.421               final=$      2,379 vol=0.173 DD= 17.1% sharpe= 1.62 fills=  361 fees=$      70 clamp= 0.0%
+      evidence k=1.000           final=$      1,944 vol=0.171 DD= 19.5% sharpe= 1.28 fills=   58 fees=$      10 clamp= 0.0%
+  futures:
+    --- match-up: matched to vol 0.428
+      vote k=1.000               final=$      7,330 vol=0.428 DD= 36.1% sharpe= 1.64 fills=  237 fees=$     178 clamp= 0.0%
+      evidence k=2.170           final=$      3,565 vol=0.428 DD= 53.2% sharpe= 1.13 fills=   16 fees=$      11 clamp= 0.0%
+    --- match-down: matched to vol 0.232
+      vote k=0.502               final=$      2,345 vol=0.235 DD= 27.6% sharpe= 1.23 fills=  178 fees=$      25 clamp= 0.0%
+      evidence k=1.000           final=$      2,079 vol=0.232 DD= 36.9% sharpe= 1.08 fills=    5 fees=$       1 clamp= 0.0%

@@ -110,9 +110,10 @@ the most expensive repeated mistake in this table.
 | R-25 | Deflated Sharpe / purged CV / bootstrap CIs | — | Cited in `RESEARCH.md`, **never computed** | Every sweep here is a trial that inflates whatever it selected (R-12 ran 32). The comparison table reports points where it should report ranges. | **CLOSED by R-29** |
 | R-26 | Parallel round on B-01, B-02/03, B-04, B-05, B-07 | 08-17 | 11 agent-sessions dispatched (5 build, 5 skeptic, 1 synthesis). Every one was blocked before executing a single call: the permission handler returned `updatedInput` with required parameters stripped, so `Bash`, `Read`, `Glob` and `Grep` all failed schema validation. Repo verified untouched afterwards. Fault has since cleared. | **0 trials, 0 configurations, 0 bars read.** The five directions were **NOT TESTED** and stay on the backlog as untried — filing them as negatives would stop a future agent trying them. Holdout counter unchanged (nothing was read). Project trials count unchanged. | **NULL ROUND** |
 | R-27 | Fabrication pressure in the operator's own prompt | 08-17 | The synthesis prompt for R-26 contained a conditional naming the hoped-for answer: *"If the inference agent found that most of the table's ordering is not distinguishable from noise, say so first and plainly."* The inference agent had run zero backtests. | The synthesizer refused and flagged it. Had it complied, a fabricated headline would have entered `docs/VALIDATION.md` — the file whose whole purpose is being trustworthy — indistinguishable from a real result to a later reader. Same failure class as L-14/L-15/L-16 (proxying order flow out of price) and R-21 (the $3.7e23 probe), but arriving through the *prompt* rather than the code. | **METHOD** — see ROUTINE.md |
-| R-28 | E-process regime detection with unified Kelly sizing (Shafer 2021; Ramdas et al. 2023; Waudby-Smith & Ramdas 2024; Shin, Ramdas & Rinaldo 2024) | 08-17 | Three variants in `experiments/eprocess_regime.py`, 24 configurations on the inner split, one frozen config on the holdout | **The deepest drawdown reduction in the project, and it still loses.** Holdout spot DD **11.6%** vs `kelly_regime_v4`'s 27.8% and holding's 54.0%; deeper than v4 in **0 of 40** Monte Carlo windows (median −14.0pp spot, −11.3pp futures). Return is 0.42x holding, so P1 fails. Anytime-valid evidence justifies only **0.27x** the incumbent's mean exposure. | **NEGATIVE** — but the risk finding is the strongest in the repo |
+| R-28 | E-process regime detection with unified Kelly sizing (Shafer 2021; Ramdas et al. 2023; Waudby-Smith & Ramdas 2024; Shin, Ramdas & Rinaldo 2024) | 08-17 | Three variants in `experiments/eprocess_regime.py`, 24 configurations on the inner split, one frozen config on the holdout | **The deepest drawdown reduction in the project, and it still loses.** Holdout spot DD **11.6%** vs `kelly_regime_v4`'s 27.8% and holding's 54.0%; deeper than v4 in **0 of 40** Monte Carlo windows (median −14.0pp spot, −11.3pp futures). Return is 0.42x holding, so P1 fails. Anytime-valid evidence justifies only **0.27x** the incumbent's mean exposure. | **NEGATIVE** — and the risk finding was **retracted by R-31**: at matched risk it does not replicate on ETH and reverses in 45–82% of the stress windows |
 | R-29 | Trials-aware inference: block-bootstrap intervals, deflated Sharpe, combinatorially purged CV (Politis & Romano 1994; Bailey & López de Prado 2014; López de Prado 2018) | 08-17 | `src/tradebot/inference.py` + `scripts/inference.py`, applied to all 25 registered strategies on both markets: 96 paired comparisons, 100 deflated Sharpes, 45 CPCV splits | **10 of 96 adjacent pairs in the ranking are distinguishable at 95%, and none of them separates two of the table's top eight from each other.** The table's *final-balance* claim for `kelly_regime_v4` over holding on spot is a coin flip (P=0.52). The drawdown claim survives on the full history (−41.1pp [−54.8, −18.4]) and on the futures holdout, but **not** on the spot holdout (−27.1pp [−35.8, **+1.9**]). Cross-validating the table's own selection rule: it beats holding in **6 of 45** folds. | **METHOD** — the ordering is mostly noise, and now says so |
 | R-30 | Wire the intervals into the comparison table itself (backlog B-12) | 08-18 | `src/tradebot/evidence.py` reads R-29's `bootstrap.csv` into `tradebot run`: two verdict columns on the README table (Δ log growth and Δ max drawdown against `buy_and_hold`, each with its 95% paired interval and a ▲/≈/▼ mark), the full error bars in the per-market detail tables, the log-growth interval added to the bootstrap output — R-29 computed it and saved only the point — and a CI rule that a registered strategy with no measured interval fails the suite. 18 new tests. | **The column R-29 computed and discarded says more than the ones it kept.** On spot over the full history, **0 of 24 strategies are distinguishably better than `buy_and_hold` on log growth**, the criterion the table ranks by; 13 are distinguishably worse and the 11 indistinguishable ones are the entire profitable block. `kelly_regime_v4`'s +0.044 advantage is **[−2.60, +2.85]** — from a thirteenth of holding's final balance to seventeen times it. Everything R-29 published reproduced exactly. | **METHOD** — the warning now lives *in* the table, not beside it |
+| R-31 | Matched-risk frontier: e-process gate vs latched anchor vote at equal realized volatility (backlog B-11) | 08-18 | `experiments/matched_risk.py` — one sizer, one deadband, one warmup, one exposure knob, gate interchangeable. 36 configurations traced on both inner splits and both markets (144 backtests), exposures solved on inner-validation to within 2% of target volatility in both directions, then frozen; holdout scored with the R-29 paired block bootstrap | **Hold risk fixed and R-28's headline dissolves — both halves of it.** All 8 holdout intervals contain zero and the sign is unstable across cells; the one cell surviving the pre-registered validity gate gives −0.072 [−0.532, +0.379] on log growth. Three cells of four are **void**: the inner-validation exposure match did not survive into 2023+ (29% volatility gaps) or the spot notional cap truncated both arms differently (41% / 27% of bars). On ETH, with exposures re-matched, the e-process gate loses all four cells on return **and on drawdown** — so R-28's P3 replication was measured against an arm carrying 2.4x the risk. Equal-risk exposure ratio is itself regime-dependent: 2.2x in the bull, 4.7x in the bear. | **NEGATIVE** — the 0.27x exposure *was* the finding |
 
 ### R-28 pre-registration — written and committed before the holdout was read
 
@@ -296,6 +297,17 @@ hand-tuned constant was very nearly the principled one.
 **Holdout counter: ~38** (~30 before, +8 this row: three configurations ×
 two markets, plus two cost re-runs). The falsification test on ETH and
 the 40-window resample do not touch the 2023+ BTC holdout.
+
+> **Superseded in part by R-31 (08-18) — read the two together.** B-11
+> ran the matched-risk comparison this row asked for, and it removes two
+> of the claims above. **P3** ("the drawdown reduction replicates on ETH")
+> was measured against an arm carrying 2.4x the volatility; at matched
+> risk the ETH drawdown ordering **reverses**. And "deeper than v4 in 0 of
+> 40 windows" becomes deeper in **45–82%** once the e-process arm carries
+> comparable exposure. Nothing in this row was mismeasured — R-31
+> reproduces every number here exactly, including 14.4% / 19.5% / 36.9% on
+> the falsification data — but the property being measured was the
+> exposure level, not the gate.
 
 **Next step → B-11.** The exposure level and the evidence gate are
 separable, and this session only measured one point on that trade-off.
@@ -747,6 +759,215 @@ were spent by the exposure solver; they select `k`, but on a criterion
 are recorded separately rather than folded into the trials count. No
 holdout data has been read at the time of this commit.
 
+### R-31 results — the decision rule did not move, and three cells of four were void
+
+**Reproduction first, because none of the rest transfers otherwise.** The
+new `GatedKelly` evidence arm at k=1 is not merely similar to R-28's E1,
+it is the same run: max |equity difference| over inner-validation is
+**0.000e+00** (`run_matched_risk.py parity`). On the falsification data it
+reproduces R-28's published drawdowns exactly through an independent code
+path — BTC control spot **14.4%**, ETH spot **19.5%**, ETH futures
+**36.9%**. So every difference in conclusion below comes from the
+matching, not from a reimplementation.
+
+The by-hand lookahead probe passes for all four gate × sizer
+combinations: orders identical under two opposite tampers of the future,
+and max |column difference| before the cut = **0.000e+00** on `target`,
+`conf` and `scale`. `pytest`: **436 passed**.
+
+**What matching costs, and the first surprise.** Equalizing realized
+volatility on spot needs the e-process arm at **k = 4.70** against the
+vote's k = 1 — but only on inner-validation. On inner-train the same
+match needs **k = 2.16**. The exposure ratio that equalizes risk is
+itself regime-dependent, roughly 2.2x in the 2017–2020 bull and 4.7x in
+the 2021–2022 top-and-bear, because the e-process shuts down hardest
+exactly when the vote does not.
+
+**The inner splits disagree with each other, at matched risk** (spot,
+plain sizer, exposures matched *within* each split):
+
+| split | matched vol | vote | e-process | Δ DD |
+|---|---|---|---|---|
+| inner-train 2017–2020 | 0.379 | **$15,381** (DD 39.3%) | $10,029 at k=2.16 (DD 31.9%) | −7.4pp |
+| inner-validation 2021–2022 | 0.325 | $909 (DD 38.1%) | **$1,233** at k=4.70 (DD 32.8%) | −5.3pp |
+
+Same asset, same sizer, same risk; the return ordering reverses with the
+regime and the drawdown ordering does not. That was the basis of the
+prediction on record, and it is the shape of the whole result.
+
+**V — the validity gate, applied before any decision rule was read.
+Three of four cells VOID.**
+
+| cell | vote vol | e-process vol | gap | max clamp | verdict |
+|---|---|---|---|---|---|
+| spot / match-up | 0.315 | 0.306 | 2.6% | **41.0%** | **VOID** (cap, not gate, sets the position) |
+| spot / match-down | 0.104 | 0.140 | **29.9%** | 1.3% | **VOID** (risk match did not survive) |
+| futures / match-up | 0.394 | 0.527 | **29.0%** | 0.0% | **VOID** (risk match did not survive) |
+| futures / match-down | 0.153 | 0.153 | 0.2% | 0.0% | **VALID** |
+
+Prediction 3 was the one that landed: the exposure frozen on 2021–22 does
+not equalize risk in 2023+. On futures the e-process arm overshot to 0.527
+against the vote's 0.394 — it was *more* volatile than the arm it was
+supposed to match — and on spot it undershot in the other direction.
+
+**And the cell that would have been the headline is void.** On spot /
+match-up the two arms landed within 2.6% of each other on realized
+volatility, and there the e-process delivered **$3,736 against the vote's
+$3,277 with a 4.5pp shallower drawdown and a third of the fills** — the
+only cell where an e-process gate beats the incumbent's own gate on both
+axes, and it beats `kelly_regime_v4` ($3,373) too. It is void because
+both arms spend 41% and 27% of their bars pinned at spot's 1.0-notional
+cap, so they are not running the same sizer. That is the pre-registered
+rule doing exactly the job it was written for: this is the number a
+round without a validity gate would have reported.
+
+**D1 — the B-11 question. NOT ESTABLISHED, and not marginally.** Paired
+stationary block bootstrap on the 2023+ holdout, 1,319 daily
+observations, identical resamples for both arms:
+
+| cell | Δ log growth (evidence − vote) | 95% CI | P(>0) |
+|---|---|---|---|
+| spot / match-up *(void)* | +0.131 | [−0.400, +0.691] | 0.68 |
+| spot / match-down *(void)* | +0.030 | [−0.300, +0.463] | 0.54 |
+| futures / match-up *(void)* | −0.125 | [−1.307, +1.441] | 0.40 |
+| **futures / match-down (valid)** | **−0.072** | **[−0.532, +0.379]** | 0.39 |
+
+Every interval contains zero, in every cell, valid or void — and the sign
+is not even stable across cells. The one cell that survives V gives the
+vote a $1,909-to-$1,776 edge that the interval cannot distinguish from
+nothing.
+
+**D2 — the axis that was not matched. Also NOT ESTABLISHED.** Δ max
+drawdown, same resamples: spot −4.7pp [−19.9, +7.1] and +1.7pp
+[−6.3, +9.6]; futures +7.3pp [−14.2, +27.0] and −1.9pp [−13.4, +5.4].
+Four intervals, four containing zero. Prediction 2 said the e-process
+would keep a drawdown advantage at matched volatility on at least one
+market; the point estimates lean that way on three of four cells and not
+one of them clears its own error bar.
+
+**D3 — the falsification test, and the result that matters most.** On
+ETH (Bitfinex, the R-17 window), with exposures re-matched on ETH's own
+volatility, the e-process gate loses **all four** cells on return and
+loses on drawdown too:
+
+| asset / market | matched vol | vote | e-process | Δ DD |
+|---|---|---|---|---|
+| ETH / spot, match-up | 0.377 | **$5,186** (DD 36.3%) | $4,010 at k=2.31 (DD **40.0%**) | +3.7pp |
+| ETH / spot, match-down | 0.171 | **$2,379** (DD 17.1%) | $1,944 (DD **19.5%**) | +2.4pp |
+| ETH / futures, match-up | 0.428 | **$7,330** (DD 36.1%) | $3,565 at k=2.17 (DD **53.2%**) | +17.1pp |
+| ETH / futures, match-down | 0.232 | **$2,345** (DD 27.6%) | $2,079 (DD **36.9%**) | +9.3pp |
+
+The BTC control over the same window behaves as it did on BTC everywhere
+else — the vote wins return in all four cells, the e-process wins
+drawdown by 5–10pp.
+
+**So R-28's P3 was a risk-level artifact.** R-28 recorded "the
+falsification test *did not* falsify — on ETH the drawdown reduction
+replicates and is larger than the incumbent's: spot 19.5% vs v4's 36.5%".
+Both numbers reproduce here exactly. But the 19.5% was measured against
+an arm carrying **2.4x** the volatility; hold the risk fixed and ETH's
+drawdown ordering **reverses**, by 2.4pp on spot and 17.1pp on futures.
+The e-process gate's risk advantage on a second asset was the exposure
+level, not the gate.
+
+**Costs.** At Bitstamp's 0.40% entry tier the e-process arm degrades far
+less than the vote — spot match-up $3,399 against $2,373, because it pays
+$381 in fees against $977 on 91 fills against 349 — which is L-06's
+turnover finding reappearing, not a gate finding, and the cell is void
+anyway. Neither arm beats `buy_and_hold`'s $3,827 at that tier. With
+funding charged on 5x futures, leveraged holding is **liquidated**; the
+matched pair pays $1,283 (vote) against $874 (e-process) at match-up and
+$264 against $178 at match-down, and finishes at $3,120/$2,787 and
+$1,597/$1,614.
+
+**Path sensitivity — and R-28's single strongest number, inverted.** The
+R-19 design, 40 random windows, identical windows for every strategy,
+carrying the frozen spot exposures. Paired per window, e-process minus
+vote:
+
+| market / pair | Δ median return | e-process return higher in | Δ median DD | e-process **deeper** in |
+|---|---|---|---|---|
+| spot / match-up | +6.7pp | 55% | −1.9pp | 45% |
+| spot / match-down | +7.8pp | 72% | +2.0pp | 72% |
+| futures / match-up | +70.8pp | 72% | +14.9pp | 78% |
+| futures / match-down | +8.6pp | 75% | +4.9pp | 82% |
+
+R-28's most-quoted line was that the e-process drawdown is deeper than
+`kelly_regime_v4`'s in **0 of 40 windows on both markets** — "the only
+claim in the project that is not inside a noise floor". Give the
+e-process arm a comparable exposure and it is deeper in **45–82%** of the
+same windows. Read this as reinforcing V rather than as a fifth cell: the
+exposures were frozen on 2021–22 spot and are not re-matched window by
+window, so the arms are only approximately equal-risk here, and on
+futures match-up the e-process arm is plainly running hot (median return
++226.6% against +106.4%, median DD 41.0% against 26.0%). That is the
+point. The 0-of-40 result was never a statement about the gate; it was a
+statement about carrying a third of the notional, and it does not survive
+being given the notional back.
+
+**P — promotion. Not reached.** D1 produced no claim, so nothing is a
+candidate. For the record the bar would have failed anyway: the best
+holdout spot number from any matched arm is $3,736 against
+`buy_and_hold`'s $3,839.
+
+**Scoreboard against the predictions written before looking.**
+Prediction 1 (D1 fails; the ordering tracks the regime) — **correct**,
+including the mechanism, though the holdout's one valid cell went to the
+vote by an amount that is itself noise. Prediction 2 (the e-process keeps
+a drawdown edge at matched volatility) — **wrong** as a claim: three of
+four point estimates lean that way, none survives its interval, and ETH
+reverses the sign outright. Prediction 3 (V is the condition most at
+risk) — **correct**, and it voided three cells of four.
+
+**Verdict: NEGATIVE**, with the decision rule untouched. Nothing was
+re-argued after the fact; the void cells are named as void including the
+one that flattered the idea.
+
+**Lesson.** R-28's headline was "the e-process gate is the deepest
+drawdown cut in the project, and it loses on return". Hold risk fixed and
+**both halves dissolve**: the return gap is inside the noise floor on BTC
+and goes the wrong way on ETH, and the drawdown cut — the finding this
+project called its strongest — does not survive risk-matching on a second
+asset. What R-28 actually measured was the consequence of holding 0.27x
+the exposure. That is a real and useful fact about calibrated evidence
+(bet honestly, hold less, draw down less), but it is a fact about the
+*exposure level*, not about the gate, and B-11 existed precisely to tell
+those two apart. It now has.
+
+The second lesson is procedural and cost nothing to obtain: **the
+validity gate earned its place in the pre-registration.** Without it this
+row would have led with spot / match-up — an e-process arm beating the
+incumbent's gate on return, drawdown and fees simultaneously — and the
+reason that number exists is that spot's notional cap was truncating both
+arms differently, not that the gate was better.
+
+**Next step → B-13, and it is pointed at this project's own headline.**
+The argument that retired R-28's risk finding applies verbatim to L-04's:
+"regime-gated sizing cuts drawdown" is a comparison between a strategy
+holding roughly half the notional and a **fully-invested** benchmark.
+R-29's −41.1pp [−54.8, −18.4] and R-17's ETH replication are both
+measured that way. Nobody has yet asked what a `buy_and_hold` de-levered
+to `kelly_regime_v4`'s realized volatility does to that gap. The harness
+built here answers it in an afternoon, and the answer is worth having in
+either direction: if the gap survives, it is the best-supported claim in
+the repo; if it does not, the project's one robust finding is the same
+arithmetic R-28 fell for.
+
+**Configurations evaluated: 36** (frontier grid: 2 sizers × 2 gates × 9
+exposures, 144 backtests across two splits and two markets), plus 32
+inner-validation backtests spent by the exposure solver on a criterion
+orthogonal to performance and 4 more for the within-split matched pairs
+above. The project trials count this round contributes is **36**; the
+count it applies is 103 + 36 = **139**.
+
+**Holdout counter: ~112** (~88 before, +24 this row: 12 matched-and-
+reference runs across two markets, 6 re-runs at the 0.40% taker tier, and
+6 with funding charged on futures). The ETH/BTC falsification cells and
+the 40-window resample do not read the 2023+ BTC holdout, following the
+R-19/R-28 convention. Consistent with R-29: nothing here is offered as a
+Sharpe-based claim, and every number above is reported with its interval
+or explicitly as a point on one path.
+
 ---
 
 ## C. Ruled out — do not re-try without new evidence
@@ -798,6 +1019,22 @@ should say so and spend itself on **B-06** instead — writing the recorder
 against a mock feed so that only the network policy, and not also the
 code, stands between this project and its first uncontaminated evidence.
 
+**Re-ranked again 08-18 after R-31.** B-11 is done, and it opened
+**B-13**, which goes to the top. R-31 removed a claim the project had been
+leaning on — R-28's ETH drawdown replication — by showing it was a
+statement about exposure rather than about the mechanism; the same
+argument applies unchanged to L-04's "regime-gated sizing cuts drawdown",
+which is also measured against a fully-invested benchmark. That makes
+B-13 the cheapest experiment left that could change what this project
+believes about itself, and it needs no new data. B-05 follows it as the
+other computation-only item. **B-06 (forward paper trading) remains the
+highest-value item on merit** and the only source of uncontaminated
+evidence, and it is still blocked on network access; a session that
+finds B-13 and B-05 unpersuasive should spend itself writing that
+recorder against a mock feed, so only the network policy — and not also
+the code — stands between this project and evidence it has not already
+spent.
+
 Two things changed the order. R-28 answered B-01. And a connectivity check
 found that **every exchange endpoint is blocked by the network policy
 these sessions run under** — Binance, Bitstamp, Kraken and Coinbase all
@@ -811,17 +1048,18 @@ remains actionable is computation on the data already here.
 
 | ID | item | attacks | status | note |
 |---|---|---|---|---|
-| ~~B-01~~ | ~~E-process regime detection with unified Kelly sizing~~ | ERR, N≈3 | **DONE → R-28** | NEGATIVE on the promotion bar, and the strongest risk result in the project: 0 of 40 windows deeper than the incumbent. (R-26's null round listed this as untried; R-28 is the round that actually ran it.) Follow-up split out as B-11. |
+| ~~B-01~~ | ~~E-process regime detection with unified Kelly sizing~~ | ERR, N≈3 | **DONE → R-28**, qualified by R-31 | NEGATIVE on the promotion bar. It read as the strongest risk result in the project — 0 of 40 windows deeper than the incumbent — until B-11 compared the two at equal risk and found that number was about exposure, not about the gate. (R-26's null round listed this as untried; R-28 is the round that actually ran it.) |
 | ~~B-04~~ | ~~Purged CV, deflated Sharpe, block-bootstrap CIs on every headline~~ | ERR | **DONE → R-29** | The guess was right: 10 of 96 adjacent pairs distinguishable, none of them in the top eight. Also closes R-25. `tradebot.inference` is now a permanent module with 27 tests; step 4 of the routine can be mechanical from here. |
 | ~~B-12~~ | ~~Put the intervals *in* the comparison table~~ | ERR | **DONE → R-30** | The table now carries Δ growth and Δ max drawdown against `buy_and_hold`, each with a 95% interval, and a strategy without a measured interval fails CI. The by-product is the sharpest number in the project: **0 of 24 strategies are distinguishably better than holding on the criterion the table ranks by**, and v4's +0.044 edge is [−2.60, +2.85]. |
-| **B-11** | Matched-risk frontier: e-process gate vs latched vote at equal realized volatility | ERR, SIZE | **NEXT** | R-28 measured one point on an exposure/evidence trade-off and compared it with the incumbent at a *different* point, so "better risk, worse return" is partly a tautology. The real question is which gate delivers more return at the same drawdown. Warning already in hand: do **not** do it by raising `evidence_cap_mult` — that keeps stale evidence alive and drawdown grows superlinearly (49% DD, −22% on inner-validation at cap 2). Needs no new data. |
-| **B-05** | Funding as a gate on the existing strategy (stand flat in the top decile) | COST | **OPEN** | Actionable: uses the committed 2020–2023 funding file, no fetch. The low-turnover way to use R-16, and it directly targets the adverse timing in R-14. Higher-turnover standalone reversal use is where strategies go to die (R-12). |
+| ~~B-11~~ | ~~Matched-risk frontier: e-process gate vs latched vote at equal realized volatility~~ | ERR, SIZE | **DONE → R-31** | Answered, negatively and usefully. At equal realized volatility the two gates are indistinguishable on the BTC holdout (all 8 intervals contain zero, sign unstable), three of four cells fail a pre-registered validity gate, and on ETH the e-process gate loses on **both** axes — so R-28's ETH drawdown replication was an artifact of carrying 2.4x less risk. The 0.27x exposure was the whole finding. |
+| **B-05** | Funding as a gate on the existing strategy (stand flat in the top decile) | COST | **NEXT** | Actionable: uses the committed 2020–2023 funding file, no fetch. The low-turnover way to use R-16, and it directly targets the adverse timing in R-14. Higher-turnover standalone reversal use is where strategies go to die (R-12). |
 | **B-02** | Extend the funding series through 2026 | COST | **BLOCKED (network)** | Still the single cheapest item that could change a decision — the literature says the carry premium broke in 2024–25 and our data stops in 2023 — but Binance is unreachable from these sessions. Needs the operator. |
 | **B-03** | Funding harvest (delta-neutral spot vs short perp) | COST | BLOCKED on B-02 | +16.2%/yr with a −1.31% worst month is a risk profile nothing else here approaches — measured entirely in the good years. Unmodelled: basis risk, short-leg liquidation, exchange/custody risk, borrow cost. |
 | **B-06** | Forward paper-trading recorder | N≈3 | **BLOCKED (network)** | Rose in importance and fell in feasibility on the same day. R-28's deflated Sharpe says this dataset is close to exhausted, which is the argument for starting the only uncontaminated record this project can still generate — but the recorder needs a live price feed, and every venue is blocked. First thing to unblock if the policy is widened. |
 | **B-07** | On-chain features, sign-corrected | INFO | BLOCKED (network) | The only genuinely orthogonal channel. Enter with the base rate in mind: a 141-predictor study found 67 worked in-sample, 29 survived out-of-sample, **4 beat a random walk at all horizons**. Note the trap: on-chain flows predict *volatility*, and R-08 showed better volatility input makes this strategy worse. **Fix the sign first.** |
 | **B-08** | Second bear, second asset, different period (ETH 2020–2026) | N≈3 | BLOCKED (network) | R-17 shares the 2018 bear with the main dataset, so the two tests are not independent; the committed Bitfinex ETH file stops in 2019 and the rest is not fetchable from here. |
 | **B-09** | Conformal prediction / adaptive conformal by betting (adaptive conformal inference under distribution shift; conformal prediction with change points, NeurIPS 2025; adaptive conformal inference by betting, 2024) | ERR | LOW | Was "mostly subsumed by B-01" — now demoted further by R-28's result: the binding problem is not that trust is miscalibrated but that correctly-calibrated trust is *low*, and conformal would say the same thing more slowly. |
+| **B-13** | Matched-risk benchmark: `kelly_regime_v4` against a **de-levered** `buy_and_hold` at equal realized volatility | ERR, SIZE | **NEXT** | Opened by R-31, and it points the same knife at this project's own headline. Every drawdown claim here — L-04's "regime-gated sizing cuts drawdown", R-17's ETH replication, R-29's −41.1pp [−54.8, −18.4] — compares a strategy holding roughly half the notional against a **fully-invested** benchmark. R-31 showed that precise mismatch manufactured a mechanism finding for the e-process gate that vanished at equal risk. The experiment is one afternoon: add a constant-exposure hold at scale `c` to `experiments/matched_risk.py`, solve `c` on inner-validation so its realized volatility equals v4's, and re-run the paired bootstrap. Needs no new data, no fetch, and the harness already exists. Pre-register the answer both ways — a hold de-levered to 0.5x is *not* obviously a weaker benchmark, and if the drawdown gap survives it, that is the strongest result this project has ever had. |
 | **B-10** | Deterministic Elliott wave counter | — | LOW | Only as a documented negative result, per R-18. ZigZag pivots, mechanical impulse/corrective rules, no discretion. About a day, converts an unfalsifiable debate into a table row. |
 
 ---
@@ -858,4 +1096,5 @@ Also record, in the row or a footnote beneath it:
 | 08-16 | ~30 | Backfilled estimate. Every OOS figure in sections A and B came from reading the 2023+ holdout; it has never been pristine. Deflate program-level claims accordingly, and treat forward paper trading (B-06) as the only uncontaminated evidence still obtainable. |
 | 08-17 | ~88 | R-29: every registered strategy (25) on both markets, as a fresh 2023+ account, to attach an interval to each. No selection was made on any of it and the decision rules were committed first — but 50 consultations is 50 consultations. The finding that matters: at ~88 program-level reads, and with `kelly_regime_v4`'s holdout Sharpe needing a **6.2-year** track record to clear a 103-trial bar it has 3.6 years of, **no Sharpe-based claim from this dataset is supportable any more**. Judge on drawdown, which still replicates, and treat B-06 (forward paper trading) as the only remaining source of evidence. |
 | 08-18 | ~88 | R-30: **unchanged, and the reasoning is the point.** The bootstrap was re-run over the holdout to recover the log-growth interval, which looks like 50 fresh consultations and is not one: R-29 drew those exact resamples and computed that exact interval object, then persisted only two of its three fields. Every overlapping number came back bit-identical, which is the evidence. No new question was asked; a field was recovered from an answer already given. Read it as ~138 if you disagree — R-29's conclusion that no Sharpe-based claim from this dataset is supportable holds either way. |
+| 08-18 | ~112 | R-31: 12 matched-and-reference runs across two markets, 6 re-runs at the 0.40% taker tier, 6 with funding charged on futures. The ETH/BTC falsification cells and the 40-window resample do not read the 2023+ BTC holdout (the R-19/R-28 convention). Every configuration was frozen on inner-validation and the decision rule, the validity gate and the predictions were committed one commit ahead of the first holdout read — `git log` records it. Nothing here is offered as a Sharpe-based claim; the round's finding is that at matched risk there is no difference to claim. |
 | 08-17 | ~38 | R-28: three configurations × two markets, plus two cost re-runs. The ETH falsification test and the 40-window resample do not read the 2023+ BTC holdout. At 24 trials in a single session the deflated Sharpe was already 0.859; at ~38 program-level consultations, treat any Sharpe-based claim from this dataset as unsupportable and judge on drawdown, which is the property that has repeatedly replicated. |
