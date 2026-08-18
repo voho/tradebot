@@ -1038,8 +1038,15 @@ rates) — noise from splitting a tied cluster, and a warning about how
 much of the rest is noise too. Four years, one asset, and this repo's
 track record is that every apparent predictor died out-of-sample. The
 low-turnover way to use it — a gate that stands flat when funding is in
-its top decile — is backlog item B-05; the high-turnover standalone
-reversal use is where strategies go to die (R-12).
+its top decile — was tried as backlog item B-05 (ledger row R-33), along
+with an analytically-derived continuous version; both failed the
+promotion bar on the 2023 holdout (neither beat `kelly_regime_v4`, and
+`kelly_regime_v4` itself narrowly lost to `buy_and_hold` that year). Both
+cut funding paid, as intended, and both gave back more return than that
+saved — funding is richest exactly where R-10 already found BTC's
+forward Sharpe is highest, so a pure cost-side use of the signal runs
+into the same wall as R-08. The high-turnover standalone reversal use
+remains where strategies go to die (R-12).
 
 ## Known limitations
 
