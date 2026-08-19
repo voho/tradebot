@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 
 from tradebot.broker import MarketSpec, PaperBroker
-from tradebot.data import load_funding
+from tradebot.data import load_funding, load_funding_deribit, load_funding_extended
 from tradebot.engine import run_backtest
 from tradebot.orders import Order
 from tradebot.registry import get_strategy
@@ -179,3 +179,45 @@ def real_ohlcv_slice():
     assert label != "SYNTHETIC"
     # a span the committed funding data actually covers
     return df.loc["2021-01-01":"2022-12-31"]
+
+
+# --- the extended (Binance + Deribit) funding series, added by R-39 ---
+
+
+def test_deribit_funding_covers_the_gap_the_binance_series_leaves():
+    """The whole point of the second series: 2024-2026, which Binance lacks."""
+    deribit = load_funding_deribit(DATA_DIR)
+    binance = load_funding(DATA_DIR)
+    assert deribit is not None
+    assert deribit.index.max() > binance.index.max()
+    assert deribit.index.max().year >= 2026
+    assert deribit.index.is_monotonic_increasing
+    assert not deribit.index.has_duplicates
+    assert deribit.notna().all()
+
+
+def test_extended_funding_never_overwrites_a_real_binance_settlement():
+    """Deribit fills the post-2023 gap only; the overlap stays Binance.
+
+    The two venues' rates differ materially (r=0.69 daily on the overlap,
+    level ratio unstable year to year), so a splice that let Deribit
+    override real Binance values inside the overlap would silently change
+    every published funding figure in the repo.
+    """
+    binance = load_funding(DATA_DIR)
+    combined, source = load_funding_extended(DATA_DIR)
+
+    overlap = combined.index.intersection(binance.index)
+    pd.testing.assert_series_equal(combined.loc[overlap], binance.loc[overlap])
+    assert (source.loc[overlap] == "binance").all()
+    assert (source[source.index > binance.index.max()] == "deribit").all()
+    assert source.index.equals(combined.index)
+
+
+def test_extended_funding_is_still_a_persistent_cost_after_2023():
+    """The premium compressed; it did not invert. Both matter downstream."""
+    combined, source = load_funding_extended(DATA_DIR)
+    extension = combined[source == "deribit"]
+    assert (extension > 0).mean() > 0.6
+    annualized = extension.mean() * 3 * 365.25
+    assert 0.0 < annualized < 0.20, f"unexpected extension funding: {annualized:.2%}"
