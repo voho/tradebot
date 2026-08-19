@@ -2171,6 +2171,89 @@ steady bulls" (L-04's own stated weakness) and its *drawdown* edge was
 already shown by this exact project (R-33) to be substantially an exposure
 artifact of the same bull-heavy sample.
 
+### R-36 results — D1 passes, and the falsification test survives, thinned out
+
+`experiments/b14_regime_breakdown.py` recovered all 40 window start dates
+from the identical `rng(seed=42)` sequence (verified: `warmup+10=23,060`
+matches `kelly_regime_v4.warmup + 10`) and joined them against the
+existing `windows.csv`. 18 of 40 windows start before 2021-01-01, 22 on or
+after it — a reasonably balanced split given it was not chosen to
+balance, only to match the inner-train/inner-validation boundary already
+in use throughout this project.
+
+| market | segment | n | win-rate | 95% CI | median Δreturn |
+|---|---|---|---|---|---|
+| spot | pooled (D1) | 40 | 82.5% | [67.2%, 92.7%] | **+20.8pp** |
+| spot | pre-2021 start | 18 | 100.0% | [81.5%, 100.0%] | +68.9pp |
+| spot | post-2021 start | 22 | 68.2% | [45.1%, 86.1%] | **+5.0pp** |
+| futures | pooled (D1) | 40 | 90.0% | [76.3%, 97.2%] | **+23.8pp** |
+| futures | pre-2021 start | 18 | 100.0% | [81.5%, 100.0%] | +97.2pp |
+| futures | post-2021 start | 22 | 81.8% | [59.7%, 94.8%] | **+7.4pp** |
+
+**D1: PASS on both markets** — the pooled win-rate's 95% CI excludes 50%
+on spot ([67.2%, 92.7%]) and futures ([76.3%, 97.2%]).
+
+**Falsification test: SURVIVES on both markets, by the pre-registered
+rule** — the post-2021 subsample's win-rate exceeds 50% (68.2% spot, 81.8%
+futures) and its median advantage is positive (+5.0pp spot, +7.4pp
+futures) in both. The advantage is not exclusively a 2017–2020 bull
+artifact.
+
+**The honest qualifier, stated because the pre-registered rule did not
+ask for it and would have missed it.** The post-2021 subsample's *own*
+95% CI contains 50% on spot ([45.1%, 86.1%]) — at n=22 it cannot by itself
+reject "no edge" at 95%, only the *point estimate* favours v4, on both
+markets. And the magnitude drops by roughly 8–13x between the two halves
+(+68.9pp → +5.0pp spot, +97.2pp → +7.4pp futures). The correct reading is
+therefore two-part: **(1) some return-per-unit-risk advantage over a
+genuinely matched passive hold generalizes past the 2017–2020 bull** — the
+point estimate is positive and the win-rate exceeds 50% in a subsample
+that includes the 2022 bear and the 2023+ cycle — **but (2) the large
+number quoted in R-33 and reproduced in the pooled D1 statistic here is
+substantially a bull-period effect**, consistent with L-04's own
+documented weakness ("it lags badly in steady bulls") applying with the
+opposite sign once the benchmark can no longer out-hold its way to a
+bigger number just by carrying more risk.
+
+**Configurations evaluated: 0.** This row is a fixed statistical readout
+of an existing measurement (R-33's `windows.csv`, unchanged), not a
+search — no parameter was swept, no threshold was tuned against the
+result. It contributes nothing to the deflated-Sharpe trial count.
+Project trials count unchanged at 312.
+
+**Holdout counter: unchanged at ~159**, per the pre-registered accounting
+above (the 40-window resample is not counted, matching the R-19/R-33
+convention already recorded in this ledger).
+
+**Lookahead / correctness check.** The date-recovery script makes no
+trading decision and touches no strategy logic — it replays an RNG
+sequence and indexes a timestamp column — so `test_causality_strict.py`'s
+concern does not apply. What was checked by hand instead: the recovered
+`warmup+10` (23,060) was cross-checked directly against
+`get_strategy("kelly_regime_v4").warmup` (23,050) before trusting any
+date in the table above, since a silent mismatch there would silently
+shift every window's identity without erroring.
+
+**Lesson.** This project's single largest headline number
+(`kelly_regime_v4`'s return-per-risk edge, +20.8pp/+23.8pp median) is
+now known to be roughly an order of magnitude smaller once the 2017–2020
+bull is excluded — but it does not vanish, and the sign is right in both
+markets. That is a materially more defensible, and more modest, claim
+than either R-33's byproduct number or a naive rejection would have
+produced, and it is the first claim in this project's SIZE lineage to
+survive both a risk-match (R-33) and a period-match (this row) instead of
+dissolving under one or the other.
+
+**Next step.** The confirmed-but-thinned edge motivates, but does not by
+itself supply, a strategy that captures more of it than v4 already does
+by construction (v4 *is* the arm that produced this number — this row
+validates the existing registered strategy's property, it does not design
+a new one). That is a new question, opened here rather than pursued in
+this row: can a SIZE-axis modification to the existing, already-validated
+regime gate capture a larger share of the post-2021 (non-bull) edge
+without reintroducing an exposure-level artifact of its own? Two
+independent attempts follow immediately below (R-37).
+
 ---
 
 ## C. Ruled out — do not re-try without new evidence
