@@ -1,5 +1,10 @@
 __pycache__/
 *.py[cod]
+# R-44 parallel round in progress: two branch files being written by
+# background agents, not yet reviewed/committed as a unit -- temporary,
+# removed from this list once the round's ledger row is written
+/experiments/kelly_regime_v10_onchain_confirm.py
+/experiments/kelly_regime_v10_hashribbon_vote.py
 *.egg-info/
 /build/
 /dist/
