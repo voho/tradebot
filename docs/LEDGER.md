@@ -127,6 +127,8 @@ the most expensive repeated mistake in this table.
 | R-32 | The ungated control, and an independent second reading of B-11 | 08-18 | A parallel session ran the same backlog row the same day from the same base commit. Same design as R-31 (one sizer, gate interchangeable, exposure scaled by a scalar) plus a **third arm with no gate at all**; 33 configurations, 132 backtests, multipliers frozen on inner-validation | **Agrees with R-31 wherever the two overlap** — gates indistinguishable at matched risk, R-28's 0-of-40 inverted (deeper in 60%/62%), its fee advantage inverted, P1 failed — from an independent implementation, and its own holdout cells are **void** under R-31's validity rule (cap binds on 41%/36%/21% of spot bars; a 29% volatility gap on futures). What it adds: at matched risk the **ungated** arm is below both gated arms at every risk level in all four inner-split cells and loses 80–90% of 40 paired windows. **The gate is worth more than the choice of gate.** | **NEGATIVE** — and the parallel-branch report the routine requires |
 | R-34 | `harsanyi_crowd`'s Bayesian bull/bear/chop posterior (L-12) as a SIZE input on `kelly_regime_v4`, instead of the DIRECTION input that lost — L-12's own recorded lesson, tested for the first time | 08-19 | Two parallel unregistered variants, each on a disjoint file: `experiments/kelly_regime_v5_damp.py` (conservative — a bounded multiplicative dampener, `mult∈[1−lam,1]`, applied on top of v4's unchanged vote) and `experiments/kelly_regime_v5_bayes.py` (novel — the discrete vote replaced entirely by a continuous, hysteresis-latched posterior margin feeding v4's unchanged conditional-vol-targeting sizer); 42 configurations across inner-train/inner-validation, both markets, plus ETH/BTC Bitfinex falsification and an explicit matched-mean-exposure check on each branch | **Conservative:** never beats v4 on return in any of 12 measured cells; its drawdown "improvement" is architecturally guaranteed (the multiplier can only shrink exposure) and the resulting exposure series correlates **R²=0.997** with a flat 0.7x rescale of v4 — the same exposure-level artifact as L-04/R-33, R-28/R-31 and R-32, reproduced with a new source signal. **Novel:** genuinely independent of the vote (correlation **−0.0017**, not a smoothed duplicate) but underperforms v4 in all 36 configurations (inner-validation spot Sharpe −2.9 to −3.9 vs v4's +0.14, turnover 4–7x), and explicitly re-scaling exposure to match v4's mean (`exposure_mult=5.27`) makes it *worse* (Sharpe −6.25, DD 92%), ruling out the exposure-artifact explanation for this branch — the margin is simply too noisy at its native hours-to-days cadence to pay 5-minute-bar trading costs on either axis. | **NEGATIVE** (both branches). Holdout untouched by either branch. |
 | R-35 | Funding rate as a COST-aware SIZE input on `kelly_regime_v4` (backlog B-05) | 08-19 | Two parallel unregistered variants, each on a disjoint file: `experiments/funding_gate_decile.py` (conservative — literal backlog reading, stand flat when trailing funding percentile clears the 90th) and `experiments/funding_ev_band.py` (novel — extends L-05's analytic no-trade band with a forecast funding-drag term); 80 configurations total across both branches on inner-train/inner-validation, plus one pre-registered holdout read (2023-01-01..2023-12-31, the funding-covered slice only) for the branch that cleared | **Conservative clears every inner-validation and falsification check — genuinely not the exposure-level artifact its own pre-registration predicted (§5 flat-rescale test) — then loses on the single holdout year it earned: Δ log growth vs v4 is negative on both markets, −0.167 [−0.495, +0.101] futures, and stays negative funding-charged. Novel branch is a real, non-exposure-artifact Sharpe edge (§7 rescale diagnostic) that fails its own plateau check and, per its author's recommendation, never reached the holdout.** | **NEGATIVE** (both branches) — see full write-up below |
+| R-36 | Formalize B-14: is `kelly_regime_v4`'s return-per-unit-of-risk edge over a matched passive hold (R-33's byproduct finding) real outside the 2017–2020 bull? | 08-19 | Pre-registered a pooled decision rule (exact-binomial 95% CI on R-33's existing 40-window win-rate) plus a named falsification test (split the same 40 windows by start date, before/after 2021-01-01); reused `windows.csv` unchanged, only recovered each window's calendar date from the identical seed=42 RNG sequence — 0 new backtests | **D1 passes on both markets (CI excludes 50%). Falsification survives on both markets — post-2021 windows still favour v4 (win-rate 68.2%/81.8%, median +5.0pp/+7.4pp) — but the effect is ~10x smaller than the pooled/pre-2021 number (+68.9pp/+97.2pp), and the post-2021 subsample's own CI still contains 50% on spot at n=22.** | **CONFIRMED, thinned** — see full write-up below |
+| R-37 | Two SIZE-axis attempts to capture more of R-36's confirmed (but thinned) edge on `kelly_regime_v4` | 08-19 | Two parallel unregistered variants, each on a disjoint file: `experiments/kelly_regime_v6_retune.py` (conservative — retunes the existing `target_vol`/`max_leverage` constants, no new signal) and `experiments/kelly_regime_v6_state_kelly.py` (novel — replaces the single global `target_vol` with a causally-estimated, per-vote-state Kelly fraction `μ_state/σ_state²`); 99 configurations total across both branches (53 + 46), inner-train/inner-validation and ETH falsification only, no holdout read by either | **Conservative: the naive best-Sharpe candidate reproduces the project's standard exposure-level artifact (+51% realized vol) and does not transfer to futures; the one candidate surviving a matched-exposure control nets a Sharpe delta inside the ±0.2 noise floor on both markets and does not clear ETH by more than a token margin. Novel: `max_leverage` never binds (rules out the raw-leverage artifact cleanly) and states genuinely differ in measured μ/σ² (bear ≈ −62%/yr, bull ≈ +154–174%/yr, non-monotone — 2/3 agreement beats unanimous 3/3) — but it fails its pre-registered ETH falsification outright, underperforming v4 on the BTC control too, and its halflife/kelly_mult neighbourhood is a fitted peak, not a plateau.** | **NEGATIVE** (both branches) — see full write-up below |
 
 ### R-28 pre-registration — written and committed before the holdout was read
 
@@ -2254,6 +2256,203 @@ regime gate capture a larger share of the post-2021 (non-bull) edge
 without reintroducing an exposure-level artifact of its own? Two
 independent attempts follow immediately below (R-37).
 
+### R-37 — two SIZE-axis attempts to harvest more of R-36's confirmed edge, run in parallel
+
+**Idea.** R-36 confirmed a real but thinned return-per-unit-of-risk edge for
+`kelly_regime_v4` over a matched passive hold outside the 2017–2020 bull
+(median +5.0pp/+7.4pp per window, post-2021 windows). That row explicitly
+declined to design a strategy around it — it validated an existing
+property, it did not build one. This row opens that question with two
+independent, disjoint-file attempts, run in parallel per ROUTINE.md's
+rules: a conservative retune of v4's existing exposed constants, and a
+novel change to the sizing formula itself. Both attack **SIZE**. Neither
+touches detection (the 3-anchor latched vote is unchanged in both
+branches), so neither duplicates R-01/R-02/R-03/R-28/R-34 (all of which
+tried to replace or augment *detection*). Neither is `kelly_regime_v2`
+(L-03, a convex exponent on the vote fraction, still riding one global
+`target_vol`). Neither is R-06/R-07 (which swept anchor horizons, a
+disjoint constructor axis). Both operated under an explicit, tighter
+constraint than the project's usual holdout discipline: **no read of any
+bar dated 2023-01-01 or later, for any purpose** — inner-train,
+inner-validation, and the pre-2020 Bitfinex ETH/BTC falsification only.
+Neither branch's worktree is offered as a Sharpe-based claim beyond what
+is stated below; both are read as risk/return-shape and falsification
+results, consistent with R-29's finding that this dataset cannot support
+Sharpe-based claims.
+
+**A build-process note, for anyone reproducing this row.** Both branches'
+git worktrees were unexpectedly based on an older commit (`origin/main`,
+17 commits behind this branch — pre-dating R-29 through R-36 and the
+docs restructure), rather than the session's current HEAD. This was
+caught and checked before trusting either report: the actual
+`kelly_regime`/`kelly_regime_v3`/`kelly_regime_v4` strategy source files
+were diffed byte-for-byte between each worktree and the current tree and
+are **identical** (those files predate R-28), so the empirical sweeps
+themselves are unaffected — only some of each branch's *contextual*
+framing (references to ledger rows not present in their checked-out
+`docs/LEDGER.md`) relied on the summary pasted directly into their task
+prompts rather than the file. The operator independently re-ran the novel
+branch's causality probe and ETH falsification from its own worktree
+(exact match on every number, see below) as a partial substitute for the
+skeptic step ROUTINE.md calls for.
+
+#### Conservative branch — retune `target_vol`/`max_leverage`
+
+**Mechanism.** v4's sizing constants (`target_vol=0.55, max_leverage=2.0`)
+were hand-set years before this project's inner/holdout discipline
+existed and have never been retuned against R-36's evidence specifically.
+No new signal, no new mechanism — only the existing constructor scalars.
+
+**Pre-registered failure modes** (named before running): (a) any
+improvement sits inside the ±0.2 Sharpe noise floor; (b) the winner is a
+plateau-free spike; (c) the winner is the L-04/R-28/R-31/R-32/R-33
+exposure-level artifact rather than a genuinely better risk/return trade
+at matched exposure.
+
+**Configurations evaluated: 53** (50 on the primary `target_vol` × 10 ×
+`max_leverage` × 5 inner-train/inner-validation grid, + 3 secondary
+`anchor_span_days` configs around the naive winner).
+
+**Result.** Naive best-Sharpe selection on inner-validation lands on
+`target_vol=0.9, max_leverage=2.5` — spot Sharpe 0.296 vs defaults' 0.142,
+but realized vol/notional **+51%/+52%** relative to defaults (failure mode
+(c), exactly as pre-registered) and it does not transfer to futures
+(Sharpe 0.085 vs 0.251, profit −13.0% vs +6.4%). The one candidate
+surviving a genuine matched-exposure control (vol/notional within ~10% of
+defaults on **both** markets simultaneously), `target_vol=0.60,
+max_leverage=3.0`: Δ Sharpe **+0.044 spot / −0.026 futures** — inside the
+±0.2 noise floor on both markets, i.e. a wash (failure mode (a)). Neither
+candidate clears the plateau bar: the naive winner sits at the edge of the
+searched grid still rising, and the matched-exposure candidate sits on a
+monotonic slope, not a flat region (failure mode (b)). Causality probe:
+**PASS** (byte-identical decisions before the cut; expected, since only
+constructor scalars differ from unmodified v4 logic — verified directly
+by the operator's independent diff of the strategy source, not re-run,
+since a re-run on unmodified `prepare()`/`on_bar()` code adds no
+information here). ETH falsification: **does not clear the pre-registered
+bar** — worse on ETH spot (ΔSharpe −0.068, Δprofit −8.3pp), only
+token-better on ETH futures (ΔSharpe +0.039); all four |ΔSharpe| ≤ 0.068,
+inside the noise floor, so nothing here is individually distinguishable
+from noise, but the direction does not clear its own bar either.
+
+**Verdict: NEGATIVE.** No candidate clears both the noise floor and the
+falsification bar; no holdout read recommended or spent.
+
+#### Novel branch — per-vote-state Kelly fraction
+
+**Mechanism.** Replace the one global `target_vol` with four separately,
+causally-estimated scales, one per vote state (`frac` ∈ {0, ⅓, ⅔, 1}):
+`scale_state = min(kelly_mult · μ_state/σ_state², max_leverage)`, μ/σ²
+estimated with a time-halflife EWM (`pandas.ewm(halflife=…, times=…)`)
+over per-bar log returns bucketed by the *previous* bar's vote state, then
+forward-filled and shifted one more bar (mirroring `kelly_regime.py`'s own
+`vol = ewm(...).shift(1)` causality pattern), gated to zero below 2,000
+same-state observations. Literal Kelly (1956)/MacLean-Thorp-Ziemba (2010)
+fractional Kelly, applied per-state instead of globally — the gap this
+project's own R-28 aside flagged (its measured half-Kelly target, 0.49,
+sat close to v4's hand-set 0.55, but as one number for every state).
+
+**Pre-registered failure modes:** (a) per-state estimates too noisy to be
+usable at 5-minute cadence (R-34's novel-branch failure mode, for a
+different signal); (b) the winner is another exposure-level artifact via
+raw leverage; (c) turnover rises because the state-conditional scale
+changes more often than v3/v4's hysteresis-latched vol regime.
+
+**Configurations evaluated: 46** (32 on the inner-train halflife ×
+kelly_mult × stat_horizon grid, + 14 in the inner-validation
+plateau/neighbourhood check).
+
+**What the data actually shows, independent of any strategy result — the
+empirical claim under this whole direction, and worth recording on its
+own.** Measured μ_state/σ_state² on inner-validation (365-day halflife):
+bear (frac=0) and the ⅓ state are both net-negative (annualized μ −62%/yr
+and −101%/yr); the ⅔ and unanimous states are both strongly positive
+(+174%/yr and +154%/yr) — **but non-monotone**: partial agreement (⅔)
+carries a higher Kelly ratio than unanimous agreement (3/3). The states
+genuinely differ, which is itself new information about this project's
+own regime gate, even though (see below) it did not translate into a
+better strategy.
+
+**Result.** On inner-validation the winning config (halflife=365d,
+kelly_mult=0.25) beats v4 on both markets (Sharpe 0.44 vs 0.14 spot, 0.59
+vs 0.25 futures; DD 28.6% vs 33.2% spot; turnover *fell*, 24 vs 52
+trades — failure mode (c) refuted) and `max_leverage` never binds across
+the whole sweep, cleanly refuting failure mode (b) in its raw-leverage
+form (though mean notional and realized vol move in *opposite* directions
+relative to v4, both >10%, an honest partial echo of the R-33 exposure
+critique in a new shape, reported as instructed). Causality probe:
+**PASS**, and independently **re-run by the operator from the agent's own
+worktree — reproduced exactly, every column differing by 0.000e+00 before
+the cut.** The halflife/kelly_mult neighbourhood is **not a clean
+plateau**: kelly_mult is non-monotone in Sharpe (0.49 → 0.20 → 0.44 → 0.34
+across 0.10 → 0.35) and the halflife region (330–450d) is narrow with
+270–300d clearly worse — a fitted peak, not the required plateau (failure
+mode (a), in a data-hunger form rather than raw per-bar noise: the
+per-state estimator needs enough calendar time to mature, which the
+365-day halflife barely achieves inside the 2-year inner-validation
+window itself).
+
+**ETH falsification: FAILS outright — independently re-run by the
+operator from the agent's own worktree, exact match to the reported
+numbers.** The candidate is not merely worse on ETH; it is worse than v4
+on the **BTC control run through the identical pipeline** (BTC spot final
+$1,224 vs v4's $12,278, Sharpe 0.43 vs 1.86) and turns Sharpe-*negative*
+on ETH (spot −0.70, futures −0.73, vs v4's +1.48/+1.25), with trading
+essentially inert there (7 trades, vol 0.024–0.029) — the 3.3-year ETH
+window is too short for a 365-day-halflife, 2,000-observation-minimum
+per-state estimator to mature. That the BTC control also loses is the
+more damning half of this: it means the inner-validation win looks fitted
+to one specific 2021–2022 window rather than a transferable property,
+consistent with the shaky plateau above.
+
+**Verdict: NEGATIVE.** A genuinely non-duplicate mechanism, cleanly
+refuting the raw-leverage-artifact failure mode and surfacing a real
+(if non-monotone) fact about this project's own regime states — and
+still failing its own pre-registered falsification test decisively
+enough, on the BTC control as well as ETH, that no holdout read is
+warranted.
+
+**Combined accounting.** Configurations evaluated this row: 53 + 46 =
+**99**. Project trials count before this row: 312 (unchanged by R-36,
+which added 0). **Applies from here: 312 + 99 = 411.**
+
+**Holdout counter: unchanged at ~159.** Neither branch read any bar dated
+2023-01-01 or later, and both explicitly declined to recommend a holdout
+read for their surviving-longest candidate.
+
+**Lookahead checks.** Conservative branch: causality PASS via structural
+argument (unmodified v4 logic, scalars only) plus the operator's source
+diff, not independently re-executed (judged unnecessary — see above).
+Novel branch: causality PASS, independently re-executed by the operator
+from the agent's own worktree with an exact match. `pytest` was green in
+both worktrees before and after (391 passed in both — the worktrees'
+older base is 45 tests short of this branch's current 436, entirely
+attributable to R-29's 27 inference tests + R-30's 18 display tests,
+neither of which touches strategy code).
+
+**Lesson.** Two structurally different, well-motivated, individually
+non-duplicate attempts to convert R-36's confirmed (if thin) edge into a
+better strategy both failed — one on a noise-floor/exposure-artifact
+combination, the other on a falsification test it failed by a wide,
+unambiguous margin rather than a close one. Taken together with R-34 and
+R-35 (also two-branch, also both negative), this project's SIZE axis has
+now absorbed four independent, non-duplicate parallel-round attempts
+(eight branches total) since the L-01–L-04 family was registered, and
+none has improved on it. The novel branch's one durable contribution is
+independent of any strategy verdict: this project's own regime-vote
+states carry measurably different, non-monotone forward drift/variance —
+a fact worth keeping in mind for anyone who next touches the vote itself
+(detection, not sizing), which remains largely unexplored territory
+outside the failed R-01/R-02/R-03/R-28/R-34 attempts.
+
+**Next step.** Neither branch reopens without new evidence (added to
+section C below). The SIZE axis on this specific incumbent looks
+increasingly exhausted by the same standard this project applies to the
+holdout itself: four independent attempts, eight branches, zero
+survivors. **B-06 (forward paper trading) remains the highest-value item
+on merit**, still blocked on network access — the project's own repeated
+conclusion, reached again from a fifth independent direction.
+
 ---
 
 ## C. Ruled out — do not re-try without new evidence
@@ -2270,6 +2469,8 @@ independent attempts follow immediately below (R-37).
 | Market making, AMM/LVR | Plausibly real — the loss-versus-rebalancing decomposition of AMM LP returns (Milionis, Moallemi, Roughgarden & Zhang) is genuinely quantitative — but **not simulable** on bar-close fills with no order book; it would need a queue model first. Ruled out on what can be checked, not on merit. | L-24 |
 | Options / volatility risk premium | Same — no options data, no way to validate here. | — |
 | `harsanyi_crowd`'s Bayesian posterior as a SIZE input on `kelly_regime_v4` | L-12's own stated hypothesis, tested both bounded (conservative) and unbounded (novel) — one is an exposure-level artifact, the other is genuinely independent of the vote but too noisy at its native cadence to pay 5-minute-bar costs on either axis. | R-34 |
+| Retuning `kelly_regime_v4`'s `target_vol`/`max_leverage` against R-36's evidence | 53 configurations; the naive winner is the standard exposure-level artifact, and the one matched-exposure survivor nets a Sharpe delta inside the ±0.2 noise floor on both markets and fails the ETH check. | R-37 (conservative) |
+| Per-vote-state Kelly fraction (`μ_state/σ_state²`) replacing v4's single global `target_vol` | 46 configurations; cleanly refutes the raw-leverage-artifact failure mode and surfaces real, non-monotone state-conditional drift/variance, but fails its own pre-registered ETH falsification decisively — worse than v4 on the BTC control too, indicating the inner-validation win was fitted to one window. | R-37 (novel) |
 
 ---
 
@@ -2385,6 +2586,30 @@ paper-trading recorder against a mock feed so that only the network
 policy stands between this project and its first uncontaminated
 evidence.
 
+**Re-ranked 08-19 after R-36 and R-37.** B-14 is done: R-36 pre-registered
+and confirmed the return-per-risk edge R-33 surfaced by accident, and
+found it survives outside the 2017–2020 bull but shrinks roughly 10x once
+that period is excluded. Off-backlog, the same session immediately spent
+a two-branch parallel round (R-37) asking whether that confirmed edge
+could be captured better than v4 already does — a conservative
+hyperparameter retune and a novel per-vote-state Kelly sizer — and both
+came back NEGATIVE, for two different, well-substantiated reasons (a
+noise-floor/exposure-artifact combination, and a falsification test
+failed decisively enough to indicate overfitting to one window). Both are
+added to section C. **B-14 moves to done** and nothing replaces it at the
+top: this project has now run four independent, non-duplicate
+parallel-round attempts (R-28/R-31 alone, R-32, R-34, R-35, R-37 — eight
+branches total since L-01–L-04 were registered) to improve on the SIZE
+axis of its own incumbent, and none has survived both a noise-floor check
+and a falsification test. **B-06 (forward paper trading) is now not just
+the highest-value item on merit but the only genuinely open, well-motivated
+item left that does not re-read a dataset this project has independently
+concluded, five separate times, has stopped answering the questions asked
+of it.** It remains blocked on network access. A session with nothing else
+to do should write the recorder against a mock feed now, so only the
+network policy stands between this project and its first uncontaminated
+evidence, exactly as every re-ranking since R-29 has said.
+
 Two things changed the order. R-28 answered B-01. And a connectivity check
 found that **every exchange endpoint is blocked by the network policy
 these sessions run under** — Binance, Bitstamp, Kraken and Coinbase all
@@ -2402,7 +2627,7 @@ remains actionable is computation on the data already here.
 | ~~B-04~~ | ~~Purged CV, deflated Sharpe, block-bootstrap CIs on every headline~~ | ERR | **DONE → R-29** | The guess was right: 10 of 96 adjacent pairs distinguishable, none of them in the top eight. Also closes R-25. `tradebot.inference` is now a permanent module with 27 tests; step 4 of the routine can be mechanical from here. |
 | ~~B-12~~ | ~~Put the intervals *in* the comparison table~~ | ERR | **DONE → R-30** | The table now carries Δ growth and Δ max drawdown against `buy_and_hold`, each with a 95% interval, and a strategy without a measured interval fails CI. The by-product is the sharpest number in the project: **0 of 24 strategies are distinguishably better than holding on the criterion the table ranks by**, and v4's +0.044 edge is [−2.60, +2.85]. |
 | ~~B-11~~ | ~~Matched-risk frontier: e-process gate vs latched vote at equal realized volatility~~ | ERR, SIZE | **DONE → R-31** | Answered, negatively and usefully. At equal realized volatility the two gates are indistinguishable on the BTC holdout (all 8 intervals contain zero, sign unstable), three of four cells fail a pre-registered validity gate, and on ETH the e-process gate loses on **both** axes — so R-28's ETH drawdown replication was an artifact of carrying 2.4x less risk. The 0.27x exposure was the whole finding. Also answered in parallel by **R-32**, which adds the arm neither the backlog row nor R-31 asked for: **no gate at all**, which loses to both gates at matched risk in every inner-split cell and in 80–90% of 40 paired windows. |
-| **B-14** | Return per unit of risk against a constant exposure — the claim R-33 kept measuring by accident | SIZE, ERR | **NEXT** | Opened by R-33, and it is the only hypothesis in this project that has *survived* a risk-matching round instead of dissolving in one. At equal realized volatility, v4 out-returned a constant-exposure passive hold by a median **+20.8pp / +23.8pp per window in 82% / 90%** of 40 windows, won all four ETH/BTC falsification cells, and led on Δ log growth in every holdout cell (valid and void). Not claimable: none of it was the pre-registered question. The round is cheap — `experiments/matched_hold.py` exists, the per-window matching converges in one probe backtest and lands within 0.5%, and the paired bootstrap is the same one R-29 ships. Pre-register Δ log growth at matched risk as the *primary* statistic, with a per-window matched arm rather than a frozen exposure (R-33's V1 shows a frozen match cannot survive a regime change between a vol-targeter and a constant hold), and name the failure mode first: the advantage is concentrated in the 2017–2020 bull and is a bull-market artifact. |
+| ~~B-14~~ | ~~Return per unit of risk against a constant exposure — the claim R-33 kept measuring by accident~~ | SIZE, ERR | **DONE → R-36** | Confirmed, thinned. Pooled across the same 40 windows R-33 used, D1 passes on both markets (win-rate 95% CI excludes 50%: [67.2%,92.7%] spot, [76.3%,97.2%] futures). The pre-registered falsification test (does it survive outside the 2017–2020 bull) also survives on both markets, but the median advantage shrinks ~10x once windows starting before 2021 are excluded (+68.9pp→+5.0pp spot, +97.2pp→+7.4pp futures), and the post-2021 subsample's own CI still contains 50% on spot at n=22. Off-backlog follow-up **R-37** (two branches, both NEGATIVE) asked whether a strategy could be built to capture more of this edge — see section C. |
 | ~~B-05~~ | ~~Funding as a gate on the existing strategy (stand flat in the top decile)~~ | COST | **DONE → R-35** | NEGATIVE, closed pending B-02. The literal gate cleared every inner-validation and falsification check — genuinely not the exposure-level artifact its own pre-registration predicted — then lost on the single funding-covered holdout year available (Δ log growth −0.167 [−0.495, +0.101] futures, point estimate negative in all three cost/market cells, interval containing zero throughout: underpowered, not a clean rejection). A parallel novel branch (funding-adjusted EV band) passed its falsification test with a genuine non-artifact Sharpe edge but failed its own plateau check and never reached the holdout. Reopens only when B-02 delivers more funding-covered years to check against. |
 | **B-02** | Extend the funding series through 2026 | COST | **BLOCKED (network)** | Still the single cheapest item that could change a decision — the literature says the carry premium broke in 2024–25 and our data stops in 2023 — but Binance is unreachable from these sessions. Needs the operator. |
 | **B-03** | Funding harvest (delta-neutral spot vs short perp) | COST | BLOCKED on B-02 | +16.2%/yr with a −1.31% worst month is a risk profile nothing else here approaches — measured entirely in the good years. Unmodelled: basis risk, short-leg liquidation, exchange/custody risk, borrow cost. |
@@ -2444,6 +2669,7 @@ Also record, in the row or a footnote beneath it:
 
 | as of | count | note |
 |---|---|---|
+| 08-19 | ~159 | R-36 and R-37: **+0** on top of R-35's ~159. R-36 reused R-33's existing `windows.csv` (seed=42, computed once) and only recovered calendar dates from the RNG sequence — no new backtest, and the 40-window resample does not count against the holdout by this project's own established convention. Both R-37 branches were explicitly restricted to inner-train/inner-validation/pre-2020-ETH only and neither read a single 2023+ bar, by design. |
 | 08-19 | ~159 | R-35: +7 on top of R-33's ~152 — one pre-registered configuration (`funding_gate_decile`, w=180) read once, restricted to the 2023-01-01..2023-12-31 funding-covered slice rather than the full 2023-2026 holdout (a deliberate, pre-registered scope limit, not an oversight): spot funding-free, futures funding-free, futures funding-charged, each a paired v4-vs-gate read (6), plus one `buy_and_hold` context run (1). The parallel novel branch and the conservative branch's `w=90`/`w=365`/expanding configurations never read it, per the pre-registered "ask fewer questions" economy. |
 | 08-16 | ~30 | Backfilled estimate. Every OOS figure in sections A and B came from reading the 2023+ holdout; it has never been pristine. Deflate program-level claims accordingly, and treat forward paper trading (B-06) as the only uncontaminated evidence still obtainable. |
 | 08-17 | ~88 | R-29: every registered strategy (25) on both markets, as a fresh 2023+ account, to attach an interval to each. No selection was made on any of it and the decision rules were committed first — but 50 consultations is 50 consultations. The finding that matters: at ~88 program-level reads, and with `kelly_regime_v4`'s holdout Sharpe needing a **6.2-year** track record to clear a 103-trial bar it has 3.6 years of, **no Sharpe-based claim from this dataset is supportable any more**. Judge on drawdown, which still replicates, and treat B-06 (forward paper trading) as the only remaining source of evidence. |
