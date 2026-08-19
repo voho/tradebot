@@ -286,14 +286,40 @@ def causality() -> None:
 # this selection was made from (inner-train / inner-validation only).
 # ============================================================================
 #
-# FROZEN CONFIGURATION: V1 — threshold_pct=0.90, lookback_settlements=90
-# (~30 days), reduction=0.0 (stand fully flat in the trailing top decile of
-# realized funding). Selected because on inner-validation (2021-2022, the
-# only inner split with full real-funding coverage) it is the variant that
-# both cuts funding paid the most and does not cost inner-validation return
-# outside noise, and the neighbourhood around it (thresholds 0.80-0.95,
-# lookbacks 60-270, reductions 0.0-1.0) is a plateau on funding-avoided and
-# NOT a plateau on return — full detail in the ledger report.
+# FROZEN CONFIGURATION: V2 — threshold_pct=0.90, lookback_settlements=270
+# (~90 days), reduction=0.0 (stand fully flat when the trailing 90-day
+# percentile rank of realized funding is in its own top decile).
+#
+# Selection was made ONLY on inner-validation (2021-01-01..2022-12-31, the
+# only inner split with FULL real-funding coverage; inner-train covers real
+# funding for calendar-2020 only, per the Step-1 pre-registration, so it is
+# reported but not used to select). Among the three pre-registered named
+# variants (V1 decile/30d/flat, V2 decile/90d/flat, V3 quintile/30d/half),
+# V2 has both the best final balance ($1,133 vs V1 $1,060, V3 $1,123) and
+# the best Sharpe (0.37 vs 0.24, 0.35) on inner-validation; V1 has a
+# marginally shallower drawdown (28.6% vs 29.9%). All three, and every
+# other point on the 12-configuration neighbourhood grid swept in step 3
+# (thresholds 0.80-0.95, lookbacks 60-270 settlements, reductions 0.0-1.0),
+# beat UNGATED kelly_regime_v4 on inner-validation on every one of final
+# balance, drawdown and Sharpe simultaneously ($887, DD 34.7%, Sharpe -0.06)
+# — this is a genuine plateau on the "gate helps" question, not a single
+# lucky peak (P4 detail and full grid in the ledger report). The one
+# grid point that beats V2 outright (threshold=0.80, lookback=90,
+# reduction=0.0: $1,201, DD 27.7%, Sharpe 0.49) is reported as a
+# neighbour, not frozen — it was not one of the three variants designed in
+# Step 2 before the sweep ran, and freezing the single best point out of a
+# 12-point post-hoc grid would be the R-12 mistake in miniature. V2 is a
+# pre-registered variant that happens to also be the best pre-registered
+# variant; that is the legitimate use of inner-validation selection
+# ROUTINE.md describes.
+#
+# On inner-train (2017-2020), where the gate is a near no-op for three of
+# the four years, max drawdown is UNCHANGED at 35.3% across literally every
+# configuration including ungated — the strategy's worst inner-train
+# drawdown event does not overlap a real-funding-covered, top-decile bar —
+# and returns move +/-14% around ungated with no consistent direction. This
+# is exactly the muted, noisy inner-train behavior the Step 1 pre-registration
+# predicted from the data constraint, not evidence against the gate.
 #
 # DECISION RULE (promote only if ALL of P1-P4 hold; default is REJECT):
 #
@@ -329,7 +355,7 @@ def causality() -> None:
 # this comment block was written after a holdout number was read.
 # ============================================================================
 
-FROZEN = dict(threshold_pct=0.90, lookback_settlements=90, reduction=0.0)
+FROZEN = dict(threshold_pct=0.90, lookback_settlements=270, reduction=0.0)  # V2
 
 
 def holdout() -> None:

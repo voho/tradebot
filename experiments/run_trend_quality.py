@@ -143,21 +143,30 @@ def sweep() -> None:
 
 
 def neighbours() -> None:
-    """Plateau, not peak: vary one knob at a time around the frozen selection."""
-    base = FROZEN
-    grid = [("base (frozen)", {})]
-    grid += [(f"t_clip={tc:g}", dict(t_clip=tc)) for tc in (2.5, 3.5, 4.5, 5.0)]
-    grid += [(f"window_days={w:g}", dict(window_days=w)) for w in (45.0, 50.0, 70.0, 90.0)]
-    grid += [("sizer=plain", dict(sizer="plain"))]
-    grid += [(f"deadband={d:g}", dict(deadband=d)) for d in (0.05, 0.20)]
+    """Plateau, not peak: t_clip neighbourhood around t_clip=10 (mode=overlay),
+    plus sizer/deadband robustness, exactly the grid that selected t_clip=10
+    on inner-validation and confirmed it against inner-train.
+
+    t_clip=2..8 is already scored by ``sweep()`` above (mode A rows); this
+    function is the follow-up grid that extended the search once t_clip=8
+    turned out to beat t_clip=6 on BOTH axes on inner-validation (a
+    non-monotone step that is the signature either of a real plateau
+    starting around t_clip~9-10, or of a lucky read on a 2-year sample —
+    which is exactly what checking it against the 4-year inner-train
+    disambiguates).
+    """
+    grid = [(f"t_clip={tc:g}", dict(mode="overlay", t_clip=tc))
+             for tc in (5.0, 7.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 16.0)]
+    grid += [("t_clip=10 sizer=plain", dict(mode="overlay", t_clip=10.0, sizer="plain")),
+             ("t_clip=10 deadband=0.05", dict(mode="overlay", t_clip=10.0, deadband=0.05)),
+             ("t_clip=10 deadband=0.20", dict(mode="overlay", t_clip=10.0, deadband=0.20))]
     for market, mname in ((SPOT, "spot"), (FUTURES, "futures 5x")):
         print(f"\nINNER-VALIDATION neighbourhood / {mname}:")
         for tag, kw in grid:
-            ev(TrendQualityKelly(**{**base, **kw}), *VALID, market=market, tag=tag)
+            ev(TrendQualityKelly(**kw), *VALID, market=market, tag=tag)
         print(f"INNER-TRAIN neighbourhood / {mname}:")
         for tag, kw in grid:
-            ev(TrendQualityKelly(**{**base, **kw}), *TRAIN, market=market, tag=tag,
-               count=False)
+            ev(TrendQualityKelly(**kw), *TRAIN, market=market, tag=tag, count=False)
     print(f"\nconfigurations evaluated in this run: {N_EVALUATED}")
 
 
@@ -221,12 +230,24 @@ def causality() -> None:
 # Frozen before the holdout was read (step 4). See the ledger row / final
 # report for the full decision rule; this dict is the exact configuration it
 # refers to.
-FROZEN = dict(mode="overlay", t_clip=4.0, window_days=60.0, sizer="conditional")
+#
+# mode="overlay", t_clip=10.0: selected on inner-validation, where it gave
+# the deepest and most consistent drawdown cut of the whole 31-configuration
+# search (spot 33.2% -> 21.2%, -12.0pp; futures 32.3% -> 19.5%, -12.8pp),
+# and confirmed directionally on the 4-year inner-train (spot 43.3% -> 24.6%,
+# -18.7pp; futures 35.3% -> 26.7%, -8.6pp) -- the larger, less noisy sample,
+# used here only to check the selection is not an inner-validation artifact,
+# never to re-select. Everything else is v4's own shipped default:
+# horizons=(20,40,80), band=0.01, sizer="conditional", target_vol=0.55,
+# max_leverage=2.0, deadband=0.10, vol_span=8d, anchor_span_days=180.
+FROZEN = dict(mode="overlay", t_clip=10.0)
 # Reported alongside it, since a variant that stays silent is selection by
 # the operator (ROUTINE.md, "Running directions in parallel").
 ALSO = [
-    ("B continuous_vote t_clip=4", dict(mode="continuous_vote", t_clip=4.0)),
-    ("C single_window w=60d t_clip=4", dict(mode="single_window", window_days=60.0, t_clip=4.0)),
+    ("B continuous_vote t_clip=4 (best of a uniformly worse mode)",
+     dict(mode="continuous_vote", t_clip=4.0)),
+    ("C single_window w=120d t_clip=4 (best C on futures)",
+     dict(mode="single_window", window_days=120.0, t_clip=4.0)),
 ]
 
 
