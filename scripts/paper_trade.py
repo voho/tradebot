@@ -69,7 +69,9 @@ sys.path.insert(0, str(ROOT / "src"))
 from tradebot.broker import MarketSpec, PaperBroker  # noqa: E402
 from tradebot.exchanges.bitstamp import BitstampSpot  # noqa: E402
 from tradebot.live import LiveAccount, compute_signal  # noqa: E402
+from tradebot.orders import Order  # noqa: E402
 from tradebot.registry import get_strategy  # noqa: E402
+from tradebot.strategy import Strategy  # noqa: E402
 
 STATE_DIR = ROOT / "reports" / "paper_trading"
 PAPER_START_EQUITY = 1000.0
@@ -99,6 +101,48 @@ class PaperState:
         return cls(cash=start_equity, pos=0.0, entry=0.0, dead=False,
                     fees_paid=0.0, last_candle_ts=None, inception_ts=None,
                     inception_price=None, n_runs=0)
+
+
+def inception_catchup_target(strategy: Strategy, candles: pd.DataFrame) -> float | None:
+    """The strategy's raw desired stance as of the latest bar, read
+    directly from ``prepare()`` - bypassing ``on_bar``'s own
+    emit-only-on-change gate.
+
+    18 of this project's 23 registered strategies (the whole
+    ``kelly_regime`` family among them) share one convention verbatim::
+
+        t = float(ctx.bar["target"]); prev = float(ctx.prev["target"]) ...
+        if abs(t - prev) > 1e-9: ctx.order_target(t)  # (or order_notional)
+
+    That gate compares the CURRENT bar's precomputed target to the
+    PREVIOUS bar's - both pure functions of price history, not of
+    account state - so ``compute_signal`` on a freshly cold-started
+    account never emits an order at all if the target has simply been
+    latched flat for the whole fetched window (exactly what happened the
+    first time this recorder ran live against ``kelly_regime_v4`` here:
+    the vote had been pinned since before the 500-bar warmup slack even
+    began). A paper account that silently sits flat forever while
+    believing it tracks the strategy would defeat the entire point of
+    B-06, and the identical gap sits in ``bot.py``/``live_bot.py`` too -
+    it just cannot be reached from here without touching those files.
+
+    Used ONLY at inception, ONLY when ``compute_signal`` itself emitted
+    nothing. Every later run relies on ``compute_signal`` exactly as
+    written; this never overrides a genuine signal. On spot
+    (``market.leverage == 1``) ``order_notional(t)`` and
+    ``order_target(t)`` are the same order, so this is correct
+    regardless of which one the strategy calls.
+
+    Returns ``None`` for strategies with no ``target`` column (the
+    remaining ~5: e.g. ``macd_rsi``, ``rsi_reversion``, decide from
+    ``ctx.position`` directly rather than a precomputed column) - those
+    have nothing to read ahead of time, so inception starts flat for
+    them, same as it does in ``bot.py`` today.
+    """
+    prepared = strategy.prepare(candles.copy())
+    if "target" not in prepared.columns:
+        return None
+    return float(prepared["target"].to_numpy()[-1])
 
 
 def load_state(path: Path, start_equity: float) -> tuple[PaperState, bool]:
@@ -180,6 +224,17 @@ def run_recorder(strategy_name: str, candles: pd.DataFrame, market: MarketSpec,
     account = LiveAccount(position=broker.pos, equity_quote=prior_equity, market=market)
     orders = compute_signal(strategy, candles, account)
 
+    catchup_used = False
+    if fresh and not orders:
+        # See inception_catchup_target(): most strategies only emit an
+        # order when their target CHANGES bar over bar, so a cold-started
+        # account that happens to catch a strategy mid-latch would
+        # otherwise sit flat forever and never actually track it.
+        catchup = inception_catchup_target(strategy, candles)
+        if catchup is not None and abs(catchup) > 1e-9:
+            orders = [Order(target=catchup)]
+            catchup_used = True
+
     trade_qty = 0.0
     fee_paid = 0.0
     new_target = prior_target
@@ -193,7 +248,9 @@ def run_recorder(strategy_name: str, candles: pd.DataFrame, market: MarketSpec,
             fee_paid += fill.fee
         if order.target is not None:
             new_target = float(order.target)
-            reason = f"target={order.target:.4f}"
+            reason = (f"INCEPTION CATCH-UP target={order.target:.4f} (on_bar's own "
+                      "change-gate emitted nothing; see inception_catchup_target)"
+                      if catchup_used else f"target={order.target:.4f}")
         else:
             reason = f"qty order ({order.side.value} {order.qty})"
         if fills:

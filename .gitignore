@@ -84,3 +84,12 @@ venv/
 !/reports/charts/kelly_regime__spot__1000.png
 !/reports/charts/champions_council__futures_5x__1000.png
 !/reports/charts/buy_and_hold__spot__1000.png
+# B-06 forward paper-trading recorder (scripts/paper_trade.py). Unlike every
+# other reports/ subdir this one is not a regenerable analysis output - it
+# grows by exactly one row per closed candle and IS the record; there is no
+# `tradebot run` that reproduces it. Commit it anyway, growth and all: it is
+# the only uncontaminated evidence this project can still generate once the
+# 2023+ holdout's consultation count exhausts deflated Sharpe (docs/LEDGER.md).
+!/reports/paper_trading/
+!/reports/paper_trading/*.json
+!/reports/paper_trading/*.csv

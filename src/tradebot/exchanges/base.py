@@ -91,6 +91,21 @@ class Exchange(abc.ABC):
         ``max_candles_per_request``, so a cold start costs
         ``ceil(bars / cap)`` calls. Pages are stitched, de-duplicated and
         returned oldest-first.
+
+        The very first page (``end_ms=None``) is fetched up to *now*, so
+        ``fetch_candles`` drops the still-forming bar from it - short of a
+        full page even when the venue has plenty more history behind it,
+        and real venues can shave off an extra row or two beyond that
+        (a duplicate tick right at the boundary, ordinary clock jitter
+        between when ``bars`` was sized and when the request lands).
+        Every later page's ``end`` is already fixed in the past, so none
+        of that applies - a short *historical* page is a reliable "no
+        more data" signal, but a short *first* page is not. Treating any
+        first-page shortfall as "venue exhausted" would truncate every
+        real cold start whose warmup exceeds ``max_candles_per_request``
+        bars to a single page - it was never caught because the test
+        suite only pages a synthetic/replay venue that has no forming
+        candle and no jitter to drop.
         """
         import sys
 
@@ -100,6 +115,7 @@ class Exchange(abc.ABC):
         page = 0
         while collected < bars:
             want = min(self.max_candles_per_request, bars - collected)
+            is_live_page = end_ms is None  # up to "now" - may come back short, harmlessly
             chunk = self.fetch_candles(symbol, minutes=minutes, limit=want,
                                        end_ms=end_ms)
             if chunk.empty:
@@ -112,8 +128,8 @@ class Exchange(abc.ABC):
                       file=sys.stderr)
             # step strictly before the oldest bar we already hold
             end_ms = int(chunk.index[0].timestamp() * 1000) - 1
-            if len(chunk) < want:
-                break  # venue has no more history
+            if not is_live_page and len(chunk) < want:
+                break  # a historical (fixed end_ms) page came back short: venue has no more history
 
         if not chunks:
             return pd.DataFrame(columns=["open", "high", "low", "close", "volume"])

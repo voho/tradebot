@@ -62,6 +62,51 @@ def test_fetch_history_stops_when_venue_runs_out(real):
     assert not got.index.has_duplicates
 
 
+class _FormingCandleVenue(ReplayExchange):
+    """A venue whose first page comes back short - exactly what
+    ``BitstampSpot``/``BinanceSpot`` do in production: page one has no
+    ``end_ms``, so it is fetched up to *now* and ``_drop_forming`` trims
+    the still-open bar (and, observed live against Bitstamp, an extra row
+    now and then - a duplicate tick right at the boundary). Every later
+    page's ``end`` is already in the past and comes back full, same as
+    the real adapters. ReplayExchange itself never drops a bar, so this
+    is the only way to reproduce the real-venue shape offline.
+
+    ``short_by`` controls how many rows page one loses, so the test below
+    can check both the common case (1, the forming candle alone) and the
+    jitter case (2, observed live) in one sweep.
+    """
+
+    def __init__(self, *args, short_by: int = 1, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.short_by = short_by
+
+    def fetch_candles(self, symbol="BTCUSD", minutes=5, limit=1000, end_ms=None):
+        chunk = super().fetch_candles(symbol, minutes=minutes, limit=limit, end_ms=end_ms)
+        if end_ms is None and not chunk.empty:
+            chunk = chunk.iloc[: max(0, len(chunk) - self.short_by)]
+        return chunk
+
+
+@pytest.mark.parametrize("short_by", [1, 2])
+def test_fetch_history_pages_past_a_short_first_page(real, short_by):
+    """Regression: a live venue's first page comes back short of
+    ``max_candles_per_request`` (the forming candle, always dropped, plus
+    occasional boundary jitter) even with plenty more history behind it.
+    Reading that shortfall as "venue exhausted" truncated every real
+    multi-page cold start to a single page - a bug only a real venue
+    could expose, since the mock used everywhere else never drops a bar.
+    Discovered running B-06's paper recorder against live Bitstamp
+    (docs/LEDGER.md); pinned here so it cannot regress silently again.
+    """
+    ex = _FormingCandleVenue(real.iloc[-5_000:], max_candles_per_request=1000,
+                             short_by=short_by)
+    got = ex.fetch_history("BTCUSD", bars=3_500)
+    assert len(got) == 3_500
+    assert got.index.is_monotonic_increasing
+    assert not got.index.has_duplicates
+
+
 def test_page_limit_is_respected(real):
     ex = ReplayExchange(real.iloc[-5_000:], max_candles_per_request=1000)
     assert len(ex.fetch_candles("BTCUSD", limit=5_000)) == 1_000

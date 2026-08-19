@@ -391,3 +391,110 @@ money is lost:
 3. Only then size up — and re-run `scripts/stress_test.py` first, since
    the drawdowns in that report are what a live account will actually
    feel.
+
+## Forward paper-trading recorder (B-06)
+
+`scripts/paper_trade.py` is a **different tool from `live_bot.py` above**,
+for a different job: not "decide once and print", but "keep an honest,
+persisted, forward-only track record over time" — the ledger's B-06,
+the highest-priority backlog item since R-29. The premise: this repo's
+2023+ holdout has been consulted so many times across the whole research
+program that deflated Sharpe can no longer support a Sharpe-based claim
+from it at all (docs/LEDGER.md). A forward paper record is the one piece
+of evidence immune to that, because it cannot have been looked at before
+it existed.
+
+```bash
+python scripts/paper_trade.py                 # run once per closed 5m candle
+```
+
+|                          | `live_bot.py`                       | `paper_trade.py`                              |
+|--------------------------|--------------------------------------|------------------------------------------------|
+| account                  | real Bitstamp balance (signed API)  | its own persisted virtual account (JSON)        |
+| credentials              | needed for `--live` / balances      | **never needed, never read**                    |
+| orders sent              | real market order with `--live`     | **never — no such code path exists**            |
+| state across runs        | none (reads exchange balance)       | `reports/paper_trading/*_state.json`            |
+| output                   | one printed decision                | one persisted decision + one CSV row, every run |
+| benchmark                | none                                | parallel `buy_and_hold` paper account           |
+
+It fetches the same public, unauthenticated OHLC candles `live_bot.py`
+does, calls the same `tradebot.live.compute_signal` extraction point, and
+executes the resulting order through `tradebot.broker.PaperBroker` — the
+exact fee/rebalance code the backtest engine itself uses — against its
+own `cash`/`pos`/`entry` state, not an exchange balance. It is
+**structurally incapable of live trading**: the module never imports
+`place_market_order` or any signed endpoint, and there is no `--live`
+flag. Two files are written per strategy under `reports/paper_trading/`
+(committed — see the `.gitignore` comment there; unlike everything else
+under `reports/` this is not a regenerable analysis output, it *is* the
+record):
+
+- `<strategy>_bitstamp_state.json` — the persisted virtual account
+  (`cash`, `pos`, `entry`, cumulative fees, the last candle acted on).
+- `<strategy>_bitstamp.csv` — one append-only row per decision:
+  timestamp, candle close, prior/new target, trade qty, fee, resulting
+  position/cash/equity, and the reason (the strategy's raw target, or
+  `INCEPTION CATCH-UP ...` — see below).
+
+### Scheduling
+
+Once per closed 5m candle, same cadence as `live_bot.py`:
+
+```cron
+*/5 * * * * cd /path/to/tradebot && python scripts/paper_trade.py >> reports/paper_trading/cron.log 2>&1
+```
+
+or a systemd timer with `OnCalendar=*:0/5` firing a oneshot unit that
+runs the same command. It is **idempotent on the candle timestamp**: a
+second invocation before the next candle closes detects
+`last_candle_ts` already matches and exits 0 having changed nothing — so
+an overlapping cron tick or a manual re-run cannot double-count. A
+missed run costs nothing but the missed rebalance, the same property
+`bot.py` documents for the live path.
+
+### The inception catch-up, and why it exists
+
+A cold-started account needs to be sized to what the strategy currently
+wants, not just react to future changes — but 18 of this project's 23
+registered strategies (the whole `kelly_regime` family included) share
+one convention: `on_bar` only emits an order when its precomputed
+`target` column **changes** from the previous bar, since both sides of
+that comparison are pure functions of price history, independent of
+account state. Running this recorder for real the first time against
+live `kelly_regime_v4` on Bitstamp hit exactly this: the vote had been
+latched at the same value since before the fetched window even began, so
+a plain `compute_signal` call returned no order at all, and a naively
+cold-started paper account would have sat at 0% exposure forever while
+genuinely believing it was tracking the strategy. `inception_catchup_target()`
+in `scripts/paper_trade.py` fixes this **at inception only**: if
+`compute_signal` emits nothing on the very first run, it reads the
+strategy's raw `target` value directly from `prepare()`'s output,
+bypassing the change gate, and enters to that stance instead (clamped to
+`[0, 1]` on spot, same as any order). Every later run relies on
+`compute_signal` exactly as written — the catch-up never overrides a
+genuine decision, only a cold start's blind spot. The identical gap
+exists in `bot.py`/`live_bot.py` today (a freshly funded live account
+would have the same problem) but is not fixed there, since neither file
+is this recorder's to change.
+
+### Honest limitations
+
+- **Fills at the observed candle's close, not the next open.** The
+  backtest and `live_bot.py` decide-on-close/fill-at-next-open contract
+  assumes a continuously running process. This recorder runs once per
+  invocation with nothing sitting on the book between runs, so it fills
+  at the *current* closed candle's close — the price observed when the
+  recorder happens to run, not a guaranteed next-open print. Read every
+  fill as an approximation of the ideal contract, not the ideal itself.
+- **Single venue, no order book, no slippage model** — Bitstamp spot
+  only, filled at the OHLC candle's printed close.
+- **Real fee tier** — Bitstamp's 0.40% entry taker by default
+  (`--taker-fee`), never the 0.10% headline assumption.
+- **The idempotency check re-fetches the full warmup window every run**
+  (24 API calls for `kelly_regime_v4`) purely to read the latest candle's
+  timestamp, even when nothing has changed. Correct but not the cheapest
+  possible design; a future pass could fetch a small tail window first
+  and only page the full history back in when a new candle is confirmed.
+- **Does not touch the 2023+ holdout.** It reads only the live public
+  feed, never `data/btcusd_spot_5m.csv.gz` — the whole point of B-06 is
+  that this record cannot have been looked at before it existed.
