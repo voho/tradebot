@@ -2090,6 +2090,89 @@ highest-value item on merit**, still blocked on network access.
 
 ---
 
+### R-36 pre-registration (B-14) — written and committed before the new analysis is read
+
+**Idea.** R-33 measured `kelly_regime_v4` against a passive hold matched to
+its own realized volatility and found, as a byproduct nobody had asked
+for, that v4 out-returns the matched hold: median **+20.8pp / +23.8pp per
+window in 82% / 90%** of 40 resampled windows, in all four ETH/BTC
+falsification cells, and in every holdout cell (valid or void). B-14 asks
+for that specific claim — return per unit of risk against a genuinely
+matched passive benchmark — to be pre-registered as a primary question in
+its own right, since nothing about it was pre-registered when R-33
+produced it.
+
+**Constraint attacked.** SIZE (does the *sizing* rule itself add value
+beyond the exposure level it happens to run at) and ERR (the claim has
+floated in this ledger for a full session without a decision rule).
+
+**Not a duplicate of.** R-33 (measured the aggregate by accident, with a
+*frozen* exposure for its own holdout arm, which is why five of six of
+those cells were void — V1 in `run_matched_hold.py:holdout`); R-31/R-32
+(matched risk on a different pair — the e-process gate vs the latched
+vote, not v4 vs a passive hold); L-04's own headline (the *drawdown* claim
+at matched risk, which R-33 killed — this row is the *return* claim R-33
+left standing). The backlog row's own instruction is followed here: name
+the bull-market failure mode and go look for it, rather than re-reporting
+the aggregate as if that settled it.
+
+**Simulable here?** Yes. `experiments/matched_hold.py`'s `windows()`
+already implements per-window matching (the fix for R-33's frozen-exposure
+failure: a probe backtest solves the matching exposure *inside* each
+window, converging to a median |vol gap| under 1%). No new data, no new
+strategy code — this is a re-read and an extension of an existing,
+already-validated harness, run at its existing `seed=42` so the 40 windows
+are the identical ones R-33 already published, not a fresh search.
+
+**What's actually new.** The aggregate number is already known (from
+R-33), so re-stating "predict D1 passes" would be circular. What has *not*
+been computed is the one thing B-14's own text asks for: a breakdown of
+the same 40 windows by calendar period, to check whether the advantage
+survives outside the 2017–2020 bull. That breakdown is written by a new,
+small, disjoint script (`experiments/b14_regime_breakdown.py`) that
+recovers each window's start date from the identical `rng(seed=42)`
+sequence `windows()` uses (same `warmup`, same `length` draws) — no
+backtests are re-run; the existing `reports/matched_hold/windows.csv` is
+reused for the return/vol numbers, and only the date lookup is new.
+
+**Holdout accounting.** Per the R-19/R-33 convention already recorded in
+this ledger ("the 40-window resample do[es] not read the 2023+ BTC
+holdout"), this round does not increment the holdout counter — even though
+some of the 40 windows' calendar spans overlap 2023+, the resample is the
+project's standing robustness methodology, not a promotion-bar evaluation.
+No holdout consultation is spent on this row.
+
+**Pre-registered decision rule, D1 (primary).** Using the 40 paired
+per-window observations already in `windows.csv` (`kelly_regime_v4` vs
+`per-window matched hold`, both markets), compute the exact-binomial 95%
+CI on the win-rate (v4's window return exceeds the matched hold's) and the
+median paired return advantage. **Established** if the win-rate's 95% CI
+excludes 50% on **both** spot and futures. This is a materially stronger
+bar than "beats hold in most windows" — it is a two-sided test with an
+interval, the R-29/R-30 discipline applied to a statistic this project has
+so far only eyeballed.
+
+**Pre-registered falsification test, named before the breakdown is run.**
+The stated failure mode: *the advantage is concentrated in the 2017–2020
+bull and does not generalize.* Split the 40 windows by whether the window's
+**start date** falls before or on/after 2021-01-01 (the inner-
+train/inner-validation boundary already used throughout this project).
+Report win-rate and median advantage for each half separately. **The claim
+downgrades to "bull-period artifact, not established generally"** if the
+post-2021-start subsample's win-rate is ≤50% or its median advantage is
+≤0, even if the pooled D1 statistic passes.
+
+**Stated prediction before looking.** D1 passes (the pooled statistic is
+already known from R-33 to be one-sided in v4's favor in 82–90% of
+windows, which should not vanish under a formal binomial CI at n=40).
+The falsification test is the genuinely open question — a real risk given
+17 of `kelly_regime`'s home turf is documented to be "it lags badly in
+steady bulls" (L-04's own stated weakness) and its *drawdown* edge was
+already shown by this exact project (R-33) to be substantially an exposure
+artifact of the same bull-heavy sample.
+
+---
+
 ## C. Ruled out — do not re-try without new evidence
 
 | what | why | ref |
