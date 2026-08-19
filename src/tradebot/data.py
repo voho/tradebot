@@ -163,6 +163,68 @@ def load_funding_extended(data_dir: str | Path) -> tuple[pd.Series | None, pd.Se
     return combined, source
 
 
+DERIBIT_PERP_PRICE_FILES = {
+    "BTC": "btcusdt_deribit_perp_5m.csv.gz",
+    "ETH": "ethusdt_deribit_perp_5m.csv.gz",
+}
+COINBASE_ETH_SPOT_FILE = "ethusd_coinbase_spot_5m.csv.gz"
+
+
+def load_deribit_perp_price(data_dir: str | Path, asset: str = "BTC") -> pd.DataFrame | None:
+    """Real Deribit ``{asset}-PERPETUAL`` 5m OHLCV, or None if not fetched (B-15).
+
+    Unlike every other "futures" series in this repository, this is a
+    genuinely distinct, independently-transacted price series -- not the
+    spot series relabeled. Fetched by ``scripts/fetch_deribit_perp_price.py``.
+    Coverage is NOT the full spot history: BTC-PERPETUAL chart data starts
+    2018-08-14 (probed empirically -- Deribit returns ``no_data`` before
+    that), and ETH-PERPETUAL was created 2019-03-14. Bars before those
+    dates simply do not exist here; nothing is back-filled or proxied.
+    """
+    if asset not in DERIBIT_PERP_PRICE_FILES:
+        raise ValueError(f"asset must be one of {sorted(DERIBIT_PERP_PRICE_FILES)}")
+    path = Path(data_dir) / DERIBIT_PERP_PRICE_FILES[asset]
+    if not path.exists():
+        return None
+    return load_ohlcv_csv(path)
+
+
+def load_coinbase_eth_spot(data_dir: str | Path) -> pd.DataFrame | None:
+    """Real Coinbase ETH-USD 5m spot OHLCV, 2019-03 -> present, or None if absent.
+
+    The committed ``ethusd_bitfinex_5m.csv.gz`` (R-17's falsification file)
+    stops in 2019-12, which would leave under a year of overlap with
+    ETH-PERPETUAL's basis history. This is fetched separately
+    (``scripts/fetch_coinbase_spot.py``) to give the ETH basis a spot
+    reference that spans its full available window.
+    """
+    path = Path(data_dir) / COINBASE_ETH_SPOT_FILE
+    if not path.exists():
+        return None
+    return load_ohlcv_csv(path)
+
+
+def compute_basis(spot: pd.DataFrame, perp: pd.DataFrame) -> pd.Series:
+    """Log basis ``log(perp_close / spot_close)`` on the perp series' own index.
+
+    Positive means the perpetual trades at a premium to spot (crowded
+    longs paying to stay levered); negative means a discount. Both frames
+    are reindexed onto ``perp``'s timestamps with a causal (as-of, not
+    interpolated) join against ``spot`` so no future spot bar can leak
+    into an earlier perp bar. Bars where the join has no spot observation
+    at or before the perp timestamp are dropped (NaN), never filled.
+    """
+    spot_aligned = (
+        spot["close"]
+        .reindex(spot.index.union(perp.index))
+        .sort_index()
+        .ffill()
+        .reindex(perp.index)
+    )
+    spot_aligned = spot_aligned.where(perp.index >= spot.index.min())
+    return np.log(perp["close"] / spot_aligned).rename("basis")
+
+
 def load_dataset(data_dir: str | Path, kind: str) -> tuple[pd.DataFrame, str]:
     """Load 'perp' or 'spot' data; returns (df, source_label).
 

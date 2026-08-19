@@ -22,6 +22,14 @@ venv/
 !/data/btcusd_bitfinex_5m.csv.gz
 !/data/btcusdt_perp_5m.csv
 !/data/btcusdt_spot_aligned_5m.csv
+# real Deribit BTC/ETH-PERPETUAL 5m price (B-15): the first genuinely
+# independent second price series this repo has had, so the spot/perp
+# basis stops being identically zero by construction
+!/data/btcusdt_deribit_perp_5m.csv.gz
+!/data/ethusdt_deribit_perp_5m.csv.gz
+# real Coinbase ETH-USD spot 5m, spanning ETH-PERPETUAL's full history
+# (the existing Bitfinex ETH file stops in 2019-12)
+!/data/ethusd_coinbase_spot_5m.csv.gz
 /reports/*
 !/reports/comparison.md
 !/reports/comparison.csv
