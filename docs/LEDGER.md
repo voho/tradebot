@@ -2695,8 +2695,25 @@ good rather than staying open pending more data.
 (b) **Novel.** The literature is explicit that funding richness declined
 sharply in 2024 and further in 2025 as the trade crowded (BitMEX's own
 2025Q3/2026Q2 reports; this project's own Deribit pull shows the same
-shape independently — annualized mean funding **30.8% (2024) → 16.2%
-(2025) → 4.8% (2026 YTD)**, computed below). If net-of-cost carry return
+shape independently — annualized mean funding **10.3% (2024) → 5.4%
+(2025) → 1.6% (2026 YTD)**, computed below).
+
+> **Correction, made by the operator before any branch result was read,
+> and recorded rather than silently fixed.** The three figures in the
+> paragraph above were first committed as 30.8% / 16.2% / 4.8% — exactly
+> **3x too high**. The error was in the annualization, not the data: the
+> series was resampled to daily sums (which already aggregates the three
+> 8-hourly settlements in a day) and then multiplied by 3 × 365 as though
+> each daily figure were still a single settlement. The corrected numbers
+> above are confirmed by two independent routes that now agree to 0.01pp
+> (per-settlement mean × 3 × 365, and daily-sum mean × 365). Nothing
+> downstream depended on the wrong values — they were cited as context
+> for the *direction* of the decline, not used as a decision threshold,
+> and the decline is real either way — but a 3x arithmetic error in a
+> committed pre-registration is exactly the kind of thing this file's
+> culture exists to surface rather than quietly overwrite.
+
+If net-of-cost carry return
 in 2024–2026 is materially worse than 2020–2023's measured +14.6%/yr
 (0.10% tier) — including possibly negative — that is the falsification
 this branch is built to test, and it should be reported as exactly that,
