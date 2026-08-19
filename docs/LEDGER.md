@@ -2615,6 +2615,151 @@ the ledger currently states.
 
 ---
 
+### R-39 pre-registration — the network re-check R-38 asked for, done properly, and what it unblocks
+
+**What changed since R-38.** R-38's connectivity note was a two-endpoint
+ping only. This session did the "proper verification (an actual
+`tradebot fetch` or a first paper-trading-recorder connection attempt,
+not just a ping)" R-38 asked the next session to do, against six
+endpoints: Binance spot REST (`451`, still blocked), Bitstamp, Coinbase
+(both `200`, confirming R-38), and three venues not checked before —
+Kraken spot (`200`), Kraken Futures' historical-funding endpoint (`200`,
+live data returned), and Deribit's public funding-rate-history endpoint
+(`200`, live data returned). OKX's public funding-rate-history endpoint
+also returned `200`. A real historical data pull was then completed
+end-to-end against Deribit (below), which is a materially stronger check
+than a ticker ping. **Binance remains the one venue blocked**, which
+matters because it is the source of the only real BTC funding data this
+project has ever had (`data/btcusdt_perp_funding_8h.csv.gz`,
+2020–2023).
+
+**Idea, in one sentence.** Fetch BTC perpetual funding from a reachable
+non-Binance venue (Deribit) to cover 2024–2026, the exact gap identified
+by B-02 as "the single cheapest item that could change a decision," and
+spend it on the two backlog items that named it as their own blocker:
+finish R-35's underpowered funding-decile-gate holdout test (B-05, closed
+"pending B-02") with real multi-year power instead of one funding-covered
+holdout year, and build B-03's delta-neutral funding-harvest strategy for
+the first time, extended through the exact 2024–2025 window the
+literature (BitMEX 2025Q3/2026Q2 derivatives reports; He, Manela, Ross &
+von Wachter 2024, SSRN 4301150, "Fundamentals of Perpetual Futures") says
+the carry premium crowded and compressed.
+
+**Constraint attacked.** COST — same axis as R-35/L-05/L-06, the one
+channel this project has repeatedly found underpowered rather than wrong.
+Not SIZE: this round deliberately does **not** touch `kelly_regime_v4`'s
+sizing formula, which is the axis five independent rounds (R-28/31, R-32,
+R-34, R-35's novel branch, R-37, R-38 — ten branches) have now exhausted
+without a surviving result. The standing diagnosis's own pattern —
+"every SIZE-axis attempt this project's own incumbent hasn't already
+captured has failed" — is the reason to attack COST's *data* limitation
+instead of SIZE's *modelling* limitation this round.
+
+**Not a duplicate of.** R-35's conservative branch (`funding_gate_decile`,
+decile fixed at 0.90) is reused **verbatim, byte-for-byte** — this is not
+a new mechanism, it is the same pre-registered rule read against a longer
+holdout, which is explicitly what its own ledger row said would resolve
+the "every interval containing zero" result. B-03 (delta-neutral harvest)
+has never been implemented as code in this repository — the $+16.2%/yr
+"harvesting the premium" figure in VALIDATION.md was a one-off compounding
+calculation, and no `experiments/` file for it exists to duplicate.
+
+**Simulable here, with one caveat named up front.** The Deribit funding
+data (`scripts/fetch_deribit_funding.py`, `data/btcusdt_deribit_perp_funding_8h.csv.gz`,
+7,264 8h buckets, 2020-01-01 → 2026-08-19) is a **different instrument's**
+funding rate, not a continuation of the Binance series: Deribit charges
+funding continuously (hourly `interest_1h`, here summed into UTC-aligned
+[00:00,08:00,16:00) buckets) rather than Binance's discrete 8-hourly
+settlement, and the on-overlap comparison (2020–2023, both real,
+1,459 overlapping days) shows correlation **r=0.69** (daily-summed rate)
+but an **unstable** cross-venue level ratio — 0.64x (2020), 1.24x (2021),
+0.21x (2022), 0.34x (2023) — so it is **not rescaled** to "look like"
+Binance (a fixed scale factor was tested and rejected for exactly this
+instability; see `src/tradebot/data.py::load_funding_deribit` docstring).
+`load_funding_extended()` therefore concatenates real Binance
+(2020–2023) with Deribit **only for the genuine post-2023 gap**, tagging
+every settlement with its source — never blending the two inside the
+overlap, never letting Deribit override a real Binance value. Read every
+2024-2026 number below as "this venue's realistic funding cost/premium,
+same underlying economic mechanism, not Binance's own number" — the same
+caveat this project already carries for spot-as-perp-proxy.
+
+**What would make each variant fail — named now.**
+(a) **Conservative.** R-35 already found the gate's *inner-validation*
+edge survives an exposure-artifact check cleanly; the open question is
+purely statistical power. If the extended 2023–2026 holdout still returns
+a confidence interval containing zero, or a negative point estimate, that
+is a real negative this time — not "still underpowered," since the
+holdout is now ~3.6x longer than R-35's one year — and B-05 closes for
+good rather than staying open pending more data.
+(b) **Novel.** The literature is explicit that funding richness declined
+sharply in 2024 and further in 2025 as the trade crowded (BitMEX's own
+2025Q3/2026Q2 reports; this project's own Deribit pull shows the same
+shape independently — annualized mean funding **30.8% (2024) → 16.2%
+(2025) → 4.8% (2026 YTD)**, computed below). If net-of-cost carry return
+in 2024–2026 is materially worse than 2020–2023's measured +14.6%/yr
+(0.10% tier) — including possibly negative — that is the falsification
+this branch is built to test, and it should be reported as exactly that,
+not reframed as a partial win.
+
+**Method.** Two independent, unregistered branches, each on a disjoint
+file, neither committing — the operator (this session) merges and
+records both after reading each report in full, per ROUTINE.md's
+parallelism rules. Neither branch touches BTC OHLCV price data outside
+the routine's existing splits; funding coverage, not price, is what is
+being extended.
+
+- **Conservative — `experiments/funding_gate_decile_extended.py`.**
+  Literally `experiments/funding_gate_decile.py`'s decision logic
+  (v4's vote/scale untouched, `target = 0` where the trailing
+  rolling-window funding percentile ≥ the fixed 0.90 decile, same swept
+  lookback set {90, 180, 365, expanding}, same 3-settlement causal EWM
+  smoothing) repointed at `load_funding_extended()` in place of
+  `load_funding()`. No new parameter, no new mechanism — only the funding
+  series' length changes.
+- **Novel — `experiments/funding_harvest_carry.py`.** Long spot BTC /
+  short an equal-notional BTC perp, rebalanced quarterly to stay
+  delta-neutral (matching the original R-15 methodology described in
+  VALIDATION.md), collecting the extended real funding stream. Report at
+  minimum: full-period and per-sub-period (2020–2023 real-Binance vs
+  2024–2026 Deribit-extension) annualized carry, at both the 0.10% and
+  0.40% taker tiers on both legs, and the worst realized 30-day drawdown
+  of the funding stream in each sub-period — the same cells VALIDATION.md
+  already reports for 2020–2023, so the two are directly comparable.
+
+**Pre-registered decision rule.**
+- Conservative: promote the gate as a registered strategy-modification
+  candidate only if the **full 2023-01-01 → 2026-08-19 holdout** (paired
+  stationary block bootstrap, R-29/R-30 convention, funding charged as a
+  first-class futures cost per the `funding_study.py` convention) gives a
+  Δ log growth or Δ Sharpe 95% CI that **excludes zero in the gate's
+  favor**, drawdown not worse, and survival of the 0.40% taker tier.
+  Anything else is NEGATIVE and closes B-05 permanently (not "pending
+  more data" — this round is the more data).
+- Novel: register `funding_harvest_carry` as a new strategy only if it
+  clears the standing promotion bar (beats `buy_and_hold` OOS after real
+  costs, or is a genuine drawdown/tail improvement outside the ±0.2
+  Sharpe floor) **on the 2024–2026 sub-period specifically**, not just on
+  the already-known-good 2020–2023 window — since the 2020–2023 result
+  is not new evidence and re-quoting it would not be a holdout test of
+  anything. If the 2024–2026 carry is thin, negative, or fails to clear
+  costs, report that plainly: it is the literature's own prediction
+  landing on this project's own data, which is exactly what this branch
+  was built to check.
+
+**Holdout note.** The conservative branch's holdout read is
+pre-registered as **one** consultation against the full extended window
+(not per-config) — it evaluates the same frozen configuration R-35 already
+fixed, so there is no new selection happening on the holdout, only a
+longer read of an existing rule. The novel branch's 2024–2026 read is
+**not** a consultation of the BTC-price 2023+ holdout in the sense the
+rest of this ledger tracks (`run_period`/`ev` on OHLCV) — it reads only
+the funding-rate series, a different signal on a different clock — but is
+counted explicitly below for transparency since it is, in spirit, reading
+data the project had not yet looked at.
+
+---
+
 ## C. Ruled out — do not re-try without new evidence
 
 | what | why | ref |

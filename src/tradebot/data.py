@@ -100,6 +100,69 @@ def load_funding(data_dir: str | Path) -> pd.Series | None:
     return s
 
 
+DERIBIT_FUNDING_FILE = "btcusdt_deribit_perp_funding_8h.csv.gz"
+
+
+def _load_raw_funding_csv(path: Path) -> pd.Series | None:
+    if not path.exists():
+        return None
+    df = pd.read_csv(path, parse_dates=["timestamp"], index_col="timestamp")
+    s = df["funding_rate"].astype(float).sort_index()
+    if s.index.tz is None:
+        s.index = s.index.tz_localize("UTC")
+    return s
+
+
+def load_funding_deribit(data_dir: str | Path) -> pd.Series | None:
+    """Deribit BTC-PERPETUAL funding, 2020-01 -> 2026-08 (R-39 / B-02).
+
+    Fetched by ``scripts/fetch_deribit_funding.py`` from Deribit's public
+    API (reachable where Binance is not, as of 08-19). Deribit charges
+    funding continuously; each row here is the sum of hourly
+    ``interest_1h`` charges over a UTC-aligned 8-hour bucket
+    [00:00, 08:00, 16:00), timestamped at the bucket's close -- a
+    *different* settlement convention from Binance's discrete 8-hourly
+    rate (settled at 03/11/19 UTC in the committed Binance series), so
+    the two are comparable in shape and rough magnitude but are not the
+    same instrument. On the 2020-2023 overlap the two series correlate at
+    r=0.69 (daily-summed) but the level ratio is unstable year to year
+    (0.21x-1.24x), so this is NOT rescaled to "look like" Binance -- see
+    ``load_funding_extended`` for how the two are combined, and
+    docs/VALIDATION.md for the cross-venue check in full.
+    """
+    return _load_raw_funding_csv(Path(data_dir) / DERIBIT_FUNDING_FILE)
+
+
+def load_funding_extended(data_dir: str | Path) -> tuple[pd.Series | None, pd.Series | None]:
+    """Real Binance funding (2020-2023) concatenated with Deribit funding
+    for the genuine post-2023 gap only -- never the reverse, and never
+    blended inside the overlap. Returns ``(rate, source)`` where
+    ``source`` is the string "binance" or "deribit" per settlement, or
+    ``(None, None)`` if neither file is present.
+
+    This is deliberately not a single silently-spliced number: any
+    analysis that cares about the venue should read ``source`` rather
+    than assume every row means the same thing. See ``load_funding_deribit``
+    for why the two series are not rescaled onto a common level.
+    """
+    binance = load_funding(data_dir)
+    deribit = load_funding_deribit(data_dir)
+    if binance is None and deribit is None:
+        return None, None
+    if binance is None:
+        return deribit, pd.Series("deribit", index=deribit.index)
+    if deribit is None:
+        return binance, pd.Series("binance", index=binance.index)
+    cutoff = binance.index.max()
+    extension = deribit[deribit.index > cutoff]
+    combined = pd.concat([binance, extension]).sort_index()
+    source = pd.concat([
+        pd.Series("binance", index=binance.index),
+        pd.Series("deribit", index=extension.index),
+    ]).sort_index()
+    return combined, source
+
+
 def load_dataset(data_dir: str | Path, kind: str) -> tuple[pd.DataFrame, str]:
     """Load 'perp' or 'spot' data; returns (df, source_label).
 
