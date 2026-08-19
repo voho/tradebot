@@ -1180,6 +1180,174 @@ it will not be kind.
 
 ![what a gate is worth at matched risk](../reports/gate_control/frontier.png)
 
+### R-33 pre-registration — written and committed before the 2023 funding-holdout was read
+
+**Idea, in one sentence.** B-05 ("funding as a gate on the existing strategy"):
+discount `kelly_regime_v4`'s futures exposure when perpetual funding is
+anomalously rich, so the strategy pays less of the adversely-timed carry
+cost R-14 measured, without touching the vote/vol sizing machinery.
+
+**Constraint attacked.** COST — funding runs +20%/yr while the strategy
+holds vs +2.8% flat (R-14); the crowding that sets the rate is exactly
+the crowding the regime vote is long into.
+
+**Not a duplicate of.** R-14 (measured funding as a passive cost, no
+strategy reaction to it); R-15/B-03 (delta-neutral funding *harvest*,
+blocked on data, a different mechanism — cash-and-carry, not a
+defensive gate); R-16 (the momentum-controlled funding→forward-return
+quintile study this idea operationalizes, never turned into a
+strategy); L-01–L-04 (the `kelly_regime` family, funding-blind
+throughout). Two variants were built in parallel this session, per
+ROUTINE.md's parallelism rules (disjoint files, neither commits, every
+branch reports):
+
+- **Conservative** (`experiments/funding_gate_conservative.py`): binary
+  momentum-controlled decile gate — halve exposure only when trailing
+  funding is in its own top decile (365-day rolling percentile) **and**
+  trailing 7-day momentum is non-positive, directly implementing R-16's
+  own momentum-controlled finding (funding-rich-and-not-rising is the
+  only cell of that table that was negative).
+- **Novel** (`experiments/funding_gate_novel.py`): continuous,
+  one-sided funding-z-score discount — exposure shrinks smoothly with
+  how anomalous current funding is relative to its own trailing
+  180-day distribution (`discount = 1 - k * clip(z, 0, z_cap)/z_cap`),
+  with no momentum control and no hard threshold. Grounded in
+  perpetual-futures cost-of-carry theory: funding is the mechanism that
+  enforces perp/spot convergence, an economically meaningful carry
+  object in the same sense as classical futures cost-of-carry (Working
+  1949; formalized for perpetuals by Ackerer, Hugonnier & Jermann 2026,
+  *Mathematical Finance*, "Perpetual Futures Pricing").
+
+Both variants apply their discount **on futures only** (spot pays no
+funding, so discounting spot would be pure alpha destruction with no
+offsetting benefit — verified byte-identical to plain `kelly_regime_v4`
+on spot in both branches, max curve difference 0.000e+00).
+
+**Data constraint, stated up front.** The only committed funding data is
+real Binance BTCUSDT, 2020-01-01 → 2023-12-31
+(`data/btcusdt_perp_funding_8h.csv.gz`). Outside that window both
+strategies are byte-identical no-ops to `kelly_regime_v4` (verified by
+causality probe). That leaves only **one year** of true holdout
+(2023-01-01 → 2023-12-31) instead of the usual 3.6 — this round's
+holdout evaluation is explicitly a compressed, lower-power version of
+the standard split, and the ledger row must say so rather than present
+it as a normal OOS read.
+
+**Simulable here?** Yes — committed data, no fetch, causal-only
+alignment of the funding series onto 5m bars (`reindex(...,
+method="ffill")`, masked to NaN outside the funding series' own date
+range so nothing is carried forward past 2023-12-31 or backward before
+2020-01-01).
+
+**What would make it fail — named before any code ran, and both
+branches were briefed with this exact risk.** (a) R-16's own effect is
+soft, noisy and non-monotone by its own "honest assessment" in
+`docs/VALIDATION.md` — a gate built on it may find nothing to grab.
+(b) The R-08 trap: a strategy that de-levers *more* on a *better* signal
+made *less* money by de-levering out of BTC's best states — any
+funding-based haircut risks the same sign inversion if it fires on
+ordinary variation rather than genuine outliers. (c) Funding richness is
+structurally a bull/crowding phenomenon, so a gate keyed on it may be
+silent for an entire bear stretch and then over-fire in the next bull.
+
+**Step 3 result (inner-train 2020–2021, inner-validation 2022; 2023+
+never read) — full reports in the session transcript, code in
+`experiments/funding_gate_{conservative,novel}.py` and
+`experiments/run_funding_gate_{conservative,novel}.py`:**
+
+- **Conservative: REJECTED without spending a holdout read.** Complete
+  no-op on inner-validation (funding never re-entered its own trailing
+  top decile once in calendar-2022 — failure mode (c), independently
+  replicating R-14/R-16's crowding-is-a-bull-phenomenon claim) and on
+  inner-train, where the gate is actually live, it **does not reduce
+  drawdown** — `kelly_regime_v4`'s own 24.4% DD is the *best* value in
+  the whole 7-config table (gated variants: 24.5–27.6%), and 6 of 7
+  configs also underperform v4 on return. This fails on its own primary
+  target (drawdown) in the only period where it does anything. Per
+  ROUTINE.md's holdout economy ("the cheapest thing this project can do
+  with the holdout is ask it fewer questions", R-31), this variant does
+  not proceed to step 4.
+- **Novel: proceeds to step 4.** On inner-train, the center config
+  (`k=0.5, z_cap=3.0, funding_halflife_days=3.0`) improved **every**
+  metric simultaneously against `kelly_regime_v4`: final balance +12.6%
+  ($4,050→$4,561), max DD −4.0pp (24.4%→20.4%), Sharpe +0.36
+  (1.87→2.23, outside the ±0.2 noise floor for a single comparison,
+  R-20), funding paid −16.8% ($894→$744). On inner-validation it is
+  within $18 of the $729 baseline across the whole swept neighborhood —
+  consistent with the mechanism, since 2022 funding was already near
+  zero (v4 paid only $14 that year), so a working gate should do
+  nothing there rather than force a false positive. All three knobs
+  (`k`, `z_cap`, `funding_halflife_days`) traced a plateau, not a peak,
+  on both splits.
+
+**Configurations evaluated in step 3: 14** (7 per branch — center +
+2 neighbors on each of 3 knobs — the routine's rule that the trials
+count is the total across parallel branches applies even though one
+branch was rejected before step 4; both spent inner-split reads).
+
+**Frozen configuration for the holdout.** `FundingGateNovel(k=0.5,
+z_cap=3.0, funding_halflife_days=3.0, funding_zscore_window_days=180)`
+— the center point of the step-3 sweep, unchanged; `funding_zscore_window_days`
+was never swept and stays at its a-priori default, in the open per L-01's
+convention for untuned knobs.
+
+**Holdout window.** 2023-01-01 → 2023-12-31 only (the funding data's own
+coverage ends there) — a fresh $1,000 account per `run_period`/`_period`
+convention (R-22), warmed on bars before the window, not a slice of the
+existing multi-year 2023–2026 holdout already published for
+`kelly_regime_v4`.
+
+**Pre-registered decision rules — fixed now, before any 2023 number is
+read:**
+
+- **P1** on the 2023 holdout, futures 5x with **real funding charged on
+  both arms**, `funding_gate_novel`'s final balance beats
+  `kelly_regime_v4`'s (also funding-charged) — this is the load-bearing
+  comparison, since spot is a byte-identical no-op for both and doesn't
+  test the idea at all, and futures **without** funding charged would
+  be measuring the cost this idea exists to reduce as if it were zero.
+- **P2** the improvement exceeds the **±0.2 Sharpe noise floor** (R-20)
+  or cuts max drawdown by **≥10 percentage points** — the project's
+  standard bar (ROUTINE.md step 4), not a discount for the shorter
+  window.
+- **P3 (falsification, chosen now).** A 20-window Monte Carlo resample
+  (R-19/R-28 design: random ~60-day windows, identical windows for both
+  strategies, futures 5x, funding charged), drawn **only from
+  2020-01-01–2022-12-31** so the falsification test spends no
+  additional holdout reads. `funding_gate_novel` must beat-or-tie
+  `kelly_regime_v4` on final balance in **at least 50%** of paired
+  windows. If it loses in a majority of resampled windows, a single
+  holdout win is not path-robust and the idea is falsified regardless of
+  the point estimate.
+- **P4 (plateau)** is taken as satisfied by the step-3 neighborhood
+  result above (three knobs, both splits, no peak) rather than re-swept
+  on the 2023 window — re-sweeping there would spend up to 7x the
+  holdout reads on a question step 3 already answered, which the
+  economy principle argues against.
+- **Statistical honesty.** The paired comparison against
+  `kelly_regime_v4` is reported with a 95% stationary block-bootstrap
+  interval (`tradebot.inference.paired_bootstrap`, 30-day mean block,
+  2,000 resamples, daily returns) exactly as R-29/R-30 require, not as a
+  bare point — even though one holdout year gives it much less power
+  than the project's usual 3.6.
+
+**Stated prediction before looking.** P1 passes on the point estimate —
+the inner-train mechanism (shrink into anomalous funding, no momentum
+gate to go silent) looks real and mechanistic rather than a curve-fit
+artifact. P2 is a coin flip: the effect sizes in step 3 (≈4pp DD, ≈0.36
+Sharpe on one path) are of the right order but one holdout year is thin.
+P3 is the one most likely to fail outright, precisely because it is the
+check this project has repeatedly found kills exactly this shape of
+result (R-08, R-28, R-31 all reversed or dissolved under a
+robustness/matched-risk check after looking promising on a single
+path).
+
+**Holdout counter going in: ~124** (per R-32's running total). This row
+will add exactly 5 fresh 2023-only reads (`kelly_regime_v4` futures
+funded, `funding_gate_novel` futures funded, `kelly_regime_v4` spot,
+`buy_and_hold` spot, `buy_and_hold` futures) — the paired bootstrap and
+the P3 resample do not read 2023 data beyond those two futures runs.
+
 ---
 
 ## C. Ruled out — do not re-try without new evidence
