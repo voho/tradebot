@@ -263,7 +263,14 @@ def causality() -> None:
     from tradebot.broker import PaperBroker
     from tradebot.strategy import Context
 
-    df = DF.iloc[-200_000:].copy()
+    # Window and tamper zone are both confined to strictly before
+    # 2023-01-01: unlike run_matched_risk.py's causality() (which is free to
+    # use the tail of the full series), this file's task instructions
+    # forbid slicing or evaluating ANY 2023+ data, so the window ends at the
+    # holdout boundary rather than at the end of the dataset.
+    boundary = int(DF.index.searchsorted("2023-01-01"))
+    df = DF.iloc[boundary - 200_000: boundary].copy()
+    assert df.index[-1] < pd.Timestamp("2023-01-01", tz="UTC")
     cut = len(df) - 5_000
     bars = [cut - k for k in (1, 2, 3, 5, 10, 20, 100, 1_000)]
 
