@@ -130,6 +130,7 @@ the most expensive repeated mistake in this table.
 | R-36 | Formalize B-14: is `kelly_regime_v4`'s return-per-unit-of-risk edge over a matched passive hold (R-33's byproduct finding) real outside the 2017–2020 bull? | 08-19 | Pre-registered a pooled decision rule (exact-binomial 95% CI on R-33's existing 40-window win-rate) plus a named falsification test (split the same 40 windows by start date, before/after 2021-01-01); reused `windows.csv` unchanged, only recovered each window's calendar date from the identical seed=42 RNG sequence — 0 new backtests | **D1 passes on both markets (CI excludes 50%). Falsification survives on both markets — post-2021 windows still favour v4 (win-rate 68.2%/81.8%, median +5.0pp/+7.4pp) — but the effect is ~10x smaller than the pooled/pre-2021 number (+68.9pp/+97.2pp), and the post-2021 subsample's own CI still contains 50% on spot at n=22.** | **CONFIRMED, thinned** — see full write-up below |
 | R-37 | Two SIZE-axis attempts to capture more of R-36's confirmed (but thinned) edge on `kelly_regime_v4` | 08-19 | Two parallel unregistered variants, each on a disjoint file: `experiments/kelly_regime_v6_retune.py` (conservative — retunes the existing `target_vol`/`max_leverage` constants, no new signal) and `experiments/kelly_regime_v6_state_kelly.py` (novel — replaces the single global `target_vol` with a causally-estimated, per-vote-state Kelly fraction `μ_state/σ_state²`); 99 configurations total across both branches (53 + 46), inner-train/inner-validation and ETH falsification only, no holdout read by either | **Conservative: the naive best-Sharpe candidate reproduces the project's standard exposure-level artifact (+51% realized vol) and does not transfer to futures; the one candidate surviving a matched-exposure control nets a Sharpe delta inside the ±0.2 noise floor on both markets and does not clear ETH by more than a token margin. Novel: `max_leverage` never binds (rules out the raw-leverage artifact cleanly) and states genuinely differ in measured μ/σ² (bear ≈ −62%/yr, bull ≈ +154–174%/yr, non-monotone — 2/3 agreement beats unanimous 3/3) — but it fails its pre-registered ETH falsification outright, underperforming v4 on the BTC control too, and its halflife/kelly_mult neighbourhood is a fitted peak, not a plateau.** | **NEGATIVE** (both branches) — see full write-up below |
 | R-38 | Risk-constrained Kelly gambling (Busseti, Ryu & Boyd 2016) as a formal, probability-calibrated replacement for `kelly_regime_v4`'s ad hoc `target_vol`/`max_leverage` constants | 08-19 | Two parallel unregistered variants, each on a disjoint file: `experiments/kelly_regime_v7_ddcap.py` (conservative — v4's vote and scale unchanged, additionally capped by a causal drawdown-risk ceiling `f_risk = mu/(lambda·sigma²)` with `lambda = ln(beta)/ln(alpha)` fixed from a stated drawdown tolerance) and `experiments/kelly_regime_v7_crra.py` (novel — v4's vote kept as a hard gate, its vol-only scale replaced entirely by the same CRRA fraction as the sizing formula); 56 configurations total across both branches (24 + 32), inner-train/inner-validation and ETH/BTC falsification only, no holdout read by either | **Both branches cleanly refute the standard exposure-level-rescale artifact (R²=0.20 and 0.15 against a mean-notional-matched flat rescale of v4, versus the 0.95+ threshold this project treats as diagnostic) — a genuinely non-duplicate mechanism in both cases. Both still fail their identical pre-registered ETH falsification decisively, and by the same diagnostic signature: each loses to `kelly_regime_v4` on the BTC control itself (conservative: ≈11–12% of v4's balance; novel: 21–37%), before ETH is even read — the inner-validation win (built on a bear/chop-heavy 2021–22 window) does not survive a trending market on either tested asset. Conservative's parameter neighbourhood is additionally not a plateau (adjacent (α,β) cells swing spot Sharpe +0.50→−0.07); novel's is a loose plateau but sits at the edge of its tested grid.** | **NEGATIVE** (both branches) — see full write-up below |
+| R-40 | Bag/ensemble R-07's already-validated 18–28d anchor-ladder plateau, instead of shipping one frozen point on it (ERR: no error control on the ladder-choice hyperparameter itself) | 08-19 | Two parallel unregistered variants, each on a disjoint file: `experiments/kelly_regime_v8_ladder_bag.py` (conservative — plain unweighted average of the latched vote across a fixed 6-ladder ensemble spanning R-07's region; Breiman 1996 bagging) and `experiments/kelly_regime_v8_uncertainty_shrink.py` (novel — the same bagged vote further shrunk by real-time cross-ladder disagreement, Baker & McHale 2013 / Sukhov 2025 parameter-uncertainty-under-Kelly style; `κ=0` verified to reduce exactly to the conservative mechanism); 12 configurations total across both branches (4 + 8), inner-train/inner-validation and ETH/BTC Bitfinex falsification only, no holdout read by either; operator independently re-ran both branches' `select`/`eth` commands and confirmed the numbers | **Both branches beat `kelly_regime_v4` on every inner-validation cell (conservative's primary candidate: spot Sharpe 0.30 vs 0.14, futures 0.42 vs 0.25) and neither is the standard exposure-level artifact (R²=0.86–0.94, below the 0.95 bar) — but both hit the same diagnostic signature that sank R-37/R-38: substantial underperformance vs v4 on the pre-2020 BTC falsification control itself, worst on futures (conservative 52–75% of v4's balance across all four ensemble definitions; novel 56%), before ETH is even read. The disagreement-shrink term added nothing over the plain bag in 6 of 6 non-zero-κ configurations.** | **NEGATIVE** (both branches) — see full write-up below |
 
 ### R-28 pre-registration — written and committed before the holdout was read
 
@@ -2891,6 +2892,168 @@ real connection rather than another ping.
 
 ---
 
+### R-40 — bagging R-07's own validated plateau, instead of shipping one point on it
+
+**Idea, one sentence.** R-07 (already in this ledger) swept nine
+anchor-ladder base periods in the 18–28 day range and found the whole
+region is a validated **plateau** — every variant cut drawdown to
+35–39%, Sharpe spread 1.52–1.60 sat inside the ±0.2 noise floor —  yet
+`kelly_regime_v4` ships exactly one point on that plateau (20/40/80) and
+treats it as certain. Bootstrap aggregating (Breiman 1996, *Machine
+Learning* 24(2)) says averaging an unstable-but-unbiased estimate across
+resamples reduces variance without moving its expectation; the "resample"
+here is not data, it is the a-priori choice of which already-validated
+ladder base to use. Separately, Baker & McHale (2013, "Optimal Betting
+Under Parameter Uncertainty: Improving the Kelly Criterion," *Decision
+Analysis* 10(3)) and Sukhov (2025, "Bayesian Kelly Criterion with
+Parameter Uncertainty," SSRN) show the Kelly fraction should shrink
+continuously with estimation uncertainty rather than being spent at full
+confidence on a point estimate.
+
+**Constraint attacked.** ERR — specifically, no error control on the
+anchor-ladder hyperparameter itself, which R-07 already showed sits on a
+plateau rather than a peak.
+
+**Not a duplicate of.** R-06/R-07 (measured individual points on the
+plateau, never averaged them); `kelly_regime_v2` (shrinks on disagreement
+among the 3 anchors *within* one fixed ladder via `vote_gamma` — a
+different axis from averaging *across* ladders); R-34 (Bayesian
+type-belief posterior, a different signal source entirely); R-37
+(per-vote-state Kelly fraction replacing `target_vol`) and R-38
+(risk-constrained drawdown cap / CRRA fraction, both using realized-return
+moments) — neither touches the vote/ladder axis at all, both leave v4's
+single ladder untouched and change the vol-targeting formula instead.
+This round is the first to touch the ladder-*choice* itself rather than
+what happens after a ladder is chosen.
+
+**Pre-registered before either branch ran** (fixed in each branch's
+dispatch prompt): (1) a fixed, not-fitted ensemble membership — doubling
+ladders with base days spanning R-07's own 18–28d region, plus one
+below-plateau negative control (14d) predicted to underperform; (2) the
+mandatory exposure-artifact check (R² > 0.95 = artifact, R-34's
+threshold); (3) a frac-correlation check against v4's own single-ladder
+vote (corr > 0.98 = "collapses to v4, no effect"); (4) the standard
+ETH-vs-BTC-control falsification, worded as: fails if the candidate is
+not comparable to v4 on ETH, **or** is visibly worse on ETH than on the
+BTC control run through the identical pipeline; (5) for the novel branch
+only, two additional checks: that `κ=0` reduces numerically exactly to
+the conservative branch's mechanism, and correlation against
+`kelly_regime_v2` (a value near 1.0 would mean re-deriving an
+already-negative result through new arithmetic); (6) the same strict
+"no 2023+ bar, for any purpose" restriction as R-37/R-38.
+
+**Conservative branch — `experiments/kelly_regime_v8_ladder_bag.py`.**
+Four fixed ensemble definitions (`full6`={18,20,22,24,26,28} primary,
+`coarse3`={18,23,28}, `edges2`={18,28}, `negcontrol`={14,21,28}).
+Inner-validation, both markets, all four beat v4 (spot $998→$1,095–1,148,
+Sharpe 0.14→0.30–0.38; futures $1,064→$1,082–1,180, Sharpe 0.25→0.28–0.42)
+on 18–35 trades vs v4's 52 — the gain concentrates in fewer, better-timed
+trades through the bear/chop-heavy 2021–2022 window. **Frac-correlation
+check:** 0.974–0.983 against v4's own vote — high, `full6` sits right at
+the "collapses" boundary, but none formally clears 0.98. **Exposure-
+artifact check:** R²=0.916–0.936 across all four — consistently *below*
+the 0.95 bar, but closer to it than R-38's clean 0.15–0.21 refutation.
+**Causality: PASS** (target/`_frac_bagged`/`_scale` bit-identical before
+a 3×/÷3 tamper cut, order-decision probe and equity path both exact).
+**Inner-train tells a different story**: `full6`'s futures max drawdown
+*worsens* to 45.6% against v4's 35.3% over 2017–2020, and the
+`negcontrol` set — predicted in advance to underperform as a
+below-plateau check — instead scores competitively on inner-train
+(futures Sharpe 2.29 vs v4's 2.28) while showing the *worst* BTC-control
+degradation of all four sets below. **ETH-vs-BTC falsification, re-run
+independently by the operator and confirmed to the dollar:** on the BTC
+control (Bitfinex 2016–2019, whole file) every candidate loses to v4,
+sharply on futures — `full6` $19,343 vs v4's $25,681 (75%), `coarse3` 67%,
+`edges2` 55%, `negcontrol` **52%** (DD 50.6% vs v4's 32.1%, its worst
+cell) — and more mildly on spot (80–84%). On ETH the *ratios* hold or
+improve (`coarse3`/`negcontrol` actually beat v4 outright on ETH
+futures), so the literal pre-registered clause — "visibly worse on ETH
+than the BTC control" — does **not** trigger. But absolute
+underperformance against v4 on the BTC control itself, particularly on
+futures, is real and not small.
+
+**Novel branch — `experiments/kelly_regime_v8_uncertainty_shrink.py`.**
+Same 6-ladder ensemble, `disagree[t] = std_k(binary vote_k[t])`,
+`shrink[t] = max(floor, 1/(1+κ·disagree²))`, `frac_final = frac_bagged ·
+shrink`. 8 configurations (κ∈{0,2,8,20} × floor∈{0.2,0.4}). **κ=0
+sanity check: PASS** — numerically exact reduction to the conservative
+branch's own mechanism (confirmed independently by the operator: both
+branches' `select` commands return $1,095/$1,180 for this cell, to the
+dollar). **Every κ>0 configuration underperforms the κ=0 baseline**, on
+inner-train and inner-validation, both markets, 6 of 6 — the disagreement
+signal is real (nonzero on 13.1% of bars, concentrated around ladder-latch
+flips) but adds no value once found. **Exposure-artifact check:**
+R²=0.862–0.867 — not an artifact. **`kelly_regime_v2` correlation:**
+0.890 — meaningfully below R-34's ~0.997 near-duplicate signature, so not
+a re-derivation of v2's convexity. **Causality: PASS** (all six prepared
+columns, orders, and equity bit-identical before the tamper cut).
+**ETH-vs-BTC falsification** (representative candidate κ=8, floor=0.2):
+BTC control 56–77% of v4's balance (worst on futures), ETH 82–87% — again
+the ratio *improves* going BTC→ETH, so the literal clause does not
+trigger, but the candidate trails v4 in every absolute cell on both
+assets.
+
+**Verdict: NEGATIVE (both branches), on a standard tighter than either
+branch's own literal pre-registered wording — stated here explicitly, per
+ROUTINE.md's rule that a moved goalpost must be named.** Neither branch
+technically fails its own falsification clause as written: relative
+performance does not degrade going from the BTC control to ETH in either
+branch. But this project has, in R-37 and R-38, already established a
+sharper and more specific diagnostic than that clause captures:
+underperforming `kelly_regime_v4` on the **BTC control window itself**,
+before ETH is even read, is evidence that an inner-validation edge built
+on the bear/chop-dominated 2021–2022 window is a window-fitting artifact
+that reverses in a trending market — regardless of what happens on the
+second asset. Both of this round's branches hit exactly that signature,
+most severely on futures. Applying that established, *stricter* bar here
+is a legitimate use of precedent, not an after-the-fact search for a
+reason to reject a result that otherwise looked like a win — it moves the
+decision in the conservative direction (reject), never the promotional
+one, and it is recorded so a future session does not read the literal
+"PASS" on this round's own ETH clause as license to reopen it without
+addressing the BTC-control finding directly. The reusable lesson: R-07's
+plateau is real on the metric it was measured on (drawdown, on the
+2021–2022 window it was measured on), but treating that plateau as a
+free ensembling opportunity does not transfer to a trending market any
+better than any other SIZE-axis modification this project has tried —
+the plateau's flatness is itself apparently local to the regime it was
+discovered in, an implication R-07 never tested and this round now has.
+
+**Combined accounting.** Configurations evaluated this row: 4 + 8 =
+**12**. Project trials count before this row: 597 (R-39's cumulative:
+467 + 72 + 58). **Applies from here: 597 + 12 = 609.**
+
+**Holdout counter: unchanged at ~221.** Neither branch read any bar
+dated 2023-01-01 or later — both were restricted to
+inner-train/inner-validation/pre-2020 ETH/BTC only, matching the R-37/
+R-38/R-39 convention, and neither branch's own report recommended a
+holdout read for its candidate.
+
+**Lookahead checks.** Both branches' causality probes were **independently
+re-executed by the operator**, not merely read and accepted — `python
+experiments/kelly_regime_v8_ladder_bag.py select` and `... eth` were
+re-run directly and their output compared line-for-line against the
+branch's own report (exact match on every figure quoted above); the
+`kelly_regime_v8_uncertainty_shrink.py` `select` output was likewise
+re-run and its κ=0 row confirmed identical to the ladder-bag branch's
+`full6` row, which is itself the numerical cross-check the two branches'
+pre-registration asked for.
+
+**Next step.** This is the fourth independent, non-duplicate
+parallel-round attempt (eight branches: R-34, R-37, R-38, R-40) to
+improve `kelly_regime_v4` on its own vote/SIZE axis since L-01–L-04 were
+registered, and — like all three before it — a branch that is neither an
+exposure-level artifact nor a re-derivation of an existing negative still
+loses to the incumbent on a trending control before a second asset is
+even read. Nothing here reopens without a new mechanism; added to section
+C below. **B-06 (forward paper trading) remains the highest-value item on
+merit**, and, per R-38/R-39's network findings, may be closer to
+reachable than the ledger has assumed for most of this project's
+history — the natural next thing to actually attempt, rather than a
+seventh variation on kelly_regime_v4's own sizing formula.
+
+---
+
 ## C. Ruled out — do not re-try without new evidence
 
 | what | why | ref |
@@ -2911,6 +3074,8 @@ real connection rather than another ping.
 | CRRA/Merton drift-over-variance fraction (`μ/(λσ²)`, `λ` from a stated drawdown tolerance) replacing v4's vol-only scale | 32 configurations; cleanly refutes the exposure-artifact explanation (R²=0.15) and finds a loose plateau at the longest tested halflife, but fails the identical ETH falsification the same way — worse than v4 on the BTC control (21–37% of its balance) before ETH is read; a continuous drift estimate systematically under-holds through a trend. | R-38 (novel) |
 | Binary top-decile-funding flat gate layered on `kelly_regime_v4`, read against a 3.6-year fully-funding-covered holdout (was 1 year in R-35) | 72 configurations; the one-year R-35 result did not merely stay underpowered, it reversed — Δ log growth −0.87 [−1.70,−0.17], Δ Sharpe −0.58 [−1.15,−0.04], both excluding zero against the gate, worse drawdown despite 27% less exposure, fails 0.40% tier outright. Not a venue-splice artifact (pure-Deribit gives the same result). Specifically ruled out: a *binary* percentile-threshold flat gate on this signal/cadence/instrument — not "funding is useless" (R-16's descriptive relationship is now known to be regime-dependent, which is itself new information). | R-39 (conservative), reopens B-05 from R-35 and closes it |
 | Delta-neutral spot-long/perp-short funding-harvest carry trade, extended through 2024-2026 | 19 specs / 58 evaluations; fails the return bar decisively (+16.7% vs buy_and_hold's +49.1% net of 0.10% costs, 2024-2026) and the drawdown/tail bar is voided (this repo's missing perp price series makes basis risk and the trade's real safety unmeasurable, not merely uncosted). Ruled out for the current era, not on principle — see B-15. | R-39 (novel) |
+| Plain bagging (unweighted average) of R-07's validated 18-28d anchor-ladder plateau, replacing v4's single (20,40,80) ladder | 4 configurations; beats v4 on every inner-validation cell (not an artifact, R²=0.92-0.94) but loses to v4 on the pre-2020 BTC falsification control itself, down to 52% of its balance on futures — the same bear/chop-window-fitting signature that sank R-37/R-38, even though the literal "worse on ETH than BTC" clause does not trigger. | R-40 (conservative) |
+| Baker-McHale/Bayesian-Kelly-style shrink of the bagged ladder vote by real-time cross-ladder disagreement | 8 configurations; genuinely non-duplicate (not an artifact at R²=0.86-0.87, not a re-derivation of `kelly_regime_v2` at corr=0.89) but never beats its own no-shrink (κ=0) baseline in 6 of 6 tested configurations, and inherits the conservative branch's BTC-control underperformance (56% of v4's futures balance) unchanged. | R-40 (novel) |
 
 ---
 
@@ -3091,6 +3256,25 @@ R-39's own network re-check is itself indirect evidence it may be closer
 to reachable than the ledger has been assuming — B-06 is the natural next
 item to attempt a real connection against, not just a ping.
 
+**Unchanged 08-19 after R-40.** A sixth independent, non-duplicate
+parallel round tested whether bagging R-07's already-validated 18-28d
+anchor-ladder plateau (conservative: plain average) or shrinking it by
+real-time cross-ladder disagreement (novel: a Baker-McHale/Bayesian-Kelly
+style formula) could improve on `kelly_regime_v4`'s single frozen ladder.
+Both branches beat v4 cleanly on inner-validation and neither is the
+standard exposure-level artifact — the closest either has come to a
+believable win by that pair of tests — but both reproduce R-37/R-38's
+exact failure signature: losing to v4 on the pre-2020 BTC falsification
+control itself (worst on futures, down to 52-56% of v4's balance) before
+ETH is even read, indicating the inner-validation win is again fitted to
+the bear/chop-dominated 2021-2022 window rather than a generalizable
+mechanism. The order below is unaffected: **B-06 (forward paper trading)
+remains the highest-value item on merit**, and this is now the fourth
+independent parallel round (eight branches: R-34, R-37, R-38, R-40) to
+fail on `kelly_regime_v4`'s own vote/SIZE axis — a future session with
+spare capacity should attempt B-06's real connection rather than a ninth
+variation on the incumbent's sizing formula.
+
 Two things changed the order. R-28 answered B-01. And a connectivity check
 found that **every exchange endpoint is blocked by the network policy
 these sessions run under** — Binance, Bitstamp, Kraken and Coinbase all
@@ -3151,6 +3335,7 @@ Also record, in the row or a footnote beneath it:
 
 | as of | count | note |
 |---|---|---|
+| 08-19 | ~221 | R-40: **+0** on top of R-39's ~221. Both branches (`kelly_regime_v8_ladder_bag`, `kelly_regime_v8_uncertainty_shrink`) were explicitly restricted to inner-train/inner-validation/pre-2020 ETH+BTC only and neither read a single 2023+ bar, by design; the operator's independent re-verification of both branches' reported numbers reused the same inner-validation and pre-2020 falsification data, not the holdout. |
 | 08-19 | ~221 | R-39: **+62** on top of R-38's ~159 — the conservative branch's own honest count (§10 of its report): 61 distinct 2023+ holdout cells, not the 1 its pre-registration authorized (the extra 60 are diagnostics — neighbourhood, cost tiers, exposure-matched control, sub-period split, venue-splice robustness — run *after* the pre-registered decision cell had already returned a significant negative; none could have changed the verdict in the gate's favour, but this file's practice is to record the real number). Plus **+1** for the operator's independent skeptic re-derivation of the decision cell via a separate code path. The novel branch (`funding_harvest_carry`) reads only the funding-rate series against `buy_and_hold`/`kelly_regime_v4` reference runs over 2024-2026 — a period the BTC-price holdout convention already treats as fair game once funding covers it — and is not counted separately here. |
 | 08-19 | ~159 | R-38: **+0** on top of R-36/R-37's ~159. Both branches (`kelly_regime_v7_ddcap`, `kelly_regime_v7_crra`) were explicitly restricted to inner-train/inner-validation/pre-2020 ETH+BTC only and neither read a single 2023+ bar, by design. |
 | 08-19 | ~159 | R-36 and R-37: **+0** on top of R-35's ~159. R-36 reused R-33's existing `windows.csv` (seed=42, computed once) and only recovered calendar dates from the RNG sequence — no new backtest, and the 40-window resample does not count against the holdout by this project's own established convention. Both R-37 branches were explicitly restricted to inner-train/inner-validation/pre-2020-ETH only and neither read a single 2023+ bar, by design. |
