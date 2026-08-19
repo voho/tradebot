@@ -320,62 +320,93 @@ def causality() -> None:
     from tradebot.broker import PaperBroker
     from tradebot.strategy import Context
 
+    from tradebot.broker import PaperBroker as _PB  # noqa: F401  (documented above)
+
     identity_check()
-    frame = DF.iloc[-250_000:].copy()
-    cut = len(frame) - 20_000
-    bars = [cut - k for k in (1, 2, 3, 5, 10, 20, 100, 1_000, 5_000)]
-    print(f"tamper probe: {len(frame):,} bars {frame.index[0]:%Y-%m-%d} -> "
-          f"{frame.index[-1]:%Y-%m-%d}, cut at bar {cut:,} "
-          f"({frame.index[cut]:%Y-%m-%d %H:%M})\n")
+    probes = (("Deribit region", "2024-03-01", None),
+              ("spans the Binance->Deribit splice", "2022-06-01", "2024-12-31"),
+              ("R-35's own region", "2020-06-01", "2022-12-31"))
+    for label, lo, hi in probes:
+        frame = _slice(DF, lo, hi).copy()
+        cut = len(frame) - 20_000
+        bars = [cut - k for k in (1, 2, 3, 5, 10, 20, 100, 1_000, 5_000)]
+        print(f"\ntamper probe [{label}]: {len(frame):,} bars "
+              f"{frame.index[0]:%Y-%m-%d} -> {frame.index[-1]:%Y-%m-%d}, "
+              f"cut at bar {cut:,} ({frame.index[cut]:%Y-%m-%d %H:%M})")
 
-    up, down = frame.copy(), frame.copy()
-    for col in ("open", "high", "low", "close"):
-        up.iloc[cut:, up.columns.get_loc(col)] *= 3.0
-        down.iloc[cut:, down.columns.get_loc(col)] /= 3.0
-    up.iloc[cut:, up.columns.get_loc("volume")] *= 7.0
-    down.iloc[cut:, down.columns.get_loc("volume")] /= 7.0
+        up, down = frame.copy(), frame.copy()
+        for col in ("open", "high", "low", "close"):
+            up.iloc[cut:, up.columns.get_loc(col)] *= 3.0
+            down.iloc[cut:, down.columns.get_loc(col)] /= 3.0
+        up.iloc[cut:, up.columns.get_loc("volume")] *= 7.0
+        down.iloc[cut:, down.columns.get_loc("volume")] /= 7.0
 
-    for w in SWEEP:
-        def decisions(f):
-            s = gate(w)
-            prepared = s.prepare(f.copy())
-            broker = PaperBroker(market=FUTURES, start_balance=10_000.0)
-            out = []
-            for i in bars:
-                ctx = Context(prepared, i, broker)
-                s.on_bar(ctx)
-                out.append([(o.side, o.qty, o.target) for o in ctx.orders])
-            return out, prepared
+        for w in SWEEP:
+            def decisions(f):
+                s = gate(w)
+                prepared = s.prepare(f.copy())
+                broker = PaperBroker(market=FUTURES, start_balance=10_000.0)
+                out = []
+                for i in bars:
+                    ctx = Context(prepared, i, broker)
+                    s.on_bar(ctx)
+                    out.append([(o.side, o.qty, o.target) for o in ctx.orders])
+                return out, prepared
 
-        a, pa = decisions(up)
-        b, pb = decisions(down)
-        bad = [bar for bar, oa, ob in zip(bars, a, b) if oa != ob]
+            a, pa = decisions(up)
+            b, pb = decisions(down)
+            bad = [bar for bar, oa, ob in zip(bars, a, b) if oa != ob]
+            worst = {}
+            for c in ("target", "v4_target", "funding_pctl", "gated"):
+                x = pa[c].to_numpy()[:cut].astype(float)
+                y = pb[c].to_numpy()[:cut].astype(float)
+                d = np.abs(np.nan_to_num(x, nan=-1.0) - np.nan_to_num(y, nan=-1.0))
+                worst[c] = float(np.max(d)) if len(d) else 0.0
+            ok = not bad and max(worst.values()) == 0.0
+            print(f"  w={str(w):9s} orders "
+                  f"{'PASS' if not bad else 'FAIL at ' + str(bad)}   "
+                  + "  ".join(f"{c}={worst[c]:.3e}" for c in worst)
+                  + f"   {'PASS' if ok else 'FAIL'}")
+
+    # Second, orthogonal leak check, aimed at the specific failure mode
+    # this project has been bitten by: a full-series statistic (global
+    # mean/std/quantile) applied to early rows. If one existed, dropping
+    # later settlements would move an earlier row's rank. It must not.
+    print("\ntruncation probe: rank(t) must not depend on settlements after t")
+    for measured_lo, measured_hi, drop_from in (
+            ("2021-01-01", "2022-12-31", "2023-01-01"),
+            ("2023-01-01", "2023-12-31", "2024-01-01"),
+            ("2024-01-01", "2024-12-31", "2025-01-01"),
+            ("2025-01-01", "2025-12-31", "2026-01-01")):
+        idx = _slice(DF, measured_lo, measured_hi).index
+        cutoff = pd.Timestamp(drop_from, tz="UTC")
+        short = FUNDING_EXT[FUNDING_EXT.index < cutoff]
         worst = {}
-        for c in ("target", "v4_target", "funding_pctl", "gated"):
-            x = pa[c].to_numpy()[:cut].astype(float)
-            y = pb[c].to_numpy()[:cut].astype(float)
-            d = np.abs(np.nan_to_num(x, nan=-1.0) - np.nan_to_num(y, nan=-1.0))
-            worst[c] = float(np.max(d)) if len(d) else 0.0
-        ok = not bad and max(worst.values()) == 0.0
-        print(f"  w={str(w):9s} orders {'PASS' if not bad else 'FAIL at ' + str(bad)}   "
-              + "  ".join(f"{c}={worst[c]:.3e}" for c in worst)
+        for w in SWEEP:
+            full = _funding_percentile(FUNDING_EXT, idx, w, 3.0, 30)
+            trunc = _funding_percentile(short, idx, w, 3.0, 30)
+            d = np.abs(np.nan_to_num(full, nan=-1.0)
+                       - np.nan_to_num(trunc, nan=-1.0))
+            worst[str(w)] = float(d.max())
+        ok = max(worst.values()) == 0.0
+        print(f"  measured {measured_lo}..{measured_hi}, all settlements "
+              f">= {drop_from} dropped: max|Δpctl| "
+              + "  ".join(f"w={k}:{v:.1e}" for k, v in worst.items())
               + f"   {'PASS' if ok else 'FAIL'}")
 
-    # Second, orthogonal leak check: a full-series statistic applied to
-    # early rows would make the early percentile column depend on data the
-    # series does not yet contain. Truncating the funding series must
-    # therefore leave every already-computed rank untouched.
-    print("\ntruncation probe: rank(t) must not depend on settlements after t")
-    idx = _slice(DF, "2021-01-01", "2022-12-31").index
-    for w in SWEEP:
-        full = _funding_percentile(FUNDING_EXT, idx, w, 3.0, 30)
-        cutoff = pd.Timestamp("2023-01-01", tz="UTC")
-        trunc = _funding_percentile(FUNDING_EXT[FUNDING_EXT.index < cutoff],
-                                    idx, w, 3.0, 30)
-        d = np.abs(np.nan_to_num(full, nan=-1.0) - np.nan_to_num(trunc, nan=-1.0))
-        print(f"  w={str(w):9s} max|Δpctl| on 2021-2022 after dropping all "
-              f"2023+ settlements = {float(d.max()):.3e} "
-              f"{'PASS' if d.max() == 0.0 else 'FAIL'}")
+    # Third: the funding series itself must not be reachable from price.
+    # Perturbing every price bar leaves funding_pctl untouched everywhere,
+    # which is the whole point of using a non-price signal (R-16/R-35).
+    print("\nindependence probe: funding_pctl must not move when ALL prices move")
+    frame = _slice(DF, "2023-01-01", None).copy()
+    scaled = frame.copy()
+    for col in ("open", "high", "low", "close"):
+        scaled[col] *= 5.0
+    a = gate(DECISION_W).prepare(frame.copy())["funding_pctl"].to_numpy()
+    b = gate(DECISION_W).prepare(scaled)["funding_pctl"].to_numpy()
+    d = np.abs(np.nan_to_num(a, nan=-1.0) - np.nan_to_num(b, nan=-1.0))
+    print(f"  w={DECISION_W} max|Δfunding_pctl| over the whole holdout = "
+          f"{float(d.max()):.3e} {'PASS' if d.max() == 0.0 else 'FAIL'}")
 
 
 # --------------------------------------------------------- 3. coverage
