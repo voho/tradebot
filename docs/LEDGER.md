@@ -115,6 +115,7 @@ the most expensive repeated mistake in this table.
 | R-30 | Wire the intervals into the comparison table itself (backlog B-12) | 08-18 | `src/tradebot/evidence.py` reads R-29's `bootstrap.csv` into `tradebot run`: two verdict columns on the README table (Δ log growth and Δ max drawdown against `buy_and_hold`, each with its 95% paired interval and a ▲/≈/▼ mark), the full error bars in the per-market detail tables, the log-growth interval added to the bootstrap output — R-29 computed it and saved only the point — and a CI rule that a registered strategy with no measured interval fails the suite. 18 new tests. | **The column R-29 computed and discarded says more than the ones it kept.** On spot over the full history, **0 of 24 strategies are distinguishably better than `buy_and_hold` on log growth**, the criterion the table ranks by; 13 are distinguishably worse and the 11 indistinguishable ones are the entire profitable block. `kelly_regime_v4`'s +0.044 advantage is **[−2.60, +2.85]** — from a thirteenth of holding's final balance to seventeen times it. Everything R-29 published reproduced exactly. | **METHOD** — the warning now lives *in* the table, not beside it |
 | R-31 | Matched-risk frontier: e-process gate vs latched anchor vote at equal realized volatility (backlog B-11) | 08-18 | `experiments/matched_risk.py` — one sizer, one deadband, one warmup, one exposure knob, gate interchangeable. 36 configurations traced on both inner splits and both markets (144 backtests), exposures solved on inner-validation to within 2% of target volatility in both directions, then frozen; holdout scored with the R-29 paired block bootstrap | **Hold risk fixed and R-28's headline dissolves — both halves of it.** All 8 holdout intervals contain zero and the sign is unstable across cells; the one cell surviving the pre-registered validity gate gives −0.072 [−0.532, +0.379] on log growth. Three cells of four are **void**: the inner-validation exposure match did not survive into 2023+ (29% volatility gaps) or the spot notional cap truncated both arms differently (41% / 27% of bars). On ETH, with exposures re-matched, the e-process gate loses all four cells on return **and on drawdown** — so R-28's P3 replication was measured against an arm carrying 2.4x the risk. Equal-risk exposure ratio is itself regime-dependent: 2.2x in the bull, 4.7x in the bear. | **NEGATIVE** — the 0.27x exposure *was* the finding |
 | R-32 | The ungated control, and an independent second reading of B-11 | 08-18 | A parallel session ran the same backlog row the same day from the same base commit. Same design as R-31 (one sizer, gate interchangeable, exposure scaled by a scalar) plus a **third arm with no gate at all**; 33 configurations, 132 backtests, multipliers frozen on inner-validation | **Agrees with R-31 wherever the two overlap** — gates indistinguishable at matched risk, R-28's 0-of-40 inverted (deeper in 60%/62%), its fee advantage inverted, P1 failed — from an independent implementation, and its own holdout cells are **void** under R-31's validity rule (cap binds on 41%/36%/21% of spot bars; a 29% volatility gap on futures). What it adds: at matched risk the **ungated** arm is below both gated arms at every risk level in all four inner-split cells and loses 80–90% of 40 paired windows. **The gate is worth more than the choice of gate.** | **NEGATIVE** — and the parallel-branch report the routine requires |
+| R-33 | Funding as a gate on `kelly_regime_v4` (backlog B-05) | 08-19 | Two parallel branches: a conservative momentum-controlled decile trigger and a novel continuous funding-z-score discount (Ackerer, Hugonnier & Jermann 2026). Conservative rejected in step 3 (inert all of 2022, and cuts DD nowhere it fires). Novel frozen and carried to the 2023 holdout — the only year the committed funding data covers — funding paid down 22% ($152→$119), DD down 1.7pp [−4.2,−0.1] (significant), but futures final balance **below** v4's ($2,321 vs $2,393). 14 configurations across both branches | **P1 FAIL** — the gate cuts a real, adversely-timed cost (R-14) and cuts drawdown with a supported interval, but 2023's bull upside was concentrated enough that shrinking into funding-rich periods cost more than it saved. P3 (20-window resample, 2020-2022) passed 15/20 — the only ledger row this session where the robustness check came out kinder than the single-path holdout, not harsher. | **NEGATIVE** |
 
 ### R-28 pre-registration — written and committed before the holdout was read
 
@@ -1348,6 +1349,138 @@ funded, `funding_gate_novel` futures funded, `kelly_regime_v4` spot,
 `buy_and_hold` spot, `buy_and_hold` futures) — the paired bootstrap and
 the P3 resample do not read 2023 data beyond those two futures runs.
 
+### R-33 results — the decision rule did not move, and it failed at P1
+
+**A bug caught before any conclusion was drawn, worth stating precisely
+because it inverts the finding it would otherwise have produced.** The
+first run of the holdout script did not pass the funding series into
+`FundingGateNovel`'s own constructor — only into the engine's
+`funding=` cost charge — so the strategy's `prepare()` took its
+`funding is None` branch and `target_funded` silently equalled
+`target_base` for the entire 2023 window: the gate never fired, and
+`funding_gate_novel` came back byte-identical to `kelly_regime_v4` in
+every column. Caught by inspecting `target_base` vs `target_funded`
+directly rather than trusting the identical top-line numbers (the same
+discipline R-29's "corpse" bug and R-22's warmup-prefix bug were caught
+by), fixed, and rerun before any interpretation of the first run was
+recorded anywhere. The two swept-branch runner scripts
+(`experiments/run_funding_gate_{conservative,novel}.py`) do not have
+this bug — verified by inspection, and independently evidenced by the
+fact that their step-3 sweeps produced genuinely different numbers
+across configurations, which a no-op could not do.
+
+**Holdout, 2023-01-01 → 2023-12-31, $1,000 start, real funding charged
+on futures:**
+
+| | spot final | spot DD | futures final | futures DD | futures Sharpe | funding paid |
+|---|---|---|---|---|---|---|
+| `buy_and_hold` | $2,556 | 22.3% | $8,040 | 48.7% | 2.74 | $731 |
+| `kelly_regime_v4` | $2,038 | 23.9% | $2,393 | 28.4% | 2.14 | $152 |
+| `funding_gate_novel` (frozen) | $2,038 *(identical)* | 23.9% | **$2,321** | **26.7%** | 2.24 | **$119** |
+
+2023 was a strong bull year — both strategies trail `buy_and_hold` by a
+wide margin on raw return, consistent with every other row in this
+ledger that measures a regime-gated strategy against a fully-invested
+benchmark in a bull holdout.
+
+**P1 — FAIL.** `funding_gate_novel`'s futures final balance ($2,321) is
+*below* `kelly_regime_v4`'s ($2,393), not above it. The gate did what it
+was built to do — it paid $119 of funding against v4's $152, a real
+22% cut — but 2023's funding-rich periods correlated enough with genuine
+upside that shrinking into them cost more in foregone gains than it
+saved in funding, the same trade-off direction R-08 and R-16's own
+momentum-controlled table warned about, on the one path available to
+test it.
+
+**Paired stationary block bootstrap, 364 daily observations, 30-day
+mean block, 2,000 resamples, gate − v4:**
+
+| statistic | Δ | 95% CI | P(gate>v4) | |
+|---|---|---|---|---|
+| Sharpe | +0.09 | [−0.05, +0.27] | 0.90 | contains zero |
+| log growth | −0.03 | [−0.13, +0.06] | 0.28 | contains zero |
+| max drawdown (pp) | **−1.70** | **[−4.20, −0.12]** | 0.01 | **excludes zero** |
+
+**P2 — FAIL** on both limbs of the rule (+0.09 Sharpe short of the ±0.2
+floor; −1.7pp drawdown short of the ≥10pp bar) — but not vacuous: the
+drawdown interval is the one statistic in this row that clears 95% on a
+single holdout year, in the same direction (shallower) as every other
+drawdown claim this project has made about regime-gated sizing (R-29,
+R-17, R-19). It is a small number on a short window and should be read
+as exactly that, not oversold.
+
+**P3 (falsification) — PASS, and did not need to be reached.** 20
+random ~60-day windows resampled from 2020–2022 (already-read inner
+data, no additional holdout spend), paired: the gate beats-or-ties v4 in
+**15 of 20 (75%)** — 9 wins, 6 ties, 5 losses. The pre-registered bar
+(≥50%) is cleared, but P1/P2 already gate the decision, so this result
+is reported for the record rather than as grounds to promote.
+
+**P4 (plateau)** — as pre-registered, taken from the step-3 neighbourhood
+(three knobs, both inner splits, no peak); not independently re-checked
+on the 2023 window.
+
+**Scoreboard against the predictions written before looking.**
+Prediction on P1 ("passes on the point estimate") — **wrong**: it fails,
+by $72 on a $2,393 base. Prediction on P2 ("a coin flip") — resolved,
+and it came down FAIL, though the drawdown limb came closer to clearing
+than the return limb did anywhere in this row. Prediction on P3 ("the
+one most likely to fail outright") — **wrong**: it passed clearly. The
+net shape is the opposite of what R-08/R-28/R-31 usually produce here —
+those rounds had a return or risk story that looked strong pre-holdout
+and reversed on a robustness check; this one had a modest, real,
+statistically supported cost saving and drawdown cut that simply wasn't
+large enough to outrun one bull year's foregone upside.
+
+**Verdict: NEGATIVE.** Default reject; P1 fails; the decision rule was
+not moved after seeing the holdout — the numbers above are exactly what
+the pre-registered script printed on its (bug-fixed) first run.
+
+**Configurations evaluated in step 3: 14** (7 conservative + 7 novel,
+per the pre-registration; the routine's rule that the trials count is
+the total across parallel branches applies here even though one branch
+never reached step 4). Project trials count: 172 (R-32) + 14 = **186**.
+No deflated-Sharpe recomputation was run for this row — P1/P2 already
+fail on the raw comparison, and deflating a rejection cannot turn it
+into a promotion.
+
+**Holdout counter: ~129** (~124 before, +5 this row: `kelly_regime_v4`
+futures funded, `funding_gate_novel` futures funded, `kelly_regime_v4`
+spot, `buy_and_hold` spot, `buy_and_hold` futures, all fresh 2023-only
+accounts. The P3 resample and the paired bootstrap re-use those same
+five reads and the already-read 2020–2022 data; neither consults 2023
+again.)
+
+**Lesson.** The conservative branch's binary decile trigger failed by
+never firing outside a bull-crowding state it wasn't built to catch
+(inert for all of calendar-2022) and, where it did fire, cutting into
+holds that were on balance worth keeping. The novel branch's continuous
+z-score trigger fixed both of those specific complaints — it fired
+throughout 2023, cut real funding cost (22%), and cut drawdown with a
+statistically supported interval — and still lost on the metric the
+table ranks by, because BTC's 2023 upside was concentrated enough that
+even a well-behaved, real cost saving couldn't outrun the return given
+up to get it. That is the SIZE/COST trade-off in miniature: a cost this
+project has repeatedly measured as real (R-14) and adversely timed
+(R-14, R-16) is nonetheless small next to what a single bull year's
+foregone exposure costs — the same arithmetic that sinks the funding-free
+futures column relative to holding once funding is actually charged
+(R-14's fullperiod band already showed this at the strategy level; this
+row shows it survives even a purpose-built defensive gate).
+
+**Next step.** No backlog item opens from this row — the one-year data
+ceiling that let this be tested at all (funding coverage ends
+2023-12-31) is also what caps how much can be learned from it further;
+re-running with a wider percentile/z-score grid would spend more
+holdout reads on a question this row already answered at P1. B-02
+(extend the funding series through 2026, currently `BLOCKED (network)`)
+is the only thing that would give this idea a second, larger holdout to
+test on, and it was already the backlog's top blocked item before this
+row. Code stays in `experiments/` (not registered — NEGATIVE, and not
+judged instructive enough to earn a table row the way `minority_oracle`
+or `game_switch` did, since the finding here is a magnitude question
+already implied by R-14's band rather than a new mechanism).
+
 ---
 
 ## C. Ruled out — do not re-try without new evidence
@@ -1427,6 +1560,15 @@ branches were scheduled onto the same backlog row by accident, which is
 the cost ROUTINE.md's parallelism section describes, paid in holdout
 consultations.
 
+**Re-ranked 08-19 after R-33.** B-05 is done and NEGATIVE — the last
+actionable, non-blocked item this dataset's funding coverage supports.
+**B-13 stays on top of the actionable list**, unchanged by this row: it
+tests the project's own headline drawdown claim rather than a new
+mechanism, needs no new data, and nothing here bears on it either way.
+B-06 (forward paper trading) remains the highest-value item on merit and
+is still `BLOCKED (network)`. A session finding B-13 unpersuasive should
+spend itself on the mock-feed recorder for B-06, same guidance as before.
+
 Two things changed the order. R-28 answered B-01. And a connectivity check
 found that **every exchange endpoint is blocked by the network policy
 these sessions run under** — Binance, Bitstamp, Kraken and Coinbase all
@@ -1444,7 +1586,7 @@ remains actionable is computation on the data already here.
 | ~~B-04~~ | ~~Purged CV, deflated Sharpe, block-bootstrap CIs on every headline~~ | ERR | **DONE → R-29** | The guess was right: 10 of 96 adjacent pairs distinguishable, none of them in the top eight. Also closes R-25. `tradebot.inference` is now a permanent module with 27 tests; step 4 of the routine can be mechanical from here. |
 | ~~B-12~~ | ~~Put the intervals *in* the comparison table~~ | ERR | **DONE → R-30** | The table now carries Δ growth and Δ max drawdown against `buy_and_hold`, each with a 95% interval, and a strategy without a measured interval fails CI. The by-product is the sharpest number in the project: **0 of 24 strategies are distinguishably better than holding on the criterion the table ranks by**, and v4's +0.044 edge is [−2.60, +2.85]. |
 | ~~B-11~~ | ~~Matched-risk frontier: e-process gate vs latched vote at equal realized volatility~~ | ERR, SIZE | **DONE → R-31** | Answered, negatively and usefully. At equal realized volatility the two gates are indistinguishable on the BTC holdout (all 8 intervals contain zero, sign unstable), three of four cells fail a pre-registered validity gate, and on ETH the e-process gate loses on **both** axes — so R-28's ETH drawdown replication was an artifact of carrying 2.4x less risk. The 0.27x exposure was the whole finding. Also answered in parallel by **R-32**, which adds the arm neither the backlog row nor R-31 asked for: **no gate at all**, which loses to both gates at matched risk in every inner-split cell and in 80–90% of 40 paired windows. |
-| **B-05** | Funding as a gate on the existing strategy (stand flat in the top decile) | COST | **NEXT** | Actionable: uses the committed 2020–2023 funding file, no fetch. The low-turnover way to use R-16, and it directly targets the adverse timing in R-14. Higher-turnover standalone reversal use is where strategies go to die (R-12). |
+| ~~B-05~~ | ~~Funding as a gate on the existing strategy~~ | COST | **DONE → R-33** | NEGATIVE. Two branches: a decile trigger (inert all of 2022, no DD benefit where it fires) and a continuous z-score discount (cut funding paid 22%, cut DD 1.7pp [−4.2,−0.1] significant) — but the z-score variant still lost on 2023 holdout final balance ($2,321 vs v4's $2,393). One bull year's foregone upside outweighed a real, adversely-timed cost. Only one holdout year was available (funding data ends 2023-12-31); B-02 would give this a second one. |
 | **B-02** | Extend the funding series through 2026 | COST | **BLOCKED (network)** | Still the single cheapest item that could change a decision — the literature says the carry premium broke in 2024–25 and our data stops in 2023 — but Binance is unreachable from these sessions. Needs the operator. |
 | **B-03** | Funding harvest (delta-neutral spot vs short perp) | COST | BLOCKED on B-02 | +16.2%/yr with a −1.31% worst month is a risk profile nothing else here approaches — measured entirely in the good years. Unmodelled: basis risk, short-leg liquidation, exchange/custody risk, borrow cost. |
 | **B-06** | Forward paper-trading recorder | N≈3 | **BLOCKED (network)** | Rose in importance and fell in feasibility on the same day. R-28's deflated Sharpe says this dataset is close to exhausted, which is the argument for starting the only uncontaminated record this project can still generate — but the recorder needs a live price feed, and every venue is blocked. First thing to unblock if the policy is widened. |
@@ -1491,3 +1633,4 @@ Also record, in the row or a footnote beneath it:
 | 08-18 | ~112 | R-31: 12 matched-and-reference runs across two markets, 6 re-runs at the 0.40% taker tier, 6 with funding charged on futures. The ETH/BTC falsification cells and the 40-window resample do not read the 2023+ BTC holdout (the R-19/R-28 convention). Every configuration was frozen on inner-validation and the decision rule, the validity gate and the predictions were committed one commit ahead of the first holdout read — `git log` records it. Nothing here is offered as a Sharpe-based claim; the round's finding is that at matched risk there is no difference to claim. |
 | 08-17 | ~38 | R-28: three configurations × two markets, plus two cost re-runs. The ETH falsification test and the 40-window resample do not read the 2023+ BTC holdout. At 24 trials in a single session the deflated Sharpe was already 0.859; at ~38 program-level consultations, treat any Sharpe-based claim from this dataset as unsupportable and judge on drawdown, which is the property that has repeatedly replicated. |
 | 08-18 | ~124 | R-32: +12 on top of R-31's ~112 (3 frozen arms × 2 markets, 3 spot fee-tier re-runs, 3 funding-charged futures re-runs). The number that matters is not the increment but why it exists: **two sessions were scheduled onto the same backlog row on the same day and each spent the holdout on it independently**. Neither branch did anything wrong — both pre-registered, both froze before reading — but the day cost ~36 consultations and 69 trials for one question, and the project applies 103 + 69 = **172** trials from here. If parallel sessions are going to run, ROUTINE.md's rule that the trials count is the total across branches is the thing that keeps the arithmetic honest; this is the first time it has actually been needed. |
+| 08-19 | ~129 | R-33: +5 on top of R-32's ~124 (`kelly_regime_v4` futures funded, `funding_gate_novel` futures funded, `kelly_regime_v4` spot, `buy_and_hold` spot, `buy_and_hold` futures — all fresh 2023-only accounts, the *only* year the committed funding data covers, distinct from the multi-year 2023-2026 holdout every other row in this table reads). Trials count: 172 (R-32) + 14 this row's step-3 configs = **186**. The P3 resample (20 windows) reused already-read 2020-2022 data and consulted no new holdout bars. |

@@ -177,12 +177,15 @@ def causality() -> None:
         worst = float(np.max(np.abs(a[valid] - b[valid])))
         return worst, worst < 1e-9
 
-    # A window fully inside the funding series' observed coverage
-    # (2020-01-01 .. 2023-12-31), so the gate is actually active on both
-    # sides of the cut rather than trivially NaN throughout — otherwise
-    # this would only prove causality for the no-op case.
+    # A window fully inside the funding series' observed coverage AND
+    # strictly before the 2023-01-01 holdout cutoff (this task must not
+    # read the holdout for any purpose, including a by-hand causality
+    # probe that computes no performance metric), so the gate is
+    # actually active on both sides of the cut rather than trivially NaN
+    # throughout — otherwise this would only prove causality for the
+    # no-op case.
     lo = int(DF.index.searchsorted("2020-06-01"))
-    hi = int(DF.index.searchsorted("2023-06-01"))
+    hi = int(DF.index.searchsorted("2022-12-31"))
     df = DF.iloc[lo:hi].copy()
     cut = len(df) - 5_000
     bars = [cut - k for k in (1, 2, 3, 5, 10, 20, 100, 1_000)]
