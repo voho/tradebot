@@ -12,6 +12,15 @@ coverage — see ``causality()`` below for the by-hand probe that stands in
 for it (same two-opposite-tampers procedure as R-28/R-31/R-33's other
 experiments).
 
+**Verdict: NEGATIVE (see docs/LEDGER.md, R-33 results).** Selected on
+2022 inner-validation, where every swept config beat the ``kelly_regime_v4``
+baseline on both return and drawdown. Frozen at H=3, W=60 and read once on
+the 2023 holdout: it loses to ``kelly_regime_v4`` on every promotion axis
+(ΔmaxDD 0.0pp, ΔSharpe -0.39) and loses outright to ``buy_and_hold``. A
+rule that stands down while funding is expensive stands down during parts
+of a rally too - crowded longs and a genuine bull can look identical from
+the funding rate alone.
+
 Mechanism, exactly as pre-registered (do not re-derive; the design was
 frozen in the ledger before this file was written)
 --------------------------------------------------------------------

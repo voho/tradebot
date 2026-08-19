@@ -4,6 +4,16 @@
 Not registered: this lives under ``experiments/`` so it is not
 auto-discovered, per ROUTINE.md step 5.
 
+**Verdict: NEGATIVE by selection (see docs/LEDGER.md, R-33 results).**
+On 2022 inner-validation this variant also beat the ``kelly_regime_v4``
+baseline on both axes at once (best config H=3d/cap=0.5), but variant A
+(``funding_veto``) dominated it on both log growth and max drawdown at
+matched inner-validation comparison, so A was the one carried to the
+holdout per the pre-registered rule and this variant never read it. A
+itself then lost on the holdout (2023, a bull year) — see
+``funding_veto.py`` for that result; nothing here suggests B would have
+fared better, since both variants show the identical bull/bear pattern.
+
 The idea, one sentence
 -----------------------
 ``kelly_regime_v4`` sizes exposure from price alone; the futures engine
