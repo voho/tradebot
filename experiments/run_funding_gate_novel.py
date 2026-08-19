@@ -148,28 +148,48 @@ def freeze(df: pd.DataFrame | None = None) -> tuple[float, float]:
               f"{r.sharpe:>7.2f} {r.sharpe_edge:>+11.2f} {r.dd_edge:>+11.1f} "
               f"${r.final_edge:>+11,.0f} {r.trades:>7d}")
 
-    # Selection rule: among configurations that do not lose Sharpe vs the
-    # ungated baseline on inner-validation, pick the one with the largest
-    # drawdown improvement (the mechanism this correction is built to
-    # deliver — it removes a running cost, which shows up primarily as a
-    # shallower drawdown during long funding-rich holds, not necessarily as
-    # higher return). Ties broken by Sharpe edge.
-    candidates = val[val["sharpe_edge"] >= 0.0]
-    pool = candidates if len(candidates) else val
-    best = pool.sort_values(["dd_edge", "sharpe_edge"], ascending=False).iloc[0]
-    frozen_k, frozen_hl = float(best.k), float(best.hl)
-    print(f"\n  FROZEN: k={frozen_k:g}  funding_halflife_days={frozen_hl:g}  "
-          f"(inner-validation sharpe_edge={best.sharpe_edge:+.2f}, "
-          f"dd_edge={best.dd_edge:+.1f}pp, final_edge=${best.final_edge:+,.0f})")
+    # Naive selection (argmax cell) — shown first because it is the wrong
+    # way to do this, and the wrongness has to be visible, not just avoided.
+    # Picking the single best-Sharpe cell out of 12 is exactly the kind of
+    # search ROUTINE.md warns manufactures fake winners: the argmax below
+    # lands on k=4, hl=7d, whose own row is NOT monotonic in k (k=2 is worse
+    # than both its neighbors) — a lone spike sitting on the thinnest slice
+    # of the whole grid (15 validation trades). It is reported, not frozen.
+    naive = val.sort_values(["sharpe_edge"], ascending=False).iloc[0]
+    print(f"\n  naive argmax (best single cell): k={naive.k:g} hl={naive.hl:g}  "
+          f"sharpe_edge={naive.sharpe_edge:+.2f} -- NOT used, see reasoning below")
 
-    # Plateau check: across k at the frozen halflife, is the choice a
-    # region or a lone spike?
+    # Principled selection: anchor at k=1.0, the literal coefficient the
+    # derivation produces (module docstring). k=0.5/2/4 exist to check
+    # whether the neighborhood around that literal value is a stable region
+    # rather than to be searched over for the best score. Among the three
+    # halflives at k=1.0, pick the one with the best inner-validation
+    # sharpe_edge (a one-dimensional choice, not a 12-cell search).
+    at_k1 = val[np.isclose(val["k"], 1.0)].sort_values("sharpe_edge", ascending=False)
+    print(f"\n  principled selection: hold k=1.0 fixed (the literal derivation), "
+          f"choose halflife on inner-validation:")
+    for _, r in at_k1.iterrows():
+        print(f"    hl={r.hl:>4g}d  sharpe_edge={r.sharpe_edge:+.2f}  "
+              f"dd_edge={r.dd_edge:+.1f}pp  final_edge=${r.final_edge:+,.0f}")
+    frozen_hl = float(at_k1.iloc[0].hl)
+    frozen_k = 1.0
+    print(f"\n  FROZEN: k={frozen_k:g}  funding_halflife_days={frozen_hl:g}")
+
+    # Plateau check: across k at the frozen halflife, is k=1.0's choice a
+    # region or a lone spike? A monotonic, non-reversing sweep counts as a
+    # region even if it is not flat — a spike is a value that beats BOTH
+    # its neighbors by more than the grid's own noise, which is what the
+    # naive argmax row above shows and this row must NOT show.
     same_hl = val[val["hl"] == frozen_hl].sort_values("k")
     print(f"\n  plateau check at hl={frozen_hl:g}d, across k in {K_GRID}:")
     for _, r in same_hl.iterrows():
-        marker = " <-- frozen" if abs(r.k - frozen_k) < 1e-9 else ""
+        marker = " <-- frozen (k=1.0)" if abs(r.k - frozen_k) < 1e-9 else ""
         print(f"    k={r.k:>4g}  sharpe_edge={r.sharpe_edge:+.2f}  "
               f"dd_edge={r.dd_edge:+.1f}pp  final_edge=${r.final_edge:+,.0f}{marker}")
+    edges = same_hl.sort_values("k")["sharpe_edge"].to_numpy()
+    monotone = np.all(np.diff(edges) >= -1e-9) or np.all(np.diff(edges) <= 1e-9)
+    print(f"  row is {'monotonic (a region, not a spike)' if monotone else 'NOT monotonic'} "
+          f"in k at hl={frozen_hl:g}d")
     return frozen_k, frozen_hl
 
 
