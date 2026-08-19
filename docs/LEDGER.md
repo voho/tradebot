@@ -125,6 +125,7 @@ the most expensive repeated mistake in this table.
 | R-31 | Matched-risk frontier: e-process gate vs latched anchor vote at equal realized volatility (backlog B-11) | 08-18 | `experiments/matched_risk.py` — one sizer, one deadband, one warmup, one exposure knob, gate interchangeable. 36 configurations traced on both inner splits and both markets (144 backtests), exposures solved on inner-validation to within 2% of target volatility in both directions, then frozen; holdout scored with the R-29 paired block bootstrap | **Hold risk fixed and R-28's headline dissolves — both halves of it.** All 8 holdout intervals contain zero and the sign is unstable across cells; the one cell surviving the pre-registered validity gate gives −0.072 [−0.532, +0.379] on log growth. Three cells of four are **void**: the inner-validation exposure match did not survive into 2023+ (29% volatility gaps) or the spot notional cap truncated both arms differently (41% / 27% of bars). On ETH, with exposures re-matched, the e-process gate loses all four cells on return **and on drawdown** — so R-28's P3 replication was measured against an arm carrying 2.4x the risk. Equal-risk exposure ratio is itself regime-dependent: 2.2x in the bull, 4.7x in the bear. | **NEGATIVE** — the 0.27x exposure *was* the finding |
 | R-33 | Matched-risk benchmark: `kelly_regime_v4` against a **de-levered** `buy_and_hold` at equal realized volatility (backlog B-13) | 08-19 | `experiments/matched_hold.py` — a passive long holding a constant fraction `c` of equity, in two readings (rebalanced to constant risk, and static buy-once), exposure solved on inner-validation so its realized volatility equals v4's, then frozen; 18 configurations on the inner splits; holdout scored with the R-29 paired block bootstrap; 40 windows re-matched **inside each window** to 0.5% | **This project's headline is ~90% arithmetic, and what is underneath it is a different claim.** Across 40 identical windows at genuinely equal risk, v4's median drawdown advantage falls from **−24.5pp to −2.9pp** (spot) and **−70.7pp to −5.5pp** (futures) — 88% and 92% of the gap was the exposure level. On the holdout, five of six frozen cells fail the pre-registered risk match (a vol-targeter and a constant-exposure hold cannot be matched across a regime change), and the one valid cell gives **−14.18pp [−22.68, +13.48]**, containing zero. But the *return* comparison, which nobody pre-registered, goes v4's way in every cell of every table: **+20.8pp / +23.8pp median per window in 82% / 90% of them**, all four ETH/BTC cells, and it survives the ETH falsification test R-28 failed. | **NEGATIVE** on D1 — the drawdown claim is downgraded to "against a fully-invested benchmark only". The finding underneath it is return-per-unit-risk, and it needs its own pre-registered round (**B-14**). |
 | R-32 | The ungated control, and an independent second reading of B-11 | 08-18 | A parallel session ran the same backlog row the same day from the same base commit. Same design as R-31 (one sizer, gate interchangeable, exposure scaled by a scalar) plus a **third arm with no gate at all**; 33 configurations, 132 backtests, multipliers frozen on inner-validation | **Agrees with R-31 wherever the two overlap** — gates indistinguishable at matched risk, R-28's 0-of-40 inverted (deeper in 60%/62%), its fee advantage inverted, P1 failed — from an independent implementation, and its own holdout cells are **void** under R-31's validity rule (cap binds on 41%/36%/21% of spot bars; a 29% volatility gap on futures). What it adds: at matched risk the **ungated** arm is below both gated arms at every risk level in all four inner-split cells and loses 80–90% of 40 paired windows. **The gate is worth more than the choice of gate.** | **NEGATIVE** — and the parallel-branch report the routine requires |
+| R-34 | `harsanyi_crowd`'s Bayesian bull/bear/chop posterior (L-12) as a SIZE input on `kelly_regime_v4`, instead of the DIRECTION input that lost — L-12's own recorded lesson, tested for the first time | 08-19 | Two parallel unregistered variants, each on a disjoint file: `experiments/kelly_regime_v5_damp.py` (conservative — a bounded multiplicative dampener, `mult∈[1−lam,1]`, applied on top of v4's unchanged vote) and `experiments/kelly_regime_v5_bayes.py` (novel — the discrete vote replaced entirely by a continuous, hysteresis-latched posterior margin feeding v4's unchanged conditional-vol-targeting sizer); 42 configurations across inner-train/inner-validation, both markets, plus ETH/BTC Bitfinex falsification and an explicit matched-mean-exposure check on each branch | **Conservative:** never beats v4 on return in any of 12 measured cells; its drawdown "improvement" is architecturally guaranteed (the multiplier can only shrink exposure) and the resulting exposure series correlates **R²=0.997** with a flat 0.7x rescale of v4 — the same exposure-level artifact as L-04/R-33, R-28/R-31 and R-32, reproduced with a new source signal. **Novel:** genuinely independent of the vote (correlation **−0.0017**, not a smoothed duplicate) but underperforms v4 in all 36 configurations (inner-validation spot Sharpe −2.9 to −3.9 vs v4's +0.14, turnover 4–7x), and explicitly re-scaling exposure to match v4's mean (`exposure_mult=5.27`) makes it *worse* (Sharpe −6.25, DD 92%), ruling out the exposure-artifact explanation for this branch — the margin is simply too noisy at its native hours-to-days cadence to pay 5-minute-bar trading costs on either axis. | **NEGATIVE** (both branches). Holdout untouched by either branch. |
 
 ### R-28 pre-registration — written and committed before the holdout was read
 
@@ -1591,6 +1592,170 @@ pre-registered none of them, so none of it can be claimed. That is
 exactly what a pre-registered round is for, and it is cheap: the harness
 exists, the arm exists, and the matching is already solved to 0.5%.
 
+### R-34 — L-12's stated hypothesis, finally tested: does the crowd posterior work as a SIZE input?
+
+**Idea, in one sentence.** `harsanyi_crowd` (L-12) builds a Bayesian
+posterior over three hidden market types — up-trend, down-trend, chop
+(Harsanyi 1967-68) — from bar-return likelihoods with a sticky transition
+prior, and trades its belief margin *directionally*; it loses. L-12's own
+recorded lesson says why it might still be useful: *"the crowding
+intuition was right — it is what `kelly_regime` later exploited — but as
+a direction signal rather than a sizing input it loses."* That sentence
+has sat in this ledger since 08-12 as an untested hypothesis. This round
+tests it, on the only axis this project's twenty-five strategies have
+ever found to work: SIZE.
+
+**Constraint attacked.** SIZE, primarily — refining "how much to hold" on
+top of the incumbent `kelly_regime_v4`, changing nothing about its
+conditional-volatility-targeting risk axis. A narrower ERR claim was
+also on the table (a smoothed Bayesian posterior is a calibrated
+confidence signal, unlike a hand-set 1% anchor band) but neither branch
+below leans on it — R-28/R-31/R-32 already showed an anytime-valid gate
+does not beat the heuristic vote at matched risk, so this round does not
+repeat that overclaim.
+
+**Not a duplicate of.** L-04/L-01/L-02/L-03 all vary the vote's *transform*
+(gamma, anchor spacing, the risk axis it multiplies) but never the
+*nature* of the confidence signal — still price-anchor threshold
+crossings. L-12 built the exact posterior used here and is the direct
+parent; this is the first round to route its output through the SIZE
+axis instead of DIRECTION. R-28/R-31/R-32 test a different confidence
+mechanism entirely (an anytime-valid e-process martingale, not a
+Bayesian type posterior) and already closed the question "does swapping
+*which* gate mechanism drives the exposure matter" (mostly not, at
+matched risk) — this round is compatible with that finding, not a re-run
+of it, since both variants here keep v4's own gate/vote machinery in
+place to different degrees rather than replacing the gate concept itself.
+
+**Simulable here?** Yes — pure OHLCV, causal, no new data. The posterior
+recursion is lifted byte-for-byte from `harsanyi_crowd.py` (already
+CI-covered, already causal) into a shared helper,
+`experiments/bayes_confidence.py`, so neither variant re-derives it.
+Verified independently by hand (two-opposite-tampers probe, R-28's
+method): max|diff| = 0.0 before the cut.
+
+**What would make each variant fail — named before either was built.**
+(a) The posterior margin correlates highly with v4's existing 3-anchor
+vote, so results are a smoothed vote in disguise inside the noise floor
+(the generic "another indicator" failure ROUTINE.md warns about).
+(b) A continuous signal re-trades on every small wiggle even under a
+deadband, and fees eat the gain (the L-14/L-15/L-16 failure mode).
+(c) Any apparent drawdown improvement is actually an exposure-level
+artifact — this project's last three "risk improvement" claims all died
+this way (L-04/R-33, R-28/R-31, R-32) — so both variants were required to
+report mean exposure against v4 on the same window *before* any drawdown
+claim could be trusted, and where they diverge, to check what a
+matched-exposure comparison shows.
+
+**Method.** Two independent, unregistered variants dispatched in
+parallel, each on a disjoint file, neither touching the 2023+ BTC
+holdout, neither committing — the operator (this session) merged and
+recorded both after reading each report in full, per ROUTINE.md's
+parallelism rules.
+
+- **Conservative — `experiments/kelly_regime_v5_damp.py`.** v4's vote and
+  conditional-vol-targeting sizer are left completely unchanged; a
+  smoothed, floored-at-zero confidence weight from the posterior margin
+  only ever *shrinks* the result through `mult = 1 − lam·(1 − conf) ∈
+  [1−lam, 1]`. By construction this can never raise exposure above v4's,
+  which is what makes it conservative — and, as the result below shows,
+  is also what dooms it to the exposure-artifact failure mode by
+  architecture rather than by accident.
+- **Novel — `experiments/kelly_regime_v5_bayes.py`.** v4's discrete vote
+  is replaced entirely by a continuous, hysteresis-latched transform of
+  the posterior margin (the same latch *shape* `harsanyi_crowd` uses for
+  its own entry/exit bands, `b_in`/`b_out`, but mapped to a continuous
+  fraction rather than a binary trade/no-trade decision), feeding v4's
+  unchanged conditional-vol-targeting sizer. This is the deeper
+  redesign: the confidence source is now a fast, hours-to-days Bayesian
+  filter rather than v4's slow 20/40/80-day anchors, so it could in
+  principle time entries and exits the vote cannot.
+
+**Configurations evaluated: 42** — conservative swept `lam ∈ {0, 0.1,
+0.2, 0.3, 0.4, 0.5}` (6, `lam=0` reserved as a correctness check —
+reproduces v4 bit-for-bit) on inner-validation, both markets; novel swept
+two 18-config grids (`stick × b_in × b_out`), one at the parameter values
+suggested going in and a second rescaled to the posterior margin's actual
+empirical distribution after the first grid revealed most of the
+suggested `b_in` thresholds sit above the 99th percentile of the signal
+and rarely latch (36 total). The project trials count this round
+contributes is **42**; the count it applies is 190 + 42 = **232**.
+
+**Results — conservative branch.** Mean |exposure| is *strictly lower*
+than v4 at every `lam > 0`, on both markets, monotonically (spot ratio
+0.90 → 0.49 as `lam` runs 0.1 → 0.5) — an architectural fact, not a
+measurement, since `mult` can only shrink. Spot Sharpe declines in
+lockstep with exposure (0.14 → 0.02); one non-monotone spike on futures
+at `lam=0.2` (Sharpe 0.36 against neighbours 0.17/0.08) was flagged as
+not a plateau and not selected on. At the pre-registered default
+`lam=0.3`: never beats v4 on return in any of 4 inner-train/inner-validation
+cells; beats it on drawdown in all 4 (e.g. inner-validation spot: $985 vs
+v4's $998, DD 26.2% vs 33.2%). ETH/BTC falsification ordering (worse
+return, better drawdown) is identical in all 4 cells — no flip. Turnover
+0.79–1.0x v4's, no fee-drag flag. The correlation between the smoothed
+confidence weight and v4's discrete vote is only **0.097** — not the
+naively-expected redundancy — but once smoothed enough to avoid whipsaw
+the margin has almost no independent dynamic range on 5-minute BTC (mean
+0.025, std 0.012, max 0.087 on inner-validation): the resulting `target`
+series correlates **0.9986 (R²=0.997)** with a flat **0.7x rescale of
+v4**. It is not a smoothed copy of the vote; it is a smoothed copy of
+*a constant*.
+
+**Results — novel branch.** All 36 configurations underperform v4 on
+inner-validation: spot Sharpe ranges −2.9 to −3.9 against v4's +0.14,
+turnover 4–7x v4's (209–341 trades vs 52), mean exposure only 5–19% of
+v4's. Unlike the conservative branch, this gap is *not* an unexamined
+exposure artifact: an explicit diagnostic multiplier
+(`exposure_mult=5.27`) rescaled the best config to match v4's mean
+notional, and results got catastrophically worse rather than better
+(Sharpe −6.25, drawdown 92%, trades nearly tripled) — ruling out
+"correctly calibrated but under-sized" as the explanation. ETH/BTC
+falsification: v4 wins on return in all 4 cells; the drawdown ordering
+flips only on ETH futures, a low-exposure mechanical effect that does not
+touch the headline (return) comparison. Vote correlation is **−0.0017** —
+genuinely independent of v4's mechanism, not a smoothed duplicate of it.
+Causality: truncation probe max|diff| = 0.0 at both default and matched-
+exposure parameters; the unregistered file does not run under
+`test_causality_strict.py`, but the full suite (51 causality tests) still
+passed, unaffected.
+
+**Verdict: NEGATIVE, both branches — and each fails for a different,
+clean reason.** The conservative branch's failure mode is the one this
+project keeps re-discovering with new instruments: any signal that can
+only *subtract* exposure will manufacture a drawdown "improvement" that
+is arithmetic, not mechanism, unless the comparison is matched — and
+this one, checked, was arithmetic. The novel branch's failure mode is
+different and is the more informative result of the two: this is
+*not* the exposure-level artifact (matching disproves it directly) and
+*not* a smoothed duplicate of the existing vote (the correlation is
+essentially zero) — it is a genuinely different, causally valid,
+economically motivated regime-confidence signal that simply loses,
+because the Bayesian posterior's native cadence (hours-to-days, driven
+by single-bar ATR-normalized likelihoods) is too noisy relative to
+5-minute-bar trading costs to serve as a timing input on *either* axis,
+direction or size. L-12's hypothesis is now closed rather than open:
+tested honestly, on the axis it proposed, and it does not hold.
+
+**Holdout counter: ~152, unchanged.** Neither branch read the 2023+ BTC
+holdout at any point — the pre-registered decision rule (available on
+request; effectively "promote to a holdout read only if inner-validation
+clears v4 by more than the ±0.2 Sharpe noise floor or a matched-exposure
+drawdown edge, and survives ETH") was never satisfied, so step 4 was
+never reached. Consistent with ROUTINE.md's guidance that a session
+finding nothing worth a holdout read should say so and stop rather than
+force one.
+
+**Next step.** Closed as a direction — the specific hypothesis L-12 left
+open has now been tried on the axis it proposed and failed cleanly on
+both a bounded and an unbounded implementation. **B-14 (return per unit
+of risk against a constant exposure) remains the ranked top of the
+backlog**, unaffected by this round; **B-06 (forward paper trading)
+remains blocked on network** and remains the highest-value item on
+merit. A future session revisiting the Bayesian-posterior idea would need
+a confidence source with more independent variance surviving multi-day
+smoothing than this (mu=0.15, stick=0.985) parametrization supplies on
+5-minute BTC — not a re-sweep of these same knobs.
+
 ---
 
 ## C. Ruled out — do not re-try without new evidence
@@ -1606,6 +1771,7 @@ exists, the arm exists, and the matching is already solved to 0.5%.
 | Elliott waves | Unfalsifiable as practised; its testable kernel already implemented. | R-18 |
 | Market making, AMM/LVR | Plausibly real — the loss-versus-rebalancing decomposition of AMM LP returns (Milionis, Moallemi, Roughgarden & Zhang) is genuinely quantitative — but **not simulable** on bar-close fills with no order book; it would need a queue model first. Ruled out on what can be checked, not on merit. | L-24 |
 | Options / volatility risk premium | Same — no options data, no way to validate here. | — |
+| `harsanyi_crowd`'s Bayesian posterior as a SIZE input on `kelly_regime_v4` | L-12's own stated hypothesis, tested both bounded (conservative) and unbounded (novel) — one is an exposure-level artifact, the other is genuinely independent of the vote but too noisy at its native cadence to pay 5-minute-bar costs on either axis. | R-34 |
 
 ---
 
@@ -1690,6 +1856,15 @@ already solved to 0.5% per window, and it is the only live hypothesis in
 this project that has *survived* a risk-matching round rather than
 dissolving in one. **B-06 (forward paper trading) remains the
 highest-value item on merit** and is still blocked on network access.
+
+**Unchanged 08-19 after R-34.** A parallel two-branch round tested
+L-12's own stated hypothesis (the `harsanyi_crowd` posterior as a SIZE
+input rather than a DIRECTION input) off-backlog, since it was a cheap,
+well-justified, self-contained question rather than a claim on the
+ranked list. Both branches were NEGATIVE for clean, different reasons
+(see R-34) and neither touched the holdout. The order below is
+unaffected: **B-14 stays top**, **B-06 stays the highest-value item on
+merit** and still blocked on network access.
 
 Two things changed the order. R-28 answered B-01. And a connectivity check
 found that **every exchange endpoint is blocked by the network policy
