@@ -129,6 +129,7 @@ the most expensive repeated mistake in this table.
 | R-35 | Funding rate as a COST-aware SIZE input on `kelly_regime_v4` (backlog B-05) | 08-19 | Two parallel unregistered variants, each on a disjoint file: `experiments/funding_gate_decile.py` (conservative — literal backlog reading, stand flat when trailing funding percentile clears the 90th) and `experiments/funding_ev_band.py` (novel — extends L-05's analytic no-trade band with a forecast funding-drag term); 80 configurations total across both branches on inner-train/inner-validation, plus one pre-registered holdout read (2023-01-01..2023-12-31, the funding-covered slice only) for the branch that cleared | **Conservative clears every inner-validation and falsification check — genuinely not the exposure-level artifact its own pre-registration predicted (§5 flat-rescale test) — then loses on the single holdout year it earned: Δ log growth vs v4 is negative on both markets, −0.167 [−0.495, +0.101] futures, and stays negative funding-charged. Novel branch is a real, non-exposure-artifact Sharpe edge (§7 rescale diagnostic) that fails its own plateau check and, per its author's recommendation, never reached the holdout.** | **NEGATIVE** (both branches) — see full write-up below |
 | R-36 | Formalize B-14: is `kelly_regime_v4`'s return-per-unit-of-risk edge over a matched passive hold (R-33's byproduct finding) real outside the 2017–2020 bull? | 08-19 | Pre-registered a pooled decision rule (exact-binomial 95% CI on R-33's existing 40-window win-rate) plus a named falsification test (split the same 40 windows by start date, before/after 2021-01-01); reused `windows.csv` unchanged, only recovered each window's calendar date from the identical seed=42 RNG sequence — 0 new backtests | **D1 passes on both markets (CI excludes 50%). Falsification survives on both markets — post-2021 windows still favour v4 (win-rate 68.2%/81.8%, median +5.0pp/+7.4pp) — but the effect is ~10x smaller than the pooled/pre-2021 number (+68.9pp/+97.2pp), and the post-2021 subsample's own CI still contains 50% on spot at n=22.** | **CONFIRMED, thinned** — see full write-up below |
 | R-37 | Two SIZE-axis attempts to capture more of R-36's confirmed (but thinned) edge on `kelly_regime_v4` | 08-19 | Two parallel unregistered variants, each on a disjoint file: `experiments/kelly_regime_v6_retune.py` (conservative — retunes the existing `target_vol`/`max_leverage` constants, no new signal) and `experiments/kelly_regime_v6_state_kelly.py` (novel — replaces the single global `target_vol` with a causally-estimated, per-vote-state Kelly fraction `μ_state/σ_state²`); 99 configurations total across both branches (53 + 46), inner-train/inner-validation and ETH falsification only, no holdout read by either | **Conservative: the naive best-Sharpe candidate reproduces the project's standard exposure-level artifact (+51% realized vol) and does not transfer to futures; the one candidate surviving a matched-exposure control nets a Sharpe delta inside the ±0.2 noise floor on both markets and does not clear ETH by more than a token margin. Novel: `max_leverage` never binds (rules out the raw-leverage artifact cleanly) and states genuinely differ in measured μ/σ² (bear ≈ −62%/yr, bull ≈ +154–174%/yr, non-monotone — 2/3 agreement beats unanimous 3/3) — but it fails its pre-registered ETH falsification outright, underperforming v4 on the BTC control too, and its halflife/kelly_mult neighbourhood is a fitted peak, not a plateau.** | **NEGATIVE** (both branches) — see full write-up below |
+| R-38 | Risk-constrained Kelly gambling (Busseti, Ryu & Boyd 2016) as a formal, probability-calibrated replacement for `kelly_regime_v4`'s ad hoc `target_vol`/`max_leverage` constants | 08-19 | Two parallel unregistered variants, each on a disjoint file: `experiments/kelly_regime_v7_ddcap.py` (conservative — v4's vote and scale unchanged, additionally capped by a causal drawdown-risk ceiling `f_risk = mu/(lambda·sigma²)` with `lambda = ln(beta)/ln(alpha)` fixed from a stated drawdown tolerance) and `experiments/kelly_regime_v7_crra.py` (novel — v4's vote kept as a hard gate, its vol-only scale replaced entirely by the same CRRA fraction as the sizing formula); 56 configurations total across both branches (24 + 32), inner-train/inner-validation and ETH/BTC falsification only, no holdout read by either | **Both branches cleanly refute the standard exposure-level-rescale artifact (R²=0.20 and 0.15 against a mean-notional-matched flat rescale of v4, versus the 0.95+ threshold this project treats as diagnostic) — a genuinely non-duplicate mechanism in both cases. Both still fail their identical pre-registered ETH falsification decisively, and by the same diagnostic signature: each loses to `kelly_regime_v4` on the BTC control itself (conservative: ≈11–12% of v4's balance; novel: 21–37%), before ETH is even read — the inner-validation win (built on a bear/chop-heavy 2021–22 window) does not survive a trending market on either tested asset. Conservative's parameter neighbourhood is additionally not a plateau (adjacent (α,β) cells swing spot Sharpe +0.50→−0.07); novel's is a loose plateau but sits at the edge of its tested grid.** | **NEGATIVE** (both branches) — see full write-up below |
 
 ### R-28 pre-registration — written and committed before the holdout was read
 
@@ -2455,6 +2456,165 @@ conclusion, reached again from a fifth independent direction.
 
 ---
 
+### R-38 — a formal, probability-calibrated sizing rule, tested against the same incumbent a fifth time
+
+**Idea, one sentence.** `kelly_regime_v4` sizes with `scale =
+min(target_vol/realized_vol, max_leverage)` — two hand-picked constants
+with no probabilistic meaning; Busseti, Ryu & Boyd (2016, "Risk-Constrained
+Kelly Gambling," *Journal of Investing* 25(3), arXiv:1603.06183) show that
+an explicit drawdown constraint `Prob(min wealth < α) < β` reduces, via a
+convex bound, to a CRRA/isoelastic-utility criterion with risk-aversion
+`λ = ln(β)/ln(α)`, which combined with the classical Merton (1969/1971)
+CRRA-optimal bet fraction `f* = μ/(λσ²)` gives a bet size *derived from a
+stated drawdown tolerance* rather than searched for backtest score.
+
+**Constraint attacked.** ERR (no error control anywhere in the signal
+path — `target_vol`/`max_leverage` are unfalsifiable constants) and SIZE
+(still an exposure-decision rule, this project's only axis that has ever
+worked).
+
+**Not a duplicate of.** L-01–L-04 (ad hoc constants vs. a
+probability-calibrated formula); R-11 (Grossman–Zhou drawdown *cushion* —
+a reactive floor triggered by realized drawdown — vs. a forward-looking
+cap/formula derived from a return-distribution risk bound, active at all
+times); R-28/R-31 (e-process hypothesis testing gates the
+regime/*direction* signal — vs. this, which never touches the vote, only
+the size given a fixed vote); R-34 (Bayesian posterior as a SIZE
+dampener — a different signal source, the harsanyi_crowd belief margin —
+vs. realized-return moments here); R-37 conservative (a pure
+hyperparameter retune of the same two constants, no new constraint — vs.
+a genuinely new, probability-interpretable quantity here); R-37 novel
+(per-vote-state `μ_state/σ_state²` with an arbitrary searched
+`kelly_mult` — vs. this novel branch's single continuous, non-state-
+conditional `μ[t]/σ[t]²`, scaled by a `λ` *derived* from a stated
+tolerance rather than searched). Both branches' docstrings restate this
+distinction against their own file, matching this project's convention.
+
+**Pre-registered before either branch ran** (fixed by the operator in
+each branch's dispatch prompt, not moved afterward): (1) the mandatory
+exposure-artifact check — R² of the candidate's exposure series against
+a mean-notional-matched flat rescale of v4, with R² > 0.95 (R-34's own
+threshold) meaning "this is the standard artifact, not a win"; (2) the
+falsification test — does the inner-validation-selected candidate beat
+`kelly_regime_v4` on Bitfinex ETH by more than a token margin, on both
+spot and 5x futures, without being visibly worse than v4 on the BTC
+control run through the identical pipeline; (3) a plateau requirement —
+report the parameter neighbourhood, not just the winning cell; (4) a
+named failure mode for each branch (conservative: `μ` too noisy at
+5-minute cadence to leave `f_risk` meaningfully time-varying, collapsing
+to "always binds" or "never binds"; novel: replacing volatility-only
+sizing with a drift-over-variance formula makes exposure hypersensitive
+to `μ`'s estimation noise, risking degenerate turnover or pinned
+exposure); (5) a strict "no 2023+ bar, for any purpose" restriction,
+independent of this project's own holdout-adjacent conventions for
+causality probes and window resampling.
+
+**Conservative branch — `experiments/kelly_regime_v7_ddcap.py`.** 24
+configurations (α∈{0.5,0.6,0.7,0.8} × β∈{0.05,0.10} × halflife∈{30,90,180}d),
+inner-train sweep, spot. Best inner-validation candidate (α=0.5, β=0.05,
+hl=180d, λ=4.32): spot Sharpe **0.50** / futures **0.70** vs. v4's
+**0.14** / **0.25** on the identical 2021–2022 window, at roughly 40% of
+v4's mean notional. **Not a plateau**: adjacent cells are non-monotone in
+λ — α=0.6/β=0.05/hl=180 (λ=5.86, between two good points) scores spot
+Sharpe **−0.07**. **Exposure-artifact check: R²=0.20–0.21**, well under
+the 0.95 bar — genuinely not the R-34-style flat-rescale artifact,
+though the operator notes the ~0.39–0.40x mean-notional gap to v4 means
+some of the DD/Sharpe gain in this specific window is still plausibly an
+exposure-*level* effect even where the *shape* clears the test.
+**Causality: PASS** (all six prepared columns, the order-decision probe,
+and the equity path all show 0.000e+00 difference before a 3×/÷3 tamper
+cut). **ETH falsification: FAILS decisively.** The candidate returns
+≈11–12% of v4's balance on the **BTC control** alone (spot $1,457 vs.
+$12,278; futures $1,353 vs. $25,681) before ETH is even read, and on ETH
+it goes essentially inert — 1 trade over ~4 years, Sharpe −0.85 (spot) /
+−0.91 (futures) vs. v4's +1.48/+1.25. The named failure mode (`μ`
+saturating near/below zero, collapsing `f_risk` toward zero and staying
+there) is exactly what happened.
+
+**Novel branch — `experiments/kelly_regime_v7_crra.py`.** 32
+configurations (α∈{0.5,0.6,0.7,0.8} × β∈{0.05,0.10} × halflife∈{7,15,30,60}d),
+inner-train sweep, spot. Best inner-validation candidate (α=0.5, β=0.05,
+hl=60d, λ=4.32): spot Sharpe **0.53** / futures **0.47** vs. v4's
+**0.14**/**0.25**, on ~0.16 mean notional vs. v4's ~0.29. The tested
+hypothesis (a *shorter*, more responsive `μ` window would help) reversed:
+7-day halflives gave near-zero-to-negative inner-train Sharpe and the
+highest turnover; the 60-day halflife (the longest tested, and the least
+noisy) dominates 6 of 8 (α,β) cells. Cells at hl=60d cluster at Sharpe
+0.47–0.53 both markets — a loose plateau — but α=0.6/β=0.05 (λ=5.86, the
+paper's own worked example) dips to 0.28/0.32, and the whole surface sits
+on 1–19 trades per config over two years, at the edge of the tested grid
+(halflife never exceeded 60d). **Exposure-artifact check: R²=0.149** —
+genuinely not a flat rescale (candidate flat 28% of bars vs. v4's 44%).
+**Causality: PASS** (identical tamper-probe construction, 0.000e+00
+throughout). **Turnover check**: no config pinned at cap or zero
+(≤1.6% of bars); the named failure mode (drift-over-variance sizing
+hypersensitive to `μ`'s noise) manifested as excessive turnover at short
+halflives exactly as predicted, but going to hl=60d avoided degeneracy
+without rescuing the direction. **ETH falsification: FAILS.** Not a
+narrow miss — the candidate underperforms v4 on the **BTC control**
+itself (37%/21% of v4's final balance, spot/futures) before ETH is read,
+and on ETH it trails on both markets (final balance 37–74% of v4's,
+Sharpe 0.13–0.69 lower). The inner-validation edge, built on a
+bear/chop-dominated 2021–2022 window, does not survive a trending market
+on either tested asset — the drift-based sizer systematically under-holds
+through the trend it needed to capture.
+
+**Verdict: NEGATIVE (both branches).** Both are honestly non-artifact
+mechanisms — the cleanest exposure-artifact refutation this project has
+recorded on either axis (R²=0.15–0.21, well below both the 0.95 rule and
+R-34's own 0.997 comparator) — and both still lose their pre-registered
+falsification test the same diagnostic way: underperforming
+`kelly_regime_v4` on the **BTC control window itself**, not narrowly on
+ETH. That is a stronger, more specific failure than any of R-34/R-35/R-37:
+it says a causally-estimated drift (`μ`) term brought into the sizing
+formula — whether as a soft cap (conservative) or as the primary driver
+(novel) — systematically gives up upside through a trend, worse than v4's
+own scheme, which carries no drift term at all and lets the discrete
+regime vote do 100% of the directional work. The reusable lesson: at this
+project's cadence and cost structure, a *continuous* drift estimate is
+not merely too noisy to trade on its own (already known from R-34's
+novel branch) — folding it into the sizing formula of an otherwise
+sound, vote-gated vol-targeting strategy actively hurts it, in two
+structurally different implementations, on two different assets.
+
+**Combined accounting.** Configurations evaluated this row: 24 + 32 =
+**56**. Project trials count before this row: 411 (R-37's cumulative).
+**Applies from here: 411 + 56 = 467.**
+
+**Holdout counter: unchanged at ~159.** Neither branch read any bar
+dated 2023-01-01 or later — both were explicitly restricted to
+inner-train/inner-validation/pre-2020 ETH/BTC only, and neither
+recommended a holdout read for its surviving candidate.
+
+**Lookahead checks.** Both branches' causality probes were read and
+accepted as reported (two-opposite-tampers construction, identical in
+spirit to `kelly_regime_v6_state_kelly.py`'s own, adapted to each
+branch's prepared columns); not independently re-executed by the
+operator in this round.
+
+**Network note, incidental to this round.** A connectivity check run
+alongside this session found Bitstamp (`bitstamp.net`) and Coinbase
+(`api.exchange.coinbase.com`) now return HTTP 200 from this session's
+network policy — Binance still returns 451. The 08-17 finding that "every
+exchange endpoint is blocked" (which is what marked B-02/B-03/B-06/B-07/B-08
+`BLOCKED (network)` below) may therefore be stale for at least Bitstamp,
+which is what `docs/LIVE.md`'s `BitstampSpot` adapter already targets.
+This was a two-endpoint ping/ticker check only, not a full `tradebot
+fetch` or paper-trading-recorder attempt, and network policy can vary
+by session — the next session with spare capacity should verify properly
+before treating B-06 as unblocked.
+
+**Next step.** Neither branch reopens without new evidence (added to
+section C below). This is the fifth independent, non-duplicate
+parallel-round attempt (ten branches total) to improve `kelly_regime_v4`
+on its own SIZE axis since L-01–L-04 were registered, and none has
+survived both the exposure-artifact check and a falsification test.
+**B-06 (forward paper trading) remains the highest-value item on merit**,
+and — pending the connectivity re-check above — may be less blocked than
+the ledger currently states.
+
+---
+
 ## C. Ruled out — do not re-try without new evidence
 
 | what | why | ref |
@@ -2471,6 +2631,8 @@ conclusion, reached again from a fifth independent direction.
 | `harsanyi_crowd`'s Bayesian posterior as a SIZE input on `kelly_regime_v4` | L-12's own stated hypothesis, tested both bounded (conservative) and unbounded (novel) — one is an exposure-level artifact, the other is genuinely independent of the vote but too noisy at its native cadence to pay 5-minute-bar costs on either axis. | R-34 |
 | Retuning `kelly_regime_v4`'s `target_vol`/`max_leverage` against R-36's evidence | 53 configurations; the naive winner is the standard exposure-level artifact, and the one matched-exposure survivor nets a Sharpe delta inside the ±0.2 noise floor on both markets and fails the ETH check. | R-37 (conservative) |
 | Per-vote-state Kelly fraction (`μ_state/σ_state²`) replacing v4's single global `target_vol` | 46 configurations; cleanly refutes the raw-leverage-artifact failure mode and surfaces real, non-monotone state-conditional drift/variance, but fails its own pre-registered ETH falsification decisively — worse than v4 on the BTC control too, indicating the inner-validation win was fitted to one window. | R-37 (novel) |
+| Risk-constrained Kelly (Busseti/Ryu/Boyd 2016) drawdown-probability cap layered on v4's unchanged vote+scale | 24 configurations; cleanly refutes the exposure-artifact explanation (R²=0.20) but the (α,β) neighbourhood is not a plateau and it fails ETH decisively, losing to v4 on the BTC control itself (≈11–12% of its balance) before ETH is even read. | R-38 (conservative) |
+| CRRA/Merton drift-over-variance fraction (`μ/(λσ²)`, `λ` from a stated drawdown tolerance) replacing v4's vol-only scale | 32 configurations; cleanly refutes the exposure-artifact explanation (R²=0.15) and finds a loose plateau at the longest tested halflife, but fails the identical ETH falsification the same way — worse than v4 on the BTC control (21–37% of its balance) before ETH is read; a continuous drift estimate systematically under-holds through a trend. | R-38 (novel) |
 
 ---
 
@@ -2610,6 +2772,28 @@ to do should write the recorder against a mock feed now, so only the
 network policy stands between this project and its first uncontaminated
 evidence, exactly as every re-ranking since R-29 has said.
 
+**Unchanged 08-19 after R-38.** A fifth independent, non-duplicate
+parallel-round attempt on `kelly_regime_v4`'s SIZE axis — a formal,
+probability-calibrated sizing rule from Busseti/Ryu/Boyd's (2016)
+risk-constrained Kelly gambling, run as a conservative cap and a novel
+full replacement of the sizing formula. Both branches did something no
+prior round fully managed: cleanly rule out the standard exposure-level
+artifact (R²=0.15–0.21 vs. the 0.95 bar). Both still failed the identical
+pre-registered ETH falsification test, and by the same diagnostic
+signature — underperforming v4 on the **BTC control window itself**, not
+narrowly on ETH — indicating a continuous drift estimate brought into the
+sizing formula systematically under-holds through a trend. The order
+below is unaffected: **B-06 stays the highest-value item on merit**. One
+new fact changes its status, though not its ranking: a two-endpoint
+connectivity check run alongside this round found Bitstamp and Coinbase
+now return HTTP 200 (Binance still 451), where the 08-17 finding below
+recorded all four exchanges as blocked. That finding is what marks
+B-02/B-03/B-06/B-07/B-08 `BLOCKED (network)` — it may be stale for
+Bitstamp specifically, which is the venue `docs/LIVE.md`'s `BitstampSpot`
+adapter already targets, and is worth a proper verification (an actual
+`tradebot fetch` or a first paper-trading-recorder connection attempt,
+not just a ping) before the next session assumes either status.
+
 Two things changed the order. R-28 answered B-01. And a connectivity check
 found that **every exchange endpoint is blocked by the network policy
 these sessions run under** — Binance, Bitstamp, Kraken and Coinbase all
@@ -2669,6 +2853,7 @@ Also record, in the row or a footnote beneath it:
 
 | as of | count | note |
 |---|---|---|
+| 08-19 | ~159 | R-38: **+0** on top of R-36/R-37's ~159. Both branches (`kelly_regime_v7_ddcap`, `kelly_regime_v7_crra`) were explicitly restricted to inner-train/inner-validation/pre-2020 ETH+BTC only and neither read a single 2023+ bar, by design. |
 | 08-19 | ~159 | R-36 and R-37: **+0** on top of R-35's ~159. R-36 reused R-33's existing `windows.csv` (seed=42, computed once) and only recovered calendar dates from the RNG sequence — no new backtest, and the 40-window resample does not count against the holdout by this project's own established convention. Both R-37 branches were explicitly restricted to inner-train/inner-validation/pre-2020-ETH only and neither read a single 2023+ bar, by design. |
 | 08-19 | ~159 | R-35: +7 on top of R-33's ~152 — one pre-registered configuration (`funding_gate_decile`, w=180) read once, restricted to the 2023-01-01..2023-12-31 funding-covered slice rather than the full 2023-2026 holdout (a deliberate, pre-registered scope limit, not an oversight): spot funding-free, futures funding-free, futures funding-charged, each a paired v4-vs-gate read (6), plus one `buy_and_hold` context run (1). The parallel novel branch and the conservative branch's `w=90`/`w=365`/expanding configurations never read it, per the pre-registered "ask fewer questions" economy. |
 | 08-16 | ~30 | Backfilled estimate. Every OOS figure in sections A and B came from reading the 2023+ holdout; it has never been pristine. Deflate program-level claims accordingly, and treat forward paper trading (B-06) as the only uncontaminated evidence still obtainable. |
