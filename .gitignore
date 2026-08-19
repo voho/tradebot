@@ -30,6 +30,10 @@ venv/
 # real Coinbase ETH-USD spot 5m, spanning ETH-PERPETUAL's full history
 # (the existing Bitfinex ETH file stops in 2019-12)
 !/data/ethusd_coinbase_spot_5m.csv.gz
+# daily on-chain metrics (B-07): the first price-independent information
+# channel this project has had, from CoinMetrics' free community API
+!/data/btc_onchain_daily.csv.gz
+!/data/eth_onchain_daily.csv.gz
 /reports/*
 !/reports/comparison.md
 !/reports/comparison.csv

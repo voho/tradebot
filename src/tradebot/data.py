@@ -225,6 +225,48 @@ def compute_basis(spot: pd.DataFrame, perp: pd.DataFrame) -> pd.Series:
     return np.log(perp["close"] / spot_aligned).rename("basis")
 
 
+ONCHAIN_FILES = {"BTC": "btc_onchain_daily.csv.gz", "ETH": "eth_onchain_daily.csv.gz"}
+ONCHAIN_METRICS = ["AdrActCnt", "TxCnt", "HashRate"]
+
+
+def load_onchain_metrics(data_dir: str | Path, asset: str = "BTC") -> pd.DataFrame | None:
+    """Daily on-chain metrics (active addresses, tx count, hash rate), or None if absent.
+
+    Fetched by ``scripts/fetch_onchain_metrics.py`` from CoinMetrics'
+    free community API (B-07). This is the first price-independent
+    information channel in this project -- every other feature is derived
+    from the same OHLCV series it is meant to trade. Indexed by UTC day
+    (midnight). ``asset="BTC"`` covers 2017-01-01 -> present;
+    ``asset="ETH"`` covers 2019-01-01 -> present, with ``HashRate`` NaN
+    from the 2022-09-15 Merge onward (ETH is proof-of-stake from there;
+    the column is not back-filled or proxied).
+    """
+    if asset not in ONCHAIN_FILES:
+        raise ValueError(f"asset must be one of {sorted(ONCHAIN_FILES)}")
+    path = Path(data_dir) / ONCHAIN_FILES[asset]
+    if not path.exists():
+        return None
+    df = pd.read_csv(path, parse_dates=["timestamp"], index_col="timestamp")
+    df.index = df.index.tz_localize("UTC")
+    return df[ONCHAIN_METRICS].astype(float).sort_index()
+
+
+def align_onchain_causal(onchain: pd.DataFrame, bars: pd.DataFrame) -> pd.DataFrame:
+    """Reindex daily on-chain metrics onto ``bars``' index, causally.
+
+    CoinMetrics reports day D's metric only after day D has closed, so a
+    bar at time T may only see the on-chain row for the most recent day
+    that closed strictly before T's own day -- i.e. shifted one full day
+    later than a naive as-of join would allow. Concretely: a metric dated
+    2024-01-05 (meaning "day 2024-01-05") only becomes visible at
+    2024-01-06T00:00 UTC. Bars before the first visible row get NaN, never
+    filled or back-cast.
+    """
+    shifted = onchain.copy()
+    shifted.index = shifted.index + pd.Timedelta(days=1)
+    return shifted.reindex(shifted.index.union(bars.index)).sort_index().ffill().reindex(bars.index)
+
+
 def load_dataset(data_dir: str | Path, kind: str) -> tuple[pd.DataFrame, str]:
     """Load 'perp' or 'spot' data; returns (df, source_label).
 
