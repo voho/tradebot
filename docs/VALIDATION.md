@@ -1117,6 +1117,44 @@ failure mode that actually destroyed carry desks in 2022), or borrow
 costs. Extending the funding series through 2026 decides this direction
 outright; it is backlog item B-02 and blocked on network access.
 
+> **Update, R-39 (08-19): B-02 and B-03 both ran, and both caveats above
+> turned out to matter more than the headline.** Funding through 2026 is
+> now available (Deribit, a different venue — see `load_funding_extended`
+> in `src/tradebot/data.py`) and the delta-neutral trade was implemented
+> as real code for the first time (`experiments/funding_harvest_carry.py`).
+> Two findings change how this section should be read:
+>
+> 1. **The +16.2%/yr headline is largely a Binance-specific number, not a
+>    market-wide one.** The identical calculation run on Deribit over the
+>    *same* 2020–2023 window gives **+7.88%/yr**, with roughly double the
+>    negative-settlement frequency (28.0% vs 13.5%) and a worse worst
+>    month (−3.32% vs −1.31%). The two venues correlate at only r=0.69
+>    over this period. A reader citing "a risk profile nothing else in
+>    this repo comes close to" should know that profile is roughly twice
+>    as good on Binance as on the other major venue checked.
+> 2. **The trade did decay into 2024–2026, but net of realistic costs
+>    (0.10% taker) rather than gross.** Gross carry Sharpe barely moved
+>    (11.05 → 11.38 across the split) — what fell was the *level* of the
+>    premium, not its noisiness. Net of 0.10% costs the carry stopped
+>    beating a T-bill around 2025 and went outright negative at a 0.40%
+>    retail tier from 2025 on. The literature's reported ~1.8–3.5 Sharpe
+>    range (He, Manela, Ross & von Wachter 2024, at retail-to-market-maker
+>    cost tiers) is far closer to this project's *net-of-cost* Deribit
+>    figures than to the gross ~11 quoted above — worth noting since this
+>    page had been citing "~6.45" for the pre-2024 era without a clean
+>    primary-source figure behind that specific number.
+>
+> **The basis-risk caveat above was never resolved — it was found to be
+> the whole story.** With no perp price series in this repo, spot and
+> perp are modelled by the *same* price, so the delta-neutral trade's
+> basis is identically zero by construction and every Sharpe/drawdown
+> figure anywhere in this section is a upper bound, not an estimate. The
+> full verdict, including why the trade is NOT registered as a strategy,
+> is in `docs/LEDGER.md` ("R-39 results"); the actual next step
+> (backlog **B-15**) is building a real perp series, which this session
+> confirmed is available from the same source used for the funding
+> extension — not more funding data, which this round already supplied.
+
 ### Funding as a positioning signal, not just a cost (measured, 2020–2023)
 
 Rich funding means crowded longs, and unlike anything else tried here

@@ -92,7 +92,7 @@ import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
 from experiments.funding_gate_decile import (  # noqa: E402
-    SETTLEMENTS_PER_DAY, FundingGateDecile, _funding_percentile)
+    FundingGateDecile, _funding_percentile)
 from tradebot.broker import MarketSpec  # noqa: E402
 from tradebot.data import load_dataset, load_funding, load_funding_extended  # noqa: E402
 from tradebot.engine import run_backtest  # noqa: E402
@@ -319,8 +319,6 @@ def causality() -> None:
     """
     from tradebot.broker import PaperBroker
     from tradebot.strategy import Context
-
-    from tradebot.broker import PaperBroker as _PB  # noqa: F401  (documented above)
 
     identity_check()
     probes = (("Deribit region", "2024-03-01", None),

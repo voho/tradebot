@@ -2775,6 +2775,120 @@ the funding-rate series, a different signal on a different clock — but is
 counted explicitly below for transparency since it is, in spirit, reading
 data the project had not yet looked at.
 
+### R-39 results — both branches NEGATIVE; the extended data answered its own question decisively
+
+**Method actually followed.** Two independent agent sessions, each on a
+disjoint unregistered file, neither committing — reports at
+`experiments/reports/funding_gate_decile_extended_report.md` and
+`experiments/reports/funding_harvest_carry_report.md`. Both reports were
+read in full before this row was written. The conservative branch's
+decision-cell numbers were **independently re-derived by the operator**
+using a different code path than the branch's own harness (mirroring
+`scripts/funding_study.py`'s existing, already-tested `_period()` helper
+rather than the branch's hand-rolled `run_period_funding`) and a fresh
+call into `tradebot.inference.paired_bootstrap`: point estimates matched
+to the cent (v4 $3,867.85 vs claimed $3,868; gate $1,617.35 vs claimed
+$1,617) and the bootstrap reproduced closely (Δ log growth −0.87
+[−1.67, −0.15] vs claimed −0.872 [−1.701, −0.166]; Δ Sharpe −0.58
+[−1.12, −0.04] vs claimed −0.582 [−1.149, −0.042] — the small differences
+are resample-path noise between two different bootstrap call sites at the
+same seed, not a disagreement about the finding). This is the
+"independent skeptic" step ROUTINE.md's parallelism section asks for.
+
+**Conservative branch (`funding_gate_decile_extended`, B-05 reopened).**
+**NEGATIVE, decisively, in the wrong direction.** The frozen `w=180`
+configuration from R-35 — same 0.90 decile, same swept lookback set, same
+smoothing, zero new parameters — read against the full 2023-01-01 →
+2026-08-19 holdout (now 100% funding-covered vs R-35's 28%, 72% of it
+genuinely new Deribit-sourced data) returns Δ log growth **−0.872
+[−1.701, −0.166]** and Δ Sharpe **−0.582 [−1.149, −0.042]** against v4,
+both excluding zero *against* the gate, plus a **worse** drawdown
+(+12.2pp) and outright failure at the 0.40% taker tier (Sharpe −0.38 vs
+v4's +0.83). The sub-period split is the interpretive centre: 2023 alone
+(what R-35 actually saw) reproduces R-35's own ledger row to the dollar
+and is a null (Δ log growth −0.120 [−0.430, +0.139]) — confirming R-35
+was not wrong about anything it measured. **All** of the new negative is
+in 2024–2026: Δ log growth −0.746 [−1.466, −0.097]. Descriptively, R-16's
+premise (rich funding forecasts weak forward returns) held with the right
+sign on inner-validation (−0.22pp) and **inverted** on 2024-2026
+(+2.27pp, wrong direction) — the gate stood flat through the strongest
+part of a multi-year bull leg specifically because funding was rich
+*because* the bull was working, which is the opposite of what the
+2020–2022 discovery sample looked like. A post-hoc check (not
+pre-registered, run to rule out an obvious objection) confirms this is
+not the Binance/Deribit venue splice: a pure-Deribit series with no
+cross-venue join at all gives the same negative, marginally stronger.
+**B-05 closes permanently, per its own pre-registration's stated rule.**
+Configs evaluated: **72** (61 distinct cells).
+
+**Novel branch (`funding_harvest_carry`, B-03 built for the first
+time).** **NEGATIVE.** The delta-neutral carry trade, coded as a real
+backtest for the first time in this project, reproduces every cell of
+`docs/VALIDATION.md`'s existing 2020-2023 figure exactly, then fails the
+pre-registered 2024-2026 test: net of 0.10% costs it returns +16.7%
+against `buy_and_hold`'s +49.1% (return bar fails decisively), and the
+drawdown/tail bar is **voided rather than scored** — this repository has
+no perp price series, so the trade's basis is identically zero by
+construction and its near-zero measured volatility is an artifact of the
+model missing two of its three real risk sources (basis risk at
+entry/exit, and liquidation risk on the short leg, which the branch
+measured reaching **1.57×–2.34× account equity** in unrealized loss
+between rebalances), not evidence the trade is safe. The pre-registered
+falsification (net-of-cost 2024-2026 materially worse than 2020-2023's
++14.6%/yr) is met: +4.98%/yr risk-matched. Configs evaluated: **19
+distinct specs, 58 configuration-evaluations**. **B-03 closes as tested
+and rejected for the current era** (not ruled out on principle — see
+below).
+
+**Four findings worth carrying forward past the NEGATIVE verdicts:**
+
+1. **The pre-registration's own Deribit annualization was 3× too high**
+   (corrected in-place above once found; both branches independently
+   caught and confirmed the same error). The shape it described was
+   right, the level was not.
+2. **Most of the apparent funding-premium "collapse" is a venue effect,
+   not a market effect.** Running the carry-harvest analysis on Deribit
+   alone across 2020-2026 (no cross-venue splice at all) gives +7.88%/yr
+   → +6.58%/yr — a real decline, but a modest one whose bootstrap CIs
+   overlap almost entirely ([+2.91,+13.44] vs [+3.95,+9.42]). Binance's
+   2020-2023 funding ran roughly **2×** Deribit's over the identical
+   calendar period. Any future citation of this project's own
+   +16.2%/yr / Sharpe-6.45-ish carry figures should carry that caveat —
+   Deribit's contemporaneous number is roughly half as good, with twice
+   the negative-settlement frequency, and neither venue's number was ever
+   measured against basis risk.
+3. **B-03's real blocker was never the funding data — it is the missing
+   perp price series.** This session confirmed Deribit's public API also
+   serves complete 5-minute `BTC-PERPETUAL` OHLCV back to 2020
+   (`get_tradingview_chart_data`, spot-checked at five dates 2020–2026,
+   288/288 or 289/289 bars every time). A future session building that
+   series would let a delta-neutral backtest measure real entry/exit
+   basis risk for the first time — the actual reason B-03 was flagged
+   "measured entirely in the good years" — rather than merely extending
+   the funding leg again. Added to the backlog below as **B-15**.
+4. **The holdout was read far more than pre-registered, and the ledger's
+   counter reflects the honest number, not the authorized one.** The
+   conservative branch's pre-registration authorized one consultation
+   (the frozen `w=180` full-window read); it actually touched 61 distinct
+   holdout cells (§10 of its report), all of them diagnostics run *after*
+   the decision cell had already returned a significant negative — none
+   could have changed the verdict in the gate's favour, but the count
+   belongs in the table below at its real size, per this file's standing
+   practice of naming the discrepancy rather than rounding it down.
+
+**Next step.** Both directions this session pursued now have a clean
+NEGATIVE. The COST axis (funding-as-cost, funding-as-gate) has now been
+tried as a cost measurement (R-14), a forecaster (R-16), a SIZE-axis gate
+(R-35, reopened and closed for good by R-39), an EV-band sizing input
+(R-35 novel, borderline-negative), and a carry-harvest trade in its own
+right (R-39 novel) — five distinct treatments of the same underlying
+signal, none surviving to promotion. **B-06 (forward paper trading)
+remains the highest-value item on merit.** Network access is now
+confirmed genuinely wider than believed (Deribit, Kraken Futures, and —
+per R-38's still-unconfirmed note — Bitstamp/Coinbase for spot), which is
+the actual blocker on B-06 clearing; a future session should attempt the
+real connection rather than another ping.
+
 ---
 
 ## C. Ruled out — do not re-try without new evidence
@@ -2795,6 +2909,8 @@ data the project had not yet looked at.
 | Per-vote-state Kelly fraction (`μ_state/σ_state²`) replacing v4's single global `target_vol` | 46 configurations; cleanly refutes the raw-leverage-artifact failure mode and surfaces real, non-monotone state-conditional drift/variance, but fails its own pre-registered ETH falsification decisively — worse than v4 on the BTC control too, indicating the inner-validation win was fitted to one window. | R-37 (novel) |
 | Risk-constrained Kelly (Busseti/Ryu/Boyd 2016) drawdown-probability cap layered on v4's unchanged vote+scale | 24 configurations; cleanly refutes the exposure-artifact explanation (R²=0.20) but the (α,β) neighbourhood is not a plateau and it fails ETH decisively, losing to v4 on the BTC control itself (≈11–12% of its balance) before ETH is even read. | R-38 (conservative) |
 | CRRA/Merton drift-over-variance fraction (`μ/(λσ²)`, `λ` from a stated drawdown tolerance) replacing v4's vol-only scale | 32 configurations; cleanly refutes the exposure-artifact explanation (R²=0.15) and finds a loose plateau at the longest tested halflife, but fails the identical ETH falsification the same way — worse than v4 on the BTC control (21–37% of its balance) before ETH is read; a continuous drift estimate systematically under-holds through a trend. | R-38 (novel) |
+| Binary top-decile-funding flat gate layered on `kelly_regime_v4`, read against a 3.6-year fully-funding-covered holdout (was 1 year in R-35) | 72 configurations; the one-year R-35 result did not merely stay underpowered, it reversed — Δ log growth −0.87 [−1.70,−0.17], Δ Sharpe −0.58 [−1.15,−0.04], both excluding zero against the gate, worse drawdown despite 27% less exposure, fails 0.40% tier outright. Not a venue-splice artifact (pure-Deribit gives the same result). Specifically ruled out: a *binary* percentile-threshold flat gate on this signal/cadence/instrument — not "funding is useless" (R-16's descriptive relationship is now known to be regime-dependent, which is itself new information). | R-39 (conservative), reopens B-05 from R-35 and closes it |
+| Delta-neutral spot-long/perp-short funding-harvest carry trade, extended through 2024-2026 | 19 specs / 58 evaluations; fails the return bar decisively (+16.7% vs buy_and_hold's +49.1% net of 0.10% costs, 2024-2026) and the drawdown/tail bar is voided (this repo's missing perp price series makes basis risk and the trade's real safety unmeasurable, not merely uncosted). Ruled out for the current era, not on principle — see B-15. | R-39 (novel) |
 
 ---
 
@@ -2956,6 +3072,25 @@ adapter already targets, and is worth a proper verification (an actual
 `tradebot fetch` or a first paper-trading-recorder connection attempt,
 not just a ping) before the next session assumes either status.
 
+**Re-ranked 08-19 after R-39 — the proper verification the row above
+asked for.** It found Binance still blocked, but Deribit and Kraken
+Futures reachable with live data, and completed an actual multi-year
+historical pull (not a ping). That closed **B-02** (partially — see its
+row for the venue caveat) and let two backlog items run to a verdict for
+the first time: **B-05 reopened and closed for good** (the one-year
+underpowered result from R-35 reversed on the full 3.6-year holdout, a
+decisive negative rather than "needs more data"), and **B-03 ran as real
+code for the first time and closed NEGATIVE for the current era** — not
+for lack of data, but because this project's missing perp price series
+makes the trade's dominant risk (basis) structurally unmeasurable. That
+finding opens **B-15** (build a real perp series; confirmed available
+from the same Deribit endpoint) as a more useful next step than any
+further funding-data work. The order is otherwise unchanged: **B-06
+(forward paper trading) remains the highest-value item on merit**, and
+R-39's own network re-check is itself indirect evidence it may be closer
+to reachable than the ledger has been assuming — B-06 is the natural next
+item to attempt a real connection against, not just a ping.
+
 Two things changed the order. R-28 answered B-01. And a connectivity check
 found that **every exchange endpoint is blocked by the network policy
 these sessions run under** — Binance, Bitstamp, Kraken and Coinbase all
@@ -2974,15 +3109,16 @@ remains actionable is computation on the data already here.
 | ~~B-12~~ | ~~Put the intervals *in* the comparison table~~ | ERR | **DONE → R-30** | The table now carries Δ growth and Δ max drawdown against `buy_and_hold`, each with a 95% interval, and a strategy without a measured interval fails CI. The by-product is the sharpest number in the project: **0 of 24 strategies are distinguishably better than holding on the criterion the table ranks by**, and v4's +0.044 edge is [−2.60, +2.85]. |
 | ~~B-11~~ | ~~Matched-risk frontier: e-process gate vs latched vote at equal realized volatility~~ | ERR, SIZE | **DONE → R-31** | Answered, negatively and usefully. At equal realized volatility the two gates are indistinguishable on the BTC holdout (all 8 intervals contain zero, sign unstable), three of four cells fail a pre-registered validity gate, and on ETH the e-process gate loses on **both** axes — so R-28's ETH drawdown replication was an artifact of carrying 2.4x less risk. The 0.27x exposure was the whole finding. Also answered in parallel by **R-32**, which adds the arm neither the backlog row nor R-31 asked for: **no gate at all**, which loses to both gates at matched risk in every inner-split cell and in 80–90% of 40 paired windows. |
 | ~~B-14~~ | ~~Return per unit of risk against a constant exposure — the claim R-33 kept measuring by accident~~ | SIZE, ERR | **DONE → R-36** | Confirmed, thinned. Pooled across the same 40 windows R-33 used, D1 passes on both markets (win-rate 95% CI excludes 50%: [67.2%,92.7%] spot, [76.3%,97.2%] futures). The pre-registered falsification test (does it survive outside the 2017–2020 bull) also survives on both markets, but the median advantage shrinks ~10x once windows starting before 2021 are excluded (+68.9pp→+5.0pp spot, +97.2pp→+7.4pp futures), and the post-2021 subsample's own CI still contains 50% on spot at n=22. Off-backlog follow-up **R-37** (two branches, both NEGATIVE) asked whether a strategy could be built to capture more of this edge — see section C. |
-| ~~B-05~~ | ~~Funding as a gate on the existing strategy (stand flat in the top decile)~~ | COST | **DONE → R-35** | NEGATIVE, closed pending B-02. The literal gate cleared every inner-validation and falsification check — genuinely not the exposure-level artifact its own pre-registration predicted — then lost on the single funding-covered holdout year available (Δ log growth −0.167 [−0.495, +0.101] futures, point estimate negative in all three cost/market cells, interval containing zero throughout: underpowered, not a clean rejection). A parallel novel branch (funding-adjusted EV band) passed its falsification test with a genuine non-artifact Sharpe edge but failed its own plateau check and never reached the holdout. Reopens only when B-02 delivers more funding-covered years to check against. |
-| **B-02** | Extend the funding series through 2026 | COST | **BLOCKED (network)** | Still the single cheapest item that could change a decision — the literature says the carry premium broke in 2024–25 and our data stops in 2023 — but Binance is unreachable from these sessions. Needs the operator. |
-| **B-03** | Funding harvest (delta-neutral spot vs short perp) | COST | BLOCKED on B-02 | +16.2%/yr with a −1.31% worst month is a risk profile nothing else here approaches — measured entirely in the good years. Unmodelled: basis risk, short-leg liquidation, exchange/custody risk, borrow cost. |
+| ~~B-05~~ | ~~Funding as a gate on the existing strategy (stand flat in the top decile)~~ | COST | **DONE → R-35, reopened and CLOSED FOR GOOD → R-39** | R-35: NEGATIVE, closed pending B-02 (underpowered, one funding-covered holdout year, interval containing zero). R-39 reopened it with the full 2020-2026 funding series and got a decisive, opposite-sign NEGATIVE: Δ log growth −0.872 [−1.701, −0.166] against the gate on the fully-covered 3.6-year holdout, worse drawdown despite less exposure, fails the 0.40% tier. Not underpowered this time — closes permanently per its own pre-registration. |
+| ~~B-02~~ | ~~Extend the funding series through 2026~~ | COST | **DONE (partial) → R-39** | Binance itself is still unreachable, but Deribit's public API is not, and a full historical pull succeeded: `data/btcusdt_deribit_perp_funding_8h.csv.gz`, 2020-01→2026-08. **Caveat that matters**: Deribit is a different instrument (continuous funding vs Binance's discrete 8h settlement), correlates with Binance at only r=0.69 on the 2020-2023 overlap with an unstable year-to-year level ratio (0.21×-1.24×) — `load_funding_extended()` therefore never rescales or blends the two, only concatenates Deribit onto the genuine post-2023 gap. Good enough to reopen and definitively close B-05, and to run B-03 for the first time; not a literal continuation of "the Binance series." |
+| ~~B-03~~ | ~~Funding harvest (delta-neutral spot vs short perp)~~ | COST | **DONE → R-39, NEGATIVE for the current era** | Implemented as real code for the first time (`experiments/funding_harvest_carry.py`) and extended through 2024-2026: fails the return bar decisively (+16.7% vs `buy_and_hold`'s +49.1% net of 0.10% costs) and the drawdown/tail bar is voided rather than passed, because this repo's missing perp price series makes basis risk structurally unmeasurable — the trade's near-zero measured volatility is an artifact of the model, not evidence of safety. Reopens only via **B-15**, not via more funding data (which this round already supplied). |
 | **B-06** | Forward paper-trading recorder | N≈3 | **BLOCKED (network)** | Rose in importance and fell in feasibility on the same day. R-28's deflated Sharpe says this dataset is close to exhausted, which is the argument for starting the only uncontaminated record this project can still generate — but the recorder needs a live price feed, and every venue is blocked. First thing to unblock if the policy is widened. |
 | **B-07** | On-chain features, sign-corrected | INFO | BLOCKED (network) | The only genuinely orthogonal channel. Enter with the base rate in mind: a 141-predictor study found 67 worked in-sample, 29 survived out-of-sample, **4 beat a random walk at all horizons**. Note the trap: on-chain flows predict *volatility*, and R-08 showed better volatility input makes this strategy worse. **Fix the sign first.** |
 | **B-08** | Second bear, second asset, different period (ETH 2020–2026) | N≈3 | BLOCKED (network) | R-17 shares the 2018 bear with the main dataset, so the two tests are not independent; the committed Bitfinex ETH file stops in 2019 and the rest is not fetchable from here. |
 | **B-09** | Conformal prediction / adaptive conformal by betting (adaptive conformal inference under distribution shift; conformal prediction with change points, NeurIPS 2025; adaptive conformal inference by betting, 2024) | ERR | LOW | Was "mostly subsumed by B-01" — now demoted further by R-28's result: the binding problem is not that trust is miscalibrated but that correctly-calibrated trust is *low*, and conformal would say the same thing more slowly. |
 | ~~B-13~~ | ~~Matched-risk benchmark: `kelly_regime_v4` against a **de-levered** `buy_and_hold` at equal realized volatility~~ | ERR, SIZE | **DONE → R-33** | Answered, and it cost the project its headline. At genuinely equal risk (40 windows, matched inside each window to 0.5%) v4's median drawdown advantage falls from −24.5pp to **−2.9pp** on spot and from −70.7pp to **−5.5pp** on futures; on the holdout five of six frozen cells fail the risk match and the valid one gives −14.18pp [−22.68, +13.48]. R-31's suspicion was right: the −41.1pp is mostly the exposure level. The consolation, and it is a real one, is that the *return* comparison at matched risk goes v4's way everywhere and survives the ETH test that killed R-28 — see **B-14**. Original framing kept below for the record. Opened by R-31, and it points the same knife at this project's own headline. Every drawdown claim here — L-04's "regime-gated sizing cuts drawdown", R-17's ETH replication, R-29's −41.1pp [−54.8, −18.4] — compares a strategy holding roughly half the notional against a **fully-invested** benchmark. R-31 showed that precise mismatch manufactured a mechanism finding for the e-process gate that vanished at equal risk. The experiment is one afternoon: add a constant-exposure hold at scale `c` to `experiments/matched_risk.py`, solve `c` on inner-validation so its realized volatility equals v4's, and re-run the paired bootstrap. Needs no new data, no fetch, and the harness already exists. Pre-register the answer both ways — a hold de-levered to 0.5x is *not* obviously a weaker benchmark, and if the drawdown gap survives it, that is the strongest result this project has ever had. |
 | **B-10** | Deterministic Elliott wave counter | — | LOW | Only as a documented negative result, per R-18. ZigZag pivots, mechanical impulse/corrective rules, no discretion. About a day, converts an unfalsifiable debate into a table row. |
+| **B-15** | Build a real perp price series (Deribit `BTC-PERPETUAL`, 5m OHLCV, confirmed available 2020-2026 via `get_tradingview_chart_data`) alongside the existing spot series | ERR, COST | OPEN (unblocked by R-39) | The actual blocker B-03 hit was never funding data — it is that spot and perp are the same series here, so basis risk (the dominant term in any real carry/basis trade) is identically zero by construction and unmeasurable. A real perp series would let B-03's falsification be re-run with its main risk term finally in the model, and would also let the futures market stop being labelled "(perp proxy)" for BTC. Confirmed reachable in this session; not yet built. |
 
 ---
 
@@ -3015,6 +3151,7 @@ Also record, in the row or a footnote beneath it:
 
 | as of | count | note |
 |---|---|---|
+| 08-19 | ~221 | R-39: **+62** on top of R-38's ~159 — the conservative branch's own honest count (§10 of its report): 61 distinct 2023+ holdout cells, not the 1 its pre-registration authorized (the extra 60 are diagnostics — neighbourhood, cost tiers, exposure-matched control, sub-period split, venue-splice robustness — run *after* the pre-registered decision cell had already returned a significant negative; none could have changed the verdict in the gate's favour, but this file's practice is to record the real number). Plus **+1** for the operator's independent skeptic re-derivation of the decision cell via a separate code path. The novel branch (`funding_harvest_carry`) reads only the funding-rate series against `buy_and_hold`/`kelly_regime_v4` reference runs over 2024-2026 — a period the BTC-price holdout convention already treats as fair game once funding covers it — and is not counted separately here. |
 | 08-19 | ~159 | R-38: **+0** on top of R-36/R-37's ~159. Both branches (`kelly_regime_v7_ddcap`, `kelly_regime_v7_crra`) were explicitly restricted to inner-train/inner-validation/pre-2020 ETH+BTC only and neither read a single 2023+ bar, by design. |
 | 08-19 | ~159 | R-36 and R-37: **+0** on top of R-35's ~159. R-36 reused R-33's existing `windows.csv` (seed=42, computed once) and only recovered calendar dates from the RNG sequence — no new backtest, and the 40-window resample does not count against the holdout by this project's own established convention. Both R-37 branches were explicitly restricted to inner-train/inner-validation/pre-2020-ETH only and neither read a single 2023+ bar, by design. |
 | 08-19 | ~159 | R-35: +7 on top of R-33's ~152 — one pre-registered configuration (`funding_gate_decile`, w=180) read once, restricted to the 2023-01-01..2023-12-31 funding-covered slice rather than the full 2023-2026 holdout (a deliberate, pre-registered scope limit, not an oversight): spot funding-free, futures funding-free, futures funding-charged, each a paired v4-vs-gate read (6), plus one `buy_and_hold` context run (1). The parallel novel branch and the conservative branch's `w=90`/`w=365`/expanding configurations never read it, per the pre-registered "ask fewer questions" economy. |
