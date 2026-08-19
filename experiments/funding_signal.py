@@ -37,7 +37,15 @@ def causal_funding_column(index: pd.DatetimeIndex, funding: pd.Series) -> np.nda
     inner-validation / holdout windows.
     """
     aligned = funding.reindex(index, method="ffill")
-    return aligned.to_numpy(dtype=float, na_value=0.0)
+    values = aligned.to_numpy(dtype=float, na_value=0.0)
+    # reindex(method="ffill") propagates the LAST known value past the end
+    # of `funding`'s own index too, which would fabricate a constant rate
+    # for every bar after 2023-12-31 if left uncorrected. Mask the tail
+    # back to 0.0 so a strategy built on this column degrades to "funding
+    # unknown -> assume zero drag" outside the committed window, rather
+    # than carrying a stale rate indefinitely.
+    values[index > funding.index[-1]] = 0.0
+    return values
 
 
 def funding_coverage(funding: pd.Series) -> tuple[pd.Timestamp, pd.Timestamp]:

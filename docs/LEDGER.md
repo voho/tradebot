@@ -1101,6 +1101,145 @@ random windows, paired, carrying the frozen exposures:
 | `evidence` − `none`, futures | +6.3pp | 62% | +75.3pp | 82% |
 | `evidence` − `vote`, spot | +4.8pp | 60% | −7.0pp | 38% |
 | `evidence` − `vote`, futures | +2.2pp | 62% | +6.3pp | 60% |
+| R-33 | Funding-percentile gate on `kelly_regime_v4` (backlog **B-05**, conservative branch) | 08-19 | Discrete decile gate: force target exposure to 0 whenever the trailing (rolling, causal) rank of the funding rate is >= the 90th/95th percentile. 6 configs (`lookback_days` x `threshold`) swept on inner-train (2020-2021), one frozen by a pre-registered selection rule, checked on inner-validation (2022) | Inner-train: real but noise-floor-adjacent Sharpe gain at the frozen 180d/0.95 config (+0.38 futures), 19.5% real-dollar funding-cost reduction. **Does not replicate on inner-validation** (within 1% of baseline both markets — 2022's vote is already flat most of the time) and **fails its own pre-registered 0.40% fee-tier falsification test**: edge flips from +2.4% to -21.7% because the gate trades 2.6x the baseline's count. | **NEGATIVE** | A real cost-reduction signal (R-16) wrapped in a decile gate adds turnover for free — and turnover, not signal quality, is this project's most reliable way to lose an edge (R-12/R-13), even when the underlying signal is real. |
+| R-34 | Continuous funding-crowding correction on `kelly_regime_v4` (backlog **B-05**, novel branch) | 08-19 | Derived, not fit: subtract causal, annualized funding rate over `kelly_regime_v4`'s own realized variance (`r_t/sigma_t^2`) from its target exposure every bar, before the existing deadband/clamp — extends L-05/L-06's one-off transaction-cost no-trade-band derivation (Constantinides 1986; Davis & Norman 1990) to a continuously-accruing holding cost, grounded in He et al. (2024)'s funding no-arbitrage relation and the same Cardaliaguet & Lehalle (2018) crowding view the base regime vote already rests on | Inner-train (2020-21 bull): costs return, roughly halves drawdown, raises Sharpe (1.99 to 3.01 spot). Inner-validation (2022 bear): **flips baseline's loss into a gain on both markets** while cutting drawdown 12-16pp. Pays **84% less real dollar funding** than baseline on the combined inner window ($151 vs $948) at a *better*, not worse, funding-free return. Partially fails its 0.40% fee-tier falsification test on raw return (Sharpe/DD survive). Not a plateau in `funding_scale` — the two inner splits disagree on the best value. | **see R-34 pre-registration and results below** | The mechanism L-05/L-06's derivation generalizes to a *running* cost, not just a one-off one, is itself real and material (correction exceeds the deadband on 85% of bars) — but "derived, not fit" describes the form, not the effect size, which is scale-sensitive. |
+
+### R-34 pre-registration — written and committed before the 2023+ holdout was read
+
+**Idea, in one sentence.** `experiments/funding_crowding_novel.py`'s
+`FundingCrowdingKelly` (funding_scale=1.0, frozen) subtracts the causal,
+annualized funding rate divided by `kelly_regime_v4`'s own realized
+variance from its target exposure every bar — see R-34's summary row
+above and the full derivation in that file's module docstring. Step 3
+(inner-train/inner-validation, both markets, a fee-tier and a
+real-funding-cost falsification test, a by-hand causality probe) is
+already complete and reported in
+`experiments/funding_crowding_novel_REPORT.md`; this section is step 4.
+
+**Constraint attacked.** `COST` — funding scales with the signal (R-14:
++20%/yr while `kelly_regime_v4` holds vs +2.8%/yr flat) — and secondarily
+`SIZE`, since the correction is a sizing adjustment, not a new predictor.
+
+**Not a duplicate of.** L-05/L-06 (`kelly_regime_ev`/`_fast`) derive a
+no-trade band from a *one-off* transaction cost; this derives a
+correction from a *continuously-accruing* holding cost — same
+mathematical machinery (Constantinides 1986; Davis & Norman 1990),
+different cost object, and it changes the target itself rather than the
+width of the band around it. R-14 measured funding as a pure cost, never
+as a signal. R-16 found the correlational pattern (funding predicts
+negative forward returns) but never wired it into a strategy. R-33 (this
+session's other branch) is a discrete decile gate on the same
+observation — structurally different (binary override vs continuous
+re-target) and already NEGATIVE; nothing here reuses its files, results,
+or selection.
+
+**Simulable here?** Yes, but **bounded**: the committed funding file
+covers `2020-01-01 03:00 UTC` to `2023-12-31 19:00 UTC` only (verified via
+`experiments/funding_signal.py::funding_coverage`). Outside that window
+`causal_funding_column` returns exactly `0.0` (fixed in this session — it
+previously forward-filled the last known rate indefinitely past
+2023-12-31, a bug that never affected either branch's already-reported
+training-period numbers but would have fabricated a stale funding rate
+for 2024-2026 had it gone unfixed), so `FundingCrowdingKelly` degenerates
+*exactly* to `kelly_regime_v4` for every bar before 2020 and after 2023 —
+a well-defined, honest full-period strategy that just happens to only
+differ from its parent during the ~4 years real funding data exists for.
+That means it can be evaluated the *same* way every other strategy in
+this project is: `ev(strategy, start=OOS_START)` over the standard
+`2023-01-01 -> 2026-08` holdout, with the mechanism itself silently
+inactive (zero correction) for the ~2.6 years past `2023-12-31` — the
+honest behavior of "funding unknown, assume none" rather than a bespoke
+truncated evaluation window.
+
+**What would make it fail — named before any holdout bar is read.**
+(a) The correction is real on the inner splits but the standard holdout
+dilutes it to nothing, since only the first ~1 of its ~3.6 years actually
+carries real funding data — expected, and not itself a failure, but it
+means the funding-free full-holdout comparison (P1 below) is a *context*
+check, not the promotion criterion. (b) The 2023-only sub-window, where
+the mechanism is actually active, fails to reduce real dollar funding
+cost out-of-sample the way it did in-sample — this would mean the inner
+result was a fit to 2020-2022's specific funding regime rather than a
+general property. (c) The already-observed non-plateau in `funding_scale`
+turns out to matter: the frozen `funding_scale=1.0` happens to sit on the
+wrong side of the 2023 regime the way it would have on 2022 (where 1.0
+underperformed 2.0) — if so, this is reported as evidence the effect size
+is regime-dependent, not reversed into a re-selection.
+
+**Method.** Two evaluations, neither previously read:
+
+1. **P1 context (funding-free, standard holdout).** `ev(strategy,
+   start="2023-01-01")` on both markets, `FundingCrowdingKelly
+   (funding_scale=1.0)` vs `kelly_regime_v4` vs `buy_and_hold` — the same
+   protocol every other holdout row in this ledger uses. Since the
+   correction is zero for all but the first ~1 of these ~3.6 years, this
+   is read as "did the change hurt the strategy's standing full-holdout
+   behavior," not as the mechanism's test.
+2. **P2/P3/P4, the mechanism's actual test (2023-01-01..2023-12-31 only,
+   the sub-window real funding data covers).** `FundingCrowdingKelly
+   (funding_scale=1.0)` vs `kelly_regime_v4`, both markets, $1,000 start,
+   warmed on bars before 2023-01-01 (`run_backtest(..., trade_start=...)`,
+   the same warm-vs-warm convention `tradebot.window.run_period` and
+   `scripts/funding_study.py`'s `_period()` use): funding-free balance,
+   Sharpe and max drawdown on both markets; real-funding-charged balance
+   and dollar cost paid on futures (funding is never charged on the spot
+   leg anywhere in this project — spot is the funding-free benchmark by
+   convention, see `scripts/funding_study.py`); and the 0.40% Bitstamp
+   entry-tier result on spot, mirroring the already-run falsification
+   test but now out-of-sample.
+
+**Pre-registered decision rule — promotion is judged as a *variant of
+`kelly_regime_v4`* (the same framing v2/v3/v4 were promoted or rejected
+under: beat the incumbent, do not degrade out-of-sample, on the metric
+the mechanism actually targets), not as a fresh challenge to
+`buy_and_hold`.** Per the step-3 report's own recommendation, **return at
+the 0.10% fee tier is explicitly excluded as a promotion criterion**,
+because falsification (a) already showed it is not robust to the real fee
+tier. Promote only if **all** of:
+
+- **D1 (funding cost, the mechanism's actual point).** On
+  2023-01-01..2023-12-31, futures 5x, real funding charged:
+  `FundingCrowdingKelly` pays strictly less dollar funding than
+  `kelly_regime_v4`.
+- **D2 (no de-lever-and-hope).** Over the same sub-window, the
+  funding-free gross balance is not more than 15 percentage points worse
+  than `kelly_regime_v4`'s own funding-free balance on futures — a guard
+  against the correction being an aggressive de-lever wearing the funding
+  mechanism as a label (the same check falsification (b) already passed
+  in-sample).
+- **D3 (drawdown).** Max drawdown on 2023-01-01..2023-12-31 (funding
+  charged on futures; funding-free on spot) is no worse for
+  `FundingCrowdingKelly` than for `kelly_regime_v4`, on both markets.
+- **D4 (survives the real fee tier, on risk not return).** At the 0.40%
+  Bitstamp entry tier, spot, 2023-01-01..2023-12-31: `FundingCrowdingKelly`'s
+  Sharpe and max drawdown are not worse than `kelly_regime_v4`'s own
+  numbers at that tier — mirroring what held in-sample (Sharpe 1.80 vs
+  1.78, DD 15.7% vs 27.9%) and explicitly not requiring the return
+  comparison to hold, per the exclusion above.
+- **Falsification.** Already run in step 3; not re-run on the holdout
+  (there is no second, independent funding dataset committed here — no
+  ETH perp funding, unlike the ETH price data used elsewhere in this
+  project — so this mechanism cannot be falsified on a second asset the
+  way `kelly_regime_v4` itself was in R-17. Noted as a real limitation
+  regardless of the D1-D4 outcome, and as a candidate falsification test
+  for whoever next extends the funding series, per backlog **B-02**.)
+- **Plateau.** The inner-split sweep already showed `funding_scale` is
+  *not* a clean plateau in effect size — but it is a plateau in
+  *direction*: higher scale monotonically reduces drawdown and funding
+  cost on both inner splits, they disagree only on how much scale is
+  optimal for return. Promotion is conditioned on that qualitative
+  monotonicity holding on the holdout too (checked, not re-swept — the
+  frozen `funding_scale=1.0` is not re-tuned against the holdout under any
+  outcome).
+
+**Holdout accounting, fixed in advance.** This round reads the standard
+2023+ holdout for two strategies (P1, context) plus a
+2023-01-01..2023-12-31 sub-window for two strategies across funding-free,
+funding-charged and the 0.40% fee tier (P2-P4, the actual test) — up to
+13 fresh backtests, none previously run at these exact (strategy, market,
+period, fee-tier, funding-setting) coordinates. No selection is performed
+on any of it: `funding_scale=1.0` was frozen in step 3, before this
+section was written, and is not touched by what follows.
 
 At the same risk, gating on the latched vote returns a median **+20.0pp**
 per window more than not gating on spot while drawing down **6.2pp** less
