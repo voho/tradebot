@@ -1,0 +1,25 @@
+1,010,889 bars  2017-01-01 -> 2026-08-12  (data: real)
+
+HOLDOUT 2023-01-01 -> / spot
+    buy_and_hold                     final=$      3,839 vol=0.469 DD= 54.0% sharpe= 1.03 fills=    1 fees=$       1 clamp= 0.0%
+    kelly_regime_v4                  final=$      3,373 vol=0.317 DD= 27.8% sharpe= 1.22 fills=  332 fees=$     310 clamp=40.7%
+    vol-matched rebalanced c=0.353   final=$      1,773 vol=0.167 DD= 22.3% sharpe= 1.03 fills=   36 fees=$       2 clamp= 0.0%
+    vol-matched static     c=0.293   final=$      1,832 vol=0.284 DD= 41.0% sharpe= 0.73 fills=    1 fees=$       0 clamp= 0.0%
+    notional-matched reb.  c=0.283   final=$      1,580 vol=0.133 DD= 17.9% sharpe= 1.02 fills=   39 fees=$       2 clamp= 0.0%
+  --- validity gate V (vs kelly_regime_v4, vol 0.317; v4 clamp 40.7%, diagnostic only)
+      vol-matched rebalanced c=0.353     vol gap 47.4%  arm clamp  0.0%  VOID (V1 risk match)
+      vol-matched static     c=0.293     vol gap 10.4%  arm clamp  0.0%  VALID
+      notional-matched reb.  c=0.283     vol gap 58.0%  arm clamp  0.0%  VOID (V1 risk match)
+
+HOLDOUT 2023-01-01 -> / futures
+    buy_and_hold                     final=$     15,176 vol=0.684 DD= 60.3% sharpe= 1.44 fills=    1 fees=$       2 clamp= 0.0%
+    kelly_regime_v4                  final=$      4,901 vol=0.375 DD= 33.0% sharpe= 1.36 fills=  328 fees=$     265 clamp= 0.0%
+    vol-matched rebalanced c=0.348   final=$      1,763 vol=0.164 DD= 22.6% sharpe= 1.04 fills=   37 fees=$       1 clamp= 0.0%
+    vol-matched static     c=0.289   final=$      1,819 vol=0.282 DD= 40.7% sharpe= 0.73 fills=    1 fees=$       0 clamp= 0.0%
+    notional-matched reb.  c=0.289   final=$      1,600 vol=0.136 DD= 18.5% sharpe= 1.02 fills=   39 fees=$       1 clamp= 0.0%
+  --- validity gate V (vs kelly_regime_v4, vol 0.375; v4 clamp 0.0%, diagnostic only)
+      vol-matched rebalanced c=0.348     vol gap 56.2%  arm clamp  0.0%  VOID (V1 risk match)
+      vol-matched static     c=0.289     vol gap 24.9%  arm clamp  0.0%  VOID (V1 risk match)
+      notional-matched reb.  c=0.289     vol gap 63.6%  arm clamp  0.0%  VOID (V1 risk match)
+
+written: /home/user/tradebot/reports/matched_hold/holdout.csv

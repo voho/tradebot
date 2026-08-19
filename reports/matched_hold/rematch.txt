@@ -1,0 +1,22 @@
+1,010,889 bars  2017-01-01 -> 2026-08-12  (data: real)
+NOT PRE-REGISTERED. Exposure solved on the holdout itself, so this
+is an in-sample description of 2023+, not evidence about D1.
+
+
+spot: kelly_regime_v4 vol 0.317, DD 27.8%, clamp 40.7%
+    rebalanced c=0.671               final=$      2,686 vol=0.320 DD= 39.4% sharpe= 1.01 fills=    9 fees=$       2 clamp= 0.0%
+      Δ log growth           ≈   +0.228 [  -0.363,   +0.808]  P(>0)=0.77   (vol gap 0.9%)
+      Δ max drawdown (pp)    ≈  -12.582 [ -20.133,  +12.615]  P(>0)=0.34   (vol gap 0.9%)
+    static c=0.375                   final=$      2,065 vol=0.321 DD= 44.3% sharpe= 0.79 fills=    1 fees=$       0 clamp= 0.0%
+      Δ log growth           ≈   +0.491 [  -0.212,   +1.211]  P(>0)=0.91   (vol gap 1.3%)
+      Δ max drawdown (pp)    ≈  -17.453 [ -26.074,  +10.761]  P(>0)=0.24   (vol gap 1.3%)
+
+futures: kelly_regime_v4 vol 0.375, DD 33.0%, clamp 0.0%
+    rebalanced c=0.793               final=$      3,183 vol=0.381 DD= 45.4% sharpe= 1.03 fills=    5 fees=$       1 clamp= 0.0%
+      Δ log growth           ≈   +0.432 [  -0.304,   +1.198]  P(>0)=0.87   (vol gap 1.5%)
+      Δ max drawdown (pp)    ≈  -14.456 [ -23.352,  +11.510]  P(>0)=0.26   (vol gap 1.5%)
+    static c=0.515                   final=$      2,459 vol=0.369 DD= 48.0% sharpe= 0.86 fills=    1 fees=$       0 clamp= 0.0%
+      Δ log growth           ≈   +0.690 [  -0.149,   +1.584]  P(>0)=0.94   (vol gap 1.7%)
+      Δ max drawdown (pp)    ≈  -17.062 [ -26.451,  +11.082]  P(>0)=0.24   (vol gap 1.7%)
+
+written: /home/user/tradebot/reports/matched_hold/rematch.csv

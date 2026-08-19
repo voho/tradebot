@@ -93,7 +93,12 @@ LEVEL = 0.95
 # drawdown-cushion variants (R-11), plus the 25 registered strategies
 # themselves — each of which is a configuration someone chose to keep.
 # Under-counting is the failure mode that matters, so this is a floor.
-PROJECT_TRIALS = 103
+#
+# Rounds since add to it, and the routine is explicit that parallel branches
+# contribute their TOTAL rather than the best one's: +36 (R-31, matched-risk
+# frontier) +33 (R-32, the ungated control that ran the same backlog row the
+# same day) +18 (R-33, the de-levered-benchmark exposure sweep) = 87.
+PROJECT_TRIALS = 190
 
 # The Sharpe dispersion across R-28's 24 configurations on inner-validation -
 # the only trial dispersion this project has ever measured, and therefore the

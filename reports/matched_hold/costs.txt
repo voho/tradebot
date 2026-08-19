@@ -1,0 +1,21 @@
+1,010,889 bars  2017-01-01 -> 2026-08-12  (data: real)
+HOLDOUT 2023+ spot, at both taker tiers:
+  0.10% (table assumption)
+      buy_and_hold                   final=$      3,839 vol=0.469 DD= 54.0% sharpe= 1.03 fills=    1 fees=$       1 clamp= 0.0%
+      kelly_regime_v4                final=$      3,373 vol=0.317 DD= 27.8% sharpe= 1.22 fills=  332 fees=$     310 clamp=40.7%
+      vol-matched rebalanced c=0.353 final=$      1,773 vol=0.167 DD= 22.3% sharpe= 1.03 fills=   36 fees=$       2 clamp= 0.0%
+      vol-matched static     c=0.293 final=$      1,832 vol=0.284 DD= 41.0% sharpe= 0.73 fills=    1 fees=$       0 clamp= 0.0%
+      notional-matched reb.  c=0.283 final=$      1,580 vol=0.133 DD= 17.9% sharpe= 1.02 fills=   39 fees=$       2 clamp= 0.0%
+  0.40% (Bitstamp entry tier)
+      buy_and_hold                   final=$      3,827 vol=0.469 DD= 54.0% sharpe= 1.03 fills=    1 fees=$       4 clamp= 0.0%
+      kelly_regime_v4                final=$      2,445 vol=0.317 DD= 34.1% sharpe= 0.94 fills=  332 fees=$   1,027 clamp=40.7%
+      vol-matched rebalanced c=0.353 final=$      1,766 vol=0.167 DD= 22.4% sharpe= 1.03 fills=   36 fees=$      10 clamp= 0.0%
+      vol-matched static     c=0.293 final=$      1,828 vol=0.284 DD= 40.9% sharpe= 0.73 fills=    1 fees=$       1 clamp= 0.0%
+      notional-matched reb.  c=0.283 final=$      1,568 vol=0.133 DD= 18.3% sharpe= 1.00 fills=   37 fees=$       7 clamp= 0.0%
+
+HOLDOUT 2023+ futures 5x with funding CHARGED (real through 2023-12, mean +15.0%/yr after):
+  buy_and_hold                       final=$        0 DD=100.0% sharpe= 0.28 funding paid=$    999  LIQUIDATED
+  kelly_regime_v4                    final=$    3,133 DD= 37.8% sharpe= 1.03 funding paid=$  1,190
+  vol-matched rebalanced c=0.348     final=$    1,397 DD= 25.5% sharpe= 0.64 funding paid=$    313
+  vol-matched static     c=0.289     final=$    1,150 DD= 55.8% sharpe= 0.28 funding paid=$    669
+  notional-matched reb.  c=0.289     final=$    1,352 DD= 21.2% sharpe= 0.68 funding paid=$    246

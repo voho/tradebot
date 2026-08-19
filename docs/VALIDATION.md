@@ -220,9 +220,11 @@ comfortable:
    holding on the spot holdout is 0.045; two-sided at 95% it is not
    established. The pre-registered rule (C2) required both spot intervals
    to exclude zero, so the claim is downgraded here, in the README and in
-   the ledger. It is still the strongest claim in the repo — R-19's
-   40-window resample and R-17's ETH replication test the same property
-   differently and both stand.
+   the ledger. R-19's 40-window resample and R-17's ETH replication test
+   the same property differently and both stand — **but all three
+   measure it against a fully-invested benchmark, and R-33 has since
+   shown that 88–92% of the gap is that difference**
+   ([below](#the-benchmark-de-levered-what-is-left-of-the-drawdown-finding)).
 2. **The return advantage is not established out-of-sample at all.**
 3. **By the table's own criterion it is not established in-sample
    either.** The table ranks by final balance; v4's full-period
@@ -256,32 +258,37 @@ strategy removes and final balance does not.
 
 ### Deflated Sharpe: nothing survives out-of-sample
 
-Bailey & López de Prado (2014), against **103 trials** counted from the
+Bailey & López de Prado (2014), against **190 trials** counted from the
 ledger (32 fee-tier configurations, 24 e-process, 9 anchor sets, 7 ladder
-widths, 4 volatility estimators, 2 cushion variants, plus the 25
-registered strategies — a floor, not an estimate).
+widths, 4 volatility estimators, 2 cushion variants, the 25 registered
+strategies, and the matched-risk rounds' 36 + 33 + 18 — a floor, not an
+estimate. The count was 103 when R-29 first computed this; the three
+matched-risk rounds R-31/R-32/R-33 added 87, and the routine's rule that
+parallel branches contribute their *total* is why R-31 and R-32 both
+count).
 
 The deflated Sharpe depends far more on how *dispersed* the trials were
 than on how many there were, and that quantity cannot be recovered after
 the fact. So two are reported. At the only dispersion this project has
-ever measured (0.223, R-28's 24 configurations → SR\* = 0.57):
+ever measured (0.223, R-28's 24 configurations → SR\* = 0.61 at 190
+trials; it was 0.57 at 103, which is how little the *count* matters):
 
 | | Sharpe | PSR>0 | DSR | min track record needed |
 |---|---|---|---|---|
-| `kelly_regime_v4`, full spot | 1.44 | 1.000 | **0.997** | 3.3y |
-| `kelly_regime_v4`, holdout spot | 1.21 | 0.991 | 0.896 | **6.2y** |
-| `buy_and_hold`, holdout spot | 1.03 | 0.976 | 0.812 | 12.4y |
+| `kelly_regime_v4`, full spot | 1.44 | 1.000 | **0.996** | 3.7y |
+| `kelly_regime_v4`, holdout spot | 1.21 | 0.991 | 0.879 | **7.2y** |
+| `buy_and_hold`, holdout spot | 1.03 | 0.976 | 0.787 | 15.4y |
 
 On the full history the leaders clear the 0.95 bar. **On the holdout not
 one strategy in the table clears it, and neither does buy-and-hold** —
-proving v4's holdout Sharpe against a 103-trial search would need 6.2
+proving v4's holdout Sharpe against a 190-trial search would need 7.2
 years of data like it, and the holdout is 3.6. At the table's own Sharpe
-dispersion (2.60) SR\* = 6.60 and everything deflates to zero; that number
+dispersion (2.60) SR\* = 7.13 and everything deflates to zero; that number
 is an upper bound on the deflation rather than an estimate, because most
 of the table was registered as *documented negative results* rather than
 entered as candidates. The column that settles it is `breakeven_sd` in
 `reports/inference/deflated.csv`: v4's full-period claim survives any
-search whose Sharpe spread is under **0.36** and dies above it.
+search whose Sharpe spread is under **0.34** and dies above it.
 
 ### Cross-validating the table's own selection rule
 
@@ -486,18 +493,16 @@ was not reachable. A second bear on a second asset in a *different*
 period is still the missing experiment (backlog item B-08 in
 [LEDGER.md](LEDGER.md)).
 
-> ⚠️ **And one more, added after ledger row R-31.** Every drawdown
-> comparison on this page — including this one — is against a
+> ⚠️ **And one more, raised after R-31 and answered by R-33.** Every
+> drawdown comparison on this page — including this one — is against a
 > **fully-invested** `buy_and_hold`, while the strategy holds
 > substantially less. R-31 showed that exactly this mismatch turned a
 > risk-level difference into what looked like a mechanism finding for the
-> e-process gate, and that the finding evaporated when exposure was
-> equalized. The same test has **not** been run on `kelly_regime_v4`
-> against a de-levered hold at matched realized volatility. Until it is,
-> read every "cuts drawdown versus holding" figure here as including an
-> unknown amount of "holds less than holding". That is backlog item B-13,
-> and it is now the cheapest experiment that could change what this
-> project believes about itself.
+> e-process gate. R-33 ran the same test on `kelly_regime_v4` and the
+> answer is that **88–92% of the drawdown gap is the exposure level**.
+> Read every "cuts drawdown versus holding" figure on this page with that
+> attached; the measurement is
+> [below](#the-benchmark-de-levered-what-is-left-of-the-drawdown-finding).
 
 ## Comparing at matched risk, and what it costs a finding
 
@@ -636,6 +641,77 @@ with `python experiments/run_gate_control.py {frontier,match,holdout,inference,e
 chart and raw window rows in `reports/gate_control/`.
 
 ![what a gate is worth at matched risk](../reports/gate_control/frontier.png)
+
+### The benchmark, de-levered: what is left of the drawdown finding
+
+The argument that retired R-28's risk claim applies verbatim to this
+project's own headline, and R-33 (backlog **B-13**) ran it. Every
+drawdown figure above compares `kelly_regime_v4` — mean notional
+**0.28–0.43**, flat on **29–44%** of bars — against a
+**fully-invested** `buy_and_hold`. The control is a passive long holding
+a constant fraction `c` of equity, de-levered until its realized
+volatility equals v4's: no gate, no forecast, no volatility estimate,
+nothing to time with.
+
+**The cleanest instrument first**, because it is 40 paths rather than
+one. Both B-11 branches had to caveat their window tables with "exposures
+frozen rather than re-matched per window"; that is avoidable for a
+constant-exposure arm, whose realized volatility is proportional to `c`
+to better than 1%, so one probe backtest per window matches v4 *inside
+that window*. Achieved median |volatility gap| **0.51%** on spot and
+**0.53%** on futures:
+
+| paired, 40 identical windows | Δ median return | v4 higher in | Δ median max DD | v4 **deeper** in |
+|---|---|---|---|---|
+| v4 − `buy_and_hold`, spot | −9.1pp | 42% | **−24.5pp** | **0%** |
+| v4 − matched passive hold, spot | **+20.8pp** | **82%** | −2.9pp | 22% |
+| v4 − `buy_and_hold`, futures | +93.3pp | 57% | **−70.7pp** | **0%** |
+| v4 − matched passive hold, futures | **+23.8pp** | **90%** | −5.5pp | 15% |
+
+Hold risk fixed and the median drawdown advantage falls from −24.5pp to
+**−2.9pp** on spot and from −70.7pp to **−5.5pp** on futures. **88% and
+92% of the gap was the exposure level**, not the gate.
+
+![how much of the drawdown finding is the exposure level](../reports/matched_hold/matched_drawdown.png)
+
+**On the holdout it cannot be resolved at all.** Five of six
+pre-registered cells fail their validity gate, for a reason that
+generalizes: a volatility-targeting strategy holds its realized
+volatility roughly constant across regimes while a constant-exposure
+hold's tracks the market's, and the market's fell ~43% from 2021–22 to
+2023+, so an exposure frozen on the earlier period delivers about half
+the intended risk in the later one. The one valid cell gives Δ max
+drawdown **−14.18pp [−22.68, +13.48]**, containing zero. Re-solving the
+exposure on the holdout itself — *not* pre-registered, and therefore
+in-sample — matches to within 1.7% and gives −12.6 to −17.5pp across four
+cells, every interval containing zero.
+
+Per the rule fixed in advance: **"regime-gated sizing cuts drawdown" is
+established against a fully-invested benchmark, and is not established
+against a de-levered one.** The −41.1pp [−54.8, −18.4] above is unchanged
+and still excludes zero; what changed is what it is a statement about.
+
+**What survives matching is a different claim, and it is the better
+one.** In every cell of every table in that round — 82–90% of the 40
+windows, all four ETH/BTC falsification cells, and every holdout cell
+valid or void — v4 out-*returns* the equal-risk passive hold. On ETH,
+where R-28's e-process gate reversed on drawdown once its risk was
+matched, v4 keeps both: **$5,482 at 36.5% drawdown against $3,827 at
+51.3%** on spot at volatility 0.407, and $4,263 at 35.1% against $3,900
+at 54.0% on futures. That is a falsification test passed, not a selected
+number — but the *return* comparison was never the pre-registered
+question in any round, so it is a hypothesis (backlog **B-14**) and not
+yet a result.
+
+One diagnostic from the same round that belongs next to every spot figure
+on this page: **on the 2023+ spot holdout `kelly_regime_v4` asks for more
+than 1.0 notional on 40.7% of bars.** Four bars in ten, spot's cap and
+not the strategy is setting the position. R-31 reports 41.0% for an
+independent reconstruction of the same gate over the same period.
+
+Reproduce with
+`python experiments/run_matched_hold.py {frontier,match,insplit,causality,holdout,interval,rematch,eth,costs,windows}`;
+frozen exposures and raw rows in `reports/matched_hold/`.
 
 ## Does the starting balance matter?
 
@@ -1057,11 +1133,13 @@ reversal use is where strategies go to die (R-12).
   the absence of return alpha) on a second asset, but it shares the 2018
   bear with the main dataset; a second bear on a second asset in a
   different period (B-08) is still missing before risking capital.
-- **The holdout is exhausted.** It has been consulted ~88 times across the
-  project (ledger, "Holdout consultations to date"), and the deflated
-  Sharpe says the leading strategy needs a 6.2-year track record to clear
-  a 103-trial bar on the 3.6 years available. No Sharpe-based claim from
-  this dataset is supportable any more. Drawdown still replicates; beyond
+- **The holdout is exhausted.** It has been consulted ~152 times across
+  the project (ledger, "Holdout consultations to date"), and the deflated
+  Sharpe says the leading strategy needs a 7.2-year track record to clear
+  a 190-trial bar on the 3.6 years available. No Sharpe-based claim from
+  this dataset is supportable any more. Drawdown still replicates against
+  a fully-invested benchmark — but R-33 found that 88–92% of that gap is
+  the exposure level, so it is a thinner finding than it looks. Beyond
   that, only forward paper trading can add evidence.
 - **Survivorship in the council.** `champions_council` selects members
   that already performed well on this data. Its OOS split is reported

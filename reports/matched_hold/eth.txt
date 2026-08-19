@@ -1,0 +1,29 @@
+1,010,889 bars  2017-01-01 -> 2026-08-12  (data: real)
+
+BTC (control)  396,449 bars  2016-01-01 -> 2019-12-31
+  spot:
+      kelly_regime_v4                final=$     12,278 vol=0.402 DD= 40.1% sharpe= 1.86 fills=  475 fees=$     672 clamp=10.3%
+      buy_and_hold                   final=$     16,756 vol=0.916 DD= 83.8% sharpe= 1.27 fills=    1 fees=$       1 clamp= 0.0%
+      vol-matched rebalanced c=0.438 final=$      4,972 vol=0.402 DD= 50.0% sharpe= 1.26 fills=   90 fees=$      16 clamp= 0.0%
+      vol-matched static c=0.051     final=$      1,806 vol=0.407 DD= 59.8% sharpe= 0.59 fills=    1 fees=$       0 clamp= 0.0%
+      notional-matched c=0.423       final=$      4,847 vol=0.389 DD= 47.1% sharpe= 1.27 fills=  101 fees=$      17 clamp= 0.0%
+  futures:
+      kelly_regime_v4                final=$     25,681 vol=0.436 DD= 32.1% sharpe= 2.19 fills=  244 fees=$     458 clamp= 0.0%
+      buy_and_hold                   final=$     79,665 vol=1.814 DD= 90.7% sharpe= 1.45 fills=    1 fees=$       2 clamp= 0.0%
+      vol-matched rebalanced c=0.475 final=$      5,520 vol=0.437 DD= 53.1% sharpe= 1.26 fills=   78 fees=$       8 clamp= 0.0%
+      vol-matched static c=0.062     final=$      1,971 vol=0.444 DD= 63.0% sharpe= 0.63 fills=    1 fees=$       0 clamp= 0.0%
+      notional-matched c=0.465       final=$      5,425 vol=0.427 DD= 50.1% sharpe= 1.26 fills=   83 fees=$       8 clamp= 0.0%
+
+ETH (test)  342,929 bars  2016-03-09 -> 2019-12-31
+  spot:
+      kelly_regime_v4                final=$      5,482 vol=0.408 DD= 36.5% sharpe= 1.48 fills=  448 fees=$     349 clamp= 0.9%
+      buy_and_hold                   final=$     11,550 vol=1.354 DD= 94.2% sharpe= 1.23 fills=    1 fees=$       1 clamp= 0.0%
+      vol-matched rebalanced c=0.301 final=$      3,827 vol=0.407 DD= 51.3% sharpe= 1.21 fills=  259 fees=$      28 clamp= 0.0%
+      vol-matched static c=0.018     final=$      1,192 vol=0.413 DD= 66.0% sharpe= 0.34 fills=    1 fees=$       0 clamp= 0.0%
+      notional-matched c=0.226       final=$      2,772 vol=0.306 DD= 41.4% sharpe= 1.17 fills=  290 fees=$      17 clamp= 0.0%
+  futures:
+      kelly_regime_v4                final=$      4,263 vol=0.430 DD= 35.1% sharpe= 1.25 fills=  214 fees=$     100 clamp= 0.0%
+      buy_and_hold                   final=$         18 vol=1.312 DD= 99.3% sharpe=-0.22 fills=    2 fees=$       4 clamp= 0.0%  LIQUIDATED
+      vol-matched rebalanced c=0.317 final=$      3,900 vol=0.430 DD= 54.0% sharpe= 1.19 fills=  231 fees=$      13 clamp= 0.0%
+      vol-matched static c=0.020     final=$      1,212 vol=0.436 DD= 68.0% sharpe= 0.35 fills=    1 fees=$       0 clamp= 0.0%
+      notional-matched c=0.229       final=$      2,822 vol=0.310 DD= 41.7% sharpe= 1.18 fills=  293 fees=$       9 clamp= 0.0%

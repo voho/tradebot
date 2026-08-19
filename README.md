@@ -35,7 +35,7 @@ anything not listed here has been folded into one of these:
 | document | its one job |
 |---|---|
 | **[docs/ROUTINE.md](docs/ROUTINE.md)** | **The process.** The single procedure for researching and adding a strategy — from idea selection through holdout evaluation to the ledger record, including the mechanics of registering one. |
-| **[docs/LEDGER.md](docs/LEDGER.md)** | **The memory.** Everything already tried — 25 registered strategies, 31 research directions — the four binding constraints, the ruled-out list, and the ranked backlog. Read before a session, appended after it. |
+| **[docs/LEDGER.md](docs/LEDGER.md)** | **The memory.** Everything already tried — 25 registered strategies, 33 research directions — the four binding constraints, the ruled-out list, and the ranked backlog. Read before a session, appended after it. |
 | **[docs/VALIDATION.md](docs/VALIDATION.md)** | **The evidence.** The single comparison protocol and benchmark, and every robustness result: walk-forward, bootstrap intervals, deflated Sharpe, Monte Carlo stress windows, fees, funding, and the ETH replication test. |
 | **[docs/STRATEGIES.md](docs/STRATEGIES.md)** | **The strategies.** What each registered strategy is, how it works, and the principles it rests on, with citations. |
 | **[docs/RESEARCH.md](docs/RESEARCH.md)** | **The literature.** The survey behind the strategies, and the methodology findings that changed how this repo tests. |
@@ -87,15 +87,37 @@ that carry one.
 > other. By the table's own criterion (final balance), `kelly_regime_v4`
 > against `buy_and_hold` on spot over the full history is a **coin flip:
 > P = 0.52**. Out-of-sample, no strategy here clears a deflated-Sharpe
-> bar against this project's 103 trials — and neither does buy-and-hold.
-> What does survive is the drawdown reduction, on the full history and on
-> the futures holdout. Read the table as buckets, not as a rank order.
+> bar against this project's 190 trials — and neither does buy-and-hold.
+> The drawdown reduction does survive against *this* benchmark, on the
+> full history and on the futures holdout — but read the next warning
+> before reading it as a property of the strategy. Read the table as
+> buckets, not as a rank order.
 > **The table now carries that test in its own last two columns**, so
 > this warning can be checked against the rows rather than taken on
 > trust: `≈` means the difference from simply holding is not established,
 > and the growth column says it for all 24. Detail in
 > [docs/VALIDATION.md](docs/VALIDATION.md#how-much-of-the-comparison-table-is-signal),
 > reproduce with `python scripts/inference.py all`.
+
+> 🚨 **The drawdown column compares a strategy holding about half the
+> notional against a benchmark holding all of it, and ~90% of the gap is
+> that difference.** `kelly_regime_v4` is flat on 29–44% of bars
+> (measured on the inner splits); `buy_and_hold` never is. De-lever the benchmark to v4's *own* realized
+> volatility — a passive long holding a constant fraction of equity, no
+> gate, no forecast — and across 40 identical windows v4's median
+> drawdown advantage falls from **−24.5pp to −2.9pp** on spot and from
+> **−70.7pp to −5.5pp** on futures. On the 2023+ holdout, five of six
+> pre-registered cells fail their risk match outright (a volatility
+> targeter and a constant-exposure hold cannot stay matched across a
+> regime change) and the one valid cell gives −14.2pp **[−22.7, +13.5]**,
+> which contains zero. So "regime-gated sizing cuts drawdown" is
+> established **against a fully-invested benchmark, and not against a
+> de-levered one**. What does survive matching is a *return* advantage at
+> equal risk — a median **+20.8pp / +23.8pp per window, in 82% and 90% of
+> 40 windows**, replicating on ETH — and that claim has not been
+> pre-registered yet, so it is a hypothesis and not a result. Detail in
+> [docs/LEDGER.md](docs/LEDGER.md) (R-33), reproduce with
+> `python experiments/run_matched_hold.py windows`.
 
 One full-history number can hide a lucky path, so the top three are also
 resampled over 40 random windows
@@ -168,7 +190,7 @@ default-reject promotion bar — beat buy-and-hold out-of-sample after
 funding and at the real fee tier, by more than the ±0.2 Sharpe noise
 floor, and survive a falsification test chosen in advance.
 
-Everything already tried — 25 registered strategies, 31 research
+Everything already tried — 25 registered strategies, 33 research
 directions, the ruled-out list and the ranked backlog — is in
 **[docs/LEDGER.md](docs/LEDGER.md)**, which is read before a session
 starts and appended to when it ends. A documented negative result is a
@@ -207,6 +229,15 @@ the interval contains zero, which is most of them
 ([analysis](docs/VALIDATION.md#how-much-of-the-comparison-table-is-signal)):
 
 ![interval forest plot, holdout](reports/inference/intervals_holdout.png)
+
+**And is the drawdown finding real?** — the same 40 windows, paired,
+comparing `kelly_regime_v4` against the fully-invested benchmark every
+figure above uses and against a passive long carrying v4's *own* risk in
+that window. The gap between the two clouds is the part of the headline
+that was never about the gate
+([analysis](docs/VALIDATION.md#the-benchmark-de-levered-what-is-left-of-the-drawdown-finding)):
+
+![drawdown at matched risk](reports/matched_hold/matched_drawdown.png)
 
 ## Data
 

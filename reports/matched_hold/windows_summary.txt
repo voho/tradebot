@@ -1,0 +1,31 @@
+
+40 random windows (90-730 days), identical across strategies:
+
+  spot:
+    buy_and_hold                       median return    +60.4%  median DD  53.2%  worst DD  84.1%  median vol  0.67  beat hold    0%  liq   0%
+    kelly_regime_v4                    median return    +76.1%  median DD  23.7%  worst DD  43.0%  median vol  0.34  beat hold   42%  liq   0%
+    vol-matched rebalanced c=0.353     median return    +28.2%  median DD  22.0%  worst DD  42.0%  median vol  0.24  beat hold   28%  liq   0%
+    vol-matched static     c=0.293     median return    +17.7%  median DD  19.9%  worst DD  59.5%  median vol  0.21  beat hold   25%  liq   0%
+    notional-matched reb.  c=0.283     median return    +23.0%  median DD  18.1%  worst DD  34.6%  median vol  0.19  beat hold   28%  liq   0%
+    per-window matched hold            median return    +37.4%  median DD  28.1%  worst DD  46.2%  median vol  0.35  beat hold   28%  liq   0%
+    per-window risk match: median |vol gap| 0.51%, worst 3.40%, exposure c median 0.509 [0.241, 0.775]
+    paired v4 − buy_and_hold                 return median     -9.1pp, v4 higher in  42%;  DD median   -24.5pp, v4 deeper in   0%
+    paired v4 − vol-matched rebalanced c=0.353 return median    +45.9pp, v4 higher in  95%;  DD median    +2.7pp, v4 deeper in  65%
+    paired v4 − vol-matched static     c=0.293 return median    +51.2pp, v4 higher in  92%;  DD median    +4.6pp, v4 deeper in  60%
+    paired v4 − notional-matched reb.  c=0.283 return median    +56.3pp, v4 higher in  92%;  DD median    +7.3pp, v4 deeper in  85%
+    paired v4 − per-window matched hold      return median    +20.8pp, v4 higher in  82%;  DD median    -2.9pp, v4 deeper in  22%
+
+  futures:
+    buy_and_hold                       median return    -98.2%  median DD  98.4%  worst DD  99.5%  median vol  1.80  beat hold    0%  liq  55%
+    kelly_regime_v4                    median return    +95.9%  median DD  23.6%  worst DD  34.6%  median vol  0.39  beat hold   57%  liq   0%
+    vol-matched rebalanced c=0.353     median return    +28.3%  median DD  22.0%  worst DD  42.0%  median vol  0.24  beat hold   57%  liq   0%
+    vol-matched static     c=0.293     median return    +17.7%  median DD  19.8%  worst DD  59.5%  median vol  0.21  beat hold   57%  liq   0%
+    notional-matched reb.  c=0.283     median return    +23.1%  median DD  18.1%  worst DD  34.6%  median vol  0.19  beat hold   57%  liq   0%
+    per-window matched hold            median return    +40.7%  median DD  29.4%  worst DD  46.9%  median vol  0.39  beat hold   57%  liq   0%
+    per-window risk match: median |vol gap| 0.53%, worst 4.71%, exposure c median 0.560 [0.237, 1.044]
+    paired v4 − buy_and_hold                 return median    +93.3pp, v4 higher in  57%;  DD median   -70.7pp, v4 deeper in   0%
+    paired v4 − vol-matched rebalanced c=0.353 return median    +73.3pp, v4 higher in  92%;  DD median    +4.1pp, v4 deeper in  55%
+    paired v4 − vol-matched static     c=0.293 return median    +75.6pp, v4 higher in  92%;  DD median    +4.9pp, v4 deeper in  57%
+    paired v4 − notional-matched reb.  c=0.283 return median    +82.5pp, v4 higher in  92%;  DD median    +6.2pp, v4 deeper in  75%
+    paired v4 − per-window matched hold      return median    +23.8pp, v4 higher in  90%;  DD median    -5.5pp, v4 deeper in  15%
+

@@ -19,6 +19,7 @@ Usage::
     python experiments/run_matched_hold.py eth         # falsification test
     python experiments/run_matched_hold.py costs       # fee tier + funding
     python experiments/run_matched_hold.py windows     # 40-window path check
+    python experiments/run_matched_hold.py chart       # the drawdown picture
 """
 
 from __future__ import annotations
@@ -443,6 +444,63 @@ def interval() -> None:
     print(f"\nwritten: {OUT / 'intervals.csv'}")
 
 
+def rematch() -> None:
+    """DESCRIPTIVE ONLY — the exposure re-solved on the holdout itself.
+
+    **This was not pre-registered.** It is added after V1 voided five of
+    six frozen cells, and solving ``c`` on 2023+ is selection on the
+    holdout, so nothing here can support D1 and nothing here is offered
+    as a decision. It exists because "the frozen exposure did not match
+    risk out-of-sample" leaves a reader without the number they actually
+    want — what a *genuinely* risk-matched passive hold does on this
+    period — and refusing to compute it would be a different kind of
+    dishonesty from computing it and labelling it.
+
+    The pre-registered equivalent, which is not selected on 2023+, is the
+    per-window matching in :func:`windows`.
+    """
+    from tradebot.inference import (daily_returns, max_drawdown_from_returns,
+                                    paired_bootstrap, stationary_bootstrap_indices,
+                                    total_log_return)
+
+    print("NOT PRE-REGISTERED. Exposure solved on the holdout itself, so this\n"
+          "is an in-sample description of 2023+, not evidence about D1.\n")
+    rows = []
+    for mname, market in MARKETS:
+        m, v4_vol, clamp, res = measure(get_strategy(INCUMBENT), *OOS, market=market)
+        print(f"\n{mname}: {INCUMBENT} vol {v4_vol:.3f}, DD {m.max_drawdown_pct:.1f}%, "
+              f"clamp {clamp:.1%}")
+        v4_curve = daily_returns(
+            run_period(get_strategy(INCUMBENT), DF, *OOS, market=market,
+                       start_balance=1_000.0, data_label=LABEL).equity).to_numpy()
+        idx = stationary_bootstrap_indices(len(v4_curve), 30.0, 2_000,
+                                           np.random.default_rng(7))
+        for static in (False, True):
+            c, vol, _ = solve_c(v4_vol, *OOS, market=market, static=static,
+                                c_max=market.leverage)
+            tag = "static" if static else "rebalanced"
+            hm, hvol, hclamp, hres = measure(hold(c, static), *OOS, market=market)
+            line(f"  {tag} c={c:.3f}", hm, hvol, hclamp, hres)
+            gap = abs(hvol - v4_vol) / v4_vol
+            b = daily_returns(
+                run_period(hold(c, static), DF, *OOS, market=market,
+                           start_balance=1_000.0, data_label=LABEL).equity).to_numpy()
+            for stat_name, stat in (("Δ log growth", total_log_return),
+                                    ("Δ max drawdown (pp)", max_drawdown_from_returns)):
+                r = paired_bootstrap(v4_curve, b, stat, indices=idx)
+                mark = "▲" if r.diff.lo > 0 else ("▼" if r.diff.hi < 0 else "≈")
+                print(f"      {stat_name:22s} {mark} {r.diff.point:>+8.3f} "
+                      f"[{r.diff.lo:>+8.3f}, {r.diff.hi:>+8.3f}]  "
+                      f"P(>0)={r.p_positive:.2f}   (vol gap {gap:.1%})")
+                rows.append({"market": mname, "arm": tag, "c": c, "vol": hvol,
+                             "vol_gap": gap, "stat": stat_name,
+                             "diff": r.diff.point, "lo": r.diff.lo,
+                             "hi": r.diff.hi, "p_positive": r.p_positive})
+    OUT.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(rows).to_csv(OUT / "rematch.csv", index=False)
+    print(f"\nwritten: {OUT / 'rematch.csv'}")
+
+
 # ------------------------------------------------------------------------- eth
 
 
@@ -628,13 +686,75 @@ def windows(trials: int = 40, seed: int = 42) -> None:
         print()
 
 
+def chart() -> None:
+    """Draw the picture the round is for, from ``windows.csv``.
+
+    Two panels, one per market. Each shows the paired per-window
+    difference in max drawdown between `kelly_regime_v4` and two
+    benchmarks: the fully-invested `buy_and_hold` every published figure
+    uses, and the passive hold matched to v4's own risk inside each
+    window. The distance between the two clouds is the part of this
+    project's headline that was never about the gate.
+    """
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    from tradebot.report import (BASELINE, GRID as GRIDC, INK, INK_2, MUTED,
+                                 PAGE, SERIES, SURFACE, _style_axes)
+
+    res = pd.read_csv(OUT / "windows.csv")
+    pairs = [("vs buy_and_hold\n(as published)", "buy_and_hold", SERIES[1]),
+             ("vs risk-matched hold\n(this round)", "per-window matched hold",
+              SERIES[0])]
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5), facecolor=PAGE)
+    rng = np.random.default_rng(0)
+    for ax, mname in zip(axes.ravel(), ("spot", "futures")):
+        _style_axes(ax)
+        ax.yaxis.set_major_formatter(
+            matplotlib.ticker.FuncFormatter(lambda v, _: f"{v:+.0f}"))
+        ax.set_facecolor(SURFACE)
+        sub = res[res.market == mname]
+        v4 = sub[sub.strategy == INCUMBENT].set_index("trial")["max_dd_pct"]
+        for x, (label, bench, colour) in enumerate(pairs):
+            d = (v4 - sub[sub.strategy == bench]
+                 .set_index("trial")["max_dd_pct"]).dropna()
+            ax.scatter(x + rng.uniform(-0.13, 0.13, len(d)), d, s=26, zorder=3,
+                       color=colour, alpha=0.75, edgecolor="none")
+            ax.plot([x - 0.28, x + 0.28], [d.median()] * 2, color=colour,
+                    linewidth=2.6, zorder=4)
+            ax.annotate(f"median {d.median():+.1f}pp", (x, d.median()),
+                        textcoords="offset points", xytext=(22, 6),
+                        color=INK_2, fontsize=9)
+        ax.axhline(0.0, color=BASELINE, linewidth=1.0, zorder=1)
+        ax.set_xticks(range(len(pairs)))
+        ax.set_xticklabels([p[0] for p in pairs], color=MUTED, fontsize=9)
+        ax.set_xlim(-0.6, len(pairs) - 0.4)
+        ax.set_title(mname, color=INK, fontsize=10, loc="left")
+        ax.set_ylabel("Δ max drawdown, v4 − benchmark (pp)", color=MUTED,
+                      fontsize=8)
+        ax.grid(True, axis="y", color=GRIDC, linewidth=0.8)
+    fig.suptitle("How much of the drawdown finding is the exposure level?",
+                 color=INK, fontsize=12, x=0.06, ha="left")
+    fig.text(0.06, 0.925, "40 identical random windows, paired; below zero = "
+             "kelly_regime_v4 draws down less. Right-hand benchmark: a passive "
+             "long carrying v4's own risk in that window.",
+             color=MUTED, fontsize=9, ha="left")
+    fig.tight_layout(rect=(0, 0, 1, 0.90))
+    OUT.mkdir(parents=True, exist_ok=True)
+    fig.savefig(OUT / "matched_drawdown.png", dpi=130, facecolor=PAGE)
+    plt.close(fig)
+    print(f"wrote {OUT / 'matched_drawdown.png'}")
+
+
 if __name__ == "__main__":
     print(f"{len(DF):,} bars  {DF.index[0]:%Y-%m-%d} -> {DF.index[-1]:%Y-%m-%d}"
           f"  (data: {LABEL})", file=sys.stderr)
     cmds = {"frontier": frontier, "match": match, "insplit": insplit,
             "causality": causality,
             "holdout": holdout, "interval": interval, "eth": eth,
-            "costs": costs, "windows": windows}
+            "rematch": rematch, "costs": costs, "windows": windows,
+            "chart": chart}
     choice = sys.argv[1] if len(sys.argv) > 1 else ""
     if choice in cmds:
         cmds[choice]()

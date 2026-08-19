@@ -20,8 +20,9 @@ list of things that do not work.
 
 Read, in this order:
 
-1. `README.md` — the comparison table and the three standing warnings
-   (fees, funding, and that the table's ordering is mostly noise).
+1. `README.md` — the comparison table and the four standing warnings
+   (fees, funding, that the table's ordering is mostly noise, and that
+   its drawdown column mostly measures holding less).
 2. [`docs/LEDGER.md`](LEDGER.md) — everything already tried, the four
    binding constraints (the standing diagnosis at the top), and the
    ranked backlog at the bottom.
@@ -340,6 +341,18 @@ multiplier**, not a free speedup, and it has to be paid for:
 
 ## Standing rules
 
+- **Match risk before comparing anything.** Holding less draws down less;
+  that is arithmetic, not evidence. Three of this project's findings have
+  died of it — R-28's e-process drawdown cut (retired by R-31), R-32's
+  gate comparison, and L-04's own headline (retired by R-33, which found
+  **88–92%** of "regime-gated sizing cuts drawdown" was the exposure
+  level). A comparison whose arms carry different realized volatility is
+  a statement about the exposures, whatever else it looks like. If the
+  arms cannot be matched, say so and void the cell rather than scoring
+  it, and prefer matching **inside each resampled window** over freezing
+  an exposure on one period: R-33 froze one on 2021–22 and five of six
+  holdout cells failed the match, while its per-window matching landed
+  within 0.5%.
 - **Nothing is deleted.** Registered negative results stay registered.
 - **The table's futures column is an upper bound** until funding is
   charged. Never quote it without that caveat.

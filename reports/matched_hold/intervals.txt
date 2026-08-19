@@ -1,0 +1,23 @@
+1,010,889 bars  2017-01-01 -> 2026-08-12  (data: real)
+
+spot: paired kelly_regime_v4 − benchmark on the 2023+ holdout (1319 daily observations)
+  buy_and_hold (R-29 reproduction)   Δ log growth           ≈   -0.129 [  -0.941,   +0.744]  P(>0)=0.37
+  buy_and_hold (R-29 reproduction)   Δ max drawdown (pp)    ≈  -27.076 [ -35.778,   +1.890]  P(>0)=0.04
+  vol-matched rebalanced c=0.353     Δ log growth           ≈   +0.643 [  -0.140,   +1.476]  P(>0)=0.94
+  vol-matched rebalanced c=0.353     Δ max drawdown (pp)    ≈   +4.240 [  -0.471,  +26.883]  P(>0)=0.97
+  vol-matched static     c=0.293     Δ log growth           ≈   +0.611 [  -0.116,   +1.377]  P(>0)=0.94
+  vol-matched static     c=0.293     Δ max drawdown (pp)    ≈  -14.184 [ -22.681,  +13.480]  P(>0)=0.35
+  notional-matched reb.  c=0.283     Δ log growth           ≈   +0.759 [  -0.105,   +1.685]  P(>0)=0.95
+  notional-matched reb.  c=0.283     Δ max drawdown (pp)    ▲   +8.563 [  +3.879,  +30.406]  P(>0)=1.00
+
+futures: paired kelly_regime_v4 − benchmark on the 2023+ holdout (1319 daily observations)
+  buy_and_hold (R-29 reproduction)   Δ log growth           ≈   -1.127 [  -2.953,   +0.519]  P(>0)=0.10
+  buy_and_hold (R-29 reproduction)   Δ max drawdown (pp)    ▼  -29.306 [ -41.047,   -4.996]  P(>0)=0.01
+  vol-matched rebalanced c=0.348     Δ log growth           ≈   +1.023 [  -0.061,   +2.154]  P(>0)=0.97
+  vol-matched rebalanced c=0.348     Δ max drawdown (pp)    ▲   +8.030 [  +2.347,  +30.784]  P(>0)=0.99
+  vol-matched static     c=0.289     Δ log growth           ▲   +0.991 [  +0.039,   +2.034]  P(>0)=0.98
+  vol-matched static     c=0.289     Δ max drawdown (pp)    ≈   -9.885 [ -18.640,  +17.476]  P(>0)=0.50
+  notional-matched reb.  c=0.289     Δ log growth           ≈   +1.120 [  -0.029,   +2.340]  P(>0)=0.97
+  notional-matched reb.  c=0.289     Δ max drawdown (pp)    ▲  +12.086 [  +6.161,  +34.156]  P(>0)=1.00
+
+written: /home/user/tradebot/reports/matched_hold/intervals.csv
