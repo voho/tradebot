@@ -225,6 +225,42 @@ def compute_basis(spot: pd.DataFrame, perp: pd.DataFrame) -> pd.Series:
     return np.log(perp["close"] / spot_aligned).rename("basis")
 
 
+ONCHAIN_FILES = {
+    "BTC": "btcusd_onchain_daily.csv.gz",
+    "ETH": "ethusd_onchain_daily.csv.gz",
+}
+
+
+def load_onchain(data_dir: str | Path, asset: str = "BTC") -> pd.DataFrame | None:
+    """Real daily on-chain metrics (MVRV, active addresses, supply) from
+    CoinMetrics' free Community API, or None if not fetched (B-07).
+
+    Fetched by ``scripts/fetch_coinmetrics_onchain.py``. Columns: ``mvrv``
+    (market cap / realized cap -- realized cap prices each coin at the
+    block it last moved, a genuinely on-chain measurement, not a price
+    transform), ``active_addresses``, ``supply``. Coverage: BTC from
+    2010-07-18 (first ~200 days are NaN for mvrv -- CoinMetrics has no
+    realized-cap estimate that early), ETH from 2015-08-08.
+
+    The index is shifted forward by one full day from CoinMetrics' own
+    timestamp convention (which labels a day's aggregate at that day's
+    00:00 UTC) before returning, so a value only becomes causally
+    available starting at the *next* day's 00:00 UTC -- callers can
+    ffill this directly onto a bar index without a separate lag step.
+    """
+    if asset not in ONCHAIN_FILES:
+        raise ValueError(f"asset must be one of {sorted(ONCHAIN_FILES)}")
+    path = Path(data_dir) / ONCHAIN_FILES[asset]
+    if not path.exists():
+        return None
+    df = pd.read_csv(path, parse_dates=["timestamp"], index_col="timestamp")
+    if df.index.tz is None:
+        df.index = df.index.tz_localize("UTC")
+    df.index = df.index + pd.Timedelta(days=1)
+    df = df[["mvrv", "active_addresses", "supply"]].astype(float).sort_index()
+    return df
+
+
 def load_dataset(data_dir: str | Path, kind: str) -> tuple[pd.DataFrame, str]:
     """Load 'perp' or 'spot' data; returns (df, source_label).
 

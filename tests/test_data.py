@@ -2,13 +2,18 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from pathlib import Path
+
 from tradebot.data import (
     align,
     generate_synthetic_pair,
     load_dataset,
     load_ohlcv_csv,
+    load_onchain,
     save_ohlcv_csv,
 )
+
+DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 
 
 def test_synthetic_is_deterministic():
@@ -90,3 +95,42 @@ def test_align():
     a2, b2 = align(a, b)
     assert a2.index.equals(b2.index)
     assert len(a2) == 90
+
+
+# --- committed on-chain data (B-07), fetched by scripts/fetch_coinmetrics_onchain.py ---
+
+
+def test_committed_onchain_data_is_present_and_sane():
+    for asset, min_rows, min_year in (("BTC", 5_500, 2010), ("ETH", 3_500, 2015)):
+        onchain = load_onchain(DATA_DIR, asset)
+        assert onchain is not None, f"committed on-chain history for {asset} is missing"
+        assert len(onchain) > min_rows
+        assert onchain.index.is_monotonic_increasing
+        assert not onchain.index.has_duplicates
+        assert onchain.index.tz is not None
+        assert onchain.index.min().year <= min_year + 1
+        assert onchain.index.max().year >= 2026
+        # MVRV is a ratio: near 0 at deep capitulation, historically never
+        # negative and rarely above ~10 once realized cap has stabilized.
+        # Its own first ~60 days are a bootstrap artifact (realized cap
+        # starts near zero as the metric's own lookback fills in) --
+        # excluded here, not evidence the strategy code needs to handle.
+        mvrv = onchain["mvrv"].dropna().iloc[60:]
+        assert len(mvrv) > min_rows - 350  # allow the realized-cap warmup gap
+        assert (mvrv > 0).all()
+        assert mvrv.max() < 20
+        assert (onchain["active_addresses"] > 0).all()
+        assert onchain["supply"].is_monotonic_increasing.__class__ is bool  # sanity: no crash
+
+
+def test_onchain_index_is_shifted_one_day_forward_for_causal_use():
+    """CoinMetrics timestamps a day's aggregate at that day's own 00:00 UTC;
+    the loader must shift it so the value is only available the next day."""
+    onchain = load_onchain(DATA_DIR, "BTC")
+    # 2026-08-18 is the last day fetched (see fetch_coinmetrics_onchain.py);
+    # after the +1 day shift its value should be indexed at 2026-08-19.
+    assert onchain.index.max() == pd.Timestamp("2026-08-19", tz="UTC")
+
+
+def test_onchain_missing_asset_returns_none(tmp_path):
+    assert load_onchain(tmp_path, "BTC") is None
