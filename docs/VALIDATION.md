@@ -1038,8 +1038,22 @@ rates) — noise from splitting a tied cluster, and a warning about how
 much of the rest is noise too. Four years, one asset, and this repo's
 track record is that every apparent predictor died out-of-sample. The
 low-turnover way to use it — a gate that stands flat when funding is in
-its top decile — is backlog item B-05; the high-turnover standalone
+its top decile — was backlog item B-05; the high-turnover standalone
 reversal use is where strategies go to die (R-12).
+
+**Attempted 2026-08-19, NEGATIVE (ledger row R-33).** Two variants: a
+binary top-decile gate and a continuous Kelly-carry haircut derived the
+same way L-05's fee deadband was. Both fail the promotion bar before the
+holdout is even touched — the decile gate's pre-registered config is a
+peak that reverses once the evaluation window is extended by one year,
+and the carry haircut cuts drawdown for real (34.7%→8.4% on
+inner-validation) but loses to `buy_and_hold` and to the funding-charged
+baseline outside that one window. Same mechanism as the volatility
+forecast finding above: BTC's inverse leverage effect means the periods
+this project's cost signals flag as expensive are also its highest
+forward-Sharpe periods, so cost-avoidance gives back more than it saves.
+Code kept, unregistered, under `experiments/funding_decile_gate.py` and
+`experiments/funding_carry_kelly.py`.
 
 ## Known limitations
 
