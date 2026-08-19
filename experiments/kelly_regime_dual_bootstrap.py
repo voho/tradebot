@@ -113,7 +113,70 @@ Usage
     python experiments/kelly_regime_dual_bootstrap.py run --futures  # + 5x futures secondary check
     python experiments/kelly_regime_dual_bootstrap.py artifact    # exposure-artifact re-check, vol_weighted
     python experiments/kelly_regime_dual_bootstrap.py causality   # window-boundary self-check
+    python experiments/kelly_regime_dual_bootstrap.py holdout     # step 4: PRE-REGISTERED holdout read, see below
     python experiments/kelly_regime_dual_bootstrap.py all
+
+Step 4 pre-registration -- written and committed BEFORE this command is
+ever run against the 2023+ holdout
+======================================================================
+The inner-validation round above (``run``) found: the POOLED drawdown-delta
+claim (all severities) has a 95% bootstrap CI that excludes zero on spot
+but CONTAINS zero on 5x futures; the BEAR-QUARTILE claim (top-quartile
+BTC-alone-severity windows only) has a CI that excludes zero on BOTH spot
+AND futures, and is actually tighter/larger there (spot bear median
+approx -5 to -5.5pp, futures bear median approx -2.9 to -3.1pp) than the
+pooled claim -- the opposite of what the pre-registered correlation-spike
+failure mode predicted. ``vol_weighted`` was the marginally stronger/
+tighter split of the two candidates on this segment.
+
+**Decision rule, fixed now, before ``holdout()`` is ever invoked:**
+
+- Population: ~40 resampled windows (same trials/day-range/seed
+  convention as ``build_windows()`` above), drawn from ETH's calendar
+  range strictly ON OR AFTER 2023-01-01 (``OOS_START`` below) instead of
+  the pre-2023 pool -- the actual project holdout, read here for the
+  FIRST time by this file.
+- Candidate: ``vol_weighted`` split (the marginally stronger candidate on
+  the bear segment in training) vs. ``kelly_regime_v4`` BTC-alone,
+  ``50_50`` reported alongside for completeness but not the decision
+  variable.
+- Segmentation: identical bear/calm split as ``bear_calm_report`` above --
+  top-quartile BTC-alone realized drawdown WITHIN each resampled window,
+  an ex-post-but-window-internal proxy that uses no information from
+  outside that window's own dates, on EITHER side of 2023-01-01.
+- **PROMOTE** (treat the N~3-attacking dual-book drawdown-in-a-crash claim
+  as CONFIRMED on the holdout, and record it as this project's first
+  surviving N-axis finding) if and only if the bear-quartile segment's
+  ``vol_weighted`` median drawdown-delta 95% bootstrap CI excludes zero
+  (i.e. stays negative / an improvement) on BOTH spot AND futures 5x. If
+  the pooled (all-severity) CI *also* excludes zero on both markets, note
+  it as a bonus, stronger result -- it is not required for promotion,
+  because it was not required in training either (the futures pooled CI
+  contained zero there and the claim was still judged worth a holdout
+  read on the strength of the bear-segment result alone).
+- **REJECT** (record NEGATIVE, matching this project's dominant historical
+  pattern -- 0-of-10 prior SIZE-axis branches, and R-42 itself already
+  NEGATIVE once) if the bear-quartile CI contains zero, or flips sign
+  (positive, i.e. worse), on EITHER market.
+- **Caveat, stated in advance, that applies to either outcome:** this
+  project's registered-strategy framework (``tradebot.strategy.Strategy``,
+  ``tradebot.registry``, ``tradebot run``) evaluates ONE instrument's bars
+  per registered class -- there is no multi-asset registration path today.
+  A PROMOTE verdict here therefore does not by itself put a new row in
+  the README comparison table; it identifies a genuine finding that
+  additionally requires new registration infrastructure (a separate,
+  future engineering task) before it can appear there. This holdout read
+  answers "is the finding real", not "is it pluggable into the existing
+  table" -- the two questions are pre-registered as separate here so a
+  positive statistical answer is not quietly demoted by an unrelated
+  engineering gap, nor is the engineering gap allowed to make a real
+  answer look unresolved.
+- This is the ONE pre-registered holdout consultation for this specific
+  claim (bear-quartile dual-book drawdown-delta, ``vol_weighted``, spot +
+  futures). No decision rule changes after this command's output is read;
+  if any future session changes this rule after seeing the result, that
+  session must say so explicitly and downgrade the result to in-sample,
+  per ROUTINE.md step 4.
 """
 
 from __future__ import annotations
@@ -393,6 +456,84 @@ def run(include_futures: bool = False) -> None:
           "1 control BTC leg + 2 split candidates x 2 legs each)")
 
 
+OOS_START = "2023-01-01"  # the project holdout boundary; read only by holdout()
+
+
+def build_holdout_windows() -> list[tuple[pd.Timestamp, pd.Timestamp, int]]:
+    """~40 resampled (start, end, days) windows, calendar-bounded to >= 2023-01-01.
+
+    Mirrors ``build_windows()`` exactly (same trials/day-range/seed
+    convention, same RNG call order, same warmup-floor logic) except the
+    pool is ETH's OOS_START-onward slice instead of its pre-2023 slice,
+    and the boundary assertion checks the LOWER bound (no window may start
+    before OOS_START) rather than the upper one -- this file's entire
+    prior existence enforced "never touch 2023+"; this function is the one
+    and only place that intentionally does, and only after the
+    pre-registration above is committed.
+    """
+    warmup = get_strategy(INCUMBENT).warmup
+    pool = ETH.loc[OOS_START:]
+    floor = pd.Timestamp(OOS_START, tz="UTC")
+
+    rng = np.random.default_rng(WINDOW_SEED)
+    windows: list[tuple[pd.Timestamp, pd.Timestamp, int]] = []
+    for _ in range(WINDOW_TRIALS):
+        length_days = int(rng.integers(WINDOW_MIN_DAYS, WINDOW_MAX_DAYS + 1))
+        length_bars = length_days * BARS_PER_DAY
+        start_pos = int(rng.integers(warmup, len(pool) - length_bars))
+        start_ts = pool.index[start_pos]
+        end_ts = pool.index[start_pos + length_bars - 1]
+        assert start_ts >= floor, f"window start {start_ts} precedes the holdout boundary"
+        windows.append((start_ts, end_ts, length_days))
+    return windows
+
+
+def holdout(include_futures: bool = True) -> dict:
+    """Step 4: the ONE pre-registered holdout read for this claim. See the
+    module docstring's "Step 4 pre-registration" section for the decision
+    rule -- fixed and committed before this function is ever called."""
+    windows = build_holdout_windows()
+    print(f"=== PRE-REGISTERED HOLDOUT READ (2023-01-01 onward) === ")
+    print(f"{len(windows)} resampled windows: spanning "
+          f"{min(w[0] for w in windows):%Y-%m-%d} to {max(w[1] for w in windows):%Y-%m-%d}, "
+          f"seed={WINDOW_SEED}, {WINDOW_MIN_DAYS}-{WINDOW_MAX_DAYS} days each")
+
+    markets = [("spot", SPOT)] + ([("futures", FUTURES)] if include_futures else [])
+    df = run_all_windows(windows, markets=markets)
+    OUT.mkdir(parents=True, exist_ok=True)
+    df.to_csv(OUT / "holdout_windows_results.csv", index=False)
+    print(f"\nwritten: {OUT / 'holdout_windows_results.csv'}")
+
+    dist_rows, bearcalm_rows = [], []
+    for mname, _ in markets:
+        dist_rows.append(distribution_report(df, mname))
+        bearcalm_rows.append(bear_calm_report(df, mname))
+    dist_df = pd.concat(dist_rows, ignore_index=True)
+    bearcalm_df = pd.concat(bearcalm_rows, ignore_index=True)
+    dist_df.to_csv(OUT / "holdout_distribution_summary.csv", index=False)
+    bearcalm_df.to_csv(OUT / "holdout_bear_calm_summary.csv", index=False)
+    print(f"written: {OUT / 'holdout_distribution_summary.csv'}")
+    print(f"written: {OUT / 'holdout_bear_calm_summary.csv'}")
+
+    print("\n=== PRE-REGISTERED DECISION ===")
+    verdict_ok = True
+    for mname, _ in markets:
+        row = bearcalm_df[(bearcalm_df.market == mname) & (bearcalm_df.segment == "bear (top quartile)")
+                           & (bearcalm_df.split == "vol_weighted")]
+        if len(row) == 0:
+            print(f"  {mname}: insufficient bear-quartile windows for a CI -- rule cannot be evaluated, REJECT by default")
+            verdict_ok = False
+            continue
+        lo, hi, med = float(row.ci_lo.iloc[0]), float(row.ci_hi.iloc[0]), float(row.median_delta_dd.iloc[0])
+        excludes_zero_improving = hi < 0.0
+        print(f"  {mname}: bear-quartile vol_weighted median={med:+.2f}pp CI=[{lo:+.2f},{hi:+.2f}] "
+              f"-> {'CI excludes zero (improvement)' if excludes_zero_improving else 'DOES NOT CLEAR THE BAR'}")
+        verdict_ok = verdict_ok and excludes_zero_improving
+    print(f"\nFINAL PRE-REGISTERED VERDICT: {'PROMOTE (statistical claim confirmed)' if verdict_ok else 'REJECT / NEGATIVE'}")
+    print("(subject to the registration-infrastructure caveat stated in the pre-registration above)")
+    return {"windows_df": df, "distribution": dist_df, "bear_calm": bearcalm_df, "promote": verdict_ok}
+
+
 def causality() -> None:
     """Window-boundary self-check: every generated window obeys the pre-2023 cutoff.
 
@@ -437,6 +578,8 @@ if __name__ == "__main__":
         exposure_artifact_check("50_50")
     elif choice == "causality":
         causality()
+    elif choice == "holdout":
+        holdout(include_futures=True)
     elif choice == "all":
         run(include_futures=True)
         exposure_artifact_check("vol_weighted")
@@ -444,4 +587,4 @@ if __name__ == "__main__":
         causality()
     else:
         print("usage: python experiments/kelly_regime_dual_bootstrap.py "
-              "[run [--futures]|artifact|causality|all]")
+              "[run [--futures]|artifact|causality|holdout|all]")
