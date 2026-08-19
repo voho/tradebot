@@ -114,10 +114,18 @@ that carry one.
 > established **against a fully-invested benchmark, and not against a
 > de-levered one**. What does survive matching is a *return* advantage at
 > equal risk — a median **+20.8pp / +23.8pp per window, in 82% and 90% of
-> 40 windows**, replicating on ETH — and that claim has not been
-> pre-registered yet, so it is a hypothesis and not a result. Detail in
-> [docs/LEDGER.md](docs/LEDGER.md) (R-33), reproduce with
-> `python experiments/run_matched_hold.py windows`.
+> 40 windows**, replicating on ETH — and this claim **has since been
+> pre-registered and confirmed (R-36)**, with a caveat the headline number
+> hides: split the same 40 windows by start date and the advantage
+> **shrinks roughly 10x outside the 2017–2020 bull**, to a median
+> **+5.0pp / +7.4pp** in windows starting 2021 or later (win-rate 68%/82%,
+> still excluding a coin flip, but the post-2021 spot subsample's own
+> interval alone contains 50% at n=22). Two independent follow-up attempts
+> to capture more of that thinned edge with a modified sizer — a
+> hyperparameter retune and a per-regime-state Kelly fraction — both
+> failed (R-37). Detail in [docs/LEDGER.md](docs/LEDGER.md) (R-33, R-36,
+> R-37), reproduce with `python experiments/run_matched_hold.py windows`
+> and `python experiments/b14_regime_breakdown.py`.
 
 One full-history number can hide a lucky path, so the top three are also
 resampled over 40 random windows

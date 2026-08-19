@@ -700,8 +700,44 @@ matched, v4 keeps both: **$5,482 at 36.5% drawdown against $3,827 at
 51.3%** on spot at volatility 0.407, and $4,263 at 35.1% against $3,900
 at 54.0% on futures. That is a falsification test passed, not a selected
 number — but the *return* comparison was never the pre-registered
-question in any round, so it is a hypothesis (backlog **B-14**) and not
-yet a result.
+question in any round, so at this point in the record it was a
+hypothesis (backlog **B-14**) and not yet a result.
+
+**R-36 closed B-14, and it is a confirmation with a large asterisk.** The
+pooled statistic above was pre-registered as a formal decision rule (exact
+binomial 95% CI on the 40-window win-rate) rather than eyeballed, and it
+passes on both markets: [67.2%, 92.7%] spot, [76.3%, 97.2%] futures, both
+excluding a coin flip. The pre-registered falsification test — split the
+same 40 windows by start date, before vs on/after 2021-01-01 — also
+survives on both markets. But the honest number is the split, not the
+pool: the median advantage **shrinks roughly 10x** once the 2017–2020
+bull is excluded, from +68.9pp/+97.2pp (pre-2021 windows) to
+**+5.0pp/+7.4pp** (post-2021 windows), and the post-2021 spot subsample's
+own interval, at n=22, still contains 50% on its own. Read together: some
+return-per-unit-of-risk advantage generalizes past the bull that produced
+the headline number, but the headline number itself is substantially a
+bull-period effect, in the same spirit — though a smaller one — as the
+drawdown headline being substantially an exposure-level effect.
+
+**R-37 then asked whether a strategy could be built to capture more of
+that thinned, confirmed edge than v4 already does by construction, and
+found nothing that survives its own falsification test.** Two
+independent, disjoint-file attempts, both restricted to inner-train/
+inner-validation/pre-2020-ETH data with no holdout read: a conservative
+retune of the existing `target_vol`/`max_leverage` constants (the one
+candidate surviving a matched-exposure control nets a Sharpe delta inside
+the ±0.2 noise floor on both markets), and a novel per-vote-state Kelly
+fraction sizer (`μ_state/σ_state²` estimated causally per regime state,
+rather than one global `target_vol`) that cleanly rules out a
+raw-leverage artifact and surfaces a real, non-monotone fact about this
+project's own regime states — partial agreement (⅔) carries a higher
+measured Kelly ratio than unanimous agreement — but fails its ETH
+falsification test decisively, underperforming v4 on the BTC control run
+through the identical pipeline as well as on ETH itself, indicating the
+inner-validation win was fitted to one window. Full detail in
+[docs/LEDGER.md](docs/LEDGER.md) (R-37); code in
+`experiments/kelly_regime_v6_retune.py` and
+`experiments/kelly_regime_v6_state_kelly.py`.
 
 One diagnostic from the same round that belongs next to every spot figure
 on this page: **on the 2023+ spot holdout `kelly_regime_v4` asks for more
