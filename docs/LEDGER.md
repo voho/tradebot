@@ -124,6 +124,8 @@ the most expensive repeated mistake in this table.
 | R-30 | Wire the intervals into the comparison table itself (backlog B-12) | 08-18 | `src/tradebot/evidence.py` reads R-29's `bootstrap.csv` into `tradebot run`: two verdict columns on the README table (Δ log growth and Δ max drawdown against `buy_and_hold`, each with its 95% paired interval and a ▲/≈/▼ mark), the full error bars in the per-market detail tables, the log-growth interval added to the bootstrap output — R-29 computed it and saved only the point — and a CI rule that a registered strategy with no measured interval fails the suite. 18 new tests. | **The column R-29 computed and discarded says more than the ones it kept.** On spot over the full history, **0 of 24 strategies are distinguishably better than `buy_and_hold` on log growth**, the criterion the table ranks by; 13 are distinguishably worse and the 11 indistinguishable ones are the entire profitable block. `kelly_regime_v4`'s +0.044 advantage is **[−2.60, +2.85]** — from a thirteenth of holding's final balance to seventeen times it. Everything R-29 published reproduced exactly. | **METHOD** — the warning now lives *in* the table, not beside it |
 | R-31 | Matched-risk frontier: e-process gate vs latched anchor vote at equal realized volatility (backlog B-11) | 08-18 | `experiments/matched_risk.py` — one sizer, one deadband, one warmup, one exposure knob, gate interchangeable. 36 configurations traced on both inner splits and both markets (144 backtests), exposures solved on inner-validation to within 2% of target volatility in both directions, then frozen; holdout scored with the R-29 paired block bootstrap | **Hold risk fixed and R-28's headline dissolves — both halves of it.** All 8 holdout intervals contain zero and the sign is unstable across cells; the one cell surviving the pre-registered validity gate gives −0.072 [−0.532, +0.379] on log growth. Three cells of four are **void**: the inner-validation exposure match did not survive into 2023+ (29% volatility gaps) or the spot notional cap truncated both arms differently (41% / 27% of bars). On ETH, with exposures re-matched, the e-process gate loses all four cells on return **and on drawdown** — so R-28's P3 replication was measured against an arm carrying 2.4x the risk. Equal-risk exposure ratio is itself regime-dependent: 2.2x in the bull, 4.7x in the bear. | **NEGATIVE** — the 0.27x exposure *was* the finding |
 | R-33 | Matched-risk benchmark: `kelly_regime_v4` against a **de-levered** `buy_and_hold` at equal realized volatility (backlog B-13) | 08-19 | `experiments/matched_hold.py` — a passive long holding a constant fraction `c` of equity, in two readings (rebalanced to constant risk, and static buy-once), exposure solved on inner-validation so its realized volatility equals v4's, then frozen; 18 configurations on the inner splits; holdout scored with the R-29 paired block bootstrap; 40 windows re-matched **inside each window** to 0.5% | **This project's headline is ~90% arithmetic, and what is underneath it is a different claim.** Across 40 identical windows at genuinely equal risk, v4's median drawdown advantage falls from **−24.5pp to −2.9pp** (spot) and **−70.7pp to −5.5pp** (futures) — 88% and 92% of the gap was the exposure level. On the holdout, five of six frozen cells fail the pre-registered risk match (a vol-targeter and a constant-exposure hold cannot be matched across a regime change), and the one valid cell gives **−14.18pp [−22.68, +13.48]**, containing zero. But the *return* comparison, which nobody pre-registered, goes v4's way in every cell of every table: **+20.8pp / +23.8pp median per window in 82% / 90% of them**, all four ETH/BTC cells, and it survives the ETH falsification test R-28 failed. | **NEGATIVE** on D1 — the drawdown claim is downgraded to "against a fully-invested benchmark only". The finding underneath it is return-per-unit-risk, and it needs its own pre-registered round (**B-14**). |
+| R-35 | Funding-percentile gate on `kelly_regime_v4` (backlog **B-05**, conservative branch) | 08-19 | Discrete decile gate: force target exposure to 0 whenever the trailing (rolling, causal) rank of the funding rate is >= the 90th/95th percentile. 6 configs (`lookback_days` x `threshold`) swept on inner-train (2020-2021), one frozen by a pre-registered selection rule, checked on inner-validation (2022) | Inner-train: real but noise-floor-adjacent Sharpe gain at the frozen 180d/0.95 config (+0.38 futures), 19.5% real-dollar funding-cost reduction. **Does not replicate on inner-validation** (within 1% of baseline both markets — 2022's vote is already flat most of the time) and **fails its own pre-registered 0.40% fee-tier falsification test**: edge flips from +2.4% to -21.7% because the gate trades 2.6x the baseline's count. | **NEGATIVE** | A real cost-reduction signal (R-16) wrapped in a decile gate adds turnover for free — and turnover, not signal quality, is this project's most reliable way to lose an edge (R-12/R-13), even when the underlying signal is real. |
+| R-36 | Continuous funding-crowding correction on `kelly_regime_v4` (backlog **B-05**, novel branch) | 08-19 | Derived, not fit: subtract causal, annualized funding rate over `kelly_regime_v4`'s own realized variance (`r_t/sigma_t^2`) from its target exposure every bar, before the existing deadband/clamp — extends L-05/L-06's one-off transaction-cost no-trade-band derivation (Constantinides 1986; Davis & Norman 1990) to a continuously-accruing holding cost, grounded in He et al. (2024)'s funding no-arbitrage relation and the same Cardaliaguet & Lehalle (2018) crowding view the base regime vote already rests on | Inner-train (2020-21 bull): costs return, roughly halves drawdown, raises Sharpe (1.99 to 3.01 spot). Inner-validation (2022 bear): **flips baseline's loss into a gain on both markets** while cutting drawdown 12-16pp. Pays **84% less real dollar funding** than baseline on the combined inner window ($151 vs $948) at a *better*, not worse, funding-free return. Partially fails its 0.40% fee-tier falsification test on raw return (Sharpe/DD survive). Not a plateau in `funding_scale` — the two inner splits disagree on the best value. | **NEGATIVE** (3 of 4 pre-registered holdout criteria pass; D4 fails) | The mechanism L-05/L-06's derivation generalizes to a *running* cost, not just a one-off one, is itself real and material (correction exceeds the deadband on 85% of bars) — but "derived, not fit" describes the form, not the effect size, which is scale-sensitive. |
 | R-32 | The ungated control, and an independent second reading of B-11 | 08-18 | A parallel session ran the same backlog row the same day from the same base commit. Same design as R-31 (one sizer, gate interchangeable, exposure scaled by a scalar) plus a **third arm with no gate at all**; 33 configurations, 132 backtests, multipliers frozen on inner-validation | **Agrees with R-31 wherever the two overlap** — gates indistinguishable at matched risk, R-28's 0-of-40 inverted (deeper in 60%/62%), its fee advantage inverted, P1 failed — from an independent implementation, and its own holdout cells are **void** under R-31's validity rule (cap binds on 41%/36%/21% of spot bars; a 29% volatility gap on futures). What it adds: at matched risk the **ungated** arm is below both gated arms at every risk level in all four inner-split cells and loses 80–90% of 40 paired windows. **The gate is worth more than the choice of gate.** | **NEGATIVE** — and the parallel-branch report the routine requires |
 
 ### R-28 pre-registration — written and committed before the holdout was read
@@ -1591,6 +1593,333 @@ pre-registered none of them, so none of it can be claimed. That is
 exactly what a pre-registered round is for, and it is cheap: the harness
 exists, the arm exists, and the matching is already solved to 0.5%.
 
+### R-35 — funding-percentile gate, conservative B-05 branch
+
+Ran the same day as R-33 (matched-risk benchmark, above), on a disjoint
+backlog row (**B-05**, not B-13) and disjoint files
+(`experiments/funding_gate_conservative*.py`) — an independent parallel
+branch rather than a continuation of R-33, per ROUTINE.md's "Running
+directions in parallel". Full detail in
+`experiments/funding_gate_conservative_REPORT.md`; see the R-35 summary
+row above for the mechanism and headline result.
+
+**Mechanism.** Force `kelly_regime_v4`'s target exposure to exactly 0.0
+whenever the causal, trailing (rolling) rank of the funding rate sits at
+or above the 90th/95th percentile of its own recent history — a directly
+observed crowding signal (Cardaliaguet & Lehalle 2018) layered on top of
+the existing price-inferred regime vote.
+
+**Pre-registered selection rule and falsification test**, written before
+the sweep: freeze the `(lookback_days, threshold)` config with the best
+inner-train futures Sharpe; then check the frozen config's inner-validation
+performance, and separately re-run it at the Bitstamp 0.40% entry taker
+tier to see whether the gate's extra turnover (flatten/re-enter cycles
+around funding spikes) survives real costs.
+
+**Result: NEGATIVE, resolved entirely on inner-period data — no holdout
+consultation.** The frozen 180-day/95th-percentile config improved
+inner-train futures Sharpe by +0.38 (2.60 vs 2.22) and cut real dollar
+funding cost 19.5% on the combined inner window, but the edge **did not
+replicate on inner-validation** (2022: gate and baseline finish within 1%
+of each other on both markets — the base strategy's own vote is already
+flat through most of the bear year the gate would otherwise act in) and
+**failed its own pre-registered fee-tier falsification test**: at 0.40%
+the gate's 2.6x turnover flips its already-small edge from +2.4% to
+−21.7%. None of the three legs of the promotion bar (beats baseline
+beyond the noise floor out-of-sample; survives falsification; plateau not
+peak) cleared, so the round stopped before the holdout was ever read.
+
+**Configurations evaluated: 6** (`lookback_days` ∈ {30, 90, 180} ×
+`threshold` ∈ {0.90, 0.95}). **26 distinct backtests total** across the
+sweep, inner-validation check, fee-tier falsification and the real
+funding-cost comparison. **Holdout counter: unaffected** (0 consultations
+— this branch resolved to NEGATIVE on inner-period evidence alone).
+
+**Causality.** By-hand two-opposite-tampers probe (R-28-style, since this
+is an unregistered strategy `tests/test_causality_strict.py` cannot see):
+PASS, max |column difference| before the cut = 0.000e+00 on `target`,
+`funding_pct` and `funding_gate`.
+
+### R-36 pre-registration — written and committed before the 2023+ holdout was read
+
+**Idea, in one sentence.** `experiments/funding_crowding_novel.py`'s
+`FundingCrowdingKelly` (funding_scale=1.0, frozen) subtracts the causal,
+annualized funding rate divided by `kelly_regime_v4`'s own realized
+variance from its target exposure every bar — see R-36's summary row
+above and the full derivation in that file's module docstring. Step 3
+(inner-train/inner-validation, both markets, a fee-tier and a
+real-funding-cost falsification test, a by-hand causality probe) is
+already complete and reported in
+`experiments/funding_crowding_novel_REPORT.md`; this section is step 4.
+Ran the same day as R-33/R-35 on a disjoint backlog row (B-05, not B-13)
+and disjoint files.
+
+**Constraint attacked.** `COST` — funding scales with the signal (R-14:
++20%/yr while `kelly_regime_v4` holds vs +2.8%/yr flat) — and secondarily
+`SIZE`, since the correction is a sizing adjustment, not a new predictor.
+
+**Not a duplicate of.** L-05/L-06 (`kelly_regime_ev`/`_fast`) derive a
+no-trade band from a *one-off* transaction cost; this derives a
+correction from a *continuously-accruing* holding cost — same
+mathematical machinery (Constantinides 1986; Davis & Norman 1990),
+different cost object, and it changes the target itself rather than the
+width of the band around it. R-14 measured funding as a pure cost, never
+as a signal. R-16 found the correlational pattern (funding predicts
+negative forward returns) but never wired it into a strategy. R-35 (this
+session's other B-05 branch) is a discrete decile gate on the same
+observation — structurally different (binary override vs continuous
+re-target) and already NEGATIVE; nothing here reuses its files, results,
+or selection. R-33 (this session's *other* concurrent round, on the
+unrelated backlog row B-13) is a matched-risk benchmark study and shares
+no files or mechanism with this one — noted only because both landed the
+same day and both are called out in the backlog re-ranking below.
+
+**Simulable here?** Yes, but **bounded**: the committed funding file
+covers `2020-01-01 03:00 UTC` to `2023-12-31 19:00 UTC` only (verified via
+`experiments/funding_signal.py::funding_coverage`). Outside that window
+`causal_funding_column` returns exactly `0.0` (fixed in this session — it
+previously forward-filled the last known rate indefinitely past
+2023-12-31, a bug that never affected either branch's already-reported
+training-period numbers but would have fabricated a stale funding rate
+for 2024-2026 had it gone unfixed), so `FundingCrowdingKelly` degenerates
+*exactly* to `kelly_regime_v4` for every bar before 2020 and after 2023 —
+a well-defined, honest full-period strategy that just happens to only
+differ from its parent during the ~4 years real funding data exists for.
+That means it can be evaluated the *same* way every other strategy in
+this project is: `ev(strategy, start=OOS_START)` over the standard
+`2023-01-01 -> 2026-08` holdout, with the mechanism itself silently
+inactive (zero correction) for the ~2.6 years past `2023-12-31` — the
+honest behavior of "funding unknown, assume none" rather than a bespoke
+truncated evaluation window.
+
+**What would make it fail — named before any holdout bar is read.**
+(a) The correction is real on the inner splits but the standard holdout
+dilutes it to nothing, since only the first ~1 of its ~3.6 years actually
+carries real funding data — expected, and not itself a failure, but it
+means the funding-free full-holdout comparison (P1 below) is a *context*
+check, not the promotion criterion. (b) The 2023-only sub-window, where
+the mechanism is actually active, fails to reduce real dollar funding
+cost out-of-sample the way it did in-sample — this would mean the inner
+result was a fit to 2020-2022's specific funding regime rather than a
+general property. (c) The already-observed non-plateau in `funding_scale`
+turns out to matter: the frozen `funding_scale=1.0` happens to sit on the
+wrong side of the 2023 regime the way it would have on 2022 (where 1.0
+underperformed 2.0) — if so, this is reported as evidence the effect size
+is regime-dependent, not reversed into a re-selection.
+
+**Method.** Two evaluations, neither previously read:
+
+1. **P1 context (funding-free, standard holdout).** `ev(strategy,
+   start="2023-01-01")` on both markets, `FundingCrowdingKelly
+   (funding_scale=1.0)` vs `kelly_regime_v4` vs `buy_and_hold` — the same
+   protocol every other holdout row in this ledger uses. Since the
+   correction is zero for all but the first ~1 of these ~3.6 years, this
+   is read as "did the change hurt the strategy's standing full-holdout
+   behavior," not as the mechanism's test.
+2. **P2/P3/P4, the mechanism's actual test (2023-01-01..2023-12-31 only,
+   the sub-window real funding data covers).** `FundingCrowdingKelly
+   (funding_scale=1.0)` vs `kelly_regime_v4`, both markets, $1,000 start,
+   warmed on bars before 2023-01-01 (`run_backtest(..., trade_start=...)`,
+   the same warm-vs-warm convention `tradebot.window.run_period` and
+   `scripts/funding_study.py`'s `_period()` use): funding-free balance,
+   Sharpe and max drawdown on both markets; real-funding-charged balance
+   and dollar cost paid on futures (funding is never charged on the spot
+   leg anywhere in this project — spot is the funding-free benchmark by
+   convention, see `scripts/funding_study.py`); and the 0.40% Bitstamp
+   entry-tier result on spot, mirroring the already-run falsification
+   test but now out-of-sample.
+
+**Pre-registered decision rule — promotion is judged as a *variant of
+`kelly_regime_v4`* (the same framing v2/v3/v4 were promoted or rejected
+under: beat the incumbent, do not degrade out-of-sample, on the metric
+the mechanism actually targets), not as a fresh challenge to
+`buy_and_hold`.** Per the step-3 report's own recommendation, **return at
+the 0.10% fee tier is explicitly excluded as a promotion criterion**,
+because falsification (a) already showed it is not robust to the real fee
+tier. Promote only if **all** of:
+
+- **D1 (funding cost, the mechanism's actual point).** On
+  2023-01-01..2023-12-31, futures 5x, real funding charged:
+  `FundingCrowdingKelly` pays strictly less dollar funding than
+  `kelly_regime_v4`.
+- **D2 (no de-lever-and-hope).** Over the same sub-window, the
+  funding-free gross balance is not more than 15 percentage points worse
+  than `kelly_regime_v4`'s own funding-free balance on futures — a guard
+  against the correction being an aggressive de-lever wearing the funding
+  mechanism as a label (the same check falsification (b) already passed
+  in-sample).
+- **D3 (drawdown).** Max drawdown on 2023-01-01..2023-12-31 (funding
+  charged on futures; funding-free on spot) is no worse for
+  `FundingCrowdingKelly` than for `kelly_regime_v4`, on both markets.
+- **D4 (survives the real fee tier, on risk not return).** At the 0.40%
+  Bitstamp entry tier, spot, 2023-01-01..2023-12-31: `FundingCrowdingKelly`'s
+  Sharpe and max drawdown are not worse than `kelly_regime_v4`'s own
+  numbers at that tier — mirroring what held in-sample (Sharpe 1.80 vs
+  1.78, DD 15.7% vs 27.9%) and explicitly not requiring the return
+  comparison to hold, per the exclusion above.
+- **Falsification.** Already run in step 3; not re-run on the holdout
+  (there is no second, independent funding dataset committed here — no
+  ETH perp funding, unlike the ETH price data used elsewhere in this
+  project — so this mechanism cannot be falsified on a second asset the
+  way `kelly_regime_v4` itself was in R-17. Noted as a real limitation
+  regardless of the D1-D4 outcome, and as a candidate falsification test
+  for whoever next extends the funding series, per backlog **B-02**.)
+- **Plateau.** The inner-split sweep already showed `funding_scale` is
+  *not* a clean plateau in effect size — but it is a plateau in
+  *direction*: higher scale monotonically reduces drawdown and funding
+  cost on both inner splits, they disagree only on how much scale is
+  optimal for return. Promotion is conditioned on that qualitative
+  monotonicity holding on the holdout too (checked, not re-swept — the
+  frozen `funding_scale=1.0` is not re-tuned against the holdout under any
+  outcome).
+
+**Holdout accounting, fixed in advance.** This round reads the standard
+2023+ holdout for two strategies (P1, context) plus a
+2023-01-01..2023-12-31 sub-window for two strategies across funding-free,
+funding-charged and the 0.40% fee tier (P2-P4, the actual test) — up to
+13 fresh backtests, none previously run at these exact (strategy, market,
+period, fee-tier, funding-setting) coordinates. No selection is performed
+on any of it: `funding_scale=1.0` was frozen in step 3, before this
+section was written, and is not touched by what follows.
+
+### R-36 results — three of four hold, and the pre-registered rule rejects it anyway
+
+Reproduce with `python experiments/run_funding_crowding_novel_holdout.py all`.
+**14 fresh holdout backtests read** (4 for P1 context, 10 for
+P2-P4 mechanism — one more than the 13 estimated in pre-registration,
+because P4's 0.40% comparison needed both strategies read at that tier
+where the estimate had assumed one could be inferred; recorded exactly as
+run, not trimmed to match the estimate).
+
+**P1 — context, funding-free, standard 2023-01-01 → 2026-08 holdout:**
+
+| market | strategy | final | Sharpe | max DD |
+|---|---|---:|---:|---:|
+| spot | `buy_and_hold` | $3,839 | 1.03 | 54.0% |
+| spot | `kelly_regime_v4` | $3,373 | 1.22 | 27.8% |
+| spot | `funding_crowding_novel` | $3,400 | 1.29 | 27.8% |
+| futures | `buy_and_hold` | $15,176 | 1.44 | 60.3% |
+| futures | `kelly_regime_v4` | $4,901 | 1.36 | 33.0% |
+| futures | `funding_crowding_novel` | $4,613 | 1.43 | 33.0% |
+
+As expected (the correction is zero-valued for 2024-2026, ~2.6 of these
+~3.6 years), the two strategies are nearly identical over the full
+standard holdout — spot balances within 1%, drawdown identical to one
+decimal, Sharpe a rounding difference in either direction. This confirms
+the mechanism did not damage the strategy's standing full-holdout
+behavior; it is a context check, not the promotion criterion, exactly as
+pre-registered.
+
+**P2/P3 — the mechanism's actual test, 2023-01-01..2023-12-31 only:**
+
+| market | funding | strategy | final | Sharpe | max DD | funding paid |
+|---|---|---|---:|---:|---:|---:|
+| spot | free | `kelly_regime_v4` | $2,038 | 2.18 | 23.9% | — |
+| spot | free | `funding_crowding_novel` | $2,057 | 2.65 | 13.8% | — |
+| futures | free | `kelly_regime_v4` | $2,594 | 2.32 | 26.9% | — |
+| futures | free | `funding_crowding_novel` | $2,444 | 2.89 | 12.9% | — |
+| futures | **charged** | `kelly_regime_v4` | $2,393 | 2.14 | 28.4% | $152 |
+| futures | **charged** | `funding_crowding_novel` | $2,352 | 2.77 | 13.2% | **$65** |
+
+**D1 (funding cost) PASS.** $65 against $152 — 57% less real dollar
+funding paid, out-of-sample, on a completely fresh year the correction
+was never tuned against. Smaller in percentage terms than the 84%
+inner-period figure, but the direction and the order of magnitude both
+hold.
+
+**D2 (no de-lever-and-hope) PASS.** Funding-free futures balance $2,444
+vs $2,594 — 5.8% lower, well inside the 15pp allowance. The correction is
+not merely an aggressive de-lever: Sharpe is *higher* on both markets
+funding-free (2.65 vs 2.18 spot, 2.89 vs 2.32 futures), because the
+drawdown cut is large enough to lift risk-adjusted return even before
+funding is charged.
+
+**D3 (drawdown) PASS, and the strongest number in the round.** 13.8%
+against 23.9% on spot, 12.9%/13.2% against 26.9%/28.4% on futures — a
+10-15 percentage point cut on both markets, out-of-sample, holding up the
+same direction and roughly the same magnitude the inner splits showed.
+
+**P4 — fee-tier robustness, 0.40% Bitstamp entry tier, spot, same sub-window:**
+
+| strategy | final | Sharpe | max DD |
+|---|---:|---:|---:|
+| `kelly_regime_v4` | $1,884 | **1.96** | 28.1% |
+| `funding_crowding_novel` | $1,407 | **1.33** | 25.9% |
+
+**D4 FAILS.** Drawdown is still shallower (25.9% vs 28.1%), but Sharpe
+**collapses well below baseline** (1.33 vs 1.96) — not a rounding
+difference, and not something the ±0.2 noise floor can absorb even
+granting a thin one-year sample. This is a different outcome from the
+in-sample falsification check, which found Sharpe essentially tied at
+the same fee tier (1.80 vs 1.78) with the drawdown advantage intact. Out
+of sample, in the one year available, the extra turnover (44 trades vs
+13 — more than 3x) costs enough at the real fee tier to erase the
+risk-adjusted edge, even though it does not erase the drawdown edge.
+D4 was written specifically to catch this failure mode and it did.
+
+**Decision: the pre-registered rule requires all of D1-D4. D4 fails.
+Verdict: NOT PROMOTED — NEGATIVE**, exactly as ROUTINE.md prescribes when
+the target has not moved: this is not a case of relaxing D4 after seeing
+the result, or arguing the one-year sample is too thin to trust it (it
+may well be — that is a real limitation, stated below, not a license to
+overrule a rule fixed in advance). Three of four criteria, including the
+mechanism's actual point (D1) and its strongest effect (D3, drawdown),
+hold cleanly out-of-sample on data the correction was never near during
+step 3. The fourth was chosen, in advance, specifically to guard against
+exactly the failure mode it caught. Both are true at once, and the
+pre-registered rule — not a judgment call made after looking — is what
+decides which one governs the verdict.
+
+**Why this is not registered.** `kelly_regime_v2` (L-03) shows precedent
+for registering a "nine-of-ten-metrics-improve, still fails promotion"
+result with the caveat stated in the table. This project's own practice
+has since tightened: R-30's session note is explicit that registering
+every instructive failure "inflates the table and slows every future
+run," and reserves a table row for a negative only when it is
+`minority_oracle`/`game_switch`-instructive on its own terms, not merely
+close. `funding_crowding_novel` stays in `experiments/` (unregistered),
+with this ledger entry as the durable record — consistent with how R-35
+(this session's other branch) and every COST/funding research row before
+it (R-14/R-15/R-16) were handled.
+
+**Genuine limitations, stated plainly.** (1) One year of real holdout
+data is a thin sample for any of D1-D4 — the ±0.2 Sharpe noise floor was
+measured on multi-year comparisons, not a single year, so treat the D4
+gap (1.33 vs 1.96) as a real, measured, out-of-sample number rather than
+a statistically certified one. (2) As pre-registered, this mechanism
+cannot be falsified on a second asset — no ETH perpetual funding data is
+committed — so unlike `kelly_regime_v4` (R-17), this finding rests on one
+instrument only. (3) The correction is structurally inactive outside
+2020-2023; nothing here says anything about whether the *idea* — pricing
+a continuously-accruing holding cost into a Kelly target — would still
+work once real funding data resumes being collected past 2023-12-31.
+
+**Configurations evaluated this session, both B-05 branches (for the
+program-level deflated Sharpe, per ROUTINE.md's parallel-round rule that
+the count is the total across branches): R-35 contributed 6, R-36
+contributed 3 (`funding_scale` ∈ {0.5, 1.0, 2.0}) — **9 new trials**.
+This session ran the same day as R-33 (the unrelated B-13 matched-risk
+round above, also 08-19), which independently contributed 18 and already
+raised the project total to 190 before this section was written — so this
+session's 9 land on top of that, not on top of R-32's 172. Project total:
+190 (R-33) + 9 = **199**.
+
+**Holdout counter: ~166** (~152 after R-33, +14 this row — the
+P1/P2/P3/P4 reads above; R-35 consulted no holdout data and does not add
+to this count).
+
+**Next step.** B-05 is done, on both its branches, with a negative
+overall verdict — the funding-as-a-signal direction attacks a real
+constraint (COST) with a real, derived, materially-sized effect
+(D1-D3), and still does not clear a pre-registered bar built to guard
+against the specific way it could be fooling itself (D4). A future
+session could revisit this once the funding series is extended past
+2023 (backlog **B-02**, currently BLOCKED on network access) — a longer
+holdout is the direct answer to limitation (1) above, and would also let
+D1-D4 be re-run with a real multi-year sample rather than one thin year.
+Until then this direction returns to the backlog as **BLOCKED (network)**,
+not abandoned.
+
 ---
 
 ## C. Ruled out — do not re-try without new evidence
@@ -1691,6 +2020,24 @@ this project that has *survived* a risk-matching round rather than
 dissolving in one. **B-06 (forward paper trading) remains the
 highest-value item on merit** and is still blocked on network access.
 
+**Reconciled 08-19 after R-35/R-36.** A second session ran B-05 (both
+branches — R-35 the decile gate, R-36 the derived continuous correction)
+the same day as R-33 above, on a disjoint backlog row, disjoint files, and
+without sight of R-33's results. Both B-05 branches are NEGATIVE — see
+the updated B-05 row below. **B-14 is unaffected and stays at the top of
+the list**; nothing in R-35/R-36 touches the matched-risk question R-33
+opened. The trials and holdout counters below are reconciled the way
+R-32 reconciled R-31: **the day's totals are R-33's 18 trials plus
+R-35/R-36's 9, applied on top of R-32's 172** (172 + 18 + 9 = **199**),
+and the **holdout counter is ~166** (~152 after R-33, +14 from R-36 — R-35
+read no holdout data). Two sessions landing on the same day without
+coordinating is exactly the scenario ROUTINE.md's parallelism section
+describes; this time they happened to land on different backlog rows, so
+no consultations were spent twice, only the ledger's ID sequence needed
+reconciling (this session's rows were renumbered from the R-33/R-34 they
+were drafted under to R-35/R-36 to avoid colliding with the matched-risk
+round's own R-33).
+
 Two things changed the order. R-28 answered B-01. And a connectivity check
 found that **every exchange endpoint is blocked by the network policy
 these sessions run under** — Binance, Bitstamp, Kraken and Coinbase all
@@ -1709,7 +2056,7 @@ remains actionable is computation on the data already here.
 | ~~B-12~~ | ~~Put the intervals *in* the comparison table~~ | ERR | **DONE → R-30** | The table now carries Δ growth and Δ max drawdown against `buy_and_hold`, each with a 95% interval, and a strategy without a measured interval fails CI. The by-product is the sharpest number in the project: **0 of 24 strategies are distinguishably better than holding on the criterion the table ranks by**, and v4's +0.044 edge is [−2.60, +2.85]. |
 | ~~B-11~~ | ~~Matched-risk frontier: e-process gate vs latched vote at equal realized volatility~~ | ERR, SIZE | **DONE → R-31** | Answered, negatively and usefully. At equal realized volatility the two gates are indistinguishable on the BTC holdout (all 8 intervals contain zero, sign unstable), three of four cells fail a pre-registered validity gate, and on ETH the e-process gate loses on **both** axes — so R-28's ETH drawdown replication was an artifact of carrying 2.4x less risk. The 0.27x exposure was the whole finding. Also answered in parallel by **R-32**, which adds the arm neither the backlog row nor R-31 asked for: **no gate at all**, which loses to both gates at matched risk in every inner-split cell and in 80–90% of 40 paired windows. |
 | **B-14** | Return per unit of risk against a constant exposure — the claim R-33 kept measuring by accident | SIZE, ERR | **NEXT** | Opened by R-33, and it is the only hypothesis in this project that has *survived* a risk-matching round instead of dissolving in one. At equal realized volatility, v4 out-returned a constant-exposure passive hold by a median **+20.8pp / +23.8pp per window in 82% / 90%** of 40 windows, won all four ETH/BTC falsification cells, and led on Δ log growth in every holdout cell (valid and void). Not claimable: none of it was the pre-registered question. The round is cheap — `experiments/matched_hold.py` exists, the per-window matching converges in one probe backtest and lands within 0.5%, and the paired bootstrap is the same one R-29 ships. Pre-register Δ log growth at matched risk as the *primary* statistic, with a per-window matched arm rather than a frozen exposure (R-33's V1 shows a frozen match cannot survive a regime change between a vol-targeter and a constant hold), and name the failure mode first: the advantage is concentrated in the 2017–2020 bull and is a bull-market artifact. |
-| **B-05** | Funding as a gate on the existing strategy (stand flat in the top decile) | COST | NEXT (after B-14) | Actionable: uses the committed 2020–2023 funding file, no fetch. The low-turnover way to use R-16, and it directly targets the adverse timing in R-14. Higher-turnover standalone reversal use is where strategies go to die (R-12). |
+| ~~B-05~~ | ~~Funding as a gate/signal on the existing strategy~~ | COST | **DONE → R-35 (decile gate), R-36 (derived continuous correction)** | Both NEGATIVE. R-35: real in-sample effect, does not replicate on inner-validation, fails its own fee-tier falsification test. R-36: a properly-derived mechanism that clears 3 of 4 pre-registered holdout criteria (funding cost −57%, drawdown −10 to −15pp, no de-lever-and-hope) and still fails the fourth (Sharpe collapses to 1.33 vs 1.96 at the real 0.40% fee tier) — the pre-registered rule requires all four. Neither branch is registered; both stay in `experiments/` with a full ledger record. Reopen once **B-02** unblocks a longer funding series — one thin year is the main limitation on both branches' holdout reads. |
 | **B-02** | Extend the funding series through 2026 | COST | **BLOCKED (network)** | Still the single cheapest item that could change a decision — the literature says the carry premium broke in 2024–25 and our data stops in 2023 — but Binance is unreachable from these sessions. Needs the operator. |
 | **B-03** | Funding harvest (delta-neutral spot vs short perp) | COST | BLOCKED on B-02 | +16.2%/yr with a −1.31% worst month is a risk profile nothing else here approaches — measured entirely in the good years. Unmodelled: basis risk, short-leg liquidation, exchange/custody risk, borrow cost. |
 | **B-06** | Forward paper-trading recorder | N≈3 | **BLOCKED (network)** | Rose in importance and fell in feasibility on the same day. R-28's deflated Sharpe says this dataset is close to exhausted, which is the argument for starting the only uncontaminated record this project can still generate — but the recorder needs a live price feed, and every venue is blocked. First thing to unblock if the policy is widened. |
@@ -1756,4 +2103,5 @@ Also record, in the row or a footnote beneath it:
 | 08-18 | ~112 | R-31: 12 matched-and-reference runs across two markets, 6 re-runs at the 0.40% taker tier, 6 with funding charged on futures. The ETH/BTC falsification cells and the 40-window resample do not read the 2023+ BTC holdout (the R-19/R-28 convention). Every configuration was frozen on inner-validation and the decision rule, the validity gate and the predictions were committed one commit ahead of the first holdout read — `git log` records it. Nothing here is offered as a Sharpe-based claim; the round's finding is that at matched risk there is no difference to claim. |
 | 08-17 | ~38 | R-28: three configurations × two markets, plus two cost re-runs. The ETH falsification test and the 40-window resample do not read the 2023+ BTC holdout. At 24 trials in a single session the deflated Sharpe was already 0.859; at ~38 program-level consultations, treat any Sharpe-based claim from this dataset as unsupportable and judge on drawdown, which is the property that has repeatedly replicated. |
 | 08-19 | ~152 | R-33: +28 on top of R-32's ~124 — 10 frozen holdout runs across two markets, 8 for the descriptive on-holdout re-match and its solver, 10 cost re-runs (5 at the 0.40% taker tier, 5 with funding charged). The ETH/BTC falsification cells and the 40-window resample do not read the 2023+ BTC holdout. The re-match is the only part of this round that reads the holdout for a quantity it was not pre-registered to read; it is labelled in-sample everywhere it appears and supports no decision. Consistent with R-29: nothing here is offered as a Sharpe-based claim, and the round's finding — that 88–92% of a drawdown gap was an exposure gap — is measured on 40 resampled windows rather than on this holdout, precisely because the holdout has stopped being able to settle anything. |
+| 08-19 | ~166 | R-36: +14 (4 for the standard-holdout context check on `funding_crowding_novel`, `kelly_regime_v4` and `buy_and_hold`, both markets; 10 for the 2023-only mechanism test — funding-free both markets, funding-charged futures, and the 0.40% fee tier on spot). Ran the same day as R-33 above, on a disjoint backlog row (B-05, not B-13), reconciled rather than merged: R-33's ~152 is the baseline this row adds to. R-35 (the same session's other B-05 branch) consulted no holdout data. Project trials count: 172 (R-32) + 18 (R-33) + 9 this session (6 from R-35, 3 from R-36) = **199**. |
 | 08-18 | ~124 | R-32: +12 on top of R-31's ~112 (3 frozen arms × 2 markets, 3 spot fee-tier re-runs, 3 funding-charged futures re-runs). The number that matters is not the increment but why it exists: **two sessions were scheduled onto the same backlog row on the same day and each spent the holdout on it independently**. Neither branch did anything wrong — both pre-registered, both froze before reading — but the day cost ~36 consultations and 69 trials for one question, and the project applies 103 + 69 = **172** trials from here. If parallel sessions are going to run, ROUTINE.md's rule that the trials count is the total across branches is the thing that keeps the arithmetic honest; this is the first time it has actually been needed. |

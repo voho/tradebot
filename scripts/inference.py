@@ -97,8 +97,11 @@ LEVEL = 0.95
 # Rounds since add to it, and the routine is explicit that parallel branches
 # contribute their TOTAL rather than the best one's: +36 (R-31, matched-risk
 # frontier) +33 (R-32, the ungated control that ran the same backlog row the
-# same day) +18 (R-33, the de-levered-benchmark exposure sweep) = 87.
-PROJECT_TRIALS = 190
+# same day) +18 (R-33, the de-levered-benchmark exposure sweep) +9 (R-35/R-36,
+# the two B-05 funding branches that ran the same day as R-33 on a disjoint
+# backlog row: 6 from R-35's decile-gate sweep, 3 from R-36's funding_scale
+# sensitivity check) = 96.
+PROJECT_TRIALS = 199
 
 # The Sharpe dispersion across R-28's 24 configurations on inner-validation -
 # the only trial dispersion this project has ever measured, and therefore the

@@ -258,37 +258,38 @@ strategy removes and final balance does not.
 
 ### Deflated Sharpe: nothing survives out-of-sample
 
-Bailey & López de Prado (2014), against **190 trials** counted from the
+Bailey & López de Prado (2014), against **199 trials** counted from the
 ledger (32 fee-tier configurations, 24 e-process, 9 anchor sets, 7 ladder
 widths, 4 volatility estimators, 2 cushion variants, the 25 registered
-strategies, and the matched-risk rounds' 36 + 33 + 18 — a floor, not an
-estimate. The count was 103 when R-29 first computed this; the three
-matched-risk rounds R-31/R-32/R-33 added 87, and the routine's rule that
-parallel branches contribute their *total* is why R-31 and R-32 both
-count).
+strategies, the matched-risk rounds' 36 + 33 + 18, and the two B-05
+funding-signal branches' 6 + 3 — a floor, not an estimate. The count was
+103 when R-29 first computed this; the matched-risk rounds R-31/R-32/R-33
+and the funding rounds R-35/R-36 added 96 since, and the routine's rule
+that parallel branches contribute their *total* is why R-31/R-32 and
+R-35/R-36 both count in full even though each pair landed the same day).
 
 The deflated Sharpe depends far more on how *dispersed* the trials were
 than on how many there were, and that quantity cannot be recovered after
 the fact. So two are reported. At the only dispersion this project has
-ever measured (0.223, R-28's 24 configurations → SR\* = 0.61 at 190
+ever measured (0.223, R-28's 24 configurations → SR\* = 0.62 at 199
 trials; it was 0.57 at 103, which is how little the *count* matters):
 
 | | Sharpe | PSR>0 | DSR | min track record needed |
 |---|---|---|---|---|
-| `kelly_regime_v4`, full spot | 1.44 | 1.000 | **0.996** | 3.7y |
-| `kelly_regime_v4`, holdout spot | 1.21 | 0.991 | 0.879 | **7.2y** |
-| `buy_and_hold`, holdout spot | 1.03 | 0.976 | 0.787 | 15.4y |
+| `kelly_regime_v4`, full spot | 1.44 | 1.000 | **0.996** | 3.8y |
+| `kelly_regime_v4`, holdout spot | 1.21 | 0.991 | 0.877 | **7.2y** |
+| `buy_and_hold`, holdout spot | 1.03 | 0.976 | 0.785 | 15.6y |
 
 On the full history the leaders clear the 0.95 bar. **On the holdout not
 one strategy in the table clears it, and neither does buy-and-hold** —
-proving v4's holdout Sharpe against a 190-trial search would need 7.2
+proving v4's holdout Sharpe against a 199-trial search would need 7.2
 years of data like it, and the holdout is 3.6. At the table's own Sharpe
-dispersion (2.60) SR\* = 7.13 and everything deflates to zero; that number
+dispersion (2.60) SR\* = 7.17 and everything deflates to zero; that number
 is an upper bound on the deflation rather than an estimate, because most
 of the table was registered as *documented negative results* rather than
 entered as candidates. The column that settles it is `breakeven_sd` in
 `reports/inference/deflated.csv`: v4's full-period claim survives any
-search whose Sharpe spread is under **0.34** and dies above it.
+search whose Sharpe spread is under **0.33** and dies above it.
 
 ### Cross-validating the table's own selection rule
 
@@ -1133,10 +1134,10 @@ reversal use is where strategies go to die (R-12).
   the absence of return alpha) on a second asset, but it shares the 2018
   bear with the main dataset; a second bear on a second asset in a
   different period (B-08) is still missing before risking capital.
-- **The holdout is exhausted.** It has been consulted ~152 times across
+- **The holdout is exhausted.** It has been consulted ~166 times across
   the project (ledger, "Holdout consultations to date"), and the deflated
   Sharpe says the leading strategy needs a 7.2-year track record to clear
-  a 190-trial bar on the 3.6 years available. No Sharpe-based claim from
+  a 199-trial bar on the 3.6 years available. No Sharpe-based claim from
   this dataset is supportable any more. Drawdown still replicates against
   a fully-invested benchmark — but R-33 found that 88–92% of that gap is
   the exposure level, so it is a thinner finding than it looks. Beyond
