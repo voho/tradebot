@@ -45,6 +45,7 @@ from gtbot.data.synthetic import simulate
 from gtbot.engine.broker import ExecutionConfig
 from gtbot.eval.account import simulate_account
 from gtbot.game.regret import LearnerConfig
+from gtbot.strategies import get as get_preset
 from gtbot.strategy import StrategyConfig
 
 TRAIN_SEEDS = [0, 1, 2, 3]
@@ -52,7 +53,11 @@ N_BARS = 150_000
 TIER = "vip9"
 EXECUTION = ExecutionConfig(entry_mode="taker", exit_mode="maker", ttl_bars=1)
 
-BASE = dict(horizon=3, entry_signal=0.55, max_hold=3)
+# Layered on the shipped preset so the ablation compares against exactly the
+# configuration that ships, not a restatement of it that can drift.
+_PRESET = get_preset("dislocation_v2")
+BASE = dict(horizon=_PRESET.config.horizon, entry_signal=_PRESET.config.entry_signal,
+            max_hold=_PRESET.config.max_hold)
 
 #: name -> kwargs layered on top of the baseline.
 #:

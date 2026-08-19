@@ -1,0 +1,92 @@
+{
+  "name": "dislocation_v1",
+  "version": "1.0.0",
+  "created": "2026-08-09",
+  "summary": "The pre-improvement baseline: same signal and sizer, but a fixed holding period and no variance reduction. Retained so the ablation in the README can be reproduced, not because it should be run.",
+  "thesis": "Most of a 5-minute move is information and is not predictable. A small part is the temporary displacement created when somebody had to trade in a hurry: the maker who absorbed that flow carries inventory it wants to shed, and the displacement unwinds over the next few bars. Two largely independent estimators read that displacement -- the price-side Kyle residual (the move order flow cannot explain) and the flow-side inventory proxy (the decayed negative of cumulative taker flow). Either alone is worth 2-4bp per trade; averaged they are worth about 11bp.",
+  "instrument": "BTCUSD perpetual (BTCUSDT)",
+  "bar_interval": "5m",
+  "minimum_fee_tier": "vip6",
+  "fee_tier_note": "Gross edge is 5-9bp per trade. A retail round trip costs 6.65bp, which leaves nothing; at VIP6 it is 3.85bp and at VIP9 2.05bp. This is a fee-tier business before it is a signal business, and the sizer will correctly refuse to trade at retail fees rather than churn.",
+  "min_bars": 130530,
+  "validated_sharpe": {
+    "retail": 0.13,
+    "vip3": 0.43,
+    "vip6": 1.19,
+    "vip9": 2.32
+  },
+  "validated_cagr": {
+    "retail": 0.003,
+    "vip3": 0.0204,
+    "vip6": 0.0645,
+    "vip9": 0.2088
+  },
+  "validated_max_drawdown": {
+    "retail": 0.0034,
+    "vip3": 0.0204,
+    "vip6": 0.0427,
+    "vip9": 0.0548
+  },
+  "validated_account_pnl_usd": {
+    "long/short robust vip6": 107.0,
+    "long/short robust vip9": 342.0,
+    "long/short fixed vip9": 1114.0
+  },
+  "evidence": {
+    "pooled_sharpe_vip6": 1.21,
+    "bootstrap_ci95": "[+0.59, +1.85]",
+    "newey_west_t": 3.66,
+    "deflated_sharpe_18_trials": 0.0011
+  },
+  "provenance": [
+    "Superseded by dislocation_v2; see scripts/ablation.py."
+  ],
+  "limitations": [
+    "All published results are on a calibrated agent-based simulator, not real BTCUSD data. The development environment had no exchange access. Run `gtbot fetch` and re-evaluate before believing any of it.",
+    "Deflated Sharpe is 0.2756 -- real headroom over what the search itself could produce, but not decisive.",
+    "Walk-forward with a cold learner per fold is weak (pooled +0.69 / +0.07 / +1.32): most folds never trade because the learner needs ~1 year of 5-minute data to converge. Warm-start from all available history.",
+    "Passive entries are adversely selected; a maker-in configuration loses money even though its modelled costs are lower.",
+    "Edge is thin in absolute terms (5-9bp per trade). Nothing here survives a large increase in costs or a materially worse fill model.",
+    "Scale-free only up to roughly six figures of deposit; beyond that the square-root impact term starts to erode the per-trade edge."
+  ],
+  "references": [
+    "Burch, Schmid, Moravcik, Bowling -- AIVAT: A New Variance Reduction Technique for Agent Evaluation in Imperfect Information Games (AAAI 2018)",
+    "Schmid -- Search in Imperfect Information Games (doctoral thesis, 2021)",
+    "Moravcik et al. -- DeepStack (Science 2017): continual re-solving",
+    "Brown & Sandholm -- Solving Imperfect-Information Games via Discounted Regret Minimization (AAAI 2019)",
+    "Kyle (1985) -- Continuous Auctions and Insider Trading",
+    "Avellaneda & Stoikov (2008) -- High-frequency trading in a limit order book",
+    "Bailey & Lopez de Prado (2014) -- The Deflated Sharpe Ratio"
+  ],
+  "config": {
+    "horizon": 3,
+    "edge_halflife": 400.0,
+    "t_full_confidence": 3.0,
+    "assumed_cost_bp": 2.05,
+    "entry_signal": 0.55,
+    "exit_signal": 0.1,
+    "max_hold": 3,
+    "variance_reduction": false,
+    "adaptive_exit": false,
+    "direction": "both",
+    "sizing_mode": "robust",
+    "signal_window": 2016,
+    "min_scale_samples": 1000,
+    "learner": "LearnerConfig(eta=0.03, mix=2e-05, payoff_halflife=500.0, include_flat=True, rule='hedge', dcfr_alpha=1.5, dcfr_beta=0.0, prior_expert='transient_dislocation', prior_weight=0.7)",
+    "ambiguity": "AmbiguityConfig(k_sigma=0.5, n_scenarios=5, model_haircut=0.9, size_grid=(np.float64(0.0), np.float64(0.025), np.float64(0.05), np.float64(0.075), np.float64(0.1), np.float64(0.125), np.float64(0.15), np.float64(0.175), np.float64(0.2), np.float64(0.225), np.float64(0.25), np.float64(0.275), np.float64(0.3), np.float64(0.325), np.float64(0.35), np.float64(0.375), np.float64(0.4), np.float64(0.425), np.float64(0.45), np.float64(0.475), np.float64(0.5), np.float64(0.525), np.float64(0.55), np.float64(0.575), np.float64(0.6), np.float64(0.625), np.float64(0.65), np.float64(0.675), np.float64(0.7), np.float64(0.725), np.float64(0.75), np.float64(0.775), np.float64(0.8), np.float64(0.825), np.float64(0.85), np.float64(0.875), np.float64(0.9), np.float64(0.925), np.float64(0.95), np.float64(0.975), np.float64(1.0)), risk_aversion=0.06, iters=200)",
+    "risk": "RiskConfig(target_vol_annual=0.15, max_leverage=5.0, min_position=0.02, drawdown_soft=0.06, drawdown_hard=0.15, vol_halflife=1000.0, max_vol_scalar=12.0)",
+    "features": "FeatureConfig(micro=MicroConfig(kyle_window=288, vpin_buckets=50, flow_halflife=6.0, inventory_halflife=0.5, slow_inventory_halflife=6.0, roll_window=288, rank_window=2016), liq=LiquidityConfig(swing_lookback=36, rank_window=2016, vol_ma=48), reg=RegimeConfig(vr_window=288, vr_lag=6, trend_fast=12.0, trend_slow=96.0, rank_window=2016, n_vol_states=1, n_flow_states=1), warmup=2016)",
+    "regime": "RegimeConfig(vr_window=288, vr_lag=6, trend_fast=12.0, trend_slow=96.0, rank_window=2016, n_vol_states=1, n_flow_states=1)"
+  },
+  "execution": {
+    "entry_mode": "taker",
+    "exit_mode": "maker",
+    "maker_offset_atr": 0.0,
+    "ttl_bars": 1,
+    "cross_after_ttl": true,
+    "queue_ticks": 1.0,
+    "min_trade": 0.02
+  },
+  "leverage": 5.0,
+  "deposit": 1000.0
+}

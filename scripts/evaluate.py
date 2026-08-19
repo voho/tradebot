@@ -41,12 +41,15 @@ from gtbot.eval.account import (
     simulate_account,
 )
 from gtbot.eval.walkforward import run_walkforward
+from gtbot.strategies import get as get_preset
 from gtbot.strategy import GameTheoreticStrategy, StrategyConfig
 
 # --- frozen configuration -------------------------------------------------
-CONFIG = StrategyConfig(horizon=3, entry_signal=0.55, max_hold=3,
-                        variance_reduction=True, adaptive_exit=True)
-EXECUTION = ExecutionConfig(entry_mode="taker", exit_mode="maker", ttl_bars=1)
+# Taken from the pinned preset rather than restated here, so these numbers
+# cannot drift away from the configuration they are published against.
+PRESET = get_preset("dislocation_v2")
+CONFIG = PRESET.config
+EXECUTION = PRESET.execution
 MAX_LEVERAGE = 2.0
 
 TEST_SEEDS = [100, 101, 102, 103, 104, 105]
@@ -69,10 +72,7 @@ N_FOLDS_WF = 5
 
 def _config_for(tier: str) -> StrategyConfig:
     """Tell the sizer the truth about what a round trip costs at this tier."""
-    cost = CostModel.for_tier(tier)
-    cfg = StrategyConfig(**{**CONFIG.__dict__})
-    cfg.assumed_cost_bp = cost.round_trip_bp(EXECUTION)
-    return cfg
+    return PRESET.config_for_tier(tier)
 
 
 def _run(bars, tier: str):
@@ -149,6 +149,7 @@ def main() -> None:
     out: dict = {}
     print("=" * 78)
     print("HELD-OUT EVALUATION  (test seeds never used during development)")
+    print(f"strategy: {PRESET.name} v{PRESET.metadata.version}")
     print(f"config: horizon={CONFIG.horizon} entry_signal={CONFIG.entry_signal} "
           f"max_hold={CONFIG.max_hold} varred={CONFIG.variance_reduction} "
           f"adaptive_exit={CONFIG.adaptive_exit}  "

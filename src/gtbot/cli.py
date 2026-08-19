@@ -31,6 +31,7 @@ from .eval.account import DEFAULT_DEPOSIT, DEFAULT_LEVERAGE, DIRECTIONS, format_
 from .eval.report import render_report
 from .eval.walkforward import run_walkforward
 from .risk import RiskConfig
+from .strategies import DEFAULT_PRESET, available as available_strategies, get as get_strategy
 from .strategy import GameTheoreticStrategy, StrategyConfig
 
 BPY = BTCUSD_5M.bars_per_year
@@ -61,24 +62,53 @@ def _load(path: str) -> pd.DataFrame:
     return validate(df, strict=False)
 
 
-def _strategy(args) -> GameTheoreticStrategy:
-    cost = CostModel.for_tier(args.tier)
-    execution = ExecutionConfig(entry_mode=args.entry_mode, exit_mode=args.exit_mode, ttl_bars=1)
-    cfg = StrategyConfig(
-        horizon=args.horizon,
-        entry_signal=args.entry_signal,
-        max_hold=args.horizon,
-        assumed_cost_bp=cost.round_trip_bp(execution),
-    )
+def _config(args) -> StrategyConfig:
+    """The preset's pinned configuration, with explicit flags layered on top."""
+    preset = get_strategy(getattr(args, "strategy", DEFAULT_PRESET))
+    execution = _execution(args)
+    cfg = preset.config_for_tier(args.tier)
+    # Explicit flags win over the preset; the defaults below match it, so a run
+    # without flags is exactly the configuration the published numbers describe.
+    if args.horizon is not None:
+        cfg.horizon = args.horizon
+        cfg.max_hold = args.horizon
+    if args.entry_signal is not None:
+        cfg.entry_signal = args.entry_signal
+    cfg.direction = args.direction
+    cfg.sizing_mode = args.sizing_mode
+    cfg.assumed_cost_bp = CostModel.for_tier(args.tier).round_trip_bp(execution)
     # The risk layer clamps before the backtester's own clip, so a --max-leverage
     # above RiskConfig's default would otherwise be silently ignored and every
     # reported number would come from a 2x run.
     cfg.risk = replace(cfg.risk, max_leverage=args.max_leverage)
-    return GameTheoreticStrategy(cfg)
+    return cfg
+
+
+def _strategy(args) -> GameTheoreticStrategy:
+    return GameTheoreticStrategy(_config(args))
 
 
 def _execution(args) -> ExecutionConfig:
     return ExecutionConfig(entry_mode=args.entry_mode, exit_mode=args.exit_mode, ttl_bars=1)
+
+
+def cmd_strategies(args) -> None:
+    """Show the pinned presets and their metadata."""
+    if args.name:
+        preset = get_strategy(args.name)
+        print(preset.metadata.to_json() if args.json else preset.describe())
+        return
+    if args.json:
+        import json as _json
+
+        print(_json.dumps(
+            {n: get_strategy(n).metadata.to_dict() for n in available_strategies()}, indent=2
+        ))
+        return
+    for n in available_strategies():
+        m = get_strategy(n).metadata
+        marker = " (default)" if n == DEFAULT_PRESET else ""
+        print(f"{n} v{m.version}{marker}\n    {m.summary}\n")
 
 
 # ----------------------------------------------------------------- commands
@@ -112,6 +142,7 @@ def cmd_backtest(args) -> None:
         res.returns, res.equity, res.position, res.costs,
         bars_per_year=BPY, n_trades=res.n_trades,
     )
+    print(f"strategy       {args.strategy}")
     print(f"bars           {len(bars):,}  ({m.years:.2f} years)")
     print(f"fee tier       {args.tier}  (round trip {cost.round_trip_bp(execution):.2f} bp)")
     print(f"execution      {args.entry_mode} in / {args.exit_mode} out")
@@ -130,7 +161,7 @@ def cmd_backtest(args) -> None:
         simulate_account(
             bars, tier=args.tier, direction=d, sizing_mode=sm,
             leverage=args.leverage, deposit=args.deposit,
-            config=_strategy(args).cfg, execution=execution,
+            config=_config(args), execution=execution,
         )
         for sm in ("robust", "fixed")
         for d in DIRECTIONS
@@ -204,8 +235,15 @@ def build_parser() -> argparse.ArgumentParser:
         sp.add_argument("--tier", default="vip6", choices=sorted(FEE_TIERS))
         sp.add_argument("--entry-mode", dest="entry_mode", default="taker", choices=["taker", "maker"])
         sp.add_argument("--exit-mode", dest="exit_mode", default="maker", choices=["taker", "maker"])
-        sp.add_argument("--horizon", type=int, default=3)
-        sp.add_argument("--entry-signal", dest="entry_signal", type=float, default=0.55)
+        sp.add_argument("--strategy", default=DEFAULT_PRESET, choices=available_strategies(),
+                        help="pinned preset to run (see: gtbot strategies)")
+        sp.add_argument("--direction", default="both", choices=["both", "long_only"])
+        sp.add_argument("--sizing-mode", dest="sizing_mode", default="robust",
+                        choices=["robust", "fixed"])
+        sp.add_argument("--horizon", type=int, default=None,
+                        help="override the preset's horizon")
+        sp.add_argument("--entry-signal", dest="entry_signal", type=float, default=None,
+                        help="override the preset's entry threshold")
         sp.add_argument("--max-leverage", dest="max_leverage", type=float, default=2.0)
         sp.add_argument("--leverage", type=float, default=DEFAULT_LEVERAGE,
                         help="leverage for the reported account outcome")
@@ -244,6 +282,11 @@ def build_parser() -> argparse.ArgumentParser:
     common(r)
     r.add_argument("--out", help="write markdown here")
     r.set_defaults(func=cmd_report)
+
+    st = sub.add_parser("strategies", help="list pinned strategy presets and their metadata")
+    st.add_argument("--name", help="show one preset in full")
+    st.add_argument("--json", action="store_true", help="emit machine-readable metadata")
+    st.set_defaults(func=cmd_strategies)
     return p
 
 

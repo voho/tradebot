@@ -6,6 +6,7 @@ __pycache__/
 venv/
 data/
 *.csv
+!docs/*.json
 *.parquet
 !configs/*.csv
 report.md

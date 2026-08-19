@@ -238,6 +238,48 @@ does.
 
 ---
 
+## The strategy as a pinned object
+
+`src/gtbot/strategies.py` defines the shipped strategy as a **frozen, versioned
+preset** rather than leaving it implicit in dataclass defaults. That matters:
+without it, editing any default silently redefines "the strategy" and quietly
+invalidates every number in this file. `tests/test_strategies.py` pins the
+values, so that edit now fails a test instead.
+
+```python
+from gtbot.strategies import get
+
+preset = get("dislocation_v2")
+print(preset.describe())            # thesis, requirements, results, limitations
+print(preset.metadata.to_json())    # the same, machine-readable
+
+strategy = preset.build()                       # ready to run
+strategy = preset.build(direction="long_only")  # with overrides
+cfg = preset.config_for_tier("vip9")            # sizer told the truth about costs
+```
+
+```bash
+gtbot strategies                                  # list presets
+gtbot strategies --name dislocation_v2            # full metadata
+gtbot strategies --name dislocation_v2 --json     # machine-readable
+gtbot backtest --strategy dislocation_v2 --tier vip9 --leverage 5 --deposit 1000
+```
+
+Two presets ship. `dislocation_v2` is the default and is what every number in
+this README describes. `dislocation_v1` is the pre-improvement baseline, kept so
+the ablation below is reproducible — it differs from v2 in exactly the two
+ablated flags, which is itself asserted by a test.
+
+Metadata travels with the strategy and is exported to `docs/dislocation_v2.json`:
+the thesis, the minimum viable fee tier and why, the history required before the
+learner is converged (130,530 bars), every held-out measurement, the provenance
+of each design decision including the one that was **rejected**, and a
+limitations list whose first entry is that all of this is simulated data.
+
+`scripts/evaluate.py` and `scripts/ablation.py` both build from the preset rather
+than restating its values, so the published results and the shipped
+configuration cannot drift apart.
+
 ## Improvements, and what they were worth
 
 Four ideas were taken from the search-and-learning literature on
@@ -408,9 +450,14 @@ src/gtbot/
   engine/      cost & execution model, backtester, paper trader
   eval/        metrics (PSR/DSR), walk-forward, bootstrap & permutation tests
   strategy.py  the assembled pipeline
+  strategies.py  pinned, versioned presets + metadata
+  strategy.py  the assembled pipeline
 scripts/
   search.py    hyperparameter search — TRAINING seeds only
+  ablation.py  per-improvement ablation — TRAINING seeds only
   evaluate.py  held-out evaluation — the numbers above
+docs/
+  dislocation_v2.json   exported strategy metadata
 ```
 
 ### The causality contract
