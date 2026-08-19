@@ -638,9 +638,87 @@ def subperiod() -> None:
         _paired(c, "kelly_regime_v4", label)
 
 
+# ------------------------------------------------- 9. seam robustness check
+
+def seam() -> None:
+    """Post-hoc: is the 2024-2026 negative an artifact of the venue splice?
+
+    NOT part of the pre-registered decision and it cannot rescue it --
+    the pre-registration fixes ``load_funding_extended()`` as the input.
+    It is here because a reader is entitled to know whether the result
+    survives removing the one structural oddity this branch inherited:
+    for ~one window-length after 2024-01-01 the trailing rank of a
+    Deribit rate is taken against a partly-Binance history, and the two
+    venues sit at different levels.
+
+    The check re-runs the identical frozen configuration on 2024-2026
+    with a *pure Deribit* funding series (``load_funding_deribit``, no
+    splice at all, so every rank is Deribit-vs-Deribit) and on the
+    2025-01-01+ slice, which is more than a full 365-day window past the
+    splice for every swept lookback. If the negative persists in both,
+    the seam is not the explanation.
+    """
+    from tradebot.data import load_funding_deribit
+
+    identity_check()
+    deribit = load_funding_deribit(ROOT / "data")
+    for label, period, series in (
+            ("2024+ / spliced series (as pre-registered)", OOS_2024P, FUNDING_EXT),
+            ("2024+ / pure Deribit series (no splice)", OOS_2024P, deribit),
+            ("2025+ / spliced, > 1 full 365d window past the splice",
+             ("2025-01-01", None), FUNDING_EXT)):
+        print(f"\n{label}, futures5x, funding charged "
+              f"(gate ranks against {'Deribit only' if series is deribit else 'the spliced series'}):")
+        arms = [("kelly_regime_v4", v4()),
+                (f"gate w={DECISION_W}",
+                 FundingGateDecileExtended(funding_window_days=DECISION_W,
+                                           decile=DECILE, funding=series))]
+        c = _curves(arms, period, FUTURES, series)
+        _paired(c, "kelly_regime_v4", label)
+
+
+# ------------------------------------------- 10. descriptive: why it failed
+
+def why() -> None:
+    """Descriptive only, no backtests: what the gate was standing aside for.
+
+    R-16's premise is that top-decile funding forecasts weak forward
+    returns. This measures that premise directly, per slice, with the
+    same causal percentile column the gate itself uses: mean forward
+    14-day log return on gated bars vs ungated bars. It generates no
+    Sharpe and evaluates no configuration, so it is not in the trials
+    tally -- it is here to give the ledger row a mechanism rather than
+    just a sign.
+    """
+    identity_check()
+    horizon = 14 * 288
+    close = DF["close"]
+    fwd = np.log(close.shift(-horizon) / close)
+    pctl = pd.Series(_funding_percentile(FUNDING_EXT, DF.index, DECISION_W,
+                                         3.0, 30), index=DF.index)
+    fired = pctl >= DECILE
+    print(f"mean forward {horizon // 288}-day log return, gated vs ungated bars "
+          f"(w={DECISION_W}, decile={DECILE}):")
+    print(f"  {'slice':40s} {'gated':>9s} {'ungated':>9s} {'spread':>9s} {'n_gated':>9s}")
+    for label, lo, hi in (("inner-validation 2021-2022", *VALID),
+                          ("holdout 2023 (Binance funding)", *OOS_2023),
+                          ("holdout 2024-2026 (Deribit funding)", *OOS_2024P),
+                          ("holdout 2023-01-01 -> end (all)", *OOS)):
+        m = _slice(DF, lo, hi).index
+        g, f = fired.reindex(m), fwd.reindex(m)
+        a = float(f[g & f.notna()].mean())
+        b = float(f[~g & f.notna()].mean())
+        print(f"  {label:40s} {a:>+9.4f} {b:>+9.4f} {a - b:>+9.4f} "
+              f"{int(g.sum()):>9,d}")
+    print("\nR-16's premise is that the top decile forecasts a WEAK forward\n"
+          "return, i.e. a negative spread. A positive spread means the gate\n"
+          "stood aside during the better half of the tape.")
+
+
 COMMANDS = {"build": build, "causality": causality, "coverage": coverage,
             "validation": validation, "holdout": holdout,
-            "neighbours": neighbours, "costs": costs, "subperiod": subperiod}
+            "neighbours": neighbours, "costs": costs, "subperiod": subperiod,
+            "seam": seam, "why": why}
 
 
 def main() -> None:

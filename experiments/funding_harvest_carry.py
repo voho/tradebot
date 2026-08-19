@@ -362,7 +362,7 @@ def carry_metrics(res: CarryResult, rate: pd.Series) -> CarryMetrics:
     worst30 = float(roll.min())
 
     peak = daily.cummax()
-    dd = float(((daily - peak) / peak).min())
+    dd = -float(((daily - peak) / peak).min())     # positive magnitude, repo convention
 
     return CarryMetrics(
         years=years,
@@ -457,7 +457,7 @@ def _arm_table(rows: list[tuple[str, Series]]) -> None:
             m, res = run_cell(s, fee=tier, rebalance=freq, fee_model=fm)
             print(f"  {label:26s} {alabel:14s} {m.annualized_pct:>+8.2f}% "
                   f"{m.total_pct:>+8.1f}% {m.sharpe_daily:>7.2f} "
-                  f"{m.worst_30d_pct:>+8.2f}% {m.max_drawdown_pct:>+6.2f}% "
+                  f"{m.worst_30d_pct:>+8.2f}% {m.max_drawdown_pct:>6.2f}% "
                   f"{m.neg_settlement_frac:>5.1%} "
                   f"{res.max_notional_over_equity:>6.2f}x {m.n_settlements:>6d}")
         print()
@@ -617,12 +617,61 @@ def cash_benchmark(series: dict[str, Series]) -> None:
 """)
     ext = series["extended"]
     approx_rf = {2024: 5.3, 2025: 4.3, 2026: 3.7}
-    print(f"  {'year':6s} {'carry @0.10%':>13s} {'~T-bill':>9s} {'excess':>9s}")
+    print("  Carry here is the RISK-MATCHED read (notional reset to equity every")
+    print("  settlement, maxLev 1.00x) minus VALIDATION.md's own quarterly fee")
+    print("  drag (4/yr x 2 legs x 2 sides = 1.6%/yr at 0.10%, 6.4%/yr at 0.40%),")
+    print("  so no part of the excess is leverage drift.\n")
+    print(f"  {'year':6s} {'gross':>9s} {'net 0.10%':>10s} {'net 0.40%':>10s} "
+          f"{'~T-bill':>9s} {'excess@0.10%':>13s}")
     for year, rf in approx_rf.items():
         sub = slice_period(ext, f"{year}-01-01", f"{year}-12-31")
-        m, _ = run_cell(sub, fee=0.001, rebalance="Q", count=False)
-        print(f"  {year:<6d} {m.annualized_pct:>+12.2f}% {rf:>8.1f}% "
-              f"{m.annualized_pct - rf:>+8.2f}%")
+        m, _ = run_cell(sub, fee=0.0, rebalance="S", count=False)
+        g = m.annualized_pct
+        print(f"  {year:<6d} {g:>+8.2f}% {g - 1.6:>+9.2f}% {g - 6.4:>+9.2f}% "
+              f"{rf:>8.1f}% {g - 1.6 - rf:>+12.2f}%")
+
+
+def bootstrap_intervals(series: dict[str, Series]) -> None:
+    """Ranges, not points (docs/ROUTINE.md standing rule).
+
+    Stationary block bootstrap over DAILY carry returns, 30-day mean
+    block, 2,000 draws, seed 39 — the same convention as
+    ``tradebot.inference`` (R-29/R-30). The resampled quantity is the
+    funding stream itself, so the interval describes sampling noise in
+    the funding rate and nothing else; it cannot widen to cover the
+    unmodelled risks, which is the whole point of the caveat section.
+    """
+    from tradebot.inference import stationary_bootstrap_indices
+
+    _hdr("11. bootstrap intervals on the carry stream (95%, 30-day block, 2,000 draws)")
+    ext = series["extended"]
+    der = series["deribit-only"]
+    rows = [
+        ("extended 2020-2023 (Binance)", slice_period(ext, *BINANCE_ERA)),
+        ("extended 2024-2026 (Deribit)", slice_period(ext, *DERIBIT_ERA)),
+        ("deribit-only 2020-2023", slice_period(der, *BINANCE_ERA)),
+        ("deribit-only 2024-2026", slice_period(der, *DERIBIT_ERA)),
+        ("deribit-only 2020-2024", slice_period(der, "2020-01-01", "2024-12-31")),
+        ("deribit-only 2025-2026", slice_period(der, "2025-01-01", "2026-12-31")),
+    ]
+    print(f"\n  {'window':30s} {'ann % (95% CI)':>30s} {'sharpe (95% CI)':>28s}")
+    for label, s in rows:
+        _, res = run_cell(s, fee=0.0, rebalance="S", count=False)
+        daily = _daily_equity(res.equity).pct_change().dropna().to_numpy()
+        n = len(daily)
+        idx = stationary_bootstrap_indices(n, 30.0, 2000, np.random.default_rng(39))
+        draws = daily[idx]
+        ann = (np.prod(1.0 + draws, axis=1) ** (DAYS_PER_YEAR / n) - 1.0) * 100.0
+        sd = draws.std(axis=1, ddof=1)
+        shp = np.where(sd > 0, draws.mean(axis=1) / sd * np.sqrt(DAYS_PER_YEAR), np.nan)
+        pann = (np.prod(1.0 + daily) ** (DAYS_PER_YEAR / n) - 1.0) * 100.0
+        psh = daily.mean() / daily.std(ddof=1) * np.sqrt(DAYS_PER_YEAR)
+        alo, ahi = np.percentile(ann, [2.5, 97.5])
+        slo, shi = np.nanpercentile(shp, [2.5, 97.5])
+        print(f"  {label:30s} {pann:>+9.2f} [{alo:>+7.2f}, {ahi:>+7.2f}] "
+              f"{psh:>12.2f} [{slo:>5.2f}, {shi:>5.2f}]")
+    print("\n  These are gross, risk-matched (continuous rebalance) streams. Fees")
+    print("  are a deterministic subtraction and shift the interval bodily.")
 
 
 def configs_report() -> None:
@@ -660,6 +709,7 @@ def main() -> None:
     rebalance_sensitivity(series)
     cash_benchmark(series)
     benchmarks()
+    bootstrap_intervals(series)
     configs_report()
 
 
