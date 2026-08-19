@@ -42,6 +42,13 @@ venv/
 !/reports/matched_risk/*.csv
 !/reports/matched_risk/*.json
 !/reports/matched_risk/*.txt
+# the de-levered-benchmark round (R-33). Same reasoning as matched_risk:
+# the frozen exposures are the pre-registration's receipt.
+!/reports/matched_hold/
+!/reports/matched_hold/*.csv
+!/reports/matched_hold/*.json
+!/reports/matched_hold/*.txt
+!/reports/matched_hold/*.png
 # the ungated-control round (R-32): its frontier chart is the picture of
 # what a gate is worth at matched risk, and its window resample is the
 # evidence behind that claim

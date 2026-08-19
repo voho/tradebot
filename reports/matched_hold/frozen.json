@@ -1,0 +1,28 @@
+{
+  "spot": {
+    "v4_vol": 0.2908298308870495,
+    "v4_clamp": 0.022647925964382504,
+    "v4_final": 997.9766056680674,
+    "v4_max_dd": 33.182451194599295,
+    "c_notional": 0.28280711430466865,
+    "c_vol_rebalanced": 0.3529608399706391,
+    "vol_rebalanced": 0.29084640106754556,
+    "iterations_rebalanced": 2,
+    "c_vol_static": 0.2929696831940005,
+    "vol_static": 0.29307977276512714,
+    "iterations_static": 3
+  },
+  "futures": {
+    "v4_vol": 0.2867562246629427,
+    "v4_clamp": 0.0,
+    "v4_final": 1063.696073859017,
+    "v4_max_dd": 32.29115790455559,
+    "c_notional": 0.2893613311593764,
+    "c_vol_rebalanced": 0.3480273744948064,
+    "vol_rebalanced": 0.2869677752436508,
+    "iterations_rebalanced": 2,
+    "c_vol_static": 0.2888496609030243,
+    "vol_static": 0.2890063318497877,
+    "iterations_static": 3
+  }
+}

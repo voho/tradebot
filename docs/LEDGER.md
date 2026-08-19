@@ -114,6 +114,7 @@ the most expensive repeated mistake in this table.
 | R-29 | Trials-aware inference: block-bootstrap intervals, deflated Sharpe, combinatorially purged CV (Politis & Romano 1994; Bailey & López de Prado 2014; López de Prado 2018) | 08-17 | `src/tradebot/inference.py` + `scripts/inference.py`, applied to all 25 registered strategies on both markets: 96 paired comparisons, 100 deflated Sharpes, 45 CPCV splits | **10 of 96 adjacent pairs in the ranking are distinguishable at 95%, and none of them separates two of the table's top eight from each other.** The table's *final-balance* claim for `kelly_regime_v4` over holding on spot is a coin flip (P=0.52). The drawdown claim survives on the full history (−41.1pp [−54.8, −18.4]) and on the futures holdout, but **not** on the spot holdout (−27.1pp [−35.8, **+1.9**]). Cross-validating the table's own selection rule: it beats holding in **6 of 45** folds. | **METHOD** — the ordering is mostly noise, and now says so |
 | R-30 | Wire the intervals into the comparison table itself (backlog B-12) | 08-18 | `src/tradebot/evidence.py` reads R-29's `bootstrap.csv` into `tradebot run`: two verdict columns on the README table (Δ log growth and Δ max drawdown against `buy_and_hold`, each with its 95% paired interval and a ▲/≈/▼ mark), the full error bars in the per-market detail tables, the log-growth interval added to the bootstrap output — R-29 computed it and saved only the point — and a CI rule that a registered strategy with no measured interval fails the suite. 18 new tests. | **The column R-29 computed and discarded says more than the ones it kept.** On spot over the full history, **0 of 24 strategies are distinguishably better than `buy_and_hold` on log growth**, the criterion the table ranks by; 13 are distinguishably worse and the 11 indistinguishable ones are the entire profitable block. `kelly_regime_v4`'s +0.044 advantage is **[−2.60, +2.85]** — from a thirteenth of holding's final balance to seventeen times it. Everything R-29 published reproduced exactly. | **METHOD** — the warning now lives *in* the table, not beside it |
 | R-31 | Matched-risk frontier: e-process gate vs latched anchor vote at equal realized volatility (backlog B-11) | 08-18 | `experiments/matched_risk.py` — one sizer, one deadband, one warmup, one exposure knob, gate interchangeable. 36 configurations traced on both inner splits and both markets (144 backtests), exposures solved on inner-validation to within 2% of target volatility in both directions, then frozen; holdout scored with the R-29 paired block bootstrap | **Hold risk fixed and R-28's headline dissolves — both halves of it.** All 8 holdout intervals contain zero and the sign is unstable across cells; the one cell surviving the pre-registered validity gate gives −0.072 [−0.532, +0.379] on log growth. Three cells of four are **void**: the inner-validation exposure match did not survive into 2023+ (29% volatility gaps) or the spot notional cap truncated both arms differently (41% / 27% of bars). On ETH, with exposures re-matched, the e-process gate loses all four cells on return **and on drawdown** — so R-28's P3 replication was measured against an arm carrying 2.4x the risk. Equal-risk exposure ratio is itself regime-dependent: 2.2x in the bull, 4.7x in the bear. | **NEGATIVE** — the 0.27x exposure *was* the finding |
+| R-33 | Matched-risk benchmark: `kelly_regime_v4` against a **de-levered** `buy_and_hold` at equal realized volatility (backlog B-13) | 08-19 | `experiments/matched_hold.py` — a passive long holding a constant fraction `c` of equity, in two readings (rebalanced to constant risk, and static buy-once), exposure solved on inner-validation so its realized volatility equals v4's, then frozen; holdout scored with the R-29 paired block bootstrap; 40 windows re-matched **inside each window** | *(see the pre-registration and results sections below)* | *(below)* |
 | R-32 | The ungated control, and an independent second reading of B-11 | 08-18 | A parallel session ran the same backlog row the same day from the same base commit. Same design as R-31 (one sizer, gate interchangeable, exposure scaled by a scalar) plus a **third arm with no gate at all**; 33 configurations, 132 backtests, multipliers frozen on inner-validation | **Agrees with R-31 wherever the two overlap** — gates indistinguishable at matched risk, R-28's 0-of-40 inverted (deeper in 60%/62%), its fee advantage inverted, P1 failed — from an independent implementation, and its own holdout cells are **void** under R-31's validity rule (cap binds on 41%/36%/21% of spot bars; a 29% volatility gap on futures). What it adds: at matched risk the **ungated** arm is below both gated arms at every risk level in all four inner-split cells and loses 80–90% of 40 paired windows. **The gate is worth more than the choice of gate.** | **NEGATIVE** — and the parallel-branch report the routine requires |
 
 ### R-28 pre-registration — written and committed before the holdout was read
@@ -1179,6 +1180,185 @@ arithmetic that dissolved R-28's finding, and the preview above suggests
 it will not be kind.
 
 ![what a gate is worth at matched risk](../reports/gate_control/frontier.png)
+
+### R-33 pre-registration — written and committed before the holdout was read
+
+**Idea, in one sentence.** Every drawdown claim this project makes
+compares `kelly_regime_v4` — which holds a mean notional fraction of
+**0.28–0.43** and is flat a third of the time — against a
+**fully-invested** `buy_and_hold`; de-lever the benchmark to v4's own
+realized volatility and ask how much of the −41.1pp gap is the *gate* and
+how much is the *exposure level*.
+
+**Constraint attacked.** ERR and SIZE. ERR because the comparison that
+produces this project's headline has never had its most obvious confound
+controlled; SIZE because "how much to hold" is the axis every profitable
+strategy here operates on, and the question is whether v4 does anything
+on that axis a constant cannot.
+
+**Which ledger rows it is not a duplicate of.** R-31 varied the *gate*
+with exposure held fixed, and both its arms were active vol-targeted
+strategies. R-32 added an ungated arm, and says in its own lesson that
+this is **not** an answer to B-13: "the ungated arm here is a
+volatility-targeted one, not a de-levered `buy_and_hold`". R-11
+(Grossman–Zhou) varies exposure by a drawdown cushion, not to match risk.
+R-29 and R-30 measured the −41.1pp and −27.1pp gaps **against the
+fully-invested benchmark** — those are the numbers under test here, not a
+prior attempt at this test. Nothing here re-tries R-08 (better volatility
+forecasting) or R-12 (turnover tuning).
+
+**Simulable here?** Yes. One price series, causal, no new data, no fetch.
+
+**What would make it fail — named before the holdout was read.** (a) V1:
+v4 *targets* constant volatility while a constant-exposure hold's
+volatility tracks the market's, so the exposure that matches risk is
+regime-dependent and the freeze need not survive into 2023+ — the same
+instability R-31 and R-32 both hit from the other side. (b) The answer
+depends on which reading of "de-levered hold" is used, in which case the
+round produces two answers and no finding. (c) On spot v4 asks for more
+than 1.0 notional on 2.3–7.4% of bars (measured on the inner splits), so
+part of the spot comparison is against the market's cap rather than
+against a strategy.
+
+**Method, fixed in advance.** One passive class
+(`experiments/matched_hold.py`) holding a constant fraction `c` of
+equity, in the two readings the phrase admits:
+
+- **rebalanced** — holds `c`×equity in notional, rebalancing when the
+  realized fraction drifts more than 10% *relative* away. Constant risk;
+  pays fees. This is the arm B-13 asks for.
+- **static** — buys `c`×equity once and never trades again. Zero
+  turnover, but the weight drifts up toward 1.0 in a bull, so it is not a
+  constant-risk arm. Carried because it is the cheapest benchmark that
+  exists and is not obviously the weaker one.
+
+One implementation detail is recorded here because it changes what is
+being measured: the rebalanced arm places **quantity** orders rather than
+targets. The broker ignores same-sign target adjustments below 5% of
+*max* notional so strategies can re-emit a target every bar without
+churn; on 5x futures that band is 25% of equity, wider than anything this
+arm ever asks for, so routed through `order_notional` it never rebalances
+on futures at all and silently becomes the static arm. The first version
+of this file did exactly that. A quantity order carries the arm's own
+10% band instead of inheriting a leverage-scaled one.
+
+Two matching axes are solved, because "de-levered to match" is ambiguous
+and this project has not been careful about which one it means:
+**equal realized volatility** (the R-31 convention, solved) and
+**equal mean notional** (v4's own mean notional fraction, no solver).
+The two disagree by construction, and the disagreement is itself
+reportable: on inner-validation spot, matching v4's *notional* (c=0.283)
+gives an arm at volatility 0.233 against v4's 0.291, because v4's
+exposure is negatively correlated with volatility.
+
+**Frozen configuration**, solved on **inner-validation only**
+(2021-01-01 → 2022-12-31) to within 0.1% of v4's realized volatility:
+
+| market | v4 realized vol | v4 mean notional | rebalanced `c` | static `c` | notional-matched `c` |
+|---|---|---|---|---|---|
+| spot | 0.291 | 0.283 | **0.353** (vol 0.291) | **0.293** (vol 0.293) | 0.283 |
+| futures 5x | 0.287 | 0.289 | **0.348** (vol 0.287) | **0.289** (vol 0.289) | 0.289 |
+
+The holdout statistic is the R-29/R-30 paired stationary block bootstrap:
+30-day mean block, 2,000 resamples, daily returns, identical resample
+indices for both arms of a pair, every difference stated as
+**v4 − benchmark** so a negative drawdown difference means v4 draws down
+less. `buy_and_hold` is carried through the same pipeline as a
+reproduction check against R-29's published −27.1pp [−35.8, +1.9].
+
+**V — validity gate, checked before any decision rule is read.** A cell
+is a matched comparison only if, *on the holdout*, (**V1**) the two arms'
+realized volatilities are within **20% of each other in relative terms**,
+and (**V2**) the passive arm is not pinned at the market's notional cap
+(clamp below 1%). Failing cells are reported and **voided**, not scored.
+
+One deliberate difference from R-31's gate, recorded now so it cannot be
+read as a convenience later: **v4's own clamp fraction does not void a
+cell.** R-31 compared two configurations of one sizer, where truncation
+broke the "same sizer" premise. Here the arms are different objects by
+design, and v4's clamping on spot is part of what v4 *is* as registered —
+every published v4-vs-hold number in this repo (the README table, R-29,
+R-30) carries it. Excluding it here would make this round less
+comparable to the claim it is testing, not more. It is reported as a
+diagnostic on every row.
+
+**Pre-registered decision rules.**
+
+- **D1 (the B-13 question).** "Regime-gated sizing cuts drawdown" is
+  upheld only if v4's paired **Δ max drawdown** against the vol-matched
+  **rebalanced** hold has a 95% interval **strictly below zero in every
+  valid cell**. If any valid cell's interval contains zero, the claim is
+  downgraded — in the README, this ledger and `VALIDATION.md` — to
+  *established against a fully-invested benchmark only, and not against a
+  de-levered one*. That is the same downgrade R-31 applied to R-28, and
+  it is written here before the numbers exist.
+- **D2 (return).** The same test on **Δ log growth**, reported whatever
+  D1 says.
+- **D3 (falsification, chosen now).** ETH on Bitfinex over the R-17
+  window, exposures re-matched on ETH's own volatility. The **sign** of
+  the drawdown gap must replicate: if v4's advantage over a risk-matched
+  passive hold flips on a second asset, any D1 claim is dead — exactly
+  the test that killed R-28's.
+- **The quantity worth having even if every interval contains zero:** the
+  **share of the −41.1pp headline that survives matching**. That is a
+  number this project should have had since L-04, and it does not depend
+  on any of the above clearing a significance bar.
+- **P (promotion).** Nothing is promoted here; v4 is already registered.
+  A *failed* D1 does not de-register anything either — nothing is
+  deleted. What changes is what the docs are allowed to claim.
+
+**Stated predictions before looking.**
+
+1. **V1 fails on at least one market.** v4 holds realized volatility
+   roughly constant by construction while the hold's tracks the market's,
+   and 2023+ is calmer than 2021–22, so the frozen `c` should undershoot.
+2. **D1 fails.** v4's drawdown advantage over a matched rebalanced hold
+   is real but small: the inner splits give **−3.7pp** and **−4.2pp**
+   (inner-validation, spot and futures) and **−5.6pp** and **−14.4pp**
+   (inner-train), against the −41.1pp headline. I predict the holdout
+   point estimate lands in −3 to −8pp and at least one valid cell's
+   interval contains zero. Stated as the number that matters:
+   **I predict 80–90% of the published drawdown gap is carried by the
+   exposure level, not by the gate.**
+3. **D2 is where the round is favourable to the incumbent, and it is not
+   the claim the project makes.** At matched risk on inner-train spot v4
+   returns **$18,477 against $6,272** — three times the passive arm at
+   the same volatility. I expect v4 to beat the matched hold on growth on
+   the holdout too, possibly with an interval excluding zero on futures.
+4. **D3 replicates in sign.** Unlike R-28's e-process arm, v4's
+   advantage here cannot be an artifact of holding less, because holding
+   less is exactly what has been controlled.
+
+**Step 3, for the record** (inner splits only, exposures solved inside
+each split, so the ordering can be read regime by regime the way R-31's
+was):
+
+| split / market | v4 | vol-matched rebalanced hold | Δ max DD | matched vol |
+|---|---|---|---|---|
+| inner-train / spot | $18,477 (DD 43.3%) | $6,272 at c=0.426 (DD 48.9%) | **−5.6pp** | 0.399 |
+| inner-train / futures | $30,344 (DD 35.3%) | $6,827 at c=0.439 (DD 49.7%) | **−14.4pp** | 0.411 |
+| inner-validation / spot | $998 (DD 33.2%) | $960 at c=0.353 (DD 36.9%) | **−3.7pp** | 0.291 |
+| inner-validation / futures | $1,064 (DD 32.3%) | $964 at c=0.348 (DD 36.5%) | **−4.2pp** | 0.287 |
+
+against `buy_and_hold` at 84.1% / 99.0% / 77.3% / 99.8% in the same four
+cells. The gate's drawdown contribution, before any holdout read, looks
+like **4–14 points of a 41–67 point gap**.
+
+**Configurations evaluated in step 3: 18** — 2 passive arms × 9
+exposures, each scored on both inner splits and both markets (72
+backtests). A further 10 inner-validation backtests were spent by the
+exposure solver and 16 on the within-split matched pairs above; they set
+`c` on a criterion (equalize realized volatility) orthogonal to
+performance, so they are recorded separately rather than folded into the
+trials count, following R-31. The project's applied trials count becomes
+172 + 18 = **190**.
+
+**Holdout accounting.** No holdout data has been read at the time of this
+commit; `git log` records it one commit ahead of the results. The
+by-hand lookahead probe (`run_matched_hold.py causality`) passes for both
+arms: orders identical under two opposite tampers of the future, max
+|column difference| and max |equity difference| before the cut both
+**0.000e+00**.
 
 ---
 

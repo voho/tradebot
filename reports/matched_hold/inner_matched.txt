@@ -1,0 +1,29 @@
+1,010,889 bars  2017-01-01 -> 2026-08-12  (data: real)
+
+inner-train / spot  (exposures solved inside this split)
+    kelly_regime_v4                  final=$     18,477 vol=0.399 DD= 43.3% sharpe= 2.03 fills=  467 fees=$     509 clamp= 7.4%
+    buy_and_hold                     final=$     29,803 vol=0.931 DD= 84.1% sharpe= 1.38 fills=    1 fees=$       1 clamp= 0.0%
+    vol-matched rebalanced c=0.426   final=$      6,272 vol=0.399 DD= 48.9% sharpe= 1.35 fills=  101 fees=$      13 clamp= 0.0%
+    vol-matched static c=0.093       final=$      3,685 vol=0.405 DD= 56.9% sharpe= 1.01 fills=    1 fees=$       0 clamp= 0.0%
+    notional-matched c=0.403         final=$      6,086 vol=0.376 DD= 47.0% sharpe= 1.39 fills=  122 fees=$      14 clamp= 0.0%
+
+inner-train / futures  (exposures solved inside this split)
+    kelly_regime_v4                  final=$     30,344 vol=0.411 DD= 35.3% sharpe= 2.28 fills=  261 fees=$     280 clamp= 0.0%
+    buy_and_hold                     final=$         18 vol=1.133 DD= 99.0% sharpe=-0.29 fills=    2 fees=$       4 clamp= 0.0%  LIQUIDATED
+    vol-matched rebalanced c=0.439   final=$      6,827 vol=0.411 DD= 49.7% sharpe= 1.37 fills=  105 fees=$       7 clamp= 0.0%
+    vol-matched static c=0.099       final=$      3,842 vol=0.417 DD= 58.1% sharpe= 1.02 fills=    1 fees=$       0 clamp= 0.0%
+    notional-matched c=0.429         final=$      6,447 vol=0.401 DD= 49.1% sharpe= 1.36 fills=  103 fees=$       7 clamp= 0.0%
+
+inner-validation / spot  (exposures solved inside this split)
+    kelly_regime_v4                  final=$        998 vol=0.291 DD= 33.2% sharpe= 0.14 fills=  256 fees=$      70 clamp= 2.3%
+    buy_and_hold                     final=$        574 vol=0.826 DD= 77.3% sharpe= 0.08 fills=    1 fees=$       1 clamp= 0.0%
+    vol-matched rebalanced c=0.353   final=$        960 vol=0.291 DD= 36.9% sharpe= 0.07 fills=   55 fees=$       3 clamp= 0.0%
+    vol-matched static c=0.293       final=$        875 vol=0.293 DD= 38.4% sharpe=-0.08 fills=    1 fees=$       0 clamp= 0.0%
+    notional-matched c=0.283         final=$        957 vol=0.233 DD= 31.0% sharpe= 0.02 fills=   53 fees=$       2 clamp= 0.0%
+
+inner-validation / futures  (exposures solved inside this split)
+    kelly_regime_v4                  final=$      1,064 vol=0.287 DD= 32.3% sharpe= 0.25 fills=  143 fees=$      27 clamp= 0.0%
+    buy_and_hold                     final=$         18 vol=2.610 DD= 99.8% sharpe= 0.43 fills=    2 fees=$       4 clamp= 0.0%  LIQUIDATED
+    vol-matched rebalanced c=0.348   final=$        964 vol=0.287 DD= 36.5% sharpe= 0.08 fills=   57 fees=$       1 clamp= 0.0%
+    vol-matched static c=0.289       final=$        877 vol=0.289 DD= 38.0% sharpe=-0.08 fills=    1 fees=$       0 clamp= 0.0%
+    notional-matched c=0.289         final=$        958 vol=0.239 DD= 31.6% sharpe= 0.03 fills=   53 fees=$       1 clamp= 0.0%

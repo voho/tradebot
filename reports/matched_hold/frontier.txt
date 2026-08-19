@@ -1,0 +1,96 @@
+1,010,889 bars  2017-01-01 -> 2026-08-12  (data: real)
+
+inner-train / spot
+  arm                   c    vol       final     DD  sharpe  fills  clamp
+  buy_and_hold        ---  0.931 $    29,803  84.1%    1.38      1  0.0%
+  kelly_regime_v4     ---  0.399 $    18,477  43.3%    2.03    467  7.4%
+  rebalanced_hold     0.1  0.093 $     1,609  13.4%    1.32    225  0.0%
+  rebalanced_hold    0.15  0.140 $     2,043  19.5%    1.35    214  0.0%
+  rebalanced_hold     0.2  0.186 $     2,505  26.3%    1.33    180  0.0%
+  rebalanced_hold     0.3  0.280 $     3,933  35.8%    1.36    154  0.0%
+  rebalanced_hold     0.4  0.373 $     5,994  46.9%    1.39    122  0.0%
+  rebalanced_hold     0.5  0.468 $     8,353  55.5%    1.37     81  0.0%
+  rebalanced_hold    0.65  0.611 $    12,940  67.2%    1.35     37  0.0%
+  rebalanced_hold     0.8  0.762 $    19,502  76.5%    1.36     11  0.0%
+  rebalanced_hold       1  0.931 $    29,803  84.1%    1.38      1  0.0%
+  static_hold         0.1  0.421 $     3,880  58.3%    1.02      1  0.0%
+  static_hold        0.15  0.514 $     5,320  65.8%    1.07      1  0.0%
+  static_hold         0.2  0.581 $     6,761  70.3%    1.11      1  0.0%
+  static_hold         0.3  0.674 $     9,641  75.4%    1.18      1  0.0%
+  static_hold         0.4  0.738 $    12,521  78.3%    1.23      1  0.0%
+  static_hold         0.5  0.786 $    15,402  80.1%    1.26      1  0.0%
+  static_hold        0.65  0.842 $    19,722  81.9%    1.31      1  0.0%
+  static_hold         0.8  0.885 $    24,042  83.0%    1.34      1  0.0%
+  static_hold           1  0.931 $    29,803  84.1%    1.38      1  0.0%
+
+inner-train / futures
+  arm                   c    vol       final     DD  sharpe  fills  clamp
+  buy_and_hold        ---  1.133 $        18  99.0%   -0.29      2  0.0%
+  kelly_regime_v4     ---  0.411 $    30,344  35.3%    2.28    261  0.0%
+  rebalanced_hold     0.1  0.093 $     1,611  13.3%    1.33    225  0.0%
+  rebalanced_hold    0.15  0.140 $     2,047  19.5%    1.35    214  0.0%
+  rebalanced_hold     0.2  0.186 $     2,515  26.2%    1.33    182  0.0%
+  rebalanced_hold     0.3  0.280 $     3,959  35.5%    1.37    156  0.0%
+  rebalanced_hold     0.4  0.373 $     6,010  46.8%    1.39    122  0.0%
+  rebalanced_hold     0.5  0.467 $     8,376  55.5%    1.37     81  0.0%
+  rebalanced_hold    0.65  0.611 $    12,957  67.2%    1.36     37  0.0%
+  rebalanced_hold     0.8  0.762 $    19,514  76.5%    1.36     11  0.0%
+  rebalanced_hold       1  0.931 $    29,823  84.1%    1.38      1  0.0%
+  static_hold         0.1  0.420 $     3,876  58.3%    1.02      1  0.0%
+  static_hold        0.15  0.513 $     5,314  65.8%    1.07      1  0.0%
+  static_hold         0.2  0.581 $     6,752  70.3%    1.11      1  0.0%
+  static_hold         0.3  0.674 $     9,628  75.4%    1.18      1  0.0%
+  static_hold         0.4  0.738 $    12,504  78.3%    1.23      1  0.0%
+  static_hold         0.5  0.786 $    15,380  80.1%    1.26      1  0.0%
+  static_hold        0.65  0.841 $    19,694  81.9%    1.31      1  0.0%
+  static_hold         0.8  0.884 $    24,008  83.0%    1.34      1  0.0%
+  static_hold           1  0.931 $    29,760  84.1%    1.38      1  0.0%
+
+inner-validation / spot
+  arm                   c    vol       final     DD  sharpe  fills  clamp
+  buy_and_hold        ---  0.826 $       574  77.3%    0.08      1  0.0%
+  kelly_regime_v4     ---  0.291 $       998  33.2%    0.14    256  2.3%
+  rebalanced_hold     0.1  0.083 $     1,001  12.1%    0.04     93  0.0%
+  rebalanced_hold    0.15  0.124 $       999  17.7%    0.06     87  0.0%
+  rebalanced_hold     0.2  0.165 $       995  22.6%    0.07     80  0.0%
+  rebalanced_hold     0.3  0.248 $       962  32.4%    0.05     55  0.0%
+  rebalanced_hold     0.4  0.330 $       929  42.3%    0.05     43  0.0%
+  rebalanced_hold     0.5  0.412 $       868  49.1%    0.03     27  0.0%
+  rebalanced_hold    0.65  0.536 $       814  59.6%    0.08     17  0.0%
+  rebalanced_hold     0.8  0.662 $       725  67.9%    0.09      7  0.0%
+  rebalanced_hold       1  0.826 $       574  77.3%    0.08      1  0.0%
+  static_hold         0.1  0.109 $       957  16.2%   -0.15      1  0.0%
+  static_hold        0.15  0.159 $       936  22.9%   -0.13      1  0.0%
+  static_hold         0.2  0.208 $       915  28.9%   -0.11      1  0.0%
+  static_hold         0.3  0.299 $       872  39.1%   -0.08      1  0.0%
+  static_hold         0.4  0.385 $       830  47.5%   -0.05      1  0.0%
+  static_hold         0.5  0.465 $       787  54.5%   -0.03      1  0.0%
+  static_hold        0.65  0.579 $       723  63.1%    0.01      1  0.0%
+  static_hold         0.8  0.686 $       659  70.0%    0.04      1  0.0%
+  static_hold           1  0.826 $       574  77.3%    0.08      1  0.0%
+
+inner-validation / futures
+  arm                   c    vol       final     DD  sharpe  fills  clamp
+  buy_and_hold        ---  2.610 $        18  99.8%    0.43      2  0.0%
+  kelly_regime_v4     ---  0.287 $     1,064  32.3%    0.25    143  0.0%
+  rebalanced_hold     0.1  0.083 $     1,001  12.1%    0.05     93  0.0%
+  rebalanced_hold    0.15  0.124 $     1,000  17.7%    0.06     87  0.0%
+  rebalanced_hold     0.2  0.165 $       995  22.6%    0.07     80  0.0%
+  rebalanced_hold     0.3  0.248 $       963  32.4%    0.05     55  0.0%
+  rebalanced_hold     0.4  0.330 $       937  41.9%    0.07     45  0.0%
+  rebalanced_hold     0.5  0.412 $       869  49.0%    0.04     27  0.0%
+  rebalanced_hold    0.65  0.536 $       815  59.6%    0.08     17  0.0%
+  rebalanced_hold     0.8  0.662 $       726  67.9%    0.09      7  0.0%
+  rebalanced_hold       1  0.826 $       574  77.3%    0.08      1  0.0%
+  static_hold         0.1  0.109 $       958  16.2%   -0.15      1  0.0%
+  static_hold        0.15  0.159 $       936  22.9%   -0.13      1  0.0%
+  static_hold         0.2  0.208 $       915  28.8%   -0.11      1  0.0%
+  static_hold         0.3  0.299 $       873  39.0%   -0.08      1  0.0%
+  static_hold         0.4  0.384 $       830  47.4%   -0.05      1  0.0%
+  static_hold         0.5  0.464 $       788  54.4%   -0.03      1  0.0%
+  static_hold        0.65  0.578 $       724  63.0%    0.01      1  0.0%
+  static_hold         0.8  0.685 $       660  69.9%    0.04      1  0.0%
+  static_hold           1  0.824 $       575  77.3%    0.08      1  0.0%
+
+configurations evaluated (distinct, counted once): 18
+written: /home/user/tradebot/reports/matched_hold/frontier.csv
