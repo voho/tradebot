@@ -38,6 +38,18 @@ the framework can back-test:
 4. :func:`cpcv_splits` with :func:`purged_train_mask` — combinatorially
    purged cross-validation (López de Prado 2018), which turns one
    walk-forward number into a distribution of out-of-fold paths.
+5. :func:`empirical_bernstein_confidence_sequence` — Waudby-Smith & Ramdas
+   (2024), the **anytime-valid** counterpart to everything above. Every
+   other tool in this module answers "is the difference significant at
+   this one, fixed sample size" — which is exactly the question B-06
+   (forward paper trading, ``docs/LEDGER.md``) cannot honestly ask,
+   because its record grows one day at a time and nobody pre-commits to a
+   sample size before checking it. This gives a (1-alpha) confidence
+   sequence for the mean of a bounded, paired difference series that is
+   simultaneously valid at *every* ``n``, so reading it after every new
+   day and stopping the first time it excludes zero does not inflate the
+   false-positive rate the way repeating a fixed-``n`` test would.
+   :func:`anytime_valid_first_exclusion` reads off that stopping rule.
 
 **Everything here works on daily returns, not 5m bars.** A million
 autocorrelated bars is not a million observations; a block bootstrap over
@@ -57,6 +69,21 @@ estimation", Review of Economic Studies 61(4), 631-653.
 Bailey & López de Prado (2014), "The deflated Sharpe ratio", J. Portfolio
 Management 40(5).
 López de Prado (2018), *Advances in Financial Machine Learning*, ch. 7 & 12.
+Waudby-Smith & Ramdas (2024), "Estimating means of bounded random
+variables by betting", J. Royal Statistical Society Series B 86(1),
+1-27 (arXiv:2010.09686) — Theorem 2, the closed-form "predictable
+plug-in empirical Bernstein" confidence sequence implemented here.
+Howard, Ramdas, McAuliffe & Sekhon (2021), "Time-uniform, nonparametric,
+nonasymptotic confidence sequences", Annals of Statistics 49(2),
+1055-1080 — the uniform-boundary / test-supermartingale framework
+Waudby-Smith & Ramdas (2024) build the above on, and the source (their
+Section A.8) of the "swap the variance term's target mean for a
+predictable one" trick that makes the plug-in closed-form.
+Wang, Wang & Ziegel (2022), "E-backtesting", arXiv:2209.00991 — the
+e-value/e-process literature on sequentially backtesting risk-measure
+and trading claims; background for *why* an anytime-valid construction
+rather than a fixed-``n`` test is the right tool for B-06, not a source
+of any formula used below.
 """
 
 from __future__ import annotations
@@ -678,3 +705,191 @@ def cpcv_splits(n_groups: int, k_test: int) -> list[tuple[int, ...]]:
     if not 1 <= k_test < n_groups:
         raise ValueError("k_test must be in [1, n_groups)")
     return list(combinations(range(n_groups), k_test))
+
+
+# ------------------------------------------ anytime-valid confidence sequences
+
+def _psi_e(lam: np.ndarray) -> np.ndarray:
+    """Waudby-Smith & Ramdas (2024) eq. (14): the empirical-Bernstein CGF bound.
+
+    ``psi_E(lambda) = (-log(1-lambda) - lambda) / 4``, for ``lambda`` in
+    ``[0, 1)``. Nonnegative, increasing, and ``psi_E(lambda)/psi_H(lambda)
+    -> 1`` as ``lambda -> 0`` (their Hoeffding-style bound ``psi_H``), which
+    is why the paper's variance term below carries a matching factor of 4.
+    """
+    return (-np.log1p(-lam) - lam) / 4.0
+
+
+def empirical_bernstein_confidence_sequence(
+    diffs: pd.Series | np.ndarray, bound: float, alpha: float = 0.05,
+    c: float = 0.75,
+) -> pd.DataFrame:
+    """Anytime-valid (1-alpha) confidence sequence for the mean of a paired,
+    bounded difference series — e.g. one paper-traded arm's daily log return
+    minus another's (B-06, ``docs/LEDGER.md``).
+
+    This is Waudby-Smith & Ramdas (2024, JRSSB 86(1); arXiv:2010.09686)
+    Theorem 2, the closed-form "predictable plug-in empirical Bernstein"
+    (PrPl-EB) construction, chosen over their harder-to-implement betting
+    confidence sequence because it is closed-form, variance-adaptive, and
+    (per their Figure 2) matches the betting CS's width closely in
+    practice — the accuracy a from-memory betting/ONS implementation risks
+    losing is not worth paying for here. The general uniform-boundary
+    machinery both rest on is Howard, Ramdas, McAuliffe & Sekhon (2021,
+    Annals of Statistics 49(2)); the variance term's ``X_i - mu_hat(i-1)``
+    swap (rather than ``X_i - mu``) is their Section A.8 trick, which is
+    what makes this closed-form instead of requiring root-finding.
+
+    **Why anytime-valid, not one more fixed-``n`` test.** Every other test
+    in this module (:func:`paired_bootstrap`, :func:`ledoit_wolf_sharpe_diff`,
+    :func:`bootstrap_studentized_sharpe_diff`) is only valid for a sample
+    size fixed *before* looking. B-06's paper-trading CSVs grow by one row
+    per candle with no pre-committed stopping point, so re-running any of
+    those tests every day and reporting the first one that looks
+    significant is exactly the repeated-testing trap ``docs/ROUTINE.md``
+    exists to prevent. A confidence sequence is instead built so that ``P(
+    the true mean is outside the interval at ANY n) <= alpha`` — simultaneously
+    over every ``n``, not just the ``n`` an analyst happens to stop at — so
+    "read it today, and again tomorrow, and stop the first day it excludes
+    zero" is a valid level-``alpha`` test, unlike doing that with a p-value.
+
+    **The bound is the one real assumption an integrator must not gloss
+    over.** WSR's construction needs ``X_i`` almost-surely bounded (it
+    rescales to ``[0, 1]``); a paired daily log-return difference between
+    two fee-charged, unleveraged, no-short paper-trading accounts
+    (``MarketSpec.spot()``, ``leverage=1.0``, ``allow_short=False`` —
+    see ``scripts/paper_trade.py``) is not *literally* bounded the way a
+    coin flip is, so this function takes the bound as a caller-supplied
+    parameter rather than assuming one:
+
+    - ``diffs`` are clipped to ``[-bound, bound]`` before rescaling to
+      ``[0, 1]`` via ``(clip(d, -bound, bound) + bound) / (2*bound)``.
+    - **The cost of clipping, stated plainly:** the guarantee this function
+      returns is a valid (1-alpha) confidence sequence for the mean of the
+      *clipped* variable, not the unclipped one. If no observation ever
+      reaches the bound, the two means coincide and the caveat is moot. If
+      one does, the interval is still valid for the clipped mean, but that
+      mean is pulled toward zero relative to the true one on the clipped
+      side — a conservative distortion, not an invalidated guarantee, and
+      the ``clipped`` column below reports exactly which rows it bit on so
+      a reader can judge whether it mattered. Choosing ``bound`` too small
+      manufactures false confidence; choosing it larger than necessary
+      only costs width (via the ``sigma_hat`` term, not the bound itself
+      directly) since the construction is variance-adaptive, not a naive
+      Hoeffding bound scaled by the range. See
+      ``experiments/r71_anytime_valid_b06.md`` for the specific bound this
+      project uses on B-06's actual arms and why.
+
+    Parameters
+    ----------
+    diffs : paired difference series (e.g. ``a - b`` of two aligned daily
+        return series). A ``pd.Series`` keeps its index on the output.
+    bound : the clipping bound ``B`` such that ``diffs`` is assumed to lie
+        in ``[-B, B]`` almost surely (after clipping, exactly). Must be > 0.
+    alpha : miscoverage level; the sequence is simultaneously valid at every
+        ``n`` at level ``1 - alpha``.
+    c : cap on the predictable mixture weight ``lambda_t`` (WSR recommend
+        1/2 or 3/4; default follows their 3/4 recommendation).
+
+    Returns
+    -------
+    A ``pd.DataFrame`` (indexed like ``diffs`` if it is a ``pd.Series``,
+    else ``RangeIndex`` 1..n) with one row per observation and columns:
+
+    - ``n`` — observation count so far (1-indexed).
+    - ``mean`` — the running lambda-weighted point estimate, in the
+      original (unrescaled) units of ``diffs``.
+    - ``lower``, ``upper`` — the (1-alpha) anytime-valid interval, after
+      Theorem 2's own "running intersection" (``lower`` is a running max,
+      ``upper`` a running min, both also clipped to ``[-bound, bound]``)
+      — the version WSR's own figures plot, monotone non-widening, and
+      the one to read for "has it excluded zero yet".
+    - ``excludes_zero`` — ``True`` from the first ``n`` the interval
+      excludes zero onward (:func:`anytime_valid_first_exclusion` reads
+      off the first such ``n``).
+    - ``clipped`` — ``True`` where ``|diffs|`` exceeded ``bound`` and was
+      clipped (see the cost-of-clipping note above).
+    """
+    if bound <= 0 or not np.isfinite(bound):
+        raise ValueError("bound must be a finite, positive number")
+    if not 0.0 < alpha < 1.0:
+        raise ValueError("alpha must be in (0, 1)")
+    if not 0.0 < c < 1.0:
+        raise ValueError("c must be in (0, 1)")
+
+    index = diffs.index if isinstance(diffs, pd.Series) else None
+    d = np.asarray(diffs, dtype=float)
+    n = len(d)
+    if n < 1:
+        raise ValueError("need at least 1 observation")
+    if np.any(~np.isfinite(d)):
+        raise ValueError("diffs must be finite")
+
+    clipped = np.abs(d) > bound
+    d_clipped = np.clip(d, -bound, bound)
+    x = (d_clipped + bound) / (2.0 * bound)  # rescaled to [0, 1]
+
+    mu_prev = np.empty(n)     # mu_hat_{t-1}, predictable: known before x[t-1]
+    sigma2_prev = np.empty(n)  # sigma2_hat_{t-1}, predictable
+
+    mu_hat = 0.5        # mu_hat_0 (Krichevsky-Trofimov-style add-1/2 prior)
+    sigma2_hat = 0.25   # sigma2_hat_0 (the max possible variance on [0, 1])
+    sum_x = 0.0
+    sum_sq_dev = 0.0
+    for t in range(1, n + 1):
+        mu_prev[t - 1] = mu_hat
+        sigma2_prev[t - 1] = sigma2_hat
+        xi = x[t - 1]
+        sum_x += xi
+        mu_hat = (0.5 + sum_x) / (t + 1)              # mu_hat_t, eq. (15)
+        sum_sq_dev += (xi - mu_hat) ** 2
+        sigma2_hat = (0.25 + sum_sq_dev) / (t + 1)     # sigma2_hat_t, eq. (15)
+
+    t_arr = np.arange(1, n + 1, dtype=float)
+    lam = np.sqrt(2.0 * np.log(2.0 / alpha)
+                  / (sigma2_prev * t_arr * np.log1p(t_arr)))
+    lam = np.minimum(lam, c)                            # eq. (15)
+    v = 4.0 * (x - mu_prev) ** 2                        # eq. (13)-(14)
+
+    s_lam = np.cumsum(lam)
+    s_lamx = np.cumsum(lam * x)
+    s_v = np.cumsum(v * _psi_e(lam))
+
+    center = s_lamx / s_lam
+    radius = (np.log(2.0 / alpha) + s_v) / s_lam
+    lo = np.clip(center - radius, 0.0, 1.0)
+    hi = np.clip(center + radius, 0.0, 1.0)
+
+    # Theorem 2's "running intersection" — also a valid (1-alpha) CS, and
+    # the tighter, monotone-non-widening one WSR's own figures report.
+    running_lo = np.maximum.accumulate(lo)
+    running_hi = np.minimum.accumulate(hi)
+
+    lower = 2.0 * bound * running_lo - bound
+    upper = 2.0 * bound * running_hi - bound
+    mean = 2.0 * bound * center - bound
+
+    out = pd.DataFrame({
+        "n": t_arr.astype(int),
+        "mean": mean,
+        "lower": lower,
+        "upper": upper,
+        "excludes_zero": (lower > 0.0) | (upper < 0.0),
+        "clipped": clipped,
+    })
+    if index is not None:
+        out.index = index
+    return out
+
+
+def anytime_valid_first_exclusion(cs: pd.DataFrame) -> int | None:
+    """First ``n`` (1-indexed) at which a confidence sequence excludes zero.
+
+    This is the valid stopping rule :func:`empirical_bernstein_confidence_sequence`
+    exists to support: "read the sequence after every new observation and
+    stop the first time it excludes zero" is a level-``alpha`` test only
+    because the sequence is uniformly valid over every ``n`` at once.
+    Returns ``None`` if it never does across the rows given.
+    """
+    hits = np.flatnonzero(cs["excludes_zero"].to_numpy())
+    return int(cs["n"].iloc[hits[0]]) if len(hits) else None

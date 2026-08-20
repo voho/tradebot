@@ -195,6 +195,129 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-71 · 08-20 · METHOD — B-06 advanced: the recorder is now scheduled and multi-strategy, and its growing record gets an anytime-valid reading tool
+
+**Direction.** Not a new mechanism on the incumbent's SIZE/COST axis. Six
+consecutive rounds (R-63, R-65, R-67, R-68, R-69, R-70) converged on the
+same diagnosis, in R-67's own words: "no mechanism can narrow an interval
+— only more data, more breadth, or forward evidence can." Every
+re-ranking of the backlog since has named **B-06** (forward paper
+trading) "the standing zero-cost recommendation" and, since R-29, "the
+highest-value item on merit" — the one item that generates genuinely new,
+uncontaminated evidence rather than re-reading a 2023+ holdout already
+consulted ~627 times. B-06 existed but was not actually accumulating: it
+had no scheduled invocation (2 rows recorded, both manual), tracked only
+two of the six kelly_regime-family strategies, and its eventual record
+had no principled way to be read at an arbitrary future time without
+repeating the exact repeated-testing mistake `docs/ROUTINE.md` exists to
+prevent. This round attacks **ERR** (no error control in the signal
+path) and **N≈3** (this project's only route to more than ~3 independent
+regime events is more time, not more mechanisms) by making the recorder
+actually run unattended and giving its output a statistically honest way
+to be read. Not a duplicate of any SIZE/COST-axis round in this file —
+nothing here sweeps a parameter, retunes a threshold, or reads the
+2023-2026 backtest holdout at all.
+
+Two parallel branches, per `docs/ROUTINE.md`'s parallelism section (each
+owns disjoint files, neither commits, both report):
+
+**Conservative branch** (`scripts/paper_trade.py`, `docs/LIVE.md`,
+`.github/workflows/paper_trading.yml`, `tests/test_paper_trade.py`).
+Extended the recorder from two hardcoded strategies to a `--strategies`
+list (default: the whole kelly_regime lineage —
+`kelly_regime_v4/v3/v2/kelly_regime/kelly_regime_ev/kelly_regime_ev_fast`
+— plus `buy_and_hold`; deliberately not "PROMOTED only", since a forward
+record of the variants this project seriously considered is itself
+uncontaminated evidence), all sharing one candle fetch sized for the
+hungriest warmup, each keeping its own state/CSV pair under
+`reports/paper_trading/` unchanged from the existing convention. Added a
+scheduled GitHub Actions workflow (`*/15 * * * *` + `workflow_dispatch`,
+`concurrency: cancel-in-progress: false`, `contents: write`) that runs the
+recorder and commits any new rows to `reports/paper_trading/` as
+`github-actions[bot]`, rebasing onto `origin/main` before pushing to
+guard against a race with a concurrent manual push. **Pre-registered
+falsification/sanity check, run before this was accepted:** does one
+invocation only advance by the single newest closed candle, or does it
+catch up on every candle missed since the last run? Read from the
+script directly (not inferred): **only the newest candle** — inception
+catch-up is a one-time, latched-signal-only exception, never a missed-
+time backfill. That makes the 15-minute cadence a real, bounded,
+honestly-documented gap (intermediate 5-minute candles between runs are
+permanently dropped, not merely delayed), chosen over an unreliable
+5-minute GitHub Actions cron per GitHub's own documented best-effort
+scheduling — recorded in both the workflow file and `docs/LIVE.md`,
+with the exact-cadence cron/systemd path kept as the alternative for
+anyone who needs it.
+
+**Novel branch** (`src/tradebot/inference.py`,
+`tests/test_inference.py`, `experiments/r71_anytime_valid_b06.md`).
+Implemented Waudby-Smith & Ramdas (2024, JRSSB 86(1); arXiv:2010.09686)
+Theorem 2 — the closed-form "predictable plug-in empirical Bernstein"
+**anytime-valid confidence sequence** — for the mean of a paired, bounded
+difference series (e.g. one paper-traded arm's daily return minus
+another's), chosen over their harder-to-verify betting construction
+because it is closed-form and (per their own Fig. 2) matches the betting
+CS's width closely. Grounded in the actual paper text (fetched, not
+recalled from memory), plus Howard, Ramdas, McAuliffe & Sekhon (2021,
+Annals of Statistics 49(2)) for the underlying uniform-boundary
+framework and Wang, Wang & Ziegel (2022, arXiv:2209.00991,
+"E-backtesting") for why an anytime-valid construction is the right tool
+for sequentially reading a trading claim rather than a fixed-`n` test.
+The one real assumption — boundedness — is not glossed: B-06's arms are
+unleveraged, no-short spot accounts on the same instrument
+(`MarketSpec.spot()`), so a paired daily-return difference is bounded by
+roughly the day's own BTCUSD move; `bound=0.5` (50 log-return points) is
+an explicit, documented engineering choice (clip-cost stated in the
+docstring, a `clipped` column flags every row it binds on), not a
+literature-derived sub-Gaussian bound — left as an explicit open item
+for a future round to tighten if B-06's real variance turns out smaller.
+
+**Configs evaluated: 0** against the committed backtest dataset — this
+round is 100% methodology/infrastructure. The novel branch's calibration
+sweep (500 synthetic runs × n=1,000, three settings: i.i.d. normal,
+AR(1) φ=0.6, Student-t df=3) is a synthetic check of the tool's own
+Type-I error control, not a configuration count against real price data,
+per this file's own convention that only real-data reads count toward
+the trials/holdout tally.
+
+**Result.** Calibration (time-uniform false-rejection rate at nominal
+α=0.05, i.e. P(the sequence ever excludes zero across a whole synthetic
+run of n=1,000, when the true difference is exactly zero)): i.i.d.
+normal 0.000, AR(1) 0.004, Student-t(3) 0.000 — all at or below α, never
+anti-conservative. Honest caveat carried rather than hidden: WSR's proof
+needs conditional-mean-zero (a martingale difference), which the AR(1)
+setting only satisfies unconditionally; flagged as a not-fully-closed
+assumption in the tool's pre-registration doc, not swept under the rug.
+Applied illustratively (explicitly labelled non-decisional) to the real
+B-06 CSVs as they stand today (~2 days, one completed daily bucket each)
+— interval `[-0.5, 0.5]`, `excludes_zero=False`, correctly and honestly
+uninformative at n=1. Both branches' full test suites pass: 40/40 new
+inference tests, 11/11 paper-trading tests (8 original + 3 new), full
+suite 492/492, run twice with no flakiness. Manual double-invocation of
+the extended recorder against the live Bitstamp feed (scratch state dir,
+committed files untouched) showed the correct INCEPTION-then-idempotent-
+no-op sequence for two strategies, and a bare-default run recorded all
+seven strategies from one shared candle fetch.
+
+**Verdict.** **METHOD.** No strategy promoted, none rejected — this round
+built infrastructure and tooling, not a new SIZE/COST mechanism, so
+`docs/ROUTINE.md`'s promotion bar does not apply. The decision rule did
+not move (there was none to pre-register beyond "does the code do what
+it says," which both branches' own pre-registered falsification checks —
+the catch-up-semantics read and the synthetic calibration gate —
+answered before either touched anything real). **Holdout counter: +0,
+running total unchanged at ~627** — neither branch read, imported, or
+sliced a single row of the committed 2017-2026 backtest dataset; the
+novel branch's one "real data" read was B-06's own live paper-trading
+CSVs, which are explicitly outside that dataset and outside the counter
+by design (stated precisely in `experiments/r71_anytime_valid_b06.md`).
+**Next step:** let the scheduled workflow run and the record accumulate;
+a future round should not re-read this entry's tools until B-06 has
+enough rows for `anytime_valid_first_exclusion` to have a real chance of
+firing — checking daily and reporting "still uninformative" is exactly
+the valid, honest use this tool was built for, and is itself the
+recommended next action rather than a new mechanism variant.
+
 ### R-70 · 08-20 · METHOD — B-36 closed: two independent Sharpe-difference test estimators built and applied; ENTRY_ONLY's edge over its predecessor is now significant by all three methods on one window, while D1 against the volatility-matched hold still fails
 
 **Direction.** Backlog item **B-36**, top of the ranked list after R-69
@@ -9363,6 +9486,17 @@ different mechanisms — a sixth mechanism variant on this axis is a
 materially worse use of a session than writing the paper-trading recorder's
 first uncontaminated read.
 
+**Re-ranked 08-20 after R-71.** B-06 moves from "built but dormant" to
+"scheduled and multi-strategy," with an anytime-valid tool now waiting on
+its record (see R-71). Nothing else on the ranked list changed: no
+mechanism round ran, so B-30/B-32/B-33 sit exactly where R-70 left them
+(open, methodology-flavoured, none blocking). The recommendation to a
+future session is unchanged in kind and slightly sharper in practice: do
+not open a seventh mechanism variant on the SIZE/COST axis six
+consecutive rounds have called exhausted; instead let B-06's record grow
+and check `anytime_valid_first_exclusion` on it periodically, which is
+now a five-minute action rather than a project to build first.
+
 **Re-ranked 08-20 after R-70.** B-36 is done: two independent, tested
 Sharpe-difference test estimators (Parzen-kernel HAC per the literal paper,
 and a stationary-bootstrap studentization matching this project's own
@@ -9405,7 +9539,7 @@ which only forward paper trading can supply.
 | ~~B-05~~ | ~~Funding as a gate on the existing strategy (stand flat in the top decile)~~ | COST | **DONE → R-35, reopened and CLOSED FOR GOOD → R-39** | R-35: NEGATIVE, closed pending B-02 (underpowered, one funding-covered holdout year, interval containing zero). R-39 reopened it with the full 2020-2026 funding series and got a decisive, opposite-sign NEGATIVE: Δ log growth −0.872 [−1.701, −0.166] against the gate on the fully-covered 3.6-year holdout, worse drawdown despite less exposure, fails the 0.40% tier. Not underpowered this time — closes permanently per its own pre-registration. |
 | ~~B-02~~ | ~~Extend the funding series through 2026~~ | COST | **DONE (partial) → R-39** | Binance itself is still unreachable, but Deribit's public API is not, and a full historical pull succeeded: `data/btcusdt_deribit_perp_funding_8h.csv.gz`, 2020-01→2026-08. **Caveat that matters**: Deribit is a different instrument (continuous funding vs Binance's discrete 8h settlement), correlates with Binance at only r=0.69 on the 2020-2023 overlap with an unstable year-to-year level ratio (0.21×-1.24×) — `load_funding_extended()` therefore never rescales or blends the two, only concatenates Deribit onto the genuine post-2023 gap. Good enough to reopen and definitively close B-05, and to run B-03 for the first time; not a literal continuation of "the Binance series." |
 | ~~B-03~~ | ~~Funding harvest (delta-neutral spot vs short perp)~~ | COST | **DONE → R-39, NEGATIVE for the current era** | Implemented as real code for the first time (`experiments/funding_harvest_carry.py`) and extended through 2024-2026: fails the return bar decisively (+16.7% vs `buy_and_hold`'s +49.1% net of 0.10% costs) and the drawdown/tail bar is voided rather than passed, because this repo's missing perp price series makes basis risk structurally unmeasurable — the trade's near-zero measured volatility is an artifact of the model, not evidence of safety. Reopens only via **B-15**, not via more funding data (which this round already supplied). |
-| **B-06** | Forward paper-trading recorder | N≈3 | **ONGOING → R-48** | Built and running: `scripts/paper_trade.py` records `kelly_regime_v4` and `buy_and_hold` against the live Bitstamp public feed into `reports/paper_trading/`, 2 rows recorded so far (inception 2026-08-19T23:05Z). No longer blocked — unblocked by direct Bitstamp reachability confirmed this session. Not yet informative: needs a future session, or an actual cron/systemd job (documented in `docs/LIVE.md`), to invoke it once per closed 5m candle so the record accumulates. The single most-repeated backlog item since R-29 is now infrastructure that exists rather than a thing still to build. |
+| **B-06** | Forward paper-trading recorder | N≈3 | **ONGOING → R-71** | Now scheduled and multi-strategy: a GitHub Actions workflow (`.github/workflows/paper_trading.yml`, `*/15 * * * *`) invokes `scripts/paper_trade.py` unattended and commits new rows, recording the whole `kelly_regime` lineage (`v4/v3/v2/kelly_regime/ev/ev_fast`) plus `buy_and_hold` — not just the original two — into `reports/paper_trading/`. A documented, bounded cadence gap remains (one invocation advances by only the newest closed candle; a 15-minute cron therefore drops the intermediate 5m candles between runs rather than merely delaying them — see R-71 and `docs/LIVE.md`). Reading the record no longer waits on a manual session either: `tradebot.inference.empirical_bernstein_confidence_sequence` (R-71, Waudby-Smith & Ramdas 2024) gives it an anytime-valid stopping rule, so a future round can check "significant yet?" after every new day without the repeated-testing penalty a fixed-`n` test would pay. Still not informative on its own — the record is ~2 days old — but the single most-repeated backlog item since R-29 is now infrastructure that runs and accumulates by itself, and has a principled reading method waiting for it. |
 | ~~B-07~~ | ~~On-chain features, sign-corrected~~ | INFO | **DONE → R-44** | Sign was fixed as designed (both branches leaned exposure INTO confirmed high-participation/capitulation-recovery regimes, never away from rising activity) and neither branch repeated R-08's inversion — they failed for unrelated, independently-reproduced reasons (magnitude-only exposure-artifact; clean inner-validation loss). Real CoinMetrics data is now committed (`data/btc_onchain_daily.csv.gz`, `data/eth_onchain_daily.csv.gz`) and available for a future round with a different exploitation. |
 | ~~B-08~~ | ~~Second bear, second asset, different period (ETH 2020–2026)~~ | N≈3 | **DONE → R-47** | Frozen `kelly_regime_v4`, zero parameters changed, run against the now-committed `ethusd_coinbase_spot_5m.csv.gz` (2019-03-14→2026-08-19). Drawdown/tail protection replicates cleanly on ETH's own 2022 bear (previously untested — independent of the 2018 BTC bear every prior ETH check shared); the return edge does not survive the realistic 0.40% fee tier over the full 2020–2026 window. Confirms L-01/R-17's own standing caveat on genuinely independent evidence for the first time. |
 | **B-09** | Conformal prediction / adaptive conformal by betting (adaptive conformal inference under distribution shift; conformal prediction with change points, NeurIPS 2025; adaptive conformal inference by betting, 2024) | ERR | LOW | Was "mostly subsumed by B-01" — now demoted further by R-28's result: the binding problem is not that trust is miscalibrated but that correctly-calibrated trust is *low*, and conformal would say the same thing more slowly. |
@@ -9490,6 +9624,15 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-20 · ~627** — R-71: **+0** on top of R-70's ~627. Pure methodology/
+  infrastructure round — neither branch imports `load_dataset` or any
+  other committed 2017-2026 price file. The novel branch's one "real
+  data" read is B-06's own live `reports/paper_trading/*.csv` files,
+  which are explicitly outside the committed backtest dataset by
+  construction (they only ever come from the live Bitstamp public feed)
+  and are therefore outside this counter by the same logic that has
+  always applied to them — B-06 was never counted as a holdout read
+  before this round either.
 - **08-20 · ~627** — R-70: **+0** on top of R-69's ~627. `experiments/r70_shared.py`
   asserts, at build time, that no index it hands to either branch reaches
   `2023-01-01` (`W_TRAIN`/`W_VAL` only, W_FULL6 deliberately excluded per

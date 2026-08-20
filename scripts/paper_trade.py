@@ -1,14 +1,27 @@
 #!/usr/bin/env python
-"""Forward paper-trading recorder for kelly_regime_v4 on Bitstamp (B-06).
+"""Forward paper-trading recorder for the promoted strategy family on
+Bitstamp (B-06).
 
 Run once per closed 5-minute Bitstamp candle. Unlike ``live_bot.py`` this
-needs **no exchange credentials and places no real order, ever** — it
-maintains its own persisted virtual account (starting paper equity, BTC
-position 0) in JSON, simulates the fill through the exact same
-``PaperBroker`` fee/rebalance code the backtest engine uses, and appends
-one row per decision to an append-only CSV log. A parallel
-``buy_and_hold`` paper account is recorded from the same candle fetch, as
-a benchmark to compare against once enough history accumulates.
+needs **no exchange credentials and places no real order, ever** — for
+each strategy it records, it maintains its own persisted virtual account
+(starting paper equity, BTC position 0) in JSON, simulates the fill
+through the exact same ``PaperBroker`` fee/rebalance code the backtest
+engine uses, and appends one row per decision to that strategy's own
+append-only CSV log.
+
+**Behavior change (this version): multi-strategy by default.** Earlier
+versions of this script only ever recorded two hardcoded strategies
+(``kelly_regime_v4`` and a ``buy_and_hold`` benchmark). It now accepts a
+``--strategies`` list and, when that flag is omitted, records the full
+default family below instead — every registered strategy docs/LEDGER.md
+section A marks PROMOTED or REGISTERED off the main incumbent lineage,
+plus the ``buy_and_hold`` benchmark — so running with no flags at all
+(e.g. from cron or the ``paper_trading.yml`` GitHub Actions workflow)
+grows a comparable forward record for the whole family, not just one
+strategy. Every strategy still gets its own state/CSV files, keyed by its
+own name (see ``STATE_DIR`` / the ``<strategy>_bitstamp`` prefix below);
+nothing is shared between strategies except the one candle fetch per run.
 
 Why this exists: R-29's holdout-consultation count put every Sharpe claim
 in this repo's 2023+ dataset past the point deflated Sharpe can support
@@ -18,15 +31,18 @@ backlog, "the highest-value item on merit" since R-29. It reads nothing
 from the committed backtest dataset and does not touch the 2023+ holdout
 counter; it only ever calls the live Bitstamp public API.
 
-    # first run: creates reports/paper_trading/*_state.json and *.csv,
-    # prints an INCEPTION line, exits 0
+    # first run: creates reports/paper_trading/*_state.json and *.csv per
+    # strategy, prints one INCEPTION line per strategy, exits 0
     python scripts/paper_trade.py
 
-    # every subsequent run, once per closed 5m candle (cron/systemd —
-    # see docs/LIVE.md): advances the paper account by exactly one
-    # decision, or exits cleanly with "nothing to do" if the candle this
-    # process would act on has already been recorded
+    # every subsequent run, once per closed 5m candle (cron/systemd/the
+    # GitHub Actions workflow — see docs/LIVE.md): advances each paper
+    # account by exactly one decision, or exits cleanly with "nothing to
+    # do" for any strategy whose candle has already been recorded
     python scripts/paper_trade.py
+
+    # record only specific strategies (space-separated registered names)
+    python scripts/paper_trade.py --strategies kelly_regime_v4 buy_and_hold
 
 **Honest limitations, stated up front (also in docs/LIVE.md):**
 
@@ -75,6 +91,31 @@ from tradebot.strategy import Strategy  # noqa: E402
 
 STATE_DIR = ROOT / "reports" / "paper_trading"
 PAPER_START_EQUITY = 1000.0
+
+# The default forward-recording set when --strategies is omitted: the
+# main incumbent lineage (docs/LEDGER.md section A) — kelly_regime and
+# its four registered variants, PROMOTED or not — plus the buy_and_hold
+# benchmark to compare against. Confirmed against docs/LEDGER.md section
+# A and src/tradebot/strategies/*.py's `name = ...` class attributes
+# (kelly_regime_ev_fast is its own registered class in kelly_regime_ev.py,
+# not a parametrization passed at runtime). Deliberately NOT "only the
+# PROMOTED ones" — kelly_regime_v2 and the two kelly_regime_ev variants
+# are NOT PROMOTED/are plain REGISTERED per the ledger, but a forward
+# record of the variants the project seriously considered is exactly the
+# kind of uncontaminated evidence B-06 exists to generate, so they are
+# tracked too. Every other registered strategy (the NEGATIVE-verdict
+# baselines and microstructure experiments in section A) is deliberately
+# excluded — recording those would just be spending API calls on
+# strategies this project has already rejected.
+DEFAULT_STRATEGIES = [
+    "kelly_regime_v4",
+    "kelly_regime_v3",
+    "kelly_regime_v2",
+    "kelly_regime",
+    "kelly_regime_ev",
+    "kelly_regime_ev_fast",
+    "buy_and_hold",
+]
 CSV_COLUMNS = [
     "timestamp", "candle_close_price", "prior_target", "new_target",
     "trade_qty", "fee_paid", "position_after", "cash_after",
@@ -291,7 +332,15 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--symbol", default="btcusd")
     ap.add_argument("--minutes", type=int, default=5)
-    ap.add_argument("--strategy", default="kelly_regime_v4")
+    ap.add_argument("--strategies", nargs="+", default=list(DEFAULT_STRATEGIES),
+                    metavar="STRATEGY",
+                    help="space-separated registered strategy names to "
+                    "record this run (default: the full promoted/"
+                    "registered kelly_regime family plus the buy_and_hold "
+                    "benchmark - see DEFAULT_STRATEGIES above and "
+                    "docs/LEDGER.md section A). Each gets its own "
+                    "reports/paper_trading/<name>_bitstamp{_state.json,.csv} "
+                    "pair, exactly like running this script once per name.")
     ap.add_argument("--taker-fee", type=float, default=0.004,
                     help="Bitstamp's real entry taker tier as a fraction "
                     "(default 0.004 = 0.40%%) - never the 0.10%% headline "
@@ -304,23 +353,47 @@ def main() -> int:
                     "matching bot.py's BotConfig.warmup_slack")
     ap.add_argument("--state-dir", default=str(STATE_DIR))
     ap.add_argument("--no-benchmark", action="store_true",
-                    help="skip the parallel buy_and_hold paper benchmark")
+                    help="drop 'buy_and_hold' from --strategies (whether "
+                    "defaulted or given explicitly) if present; kept for "
+                    "backward compatibility with the old two-strategy "
+                    "default's --no-benchmark flag")
     ap.add_argument("--quiet", action="store_true")
     args = ap.parse_args()
 
+    # De-dup while preserving order (a hand-written --strategies list
+    # could repeat a name; running it twice in one invocation would just
+    # double-append an identical row the second time within this process,
+    # which run_recorder's own idempotency check would then reject as an
+    # internal contradiction rather than silently accept).
+    strategies = list(dict.fromkeys(args.strategies))
+    if args.no_benchmark:
+        strategies = [s for s in strategies if s != "buy_and_hold"]
+    if not strategies:
+        print("no strategies to record (--strategies resolved to an empty "
+              "list, e.g. --no-benchmark with only buy_and_hold given)",
+              file=sys.stderr)
+        return 2
+
     state_dir = Path(args.state_dir)
-    strategy_cls_warmup = get_strategy(args.strategy).warmup
     market = MarketSpec.spot(fee_rate=args.taker_fee)
-    bars = strategy_cls_warmup + args.warmup_slack
+
+    # Resolve every strategy up front - fails fast (KeyError, uncaught,
+    # exit 1) on a typo'd/unregistered name before any network call, and
+    # lets every strategy in this run share ONE fetched candle window
+    # sized for the hungriest one, so they all decide from the exact same
+    # point-in-time snapshot rather than N slightly-different fetches.
+    strategy_warmups = {name: get_strategy(name).warmup for name in strategies}
+    max_warmup = max(strategy_warmups.values())
+    bars = max_warmup + args.warmup_slack
 
     # Public candles need no credentials. No key/secret is ever read or
     # passed here, and this module never calls place_market_order or any
     # signed endpoint - paper-only by construction, not configuration.
     exchange = BitstampSpot()
-    print(f"bitstamp {args.symbol} · paper-trading {args.strategy} · "
-          f"taker fee {args.taker_fee:.2%} · fetching {bars} bars "
-          f"(warmup {strategy_cls_warmup} + slack {args.warmup_slack})",
-          file=sys.stderr)
+    print(f"bitstamp {args.symbol} · paper-trading {len(strategies)} "
+          f"strategies ({', '.join(strategies)}) · taker fee "
+          f"{args.taker_fee:.2%} · fetching {bars} bars (max warmup "
+          f"{max_warmup} + slack {args.warmup_slack})", file=sys.stderr)
     try:
         candles = exchange.fetch_history(args.symbol, bars=bars,
                                          minutes=args.minutes,
@@ -331,25 +404,28 @@ def main() -> int:
               "(sandboxes and CI runners usually block it)", file=sys.stderr)
         return 2
 
-    if len(candles) < strategy_cls_warmup:
-        print(f"insufficient history: {len(candles)}/{strategy_cls_warmup} "
-              "bars - bitstamp has not returned enough candles yet",
-              file=sys.stderr)
-        return 2
-
-    prefix = f"{args.strategy}_bitstamp"
-    run_recorder(args.strategy, candles, market,
-                state_path=state_dir / f"{prefix}_state.json",
-                csv_path=state_dir / f"{prefix}.csv",
-                start_equity=args.paper_equity, verbose=not args.quiet)
-
-    if not args.no_benchmark:
-        bh_prefix = "buy_and_hold_bitstamp"
-        run_recorder("buy_and_hold", candles, market,
-                    state_path=state_dir / f"{bh_prefix}_state.json",
-                    csv_path=state_dir / f"{bh_prefix}.csv",
+    ran_any = False
+    for name in strategies:
+        warmup = strategy_warmups[name]
+        if len(candles) < warmup:
+            print(f"[{name}] insufficient history: {len(candles)}/{warmup} "
+                  "bars - bitstamp has not returned enough candles yet, "
+                  "skipping this strategy this run", file=sys.stderr)
+            continue
+        prefix = f"{name}_bitstamp"
+        run_recorder(name, candles, market,
+                    state_path=state_dir / f"{prefix}_state.json",
+                    csv_path=state_dir / f"{prefix}.csv",
                     start_equity=args.paper_equity, verbose=not args.quiet)
+        ran_any = True
 
+    if not ran_any:
+        # Every requested strategy was skipped for insufficient history -
+        # the one condition (besides the network) this function treats as
+        # a soft, expected failure (exit 2) rather than a bug (uncaught
+        # exception, exit 1). See docs/LIVE.md and paper_trading.yml,
+        # which only treat exit 2 as "not a real job failure".
+        return 2
     return 0
 
 

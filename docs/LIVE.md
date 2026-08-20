@@ -408,6 +408,26 @@ it existed.
 python scripts/paper_trade.py                 # run once per closed 5m candle
 ```
 
+**Multi-strategy by default.** A single invocation now records the whole
+main incumbent lineage in one pass, not just `kelly_regime_v4`: the
+default `--strategies` list is `kelly_regime_v4 kelly_regime_v3
+kelly_regime_v2 kelly_regime kelly_regime_ev kelly_regime_ev_fast
+buy_and_hold` — every strategy docs/LEDGER.md section A marks PROMOTED
+or REGISTERED off that lineage, plus the `buy_and_hold` benchmark (see
+`DEFAULT_STRATEGIES` in `scripts/paper_trade.py`). All strategies in a
+run decide from one shared candle fetch (sized for whichever needs the
+longest warmup), so they share the exact same point-in-time snapshot; each
+still gets its own `<strategy>_bitstamp{_state.json,.csv}` pair under
+`reports/paper_trading/`, exactly as if the script had been run once per
+strategy. Pass `--strategies` to record a different set, e.g.:
+
+```bash
+python scripts/paper_trade.py --strategies kelly_regime_v4 buy_and_hold
+```
+
+`--no-benchmark` still works as before, now dropping `buy_and_hold` out of
+whatever `--strategies` list (defaulted or explicit) it appears in.
+
 |                          | `live_bot.py`                       | `paper_trade.py`                              |
 |--------------------------|--------------------------------------|------------------------------------------------|
 | account                  | real Bitstamp balance (signed API)  | its own persisted virtual account (JSON)        |
@@ -438,7 +458,54 @@ record):
 
 ### Scheduling
 
-Once per closed 5m candle, same cadence as `live_bot.py`:
+**GitHub Actions (the primary, automated path).**
+`.github/workflows/paper_trading.yml` runs the recorder on a schedule and
+pushes any new rows straight to `main` — no server, cron box, or
+credentials to maintain; the record now accumulates on its own instead of
+depending on someone remembering to invoke the script by hand. It:
+
+- fires on `cron: "*/15 * * * *"` (every 15 minutes) and also accepts
+  `workflow_dispatch` for an on-demand manual run from the Actions tab;
+- checks out the repo, sets up Python 3.11, `pip install -e ".[dev]"`,
+  then runs `python scripts/paper_trade.py` with its full default
+  `--strategies` list (see above) — no exchange credentials are ever
+  configured as a secret, because none are needed;
+- treats the script's own exit code 2 (Bitstamp unreachable, or every
+  requested strategy still short on warmup history) as a **handled,
+  logged, non-failing** condition — a real network hiccup or a startup
+  transient should not redden the Actions tab — but lets any other
+  nonzero exit (a genuine crash, or the recorder's own
+  out-of-order-candle `RuntimeError`) fail the job loudly;
+- if `reports/paper_trading/` has any changes afterward, commits them as
+  `github-actions[bot]` and pushes directly to `main` — a plain,
+  additive data-recording commit that never touches any other path;
+- runs under a `concurrency` group with `cancel-in-progress: false`, so
+  overlapping runs queue rather than overlap, and a run already writing
+  state is never cancelled mid-write (which could corrupt a
+  `*_state.json`).
+
+**Why 15 minutes, not the literal 5-minute candle cadence:** GitHub
+itself documents that scheduled workflows are a best-effort service that
+can be delayed under load, especially at high frequency, and that
+low-frequency schedules on quiet repos can occasionally be skipped
+entirely — a 5-minute cron this project cannot actually rely on GitHub to
+honor would not buy a tighter record, just a false sense of one.
+**Honest limitation this creates:** `scripts/paper_trade.py` advances by
+exactly the single newest closed candle per invocation — it does not walk
+forward through every candle missed since its last run (only inception
+gets a one-time catch-up, and only for a latched signal, never for missed
+time; see `inception_catchup_target()` below). A 15-minute cadence
+therefore does not just delay the record by up to ~15 minutes each tick —
+whichever intermediate 5-minute candles fall between two runs are
+permanently absent from that strategy's CSV, not backfilled. This is a
+real, bounded gap in resolution, not silent data loss of the *account* (the
+persisted `cash`/`pos`/`entry` state itself is exact at every candle it did
+act on) — but it does mean the record is closer to "one decision every
+~15 minutes" than "one decision every 5 minutes" in practice. Anyone who
+needs the tighter cadence should run the alternative below instead.
+
+**Cron / systemd (the alternative, for anyone running this outside GitHub
+Actions).** Once per closed 5m candle, same cadence as `live_bot.py`:
 
 ```cron
 */5 * * * * cd /path/to/tradebot && python scripts/paper_trade.py >> reports/paper_trading/cron.log 2>&1
@@ -450,7 +517,10 @@ second invocation before the next candle closes detects
 `last_candle_ts` already matches and exits 0 having changed nothing — so
 an overlapping cron tick or a manual re-run cannot double-count. A
 missed run costs nothing but the missed rebalance, the same property
-`bot.py` documents for the live path.
+`bot.py` documents for the live path. This path has no built-in commit
+step of its own — commit `reports/paper_trading/` yourself (or add one to
+the unit) if you want the same record checked in as the GitHub Actions
+path produces.
 
 ### The inception catch-up, and why it exists
 
@@ -498,3 +568,17 @@ is this recorder's to change.
 - **Does not touch the 2023+ holdout.** It reads only the live public
   feed, never `data/btcusd_spot_5m.csv.gz` — the whole point of B-06 is
   that this record cannot have been looked at before it existed.
+- **One shared candle fetch across every strategy in a run.** All
+  strategies in a `--strategies` list decide from the same fetched
+  window (sized for whichever needs the longest warmup) rather than each
+  paging its own history — a deliberate choice so every strategy's row
+  for a given run reflects the exact same point-in-time snapshot, at the
+  cost of a slightly larger fetch than a strategy with a short warmup
+  strictly needs on its own.
+- **The GitHub Actions schedule (every 15 minutes) does not walk forward
+  through missed candles** — see "Scheduling" above. A single invocation
+  of this script only ever advances by the single newest closed candle,
+  so a 15-minute cadence leaves gaps in the record's candle-by-candle
+  resolution, not just a delay; run the cron/systemd alternative above
+  instead if a true 5-minute cadence matters more than zero
+  infrastructure to maintain.

@@ -13,8 +13,10 @@ import pandas as pd
 import pytest
 
 from tradebot.inference import (
-    DAYS_PER_YEAR, annualized_sharpe, bootstrap_interval, cpcv_splits,
-    daily_returns, deflated_sharpe_ratio, expected_max_sharpe, fold_mask,
+    DAYS_PER_YEAR, annualized_sharpe, anytime_valid_first_exclusion,
+    bootstrap_interval, cpcv_splits,
+    daily_returns, deflated_sharpe_ratio,
+    empirical_bernstein_confidence_sequence, expected_max_sharpe, fold_mask,
     group_bounds, max_drawdown_from_returns, min_track_record_length, moments,
     norm_cdf, norm_ppf, paired_bootstrap, probabilistic_sharpe_ratio,
     purged_train_mask,
@@ -223,3 +225,154 @@ def test_purged_train_mask_is_strictly_smaller_than_the_complement():
     for groups in cpcv_splits(5, 2):
         train = purged_train_mask(n, bounds, groups, purge=10, embargo=10)
         assert train.sum() < (~fold_mask(n, bounds, groups)).sum()
+
+
+# ------------------------------------------ anytime-valid confidence sequences
+#
+# The correct calibration check for an anytime-valid method is NOT "does the
+# interval at one fixed n have correct coverage" (that would not distinguish
+# this from an ordinary fixed-n interval re-read many times, which is exactly
+# the trap this tool exists to avoid). It is: across many repeated runs under
+# a true null of zero mean, in what fraction of runs does the sequence ever
+# exclude zero at ANY n along the way. That fraction must stay <= alpha.
+
+def _ar1(rng: np.random.Generator, n: int, phi: float = 0.6,
+        sigma: float = 0.02) -> np.ndarray:
+    """A mean-zero AR(1) series with the same marginal variance for all phi."""
+    innovation_sd = sigma * np.sqrt(1.0 - phi ** 2)
+    e = rng.normal(0.0, innovation_sd, n)
+    x = np.empty(n)
+    x[0] = rng.normal(0.0, sigma)
+    for t in range(1, n):
+        x[t] = phi * x[t - 1] + e[t]
+    return x
+
+
+def _fat_tailed(rng: np.random.Generator, n: int, df: float = 3.0,
+               scale: float = 0.02) -> np.ndarray:
+    """A mean-zero Student-t series rescaled to a chosen standard deviation."""
+    t = rng.standard_t(df, n)
+    return t / np.sqrt(df / (df - 2.0)) * scale
+
+
+@pytest.mark.parametrize("setting", ["iid_normal", "ar1", "fat_tailed"])
+def test_empirical_bernstein_cs_time_uniform_false_rejection_rate(setting):
+    """The headline calibration property: under a true null mean of zero,
+    the sequence must exclude zero at SOME n in at most ~alpha of runs —
+    checked across many independent runs, several dependence/tail settings,
+    not by checking coverage at one chosen n (see module comment above)."""
+    rng = np.random.default_rng({"iid_normal": 10, "ar1": 11,
+                                 "fat_tailed": 12}[setting])
+    alpha, n, n_sims = 0.05, 1_000, 500
+    false_rejections = 0
+    for _ in range(n_sims):
+        if setting == "iid_normal":
+            d = rng.normal(0.0, 0.02, n)
+        elif setting == "ar1":
+            d = _ar1(rng, n)
+        else:
+            d = _fat_tailed(rng, n)
+        cs = empirical_bernstein_confidence_sequence(d, bound=0.5, alpha=alpha)
+        if cs["excludes_zero"].any():
+            false_rejections += 1
+    rate = false_rejections / n_sims
+    # A hard cap of 2x nominal alpha absorbs Monte Carlo noise at n_sims=500
+    # (a Binomial(500, 0.05) count is rarely above ~40) without weakening the
+    # property being checked: this method is conservative in every setting
+    # measured so far, never anywhere near exceeding alpha.
+    assert rate <= 2 * alpha, (
+        f"time-uniform false-rejection rate {rate:.3f} exceeds 2*alpha for "
+        f"{setting}; the anytime-valid guarantee would be broken")
+
+
+def test_empirical_bernstein_cs_width_shrinks_and_can_exclude_zero():
+    """Sanity/monotonicity: fixed true mean and variance, width should shrink
+    (up to the log(n)-type inflation term every anytime-valid method carries)
+    as n grows, and a large-enough true effect should eventually be detected.
+    The running-intersection construction makes the width non-increasing by
+    construction; this test also checks it is not TRIVIALLY non-informative."""
+    rng = np.random.default_rng(20)
+    d = rng.normal(0.01, 0.01, 2_000)  # a real, persistent positive drift
+    cs = empirical_bernstein_confidence_sequence(d, bound=0.5)
+    width = (cs["upper"] - cs["lower"]).to_numpy()
+    assert (np.diff(width) <= 1e-12).all(), "width must be non-increasing"
+    assert width[-1] < width[0] / 5, "width should shrink substantially by n=2000"
+    assert anytime_valid_first_exclusion(cs) is not None, (
+        "a real, sustained drift this large should eventually be detected")
+
+
+def test_empirical_bernstein_cs_no_effect_stays_uninformative():
+    """The complementary sanity check: with true mean exactly zero, the
+    interval should keep including zero (not just "eventually shrink")."""
+    rng = np.random.default_rng(21)
+    d = rng.normal(0.0, 0.01, 2_000)
+    cs = empirical_bernstein_confidence_sequence(d, bound=0.5)
+    assert cs["lower"].iloc[-1] < 0.0 < cs["upper"].iloc[-1]
+
+
+def test_empirical_bernstein_cs_n_equals_one():
+    cs = empirical_bernstein_confidence_sequence(np.array([0.01]), bound=0.5)
+    assert len(cs) == 1
+    assert cs["lower"].iloc[0] <= 0.01 <= cs["upper"].iloc[0]
+    assert cs["lower"].iloc[0] >= -0.5 and cs["upper"].iloc[0] <= 0.5
+    assert not cs["clipped"].iloc[0]
+
+
+def test_empirical_bernstein_cs_all_identical_observations():
+    """A degenerate zero-empirical-variance series must not divide by zero,
+    and should still shrink towards the (nonzero) constant value."""
+    cs = empirical_bernstein_confidence_sequence(np.full(500, 0.02), bound=0.5)
+    assert np.isfinite(cs[["mean", "lower", "upper"]].to_numpy()).all()
+    assert cs["mean"].iloc[-1] == pytest.approx(0.02)
+    # a sustained, noise-free 0.02 difference should be detected well before
+    # the series ends
+    assert anytime_valid_first_exclusion(cs) is not None
+
+
+def test_empirical_bernstein_cs_observation_exactly_at_the_bound():
+    d = np.array([0.5, -0.5, 0.5, -0.5, 0.5])
+    cs = empirical_bernstein_confidence_sequence(d, bound=0.5)
+    assert not cs["clipped"].any()  # exactly at the bound, not beyond it
+    assert np.isfinite(cs[["mean", "lower", "upper"]].to_numpy()).all()
+    assert (cs["lower"] >= -0.5).all() and (cs["upper"] <= 0.5).all()
+
+
+def test_empirical_bernstein_cs_clips_and_flags_out_of_bound_observations():
+    d = np.array([0.1, 10.0, -0.2, -5.0, 0.05])
+    cs = empirical_bernstein_confidence_sequence(d, bound=1.0)
+    assert list(cs["clipped"]) == [False, True, False, True, False]
+
+
+def test_empirical_bernstein_cs_keeps_a_series_index():
+    idx = pd.date_range("2026-01-01", periods=5, freq="D", tz="UTC")
+    s = pd.Series([0.01, -0.01, 0.02, 0.0, 0.005], index=idx)
+    cs = empirical_bernstein_confidence_sequence(s, bound=0.5)
+    assert list(cs.index) == list(idx)
+
+
+def test_empirical_bernstein_cs_rejects_bad_inputs():
+    with pytest.raises(ValueError):
+        empirical_bernstein_confidence_sequence(np.zeros(10), bound=0.0)
+    with pytest.raises(ValueError):
+        empirical_bernstein_confidence_sequence(np.zeros(10), bound=1.0, alpha=1.5)
+    with pytest.raises(ValueError):
+        empirical_bernstein_confidence_sequence(np.zeros(10), bound=1.0, c=1.0)
+    with pytest.raises(ValueError):
+        empirical_bernstein_confidence_sequence(np.array([]), bound=1.0)
+    with pytest.raises(ValueError):
+        empirical_bernstein_confidence_sequence(np.array([np.nan, 0.0]), bound=1.0)
+
+
+def test_anytime_valid_first_exclusion_reads_off_the_stopping_time():
+    rng = np.random.default_rng(30)
+    d = rng.normal(0.02, 0.01, 500)
+    cs = empirical_bernstein_confidence_sequence(d, bound=0.5)
+    first = anytime_valid_first_exclusion(cs)
+    assert first is not None
+    assert cs.iloc[first - 1]["excludes_zero"]
+    assert not cs.iloc[:first - 1]["excludes_zero"].any()
+
+
+def test_anytime_valid_first_exclusion_is_none_when_never_significant():
+    cs = empirical_bernstein_confidence_sequence(np.zeros(20), bound=0.5)
+    assert anytime_valid_first_exclusion(cs) is None

@@ -15,6 +15,7 @@ from conftest import make_ohlcv
 
 from tradebot.broker import MarketSpec, PaperBroker
 from tradebot.orders import Order
+from tradebot.registry import get_strategy
 from tradebot.strategy import Context, Strategy
 
 import scripts.paper_trade as pt
@@ -188,3 +189,31 @@ def test_run_recorder_rejects_an_older_candle_than_the_persisted_state(tmp_path)
         pt.run_recorder("buy_and_hold", make_ohlcv([100.0] * 50), market,
                         state_path=state_path, csv_path=csv_path,
                         start_equity=1000.0, verbose=False)
+
+
+# ------------------------------------------------------- DEFAULT_STRATEGIES
+
+def test_default_strategies_are_all_registered_and_unique():
+    """The multi-strategy default (this recorder's main behavior change:
+    a bare invocation now records the whole promoted/registered
+    kelly_regime lineage plus buy_and_hold, not just kelly_regime_v4) must
+    name only real, currently-registered strategies, each exactly once —
+    a typo or a stale/renamed strategy here would silently narrow the
+    forward record or crash every scheduled run.
+    """
+    assert len(pt.DEFAULT_STRATEGIES) == len(set(pt.DEFAULT_STRATEGIES))
+    for name in pt.DEFAULT_STRATEGIES:
+        get_strategy(name)  # raises KeyError if not registered
+
+
+def test_default_strategies_includes_the_benchmark():
+    assert "buy_and_hold" in pt.DEFAULT_STRATEGIES
+
+
+def test_kelly_regime_ev_fast_is_its_own_registered_class_not_a_parametrization():
+    """Confirms the premise the default list relies on: `kelly_regime_ev`
+    and `kelly_regime_ev_fast` are two separately registered classes (both
+    defined in kelly_regime_ev.py), not one class instantiated two ways -
+    so tracking both by name is meaningful, not a duplicate.
+    """
+    assert type(get_strategy("kelly_regime_ev")) is not type(get_strategy("kelly_regime_ev_fast"))

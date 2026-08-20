@@ -1,0 +1,105 @@
+name: paper-trading-recorder
+
+# Automates B-06 (docs/LEDGER.md): the forward paper-trading recorder,
+# scripts/paper_trade.py. This workflow places NO real order and needs NO
+# exchange credentials — it only ever calls Bitstamp's live public candle
+# feed and appends rows to its own persisted virtual account under
+# reports/paper_trading/. See docs/LIVE.md's "Forward paper-trading
+# recorder (B-06)" section for the full design and its honest limitations.
+#
+# Cadence note (a deliberate, documented gap — see docs/LIVE.md): the
+# strategies this records decide once per closed 5-minute Bitstamp candle,
+# and scripts/paper_trade.py's own docstring is explicit that ONE
+# invocation advances by exactly the single newest closed candle — it does
+# not walk forward and catch up on every candle missed since its last run
+# (only inception gets a one-time catch-up, for a latched signal, not for
+# missed time). A cron schedule slower than 5 minutes therefore does not
+# just delay the record, it permanently DROPS whichever intermediate
+# candles fall between two runs — the recorder trades and marks-to-market
+# on whatever the newest closed candle happens to be at each firing, not a
+# full 5-minute bar-by-bar tape. 15 minutes is chosen here, not 5, because
+# GitHub itself documents that scheduled workflows are a best-effort
+# service that can be delayed under load, especially at high frequency,
+# and that a schedule this repo cannot realistically hold to would just
+# trade "missing some candles on a slow cron" for "missing some candles on
+# an unreliable 5-minute cron" while adding load for no benefit. A missed
+# or skipped candle costs nothing but that one rebalance decision — the
+# same property docs/LIVE.md and bot.py already document for the live
+# path — so this is a bounded, honestly-stated gap, not silent data loss.
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+
+# Never run two recordings at once (an overlapping/backed-up run reading
+# and writing the same *_state.json mid-write could corrupt it), but never
+# cancel one that is already writing either — cancel-in-progress: false is
+# deliberate here, unlike a typical CI-cancel-on-new-push setup.
+concurrency:
+  group: paper-trading-recorder
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - run: pip install -e ".[dev]"
+
+      - name: Run the B-06 paper-trading recorder
+        run: |
+          set +e
+          python scripts/paper_trade.py
+          code=$?
+          set -e
+          if [ "$code" -eq 0 ]; then
+            echo "recorder ran cleanly"
+          elif [ "$code" -eq 2 ]; then
+            # scripts/paper_trade.py's own documented "soft failure"
+            # contract: main() returns exit 2 only for a Bitstamp
+            # urllib.error.URLError (network unreachable) or every
+            # requested strategy still short on warmup history — both
+            # handled, expected conditions, never a code bug. GitHub
+            # Actions runners occasionally have restricted or flaky
+            # outbound network, and a missed run costs nothing but one
+            # skipped rebalance decision, so this is logged loudly but
+            # does NOT fail the job.
+            echo "::warning::paper_trade.py returned exit 2 - a handled network/insufficient-history condition (see scripts/paper_trade.py main()), not a bug. Continuing without failing the job."
+          else
+            # Any other nonzero code is an uncaught exception (a genuine
+            # bug, or a real-order/causality invariant the script itself
+            # refuses to violate — e.g. its own out-of-order-candle
+            # RuntimeError) and must surface loudly, not be swallowed.
+            echo "::error::paper_trade.py crashed with exit code $code - failing the job so this is visible"
+            exit "$code"
+          fi
+
+      - name: Commit and push the updated paper-trading record, if anything changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reports/paper_trading/
+          if git diff --cached --quiet; then
+            echo "no new paper-trading rows this run - nothing to commit"
+            exit 0
+          fi
+          git commit -m "paper trading: record $(date -u +%Y-%m-%dT%H:%M:%SZ) (B-06, automated)"
+          # Guard against a slow race with a manual push to main between
+          # this job's checkout and its push (the concurrency group above
+          # only serializes this workflow against itself): rebase onto
+          # whatever is newest on main, which for an append-only CSV/JSON
+          # record is always a clean fast-forward-able rebase, then push.
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
