@@ -122,6 +122,149 @@ entry that replaced it — nothing was dropped in the conversion. Rounds
 before R-28 were backfilled from the long-form docs and carry only the
 fields their original row had.
 
+### R-60 · 08-20 · NEGATIVE — B-26 closes: neither OU half-life-adaptive anchor timing nor a CUSUM change-point vote restores v4's panel drawdown property
+
+**Direction.** Backlog **B-26**, filed by R-59. R-59 tested R-57's own named
+hypothesis on the SCALE axis twice — per-asset `target_vol` calibration and a
+self-normalizing relative-vol scale — and both failed identically (D1 0/6),
+localizing the failure away from the sizing constant's magnitude or
+dimensional form and toward R-57's own alternative explanation: the panel's
+matched-hold advantage looks like a buy-the-dip effect these higher-
+volatility, more mean-reverting instruments reward, which `kelly_regime_v4`'s
+vote-gated trend rule sits out because it is still latched in the wrong
+state. Neither R-59 branch touched the vote's *timing*. B-26 asks that
+question directly: does the vote arriving faster, or asset-adaptively,
+restore the property instead of a bigger or differently-shaped notional
+doing it? Attacks **SIZE** and **N≈3**. Not a duplicate of R-59 (scale, not
+timing) or R-57 (pure replication, nothing about the strategy changes). Not
+a duplicate of R-07 (BTC-only, calendar-length horizon sweep, never
+asset-adaptive and never against the panel) or of any of the sixteen
+scale-axis rounds cited by R-59 (R-34, R-37, R-38, R-40, R-41, R-45, R-46,
+R-53–R-56) — this is the first round on this strategy family to vary the
+vote's cadence, and the first to try a non-moving-average timing mechanism
+(CUSUM) at all.
+
+**Caution, carried forward from B-26's own filing and repeated in the
+pre-registration.** This was the strategy family's SIZE-axis attempt number
+**twenty**, on a family R-57 itself suggested might be better abandoned in
+favour of a genuinely different strategy run on the panel. The round
+proceeded anyway because timing is a materially different axis from scale,
+not a further subdivision of an already-exhausted one, and because it was
+cheap: no new data, the panel/control/harness already built by R-57/R-59.
+
+**What was done.** Pre-registration committed first
+(`experiments/r60_shared.py`, frozen windows/decision rules/literature),
+before either branch read a panel result. Two parallel branches, each owning
+disjoint files, neither committing: **conservative**
+(`experiments/r60_conservative_ou_halflife.py`) rescales `kelly_regime_v4`'s
+`(20,40,80)`-day anchor ladder per asset by an Ornstein-Uhlenbeck
+mean-reversion half-life estimated by OLS-through-the-origin on daily
+log-close over PANEL_TRAIN/CONTROL (2020-04-01→2022-12-31), ratio to BTC's
+own half-life clamped to `[0.90, 1.40]×` (R-07's validated 18–28-day
+plateau bound on the shortest anchor); **novel**
+(`experiments/r60_novel_cusum_vote.py`) replaces the three moving-average
+anchors with an ensemble of three CUSUM (Page 1954) sequential change-point
+detectors sharing one reference drift `k` on a doubling threshold ladder
+(`h, 2h, 4h`), averaged into `frac` the same way the three anchors are,
+selected from a pre-registered 3×3 `(k,h)` grid (`k` derived from BTC's own
+per-bar volatility, not from any performance number) by highest D1 count,
+ties broken by D2 margin. Windows: PANEL_TRAIN 2020-04-01→2022-12-31
+(fit/select only), CONTROL = R-57's own BTC/ETH window (same dates),
+PANEL_TEST 2023-2026 (panel assets only, descriptive, frozen config).
+Decision rules frozen in `r60_shared.py`: D1 primary (matched-exposure
+drawdown count on PANEL_TRAIN, binomial), D2 falsification (BTC/ETH control
+must not regress R-57's own numbers by >5pp), D3 falsification
+(crash-transition-lag on BTC's three marquee crash windows must not exceed
+v4's own baseline lag by more than 2 bars — a check added specifically for
+this round per R-56's lesson that a timing change can look clean in
+aggregate while quietly slowing exactly the de-risking events that are the
+strategy's edge), D4 generalization (PANEL_TEST, descriptive), D5 (0.40%
+fee, predicted to fail). Promotion bar: D1≥5/6 AND D2 passes both assets AND
+D3 passes. **296 configurations** across both branches (78 conservative: 60
+backtests + 8 closed-form OU regressions + 10 `prepare()`-only D3 signal
+reads; 218 novel: 144 sweep + 24 D1 + 8 D2 + 18 D4 + 24 D5, D3 counted as 0
+per the `prepare()`-only convention). Causality tamper probes (R-57's
+opposite-tamper methodology) PASS on both branches, 4/4 assets (conservative,
+including both the ceiling- and floor-clamped ladders) and 3/3 assets ×2
+gates (novel, pre-sweep and post-selection). `pytest -q`: 461 passed,
+unchanged, independently re-run by the operator after each branch's own run.
+The operator independently re-executed both branches' full `run` command
+from a clean shell and reproduced every headline number reported below
+exactly.
+
+**Result.** **Both branches NEGATIVE, and this time not by the same
+signature.** Conservative: D1 1/6 (only LTC, the floor-clamped ladder, a
+near-tie at −1.4pp [−11.4,+24.9] — the other five unchanged-to-worse: BCH
++10.2, ETC +15.4, DASH +15.0, LINK +16.5, XTZ +18.3pp, one interval (ETC)
+excluding zero against the candidate); D2 PASSES both assets (BTC −5.6pp,
+exact match to R-57 since `ratio_BTC=1.0` is a no-op by construction; ETH
+−10.7pp vs R-57's −11.5pp, negligibly smaller); D3 PASSES, trivially, on BTC
+(byte-identical signal by construction) with mixed, small, inconclusive
+non-gating ETH robustness numbers; D4 0/6, and the one D1 near-tie (LTC) is
+D4's *worst* cell (+38.7pp) — the near-miss did not generalize, the same
+pattern R-59's conservative branch found on the same asset; D5 3/6, fails as
+predicted. A calibration anomaly worth noting: the clamp bound 4 of 6 panel
+assets (3 at the floor, 1 at the ceiling), so the "structural" per-asset
+ladder mostly collapsed to one of two fixed points rather than expressing
+six genuinely distinct calibrations. Novel: D1 0/6 — a cleaner, harder
+failure than either R-59 branch or the conservative branch here (BCH +12.3,
+LTC +19.2, ETC +26.0, DASH +9.8, LINK +18.3, XTZ +29.4pp, 5 of 6 bootstrap
+intervals excluding zero against the candidate); D2 FAILS both assets for
+the first time in this round's own or R-59's history (BTC +7.2pp against a
+≤−0.6pp tolerance, ETH +5.7pp against a ≤−6.5pp tolerance) — this candidate
+broke the two instruments the mechanism already worked on; D3 PASSES on its
+frozen mean-only rule (candidate 1019.0 bars vs baseline 2085.67 bars) but
+the per-window breakdown it was designed to surface shows exactly the
+pre-registered risk: the 2020-03 COVID window resolves in 0 bars (a big win
+that drags the mean down) while the 2018-11 window is **1381 bars slower
+than baseline** (2181 vs 800) — a CUSUM detector fast in one crash and
+dangerously slow in another, invisible to a mean-only gate and reported
+prominently rather than let the passing mean stand uncontextualized; D4 0/6,
+corroborating D1; D5 0/6, the worst 0.40%-tier result of any round in this
+line (R-57's frozen v4: 2/6, both R-59 branches: 3/6 each). A distinct
+failure mode also confirmed: turnover ran 1.8×–3.3× v4's baseline trade
+count on identical asset/windows (e.g. XTZ 308 vs 92 trades, BCH 156 vs 68),
+the whipsaw risk the pre-registration named in advance. Neither branch's own
+account contradicts the other's: the conservative branch's near-null result
+and the novel branch's decisive, D2-breaking failure both point the same
+direction — timing, like scale before it, is not where the panel's drawdown
+inversion lives, and pushing the vote to arrive on a genuinely different
+schedule (CUSUM) costs more than it buys, both in exposure to the panel's
+own dip-buying dynamic and, this time, in the BTC/ETH control the family had
+never previously broken.
+
+**Verdict.** **NEGATIVE (both branches). B-26 closes.** One-line lesson: the
+strategy family's SIZE-axis record is now **0-for-21** (R-34 → R-46, R-53 →
+R-56, R-59×2, R-60×2) across both axes this family exposes — scale (R-59)
+and timing (this round) — and the novel branch is the first of the
+twenty-one to also break the BTC/ETH control it was meant to protect,
+sharpening rather than softening R-57's own standing explanation: the
+panel's matched-hold advantage is best read as a property of the panel's own
+price dynamics (a buy-the-dip / mean-reversion effect), not as a
+miscalibration of `kelly_regime_v4`'s vote-and-scale architecture on either
+axis it exposes. Holdout counter: **+0**, program total unchanged at
+**~627** — no BTC/ETH bar past 2022-12-31 is read anywhere in either branch
+(both branches' own `load_control_assets`/panel-loader call sites truncate
+at `"2022-12-31"` before any other line touches the frame; the three D3
+crash windows are all pre-2023 and already read by every registered
+strategy's own backtest; confirmed by the operator's independent grep of
+both files for `202[3-9]` literals). Decision rule did **not** move — D1–D5
+and the promotion bar are exactly as committed in `r60_shared.py` before
+either branch ran. Not registered — no candidate cleared even D1, nothing to
+promote; both files stay in `experiments/` per ROUTINE.md step 5. **Next
+step, stated plainly rather than filed as a further backlog row on this
+axis**: with both scale and timing now exhausted (0-for-21) and the novel
+branch additionally breaking the control, the operator's recommendation is
+to treat `kelly_regime_v4`'s own vote-and-scale mechanism as answered on the
+panel-generalization question and not attempt a twenty-second variant absent
+new evidence; R-57's own suggestion — a genuinely different strategy family
+evaluated on the panel before any holdout consultation — is now the
+better-justified next step on this question than any further tweak to the
+incumbent, should a future session choose to pursue it. Reports:
+`experiments/reports/r60_conservative_report.md`,
+`experiments/reports/r60_novel_report.md`; raw data:
+`reports/r60_conservative/*.csv`, `reports/r60_novel/*.csv`.
+
 ### R-59 · 08-20 · NEGATIVE — B-25 closes: neither per-asset `target_vol` calibration nor a self-normalizing relative-vol scale restores v4's panel drawdown property
 
 **Direction.** Backlog **B-25**, filed by R-57. R-57 found `kelly_regime_v4`'s
@@ -6574,6 +6717,35 @@ SIZE-axis record is now 0-for-19, so a session preferring a fresh idea should
 weigh a genuinely different strategy family on the panel (R-57's own
 suggestion, still untried) at least as seriously as B-26.
 
+**Re-ranked 08-20 after R-60.** Two parallel branches attacked **B-26**
+directly — the timing-axis question R-59 filed. **B-26 is now CLOSED,
+REJECTED.** The conservative branch (per-asset OU half-life-adaptive anchor
+rescaling) landed close to a null result (D1 1/6, a near-tie that did not
+generalize) while cleanly passing the BTC/ETH falsification control; the
+novel branch (a CUSUM change-point vote, a materially different timing
+mechanism rather than a retuned moving average) failed more decisively (D1
+0/6) and, for the first time in twenty-one attempts on this family's SIZE
+axis, also broke the BTC/ETH control it was meant to protect — plus a
+crash-transition-lag check whose mean-only pass concealed a real,
+1381-bar-slower regression on the 2018-11 crash window specifically, and a
+1.8×–3.3× turnover/whipsaw cost. Both branches, independently, land on the
+same reading R-59's two branches did: the panel's matched-hold advantage is
+not an artifact of how `kelly_regime_v4` is calibrated on either the scale
+axis (R-59) or the timing axis (this round) — it looks like a property of
+the panel's own price dynamics instead. This extends the strategy family's
+SIZE-axis record to **0-for-21** (R-34 → R-46, R-53 → R-56, R-59×2, R-60×2).
+What that does to the order: **B-06 remains the standing zero-cost
+recommendation** at the top, now more clearly than at any prior re-ranking —
+with both axes this strategy family exposes exhausted, and one branch this
+round breaking the control for the first time, there is no well-motivated
+twenty-second attempt on `kelly_regime_v4`'s own vote-and-scale mechanism
+left to file. A session preferring a fresh research direction on the panel
+should pursue **R-57's own suggestion — a genuinely different strategy
+family, evaluated on the panel before any holdout consultation is spent —
+in preference to any further variant of the incumbent**, which this
+re-ranking now states as the primary recommendation rather than an
+alternative weighed alongside a backlog row.
+
 | ID | item | attacks | status | note |
 |---|---|---|---|---|
 | ~~B-01~~ | ~~E-process regime detection with unified Kelly sizing~~ | ERR, N≈3 | **DONE → R-28**, qualified by R-31 | NEGATIVE on the promotion bar. It read as the strongest risk result in the project — 0 of 40 windows deeper than the incumbent — until B-11 compared the two at equal risk and found that number was about exposure, not about the gate. (R-26's null round listed this as untried; R-28 is the round that actually ran it.) |
@@ -6601,7 +6773,7 @@ suggestion, still untried) at least as seriously as B-26.
 | ~~B-23~~ | ~~A materially different mechanism on the same aggregate-USDT-stablecoin-supply-deceleration signal — e.g. a shorter growth window matched to genuine-stress duration rather than a persistence filter bolted onto the existing 14-day feature, or corroboration from a second independent signal rather than filtering one signal alone~~ | INFO | **DONE → R-58, REJECTED** | Both of B-23's own named fixes tested, both NEGATIVE. Shorter window: fails its own pre-registered Step-A gate before any Sharpe number — lead time flips monotonically from +16.5d (N=14) to −15.0d (N=2) as the window shrinks, a timescale mismatch between acute redemption (~2-3d) and the multi-week capital-flight dynamic the signal actually leads on. On-chain corroboration: the AND-gate does not separate genuine leads from noise (7/9 vs 3/3 corroboration rate) and increases the false-onset count (24→28); its one striking number (rescuing R-54's failed hard override into a tie/win) is an exposure-level artifact (R²=0.9971), not a real edge. This closes the stablecoin-signal research line's fifth mechanism attempt and the INFO axis's sixth consecutive failed round (R-44, R-53, R-54, R-55, R-58×2) — not recommended for further pursuit absent a genuinely new information channel. |
 | **B-24** | A narrower pre-registration (N capped at ≤24, deliberately excluding the N≥72 near-miss/trend-drift failure modes R-56's conservative branch found) of the patient-limit/taker-fallback execution model on `kelly_regime_v4`'s COST axis, tested against the same falsification battery (ETH, BTC control, crash-transition-lag) | COST | LOW | Filed by R-56 after its own conservative branch's full N∈{1,...,288} sweep failed to clear the noise floor anywhere and failed its crash-lag test for N≥3. The N∈[2,24] region looked least-bad in the same sweep (captures most of the fee saving, avoids the N≥72 failure modes, stays directionally positive in inner-validation) but was never the pre-registered decision subset, so R-56 correctly declined to promote it. Not recommended as a priority: even this "least bad" reading never cleared the ±0.2 Sharpe noise floor in the original sweep, and R-56's novel branch independently showed the conservative branch's fill assumption (100% on touch) is already the optimistic end of the spectrum — a more realistic accounting is more likely to find less here, not more. |
 | ~~B-25~~ | ~~Is `kelly_regime_v4`'s BTC-calibrated `target_vol` (0.55) / `max_leverage` (2.0) the reason its matched-exposure drawdown property does not travel? R-57 found the mechanism's mean notional collapses to 0.18–0.26 on higher-volatility instruments (vs 0.38 BTC / 0.34 ETH), leaving mostly the vote's timing — a per-asset volatility-normalized target is the obvious test~~ | SIZE, N≈3 | **DONE → R-59, REJECTED** | Both readings tested. Per-asset `target_vol` calibration (conservative) and a self-normalizing relative-vol scale with zero new fitted parameters (novel) both pass their falsification control (BTC/ETH unregressed) and both fail to restore the panel drawdown property (D1 0/6, both branches). Neither the magnitude nor the dimensional form of the sizing constant is the binding constraint — both branches converge on R-57's own alternative hypothesis: the matched hold's advantage on the panel looks like a buy-the-dip effect these higher-volatility instruments reward, not a sizing mismatch. Reopens only as **B-26**, on the timing axis rather than the scale axis. |
-| **B-26** | Does changing `kelly_regime_v4`'s vote/gate **timing** — rather than its exposure **scale**, which R-59 tested twice and twice found not to be the binding constraint — restore the matched-exposure drawdown property on R-57's six-asset panel? E.g. faster/asset-adaptive anchor horizons, or a different hysteresis band, tested against the same matched-exposure D1 bar | SIZE, N≈3 | LOW (ranked below B-06 and B-24) | Filed by R-59 after both of B-25's scale-axis fixes failed. Caution attached: it would be the strategy family's SIZE-axis attempt #20 (R-34 → R-46, R-53 → R-56, R-59×2 all NEGATIVE), on a family both R-59 branches independently suggest may be losing to the panel's price dynamics (mean-reversion favouring the matched hold) rather than to any parameter this family exposes. A session considering B-26 should weigh it against R-57's own suggestion — a genuinely different strategy family run on the panel, cheap to fail on six instruments before any holdout consultation — which remains untried. |
+| ~~B-26~~ | ~~Does changing `kelly_regime_v4`'s vote/gate **timing** — rather than its exposure **scale**, which R-59 tested twice and twice found not to be the binding constraint — restore the matched-exposure drawdown property on R-57's six-asset panel? E.g. faster/asset-adaptive anchor horizons, or a different hysteresis band, tested against the same matched-exposure D1 bar~~ | SIZE, N≈3 | **DONE → R-60, REJECTED** | Both readings tested. Per-asset OU half-life-adaptive anchor rescaling (conservative) landed near-null (D1 1/6, a near-tie that failed to generalize) and cleanly passed the BTC/ETH control; a CUSUM change-point vote (novel) failed more decisively (D1 0/6) and, for the first time in 21 attempts on this family's SIZE axis, also broke the BTC/ETH control — plus a crash-lag check whose passing mean concealed a 1381-bar regression on the 2018-11 window specifically, and 1.8×–3.3× turnover. Neither the anchor ladder's calendar length (R-07), its cross-sectional scale (R-59), nor its timing mechanism (this round, both a retuned moving average and a genuinely different sequential detector) restores the property — both branches converge on R-57's own alternative: the matched hold's advantage on the panel is a property of the panel's own price dynamics, not a miscalibration of this strategy family on any axis it exposes. SIZE-axis record: 0-for-21. Not reopened — the operator's recommendation is a genuinely different strategy family on the panel (R-57's own suggestion) rather than a 22nd variant of the incumbent, should this question be pursued further. |
 
 ---
 
@@ -6667,6 +6839,18 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-20 · ~627** — R-60: **+0** on top of R-59's ~627. Neither the
+  conservative (OU half-life-adaptive anchor rescaling) nor the novel
+  (CUSUM change-point vote) branch read any bar of BTC or ETH past
+  2022-12-31 — both branches' `load_control_assets`/panel-loader call sites
+  truncate at `"2022-12-31"` before any other line touches the frame,
+  confirmed by the operator's independent grep of both files for
+  `202[3-9]` literals. Panel-asset reads (train and test alike) cost +0 per
+  the established R-47/B-08/R-57 convention; the three D3 crash-lag windows
+  are all pre-2023 and already read by every registered strategy's own
+  backtest. Neither branch cleared its own pre-registered promotion bar
+  (D1 1/6 and 0/6 respectively), so neither reached, nor needed, a holdout
+  read.
 - **08-20 · ~627** — R-59: **+0** on top of R-58's ~627 (pre-registered and
   run as "R-58"; renumbered to R-59 after a concurrent session claimed R-58
   first — see the entry's own numbering note). Neither the conservative

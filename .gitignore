@@ -128,3 +128,9 @@ uv.lock
 !/reports/r59_conservative/*.csv
 !/reports/r59_novel/
 !/reports/r59_novel/*.csv
+# R-60 (B-26): per-cell numbers behind both branches' reports, same
+# reasoning as r59_conservative/r59_novel above.
+!/reports/r60_conservative/
+!/reports/r60_conservative/*.csv
+!/reports/r60_novel/
+!/reports/r60_novel/*.csv
