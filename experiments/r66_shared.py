@@ -355,14 +355,77 @@ of a band is the expensive side to widen):
     properties of the Kelly criterion." Quantitative Finance 10(7), 681-687.
 
 Cost-aware implementation, and the one published band-vs-smoothing head-to-head
-this project has found:
+this project has:
   Novy-Marx, R. & Velikov, M. (2016). "A Taxonomy of Anomalies and Their
-    Trading Costs." Review of Financial Studies 29(1), 104-147. (Table 5: at
-    identical costs a hysteresis band preserves 0.77 of gross return against
-    0.62 for trade-smoothing. Their band is cheap partly because a 500-name
-    cross-section has close substitutes and netting; this project has one
-    instrument and zero netting, so the magnitude is not expected to transfer
-    -- only the ordering.)
+    Trading Costs." Review of Financial Studies 29(1), 104-147.
+
+    **A CORRECTION THIS ROUND OWES ITS PREDECESSOR.** R-64's ledger entry
+    reports this paper as "a hysteresis band preserves 0.77 of gross return
+    against 0.62 for trade-smoothing, i.e. 38% more net return." An
+    independent survey commissioned for this round read Table 5 directly and
+    those numbers are **not** fractions of gross return preserved -- they are
+    monthly gross excess returns in percent. The row reads: trading hysteresis
+    gross 0.77, t-costs 0.26, **net 0.51 [t=2.87]**; staggered quarterly
+    rebalancing gross 0.62, t-costs 0.26, **net 0.37 [t=2.34]**. The honest
+    version is *stronger* than the version R-64 carried -- the two mitigations
+    cut costs identically and the band preserves far more gross signal -- but
+    the ledger's phrasing is wrong and is annotated in place there, not
+    deleted. Also: NMV's rule is itself **asymmetric** (an sS rule; the entry
+    threshold is strictly stricter than the exit threshold), which R-64 did
+    not note and which is directly relevant to this round.
+
+    Their own stated mechanism is cross-sectional substitution -- "holding
+    (not selling) close substitutes to the stocks you would have bought" --
+    so the 41%/42% turnover and cost reductions should be assumed to be ~0 on
+    one instrument with zero netting. What transfers is the *ordering* and the
+    sS shape, not the magnitude.
+
+The single-instrument, proportional-cost, non-asymptotic band literature -- the
+closest published model to this repo, and the reason the novel arm's width
+profile is the right object even though its specific f**p form is a
+simplification:
+  Martin, R. J. (2012). "Optimal multifactor trading under proportional
+    transaction costs." arXiv:1204.6488. (Preprint; no journal publication
+    verified. Band half-width ~ (cost)^(1/3) x (volatility of the TARGET
+    position)^(2/3), so a faster signal is buffered more; and the band's
+    *centre* is displaced in the direction the target is expected to move,
+    at order cost^(2/3). Martin judges that displacement negligible -- but
+    explicitly for a small cost-per-unit-volatility, and on 5m BTC bars this
+    project is not in that regime.)
+  de Lataillade, J. & Chaouki, A. (2020). "Equations and Shape of the Optimal
+    Band Strategy." arXiv:2003.04646. (Preprint/CFM working paper. Single
+    asset, linear proportional cost, OU predictor, non-asymptotic. Two results
+    that bear directly on both arms: at zero signal the band is exactly
+    symmetric with half-width ~ (3/2 x Gamma x beta^2)^(1/3); at large signal
+    it becomes "completely asymmetric", the risk-reducing edge collapsing onto
+    the target while the risk-increasing edge sits far away. Their simulated
+    head-to-head against a grid-search-optimal *constant symmetric* band shows
+    the advantage growing monotonically with the cost ratio -- the same shape
+    as this round's D2.)
+
+**AND THE ONE THAT CUTS AGAINST THE CONSERVATIVE ARM, RECORDED BEFORE ITS
+NUMBER IS READ.** The static-target result that the band width vanishes as the
+target goes to zero (Gerhold et al. 2014 sect. 3.3; Muhle-Karbe, Reppen & Soner
+2017 sect. 5.1, "both of these expressions vanish if zero or full investment is
+optimal in the frictionless model") does **not** survive a signal-driven
+target. The Primer's general formula (eqs. 4.14-4.15) has a strictly positive
+band-width floor everywhere once the target is sensitive to a factor and that
+factor is not perfectly correlated with price, and its sect. 5.2 says so
+outright: "the no-trade region no longer vanishes if the frictionless risky
+weight is zero or one." de Lataillade & Chaouki put it plainly: "even if we
+trade, the optimal policy is not to trade directly towards zero: indeed, once
+close enough from zero, one can afford to wait a little bit to see whether the
+predictor becomes positive or negative."
+
+So **transaction-cost theory does not license snapping to exactly flat.** That
+does not retract B-29 -- B-29's motivation was never cost-optimality, it was
+that R-64's arm carried a residual long through bear regimes, which is a
+*regime-risk* argument -- but it does mean the conservative arm must be
+defended on regime-risk grounds and must NOT be described as the
+Constantinides/Davis-Norman optimum with a fix. What the theory licenses is the
+novel arm's shape: a band that *tapers* toward zero rather than a
+discontinuous snap. That the two arms disagree on this point is now a
+pre-registered expectation rather than a post-hoc reading.
 """
 
 from __future__ import annotations
