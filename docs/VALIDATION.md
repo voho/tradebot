@@ -495,7 +495,7 @@ period is still the missing experiment (backlog item B-08 in
 drawdown property replicating on ETH's own 2022 bear while the return
 edge died at the 0.40% tier.
 
-> 🚨 **"Not BTC-specific" was measured on one other asset, and R-56
+> 🚨 **"Not BTC-specific" was measured on one other asset, and R-57
 > measured it on six more.** The claim in the verdict above — the
 > drawdown reduction transfers — holds against a *fully-invested*
 > benchmark on every asset tried, BCH, LTC, ETC, DASH, LINK and XTZ
@@ -519,7 +519,7 @@ edge died at the 0.40% tier.
 The ETH test above, and R-47's 2020–2026 follow-up, are both **n=1
 asset**, and one of the two assets in this project's evidence base is the
 one the strategy was fitted on. That cannot distinguish a mechanism from a
-calibration. R-56 fetched six further Coinbase USD 5-minute series and ran
+calibration. R-57 fetched six further Coinbase USD 5-minute series and ran
 the **frozen, byte-identical** `kelly_regime_v4` on all of them.
 
 ### Design
@@ -534,8 +534,8 @@ the **frozen, byte-identical** `kelly_regime_v4` on all of them.
 - Three arms per cell: the strategy, the fully-invested `buy_and_hold`,
   and a passive long holding **v4's own mean notional** — the R-33 matched
   arm. Decision rules pre-registered and committed two commits ahead of
-  the first backtest ([LEDGER.md](LEDGER.md), "R-56 pre-registration").
-- Reproduce: `python experiments/r56_cross_asset_panel.py run` and
+  the first backtest ([LEDGER.md](LEDGER.md), "R-57 pre-registration").
+- Reproduce: `python experiments/r57_cross_asset_panel.py run` and
   `… control`. Cells in `reports/cross_asset_panel/`.
 
 ### Result — spot, 0.10% taker, 2020-04-01 → 2026-08-20
@@ -589,7 +589,7 @@ ETH**. Nothing already recorded is retracted — R-33 had established that
 88–92% of the headline gap was exposure, and R-17/R-47's ETH numbers
 reproduce here — but the scope of what those rounds left standing is now
 measured instead of assumed. Full write-up:
-`experiments/reports/r56_cross_asset_panel_report.md`.
+`experiments/reports/r57_cross_asset_panel_report.md`.
 
 ## Comparing at matched risk, and what it costs a finding
 

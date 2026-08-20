@@ -9,7 +9,7 @@ prompt so it can be revised when the evidence changes, and so every
 session runs the same procedure.
 
 The routine's job is **not** to produce a strategy every day. It is to
-convert one idea per session into a permanent, honest row in
+convert one idea per session into a permanent, honest entry in
 [LEDGER.md](LEDGER.md) — promoted or rejected. A well-documented negative
 result is a successful day. This repo's most valuable output so far is a
 list of things that do not work.
@@ -25,7 +25,10 @@ Read, in this order:
    its drawdown column mostly measures holding less).
 2. [`docs/LEDGER.md`](LEDGER.md) — everything already tried, the four
    binding constraints (the standing diagnosis at the top), and the
-   ranked backlog at the bottom.
+   ranked backlog at the bottom. Section B is the research log: **one
+   section per round, newest first**, so the rounds immediately below
+   that heading are the most recent work and the ones most likely to
+   duplicate today's idea. Read those first, then the backlog.
 
 **Backlog first.** If the backlog has an item marked `NEXT` or `OPEN`
 that is not blocked, work that. Invent a new direction only when the
@@ -50,7 +53,7 @@ formality.
    (n≈3), no error control in the signal path, or costs that scale with
    the signal. *"Another indicator" attacks none of them* — that is why
    the bottom of the comparison table looks the way it does.
-2. **Which ledger rows is it not a duplicate of?** Cite them by ID. If
+2. **Which ledger entries is it not a duplicate of?** Cite them by ID. If
    it is a variant of something already tried, say what is different and
    why that difference should matter.
 3. **Is it simulable here?** 5m OHLCV bars, bar-close signals, next-open
@@ -137,7 +140,7 @@ holdout has not already been protected from.
 
 Freeze the configuration. **Before running the holdout, write down the
 decision rule** — the exact thresholds that will promote or reject —
-into the ledger row. Then run it:
+into the ledger entry. Then run it:
 
 ```python
 ev(MyStrategy(frozen), start=OOS_START)        # holdout
@@ -153,10 +156,12 @@ the ledger came from it), so treating it as pristine would be a
 comfortable fiction. Pre-registration is the discipline that still works
 after that has happened.
 
-**Increment the holdout counter** in the ledger row: how many times this
-holdout has been consulted across the whole project to date. That number
-is the trials count for deflated Sharpe at the program level, and it
-only goes up. When it gets large enough that nothing can clear the
+**Increment the holdout counter** in the ledger entry, and add a bullet
+at the **top** of the ledger's `Holdout consultations to date` list —
+that list is newest-first too — recording how many times this holdout has
+been consulted across the whole project to date and what this round added
+to it. That number is the trials count for deflated Sharpe at the program
+level, and it only goes up. When it gets large enough that nothing can clear the
 deflated bar, the honest conclusion is that this dataset is exhausted
 and only forward paper trading (B-06) can settle anything — which is the
 argument for starting that recorder now rather than later.
@@ -173,7 +178,7 @@ Report all of:
 | trials-adjusted significance | deflated Sharpe using the step-3 count |
 
 **If you change the decision rule after seeing any of this, say so
-explicitly in the ledger row and downgrade the result to in-sample.**
+explicitly in the ledger entry and downgrade the result to in-sample.**
 Going back to step 3 to fix a *bug* is fine and always was; going back
 to find a threshold that turns a rejection into a promotion is the thing
 that produced 28-of-32 in-sample winners and 0-of-28 out-of-sample
@@ -198,10 +203,49 @@ Anything else is `NEGATIVE`. Write it up with the same care as a win.
 
 ## Step 5 — Record
 
-Append one row to [`LEDGER.md`](LEDGER.md) using the template at the
-bottom of that file: ID, date, idea, constraint attacked, sources,
-variants, **configs evaluated**, train result, holdout result,
-falsification outcome, verdict, one-line lesson, next step.
+Add **one section** to section B of [`LEDGER.md`](LEDGER.md), at the
+**top** of that section — the log is newest-first, so today's round goes
+directly above the previous one, never at the bottom of the file and
+never inside another round's write-up. Copy the skeleton from
+[Appending an entry](LEDGER.md#appending-an-entry) at the bottom of that
+file; the shape is fixed:
+
+```markdown
+### R-nn · MM-DD · <VERDICT> — <short title, ≤90 chars>
+
+**Direction.** the idea, its citation, the backlog item, the constraint
+attacked, and the IDs it is not a duplicate of.
+
+**What was done.** branches and files, data, the pre-registered decision
+rule and falsification test as frozen, **configs evaluated** (total across
+ALL branches).
+
+**Result.** train / inner-validation / holdout numbers, the decision
+rule's outcome, the falsification test's outcome, skeptic reproduction.
+
+**Verdict.** verdict, one-line lesson, **holdout counter** (increment and
+running total), whether the decision rule moved, next step.
+```
+
+A round that produced a long-form pre-registration or results write-up
+keeps it in the same section, under `####` sub-headings (`#### R-nn
+pre-registration — …`, `#### R-nn results — …`), as R-28 through R-40 do.
+
+Three rules the format exists to protect, learned by losing them:
+
+- **Prose belongs in a section, never in a table cell.** Section B was a
+  table until 08-20 and it broke every way a table can: cells grown to
+  10,000 characters, `|basis|`-style notation silently shifting whole
+  columns (R-41, R-44), a round appended to the wrong table (R-46), and
+  nine rounds appended below the table as raw pipe-text (R-47–R-55).
+  Sections A, C and D are short-cell registries and stay tables — if one
+  of their cells starts wanting a paragraph, the paragraph goes in the
+  round's section in B and the cell gets the ID.
+- **Newest first, everywhere.** Section B and the holdout-consultation
+  list are both appended at the top. Reading down either one reads
+  backwards through the project.
+- **Nothing is deleted.** A superseded finding is annotated in place
+  (R-28's risk claim, retracted by R-31), never removed.
 
 Then, by verdict:
 
@@ -211,12 +255,12 @@ Then, by verdict:
   `docs/STRATEGIES.md` and `docs/VALIDATION.md`. CI fails if a
   registered strategy is missing from either the README table or
   `reports/inference/bootstrap.csv`.
-- **NEGATIVE** → ledger row plus code under `experiments/` (not
+- **NEGATIVE** → ledger entry plus code under `experiments/` (not
   auto-discovered), **unless** the negative is instructive enough to
   earn a table row the way `minority_oracle` and `game_switch` did.
   Registering every failure inflates the table and slows every future
   run; the ledger is the record now.
-- **BLOCKED / PARKED** → ledger row with the blocker named and what
+- **BLOCKED / PARKED** → ledger entry with the blocker named and what
   would unblock it.
 
 Finally, **re-rank the backlog** at the bottom of the ledger, then
@@ -359,4 +403,5 @@ multiplier**, not a free speedup, and it has to be paid for:
 - **Never proxy unavailable data out of price.** If the information is
   not in the file, it is not in the strategy.
 - **Report ranges, not points**, wherever a bootstrap is available.
-- One session, one idea, one ledger row.
+- One session, one idea, one ledger entry — a new section at the top of
+  the ledger's section B, never a row appended to a table.

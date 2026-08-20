@@ -1,4 +1,4 @@
-"""R-56: does `kelly_regime_v4`'s one surviving property replicate across a
+"""R-57: does `kelly_regime_v4`'s one surviving property replicate across a
 PANEL of instruments it has never seen, or is it a BTC-and-ETH coincidence?
 
 Not registered: lives under ``experiments/`` per ROUTINE.md step 5. This is a
@@ -202,9 +202,9 @@ backtest before this docstring was committed.
 
 Usage::
 
-    python experiments/r56_cross_asset_panel.py panel      # selection + integrity
-    python experiments/r56_cross_asset_panel.py causality  # tamper probe, per asset
-    python experiments/r56_cross_asset_panel.py run        # the frozen matrix
+    python experiments/r57_cross_asset_panel.py panel      # selection + integrity
+    python experiments/r57_cross_asset_panel.py causality  # tamper probe, per asset
+    python experiments/r57_cross_asset_panel.py run        # the frozen matrix
 """
 
 from __future__ import annotations
@@ -691,7 +691,7 @@ def cmd_chart() -> None:
         f"{r.asset} {r.dd_diff:+.1f}pp" for r in ctrl.itertuples()
         if r.asset in ("BTC", "ETH"))
     fig.suptitle(
-        "R-56 · kelly_regime_v4's drawdown advantage on six instruments it "
+        "R-57 · kelly_regime_v4's drawdown advantage on six instruments it "
         "was never fitted on\n"
         "spot, 0.10% taker, 2020-04-01 -> 2026-08-20 · Δ max drawdown (pp) · "
         f"same comparison 2020-04..2022-12 on the fitted assets: {ctrl_line}",

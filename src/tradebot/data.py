@@ -202,7 +202,7 @@ def load_coinbase_eth_spot(data_dir: str | Path) -> pd.DataFrame | None:
 
 
 def coinbase_spot_file(asset: str) -> str:
-    """Filename convention for a Coinbase USD 5m spot series (R-56's panel).
+    """Filename convention for a Coinbase USD 5m spot series (R-57's panel).
 
     ``ETH`` -> ``ethusd_coinbase_spot_5m.csv.gz``, matching the file
     ``scripts/fetch_coinbase_spot.py`` already wrote and the names
@@ -214,7 +214,7 @@ def coinbase_spot_file(asset: str) -> str:
 def load_coinbase_spot(data_dir: str | Path, asset: str) -> pd.DataFrame | None:
     """Real Coinbase ``{asset}-USD`` 5m spot OHLCV, or None if not fetched.
 
-    The generic form of :func:`load_coinbase_eth_spot`. R-56 fetched a panel
+    The generic form of :func:`load_coinbase_eth_spot`. R-57 fetched a panel
     of six further Coinbase USD series (2020-01 -> 2026-08) to ask whether
     ``kelly_regime_v4``'s drawdown property replicates on instruments it was
     never fitted on; this is the loader those files share. Nothing is

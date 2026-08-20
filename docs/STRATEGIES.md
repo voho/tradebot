@@ -533,7 +533,7 @@ rather than a tuned peak. The beta-test harness promotes it: it beats the
 base on the full period, drawdown, out-of-sample, and the Monte Carlo
 left tail.
 
-**And the scope of that drawdown finding, measured by R-56.** It is a
+**And the scope of that drawdown finding, measured by R-57.** It is a
 comparison against a *fully-invested* benchmark, and R-33 showed 88–92% of
 the gap is the exposure level. Run frozen on six instruments this strategy
 was never fitted on (BCH, LTC, ETC, DASH, LINK, XTZ, Coinbase 5m

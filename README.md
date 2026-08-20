@@ -35,7 +35,7 @@ anything not listed here has been folded into one of these:
 | document | its one job |
 |---|---|
 | **[docs/ROUTINE.md](docs/ROUTINE.md)** | **The process.** The single procedure for researching and adding a strategy — from idea selection through holdout evaluation to the ledger record, including the mechanics of registering one. |
-| **[docs/LEDGER.md](docs/LEDGER.md)** | **The memory.** Everything already tried — 25 registered strategies, 56 research directions — the four binding constraints, the ruled-out list, and the ranked backlog. Read before a session, appended after it. |
+| **[docs/LEDGER.md](docs/LEDGER.md)** | **The memory.** Everything already tried — 25 registered strategies, and a research log of 57 rounds, newest first — the four binding constraints, the ruled-out list, and the ranked backlog. Read before a session, appended after it. |
 | **[docs/VALIDATION.md](docs/VALIDATION.md)** | **The evidence.** The single comparison protocol and benchmark, and every robustness result: walk-forward, bootstrap intervals, deflated Sharpe, Monte Carlo stress windows, fees, funding, and the ETH replication test. |
 | **[docs/STRATEGIES.md](docs/STRATEGIES.md)** | **The strategies.** What each registered strategy is, how it works, and the principles it rests on, with citations. |
 | **[docs/RESEARCH.md](docs/RESEARCH.md)** | **The literature.** The survey behind the strategies, and the methodology findings that changed how this repo tests. |
@@ -128,7 +128,7 @@ that carry one.
 > and `python experiments/b14_regime_breakdown.py`.
 
 > 🚨 **And both of those claims are about BTC and ETH specifically — on six
-> instruments the strategy was never fitted on, they invert.** R-56 ran the
+> instruments the strategy was never fitted on, they invert.** R-57 ran the
 > frozen `kelly_regime_v4` on BCH, LTC, ETC, DASH, LINK and XTZ (Coinbase
 > 5m, 2020-04 → 2026-08). Against the fully-invested `buy_and_hold` this
 > table uses, its drawdown is lower on **6 of 6**, by 16–46pp. Against a
@@ -142,8 +142,8 @@ that carry one.
 > asset-specific rather than period-specific. **Read the drawdown finding
 > with its measured scope attached: BTC and ETH, 2 of 8.** Detail in
 > [docs/VALIDATION.md](docs/VALIDATION.md#six-instruments-it-was-never-fitted-on-the-cross-asset-panel)
-> and [docs/LEDGER.md](docs/LEDGER.md) (R-56), reproduce with
-> `python experiments/r56_cross_asset_panel.py run`.
+> and [docs/LEDGER.md](docs/LEDGER.md) (R-57), reproduce with
+> `python experiments/r57_cross_asset_panel.py run`.
 
 One full-history number can hide a lucky path, so the top three are also
 resampled over 40 random windows
@@ -216,8 +216,8 @@ default-reject promotion bar — beat buy-and-hold out-of-sample after
 funding and at the real fee tier, by more than the ±0.2 Sharpe noise
 floor, and survive a falsification test chosen in advance.
 
-Everything already tried — 25 registered strategies, 56 research
-directions, the ruled-out list and the ranked backlog — is in
+Everything already tried — 25 registered strategies, a research log of
+57 rounds, the ruled-out list and the ranked backlog — is in
 **[docs/LEDGER.md](docs/LEDGER.md)**, which is read before a session
 starts and appended to when it ends. A documented negative result is a
 successful session; most of the value in this repo is the record of what
@@ -310,11 +310,11 @@ Real Binance BTCUSDT **funding rates** for 2020–2023 are also committed
 cross-asset test ships as `data/{btcusd,ethusd}_bitfinex_5m.csv.gz`.
 
 A **six-instrument Coinbase panel** ships too — `data/{bch,ltc,etc,dash,link,xtz}usd_coinbase_spot_5m.csv.gz`,
-5-minute, 2020-01 → 2026-08, plus `xrpusd_…` (excluded by R-56's continuity
+5-minute, 2020-01 → 2026-08, plus `xrpusd_…` (excluded by R-57's continuity
 rule: Coinbase suspended XRP-USD for 905 days) and `ethusd_coinbase_spot_5m.csv.gz`.
 It exists so a strategy can be failed on six independent instruments before
 a holdout consultation is spent on it — which is what
-[R-56](docs/VALIDATION.md#six-instruments-it-was-never-fitted-on-the-cross-asset-panel)
+[R-57](docs/VALIDATION.md#six-instruments-it-was-never-fitted-on-the-cross-asset-panel)
 did to this project's own incumbent. Refresh with
 `python scripts/fetch_coinbase_panel.py --products BCH-USD LTC-USD …`.
 

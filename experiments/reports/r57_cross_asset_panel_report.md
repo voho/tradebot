@@ -1,10 +1,10 @@
-# R-56 — six instruments the strategy was never fitted on (08-20)
+# R-57 — six instruments the strategy was never fitted on (08-20)
 
-Unregistered experiment. Code: `experiments/r56_cross_asset_panel.py`,
+Unregistered experiment. Code: `experiments/r57_cross_asset_panel.py`,
 data fetched by `scripts/fetch_coinbase_panel.py`. Nothing under
 `src/tradebot/strategies/` is touched; `kelly_regime_v4` runs byte-identical
 in every cell below. Pre-registration (and its one amendment) committed
-before any backtest: `docs/LEDGER.md`, "R-56 pre-registration", commits
+before any backtest: `docs/LEDGER.md`, "R-57 pre-registration", commits
 `c22ba3e` and `8a7fa5b`.
 
 ## 1. The question, one sentence
