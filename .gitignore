@@ -134,3 +134,9 @@ uv.lock
 !/reports/r60_conservative/*.csv
 !/reports/r60_novel/
 !/reports/r60_novel/*.csv
+# R-64 (the holding-period axis): both branches' frontier rows plus the
+# operator's prices-only decay curve. Same reasoning as r60_* above -- the
+# per-cell numbers are the receipt that the pre-registered rules were read
+# in the order the ledger claims.
+!/reports/r64_holding_period/
+!/reports/r64_holding_period/*.csv
