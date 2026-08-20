@@ -267,6 +267,54 @@ def align_onchain_causal(onchain: pd.DataFrame, bars: pd.DataFrame) -> pd.DataFr
     return shifted.reindex(shifted.index.union(bars.index)).sort_index().ffill().reindex(bars.index)
 
 
+MACRO_FILES = {
+    "spx": "spx_daily.csv.gz",
+    "vix": "vix_daily.csv.gz",
+    "dxy": "dxy_daily.csv.gz",
+}
+
+
+def load_macro_metrics(data_dir: str | Path) -> pd.DataFrame | None:
+    """Daily S&P 500 close, VIX close and Fed broad dollar index, or None if absent.
+
+    Fetched by ``scripts/fetch_macro_data.py`` from FRED's free public CSV
+    endpoint (R-53). Unlike on-chain metrics (B-07), which describe the
+    traded asset's own network, these three describe the rest of the
+    financial system -- equity risk appetite, equity-implied fear and
+    dollar strength -- the channel the VIX/DXY-Bitcoin spillover literature
+    argues leads crypto risk-off moves rather than merely coinciding with
+    them. Indexed by UTC day (midnight). ``spx`` only carries a trailing
+    ~10-year window (a FRED platform limit on that specific series, not a
+    fetch gap); ``vix`` and ``dxy`` go back decades. Columns with no
+    observation for a given day (weekends, market holidays) are simply
+    absent rows, not zero-filled -- causal alignment handles that with
+    ``ffill``, same as the on-chain loader.
+    """
+    frames = {}
+    for col, filename in MACRO_FILES.items():
+        path = Path(data_dir) / filename
+        if not path.exists():
+            return None
+        raw = pd.read_csv(path, parse_dates=["date"], index_col="date")
+        frames[col] = raw.iloc[:, 0]
+    df = pd.DataFrame(frames)
+    df.index = df.index.tz_localize("UTC")
+    return df.astype(float).sort_index()
+
+
+def align_macro_causal(macro: pd.DataFrame, bars: pd.DataFrame) -> pd.DataFrame:
+    """Reindex daily macro series onto ``bars``' index, causally.
+
+    FRED publishes day D's close only after day D has ended, so -- exactly
+    like ``align_onchain_causal`` -- a bar at time T may only see the row
+    for the most recent day that closed strictly before T's own day. Bars
+    before the first visible row get NaN, never filled or back-cast.
+    """
+    shifted = macro.copy()
+    shifted.index = shifted.index + pd.Timedelta(days=1)
+    return shifted.reindex(shifted.index.union(bars.index)).sort_index().ffill().reindex(bars.index)
+
+
 def load_dataset(data_dir: str | Path, kind: str) -> tuple[pd.DataFrame, str]:
     """Load 'perp' or 'spot' data; returns (df, source_label).
 

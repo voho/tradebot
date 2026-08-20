@@ -34,6 +34,12 @@ venv/
 # channel this project has had, from CoinMetrics' free community API
 !/data/btc_onchain_daily.csv.gz
 !/data/eth_onchain_daily.csv.gz
+# daily macro/cross-asset series (R-53): S&P 500, VIX and the Fed broad
+# dollar index from FRED - the first information channel describing the
+# rest of the financial system rather than the traded asset itself
+!/data/spx_daily.csv.gz
+!/data/vix_daily.csv.gz
+!/data/dxy_daily.csv.gz
 /reports/*
 !/reports/comparison.md
 !/reports/comparison.csv
