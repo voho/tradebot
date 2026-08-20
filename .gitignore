@@ -6,6 +6,11 @@ __pycache__/
 .pytest_cache/
 .venv/
 venv/
+# R-52 (B-20) parallel round in progress: the conservative branch's file is
+# still being written by a background agent, not yet reviewed/committed as
+# a unit with the novel branch -- temporary, removed once both branches
+# have reported and the round's ledger row is written
+/experiments/b20_literal_calendar_5050.py
 # transient agent working directories, not project content
 /.claude/worktrees/
 /data/*
