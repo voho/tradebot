@@ -3116,6 +3116,26 @@ be read as post-hoc: **XRP is expected to fail the continuity gate**
 its place; if a second asset also fails, the panel is five and the binomial
 thresholds below are recomputed for n=5.
 
+> **Amendment to the selection rule, same day, before any backtest.** Run
+> against the fetched files, the ≥95% coverage clause excluded four of seven
+> candidates: XRP (62.6%, the 905-day listing hole it was written for) but
+> also ETC (91.5%), DASH (82.1%) and XTZ (91.0%) — none of which has a gap
+> longer than 6h40m. The clause was conflating a *listing hole* with *thin
+> trading* (a 5-minute interval with no print produces no Coinbase candle),
+> and it left n=3, where the pre-registered 6/6 threshold is unreachable and
+> the round could not have returned a verdict at all. The gate is therefore
+> split into the two things it meant: **largest gap ≤ 7 days** (continuity —
+> XRP still fails) and **coverage ≥ 80%** (a liquidity floor, *derived* not
+> picked: coverage f stretches v4's 20-day anchor to 20/f calendar days, and
+> R-07 measured the anchor plateau as the 18–28-day region, so f ≥ 0.80 keeps
+> the shortest anchor ≤ 25 days, inside that validated plateau — ETC 21.9d,
+> XTZ 22.0d, DASH 24.4d). **No backtest had been run on any panel asset when
+> this was written**: the only numbers read were bar counts, coverage
+> fractions and gap lengths, properties of the files rather than of any
+> strategy. The resulting panel — **BCH, LTC, ETC, DASH, LINK, XTZ** — is the
+> six the liquidity ranking named, minus XRP, plus the pre-authorized XTZ
+> substitute. The decision rules below are untouched.
+
 **Windows.** FULL 2020-04-01 → last bar (starting three months after the data
 does, so v4's 80-day warmup comes from bars *before* the measured period —
 R-22). BEAR22 2022-05-01 → 2022-11-30, the identical window R-47

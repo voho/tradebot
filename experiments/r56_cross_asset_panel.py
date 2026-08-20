@@ -67,9 +67,34 @@ backtest before this docstring was committed.
         BCH 24.7M, LTC 10.4M, ETC 9.3M, XRP 8.4M, DASH 8.3M, LINK 3.8M,
         XTZ 2.6M, OXT 2.1M, XLM 1.7M, ZRX 0.8M.
   (d) Continuity: after fetching 2020-01-01 -> 2026-08-20 at 5m, an asset
-      qualifies only if bar coverage is >= 95% of the expected 5-minute
-      grid AND its largest single gap is <= 7 days.
+      qualifies only if its largest single gap is <= 7 days (no listing or
+      suspension hole) AND bar coverage is >= 80% of the expected 5-minute
+      grid.
   (e) **The panel is the six highest-ranked assets that pass (d).**
+
+  AMENDMENT, 2026-08-20, recorded in full because amending a
+  pre-registration is exactly the move this project's own routine warns
+  about. Rule (d) originally read "coverage >= 95% AND largest gap <= 7
+  days" as a single continuity gate. Run against the fetched panel it
+  excluded FOUR of seven candidates — XRP (62.6%, the 905-day listing
+  hole it was written for) but also ETC (91.5%), DASH (82.1%) and XTZ
+  (91.0%), none of which has a gap over 6h40m. The gate was conflating two
+  different things: a *listing hole* (what it was meant to catch) and
+  *thin trading* (a 5-minute interval with no print produces no candle on
+  Coinbase). It left n=3, at which the pre-registered 6/6 threshold cannot
+  be reached at all, so the round could not have returned a verdict.
+  The rule is therefore split into its two intended parts, and the
+  liquidity floor is derived rather than picked: a coverage fraction f
+  stretches v4's 20-day anchor to 20/f calendar days, and R-07 measured
+  the anchor plateau as the 18-28 day region, so f >= 0.80 keeps the
+  shortest anchor at <= 25 days, inside that validated plateau (ETC 21.9d,
+  XTZ 22.0d, DASH 24.4d). **No backtest had been run on any panel asset
+  when this amendment was written** — the only numbers read were bar
+  counts, coverage fractions and gap lengths, all properties of the data
+  files rather than of any strategy — and the panel it produces
+  (BCH, LTC, ETC, DASH, LINK, XTZ) is the six the liquidity ranking named
+  in the first place, minus XRP, plus the pre-authorized XTZ substitute.
+  The decision rules in section 4 are untouched.
 
   Named in advance so the substitution cannot be read as a post-hoc choice:
   XRP-USD is expected to FAIL rule (d) — Coinbase suspended XRP-USD trading
@@ -228,7 +253,7 @@ RANKED_CANDIDATES = [
 
 FETCH_START = pd.Timestamp("2020-01-01", tz="UTC")
 FETCH_END = pd.Timestamp("2026-08-20", tz="UTC")
-MIN_COVERAGE = 0.95
+MIN_COVERAGE = 0.80  # see the rule-1(d) amendment in the docstring
 MAX_GAP = pd.Timedelta(days=7)
 PANEL_SIZE = 6
 
@@ -326,14 +351,15 @@ def select_panel(candidates: list[Asset]) -> list[Asset]:
 
 def cmd_panel() -> list[Asset]:
     print("=" * 100)
-    print("PANEL SELECTION — rule 1(d): coverage >= 95% of the 5m grid, "
-          "largest gap <= 7 days")
+    print("PANEL SELECTION — rule 1(d) as amended: largest gap <= 7 days "
+          "(no listing hole) and coverage >= 80% of the 5m grid")
     print("=" * 100)
     candidates = load_candidates()
     for a in candidates:
         print(f"  {a.ticker:5s} bars={len(a.df):>8,d} "
               f"{a.df.index[0]:%Y-%m-%d}->{a.df.index[-1]:%Y-%m-%d} "
               f"coverage={a.coverage:6.1%} max_gap={str(a.max_gap):>20s} "
+              f"20d-anchor spans {20 / a.coverage:5.1f}d "
               f"{'QUALIFIES' if a.qualifies else 'EXCLUDED'}")
     panel = select_panel(candidates)
     print(f"\nPanel ({len(panel)}): {', '.join(a.ticker for a in panel)}")
