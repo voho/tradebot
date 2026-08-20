@@ -349,6 +349,23 @@ def cmd_causality(k: float, probe_assets: list[Asset]) -> bool:
 # --------------------------------------------------------------------- cells
 
 
+class _FlatHoldMetrics:
+    """Stand-in for `compute_metrics`'s output when the candidate's own mean
+    notional is exactly zero (it never took a position over the whole
+    window — a real, causality-checked outcome, not a bug: an idle hold
+    is the only honest "matched exposure" for a strategy that held
+    nothing). `ConstantExposureHold` correctly rejects `c<=0` by design
+    (see matched_hold.py), so this is synthesized directly rather than
+    routed through it. NOT counted as a `measure()` call — no backtest ran."""
+
+    def __init__(self, start_balance: float) -> None:
+        self.final_balance = start_balance
+        self.max_drawdown_pct = 0.0
+        self.sharpe = 0.0
+        self.num_trades = 0
+        self.liquidated = False
+
+
 def cell(a: Asset, strategy, window, market, label: str, rows: list) -> dict:
     """One asset x window x market cell: candidate, buy_and_hold, matched
     hold, paired-bootstrap intervals. Identical structure to R-57/R-59's
@@ -358,10 +375,23 @@ def cell(a: Asset, strategy, window, market, label: str, rows: list) -> dict:
     hold_res, hold = measure(get_strategy("buy_and_hold"), a.df, start, end, market)
 
     c_mean = mean_notional(cand_res)
-    mh_res, mh = measure(ConstantExposureHold(c_mean), a.df, start, end, market)
+    if np.isfinite(c_mean) and c_mean > 0.0:
+        mh_res, mh = measure(ConstantExposureHold(c_mean), a.df, start, end, market)
+        mh_equity = mh_res.equity
+    else:
+        # Candidate never entered a position anywhere in this window (a
+        # legitimate, causality-checked strategy outcome — see class
+        # docstring above). The only honest "matched exposure" hold is one
+        # that also holds nothing: flat at the starting balance throughout.
+        print(f"  {a.ticker:5s} {label:9s} NOTE: candidate mean notional == 0 "
+              f"(never took a position this window) — matched hold synthesized "
+              f"as a flat/idle position rather than run through ConstantExposureHold, "
+              f"and not counted as a backtest configuration.")
+        mh_equity = pd.Series(1_000.0, index=cand_res.equity.index)
+        mh = _FlatHoldMetrics(1_000.0)
 
     cand_ret = daily_returns(cand_res.equity).to_numpy(dtype=float)
-    mh_ret = daily_returns(mh_res.equity).to_numpy(dtype=float)
+    mh_ret = daily_returns(mh_equity).to_numpy(dtype=float)
     hold_ret = daily_returns(hold_res.equity).to_numpy(dtype=float)
     n = min(len(cand_ret), len(mh_ret), len(hold_ret))
     dd_matched = paired_bootstrap(cand_ret[:n], mh_ret[:n], max_drawdown_from_returns, **BOOT)
