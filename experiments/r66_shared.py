@@ -1,4 +1,4 @@
-"""R-65: the no-trade band's *shape*, and the one consequence R-64 could not
+"""R-66: the no-trade band's *shape*, and the one consequence R-64 could not
 separate from its own mechanism -- that a band never lets the position reach
 exactly flat.
 
@@ -269,6 +269,54 @@ arm**; the exact count is reported in the ledger entry.
 **TRIALS COUNT.** The total across BOTH branches, per ROUTINE.md's parallelism
 rule. Every configuration evaluated is counted by `measure` below, including
 the discarded ones.
+
+=====================================================================
+OPERATOR AMENDMENTS, DISCLOSED
+=====================================================================
+
+Two changes were made to this round's setup **after** the pre-registration was
+first written and **before** either branch reported any performance number.
+Both are recorded here rather than quietly applied, per this file's own
+standard: what corrupts a pre-registration is moving a goalpost after seeing a
+result, not fixing a specification before one exists.
+
+1. **Renumbered R-65 -> R-66.** A concurrently-running session claimed the ID
+   R-65 on `main` for a different round (holding period / rank buffer) while
+   this file was being written. Renumbered on the R-31/R-32 same-day-parallel
+   precedent. No content change.
+
+2. **The conservative arm's snap conditional was corrected before it was
+   measured.** The first draft of the branch brief specified
+
+       if desired == 0.0 and pos != 0.0 and abs(desired - pos) > band:
+           pos = 0.0
+
+   which does not do what B-29 asks. The boundary rule parks the position at
+   exactly `k*band` when the target hits zero, and `|0 - 0.10|` is not
+   *greater than* `0.10`, so the snap never fires in precisely the state it
+   exists for. An operator-side diagnostic run before either branch reported
+   measured the consequence directly: that gated form still holds a nonzero
+   position on 15.0% of v4's exactly-flat bars on BTC-inner and 34.6% on
+   ETH-A. The frozen primary is therefore the unconditional form, which is
+   also B-29's literal wording ("still snaps to exactly flat when
+   `desired == 0`") and matches `kelly_regime_ev`'s own standing exception
+   ("a full exit is always allowed"):
+
+       if desired == 0.0:            pos = 0.0
+       elif desired - pos > band:    pos = desired - k*band
+       elif pos - desired > band:    pos = desired + k*band
+
+   The gated form is retained as a labelled ablation, because the difference
+   between the two isolates the residual long specifically.
+
+The same operator diagnostic produced one fact that belongs in the record
+regardless of either arm's verdict, and that no prior round had noticed:
+**`kelly_regime_v4` itself carries a residual long on flat bars.** Its own
+rule does not fire when the target falls from ~0.09 to 0.0, because that step
+is inside its own 10% band. Measured on ETH-A, v4 is nonzero on 3.3% of its
+own exactly-flat bars (mean 0.0032, max 0.0995); on BTC-inner it is 0.0%. The
+disease R-64 diagnosed in the boundary arm is present in the incumbent, more
+rarely and asset-dependently.
 
 =====================================================================
 CITATIONS
