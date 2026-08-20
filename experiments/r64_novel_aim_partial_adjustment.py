@@ -180,6 +180,50 @@ instrument is ETH-A (``load_eth_a()``, Bitfinex 2016-03 -> 2019-12), which is
 entirely pre-2020 and costs zero holdout consultations. **Holdout
 consultations added by this branch: 0.**
 
+=====================================================================
+WHAT WAS MEASURED (written after the inner splits, before any holdout)
+=====================================================================
+
+376 configurations. ``pytest -q``: 461 passed. Causality: truncation probe
+(3 cut points x 3 variants) and tamper probe (3 variants) both PASS; the
+``verify`` cell reproduces ``kelly_regime_v4``'s target column bit-for-bit
+over 250,000 bars.
+
+**The anchor persistences (a measurement of the incumbent, item 7).**
+Causal expanding flip rates as of 2020-12-31: 20d 199 flips / 50.4 a year,
+phi = 9.4e-4 per bar, correlation half-life 2.5 days; 40d 168 flips / 43.2,
+phi = 8.1e-4, 3.0 days; 80d 106 flips / 28.0, phi = 5.3e-4, 4.6 days. The
+ordering is exactly GP's prediction -- the fast anchor decays fastest -- but
+the magnitudes make the shrinkage inert: at a >= 0.05 the normalised aim
+weights are (0.332, 0.333, 0.335) against v4's flat (1/3, 1/3, 1/3). The
+weights only separate (0.29, 0.34, 0.37 at a = 0.002) once the trading rate
+is slower than the signal's own decay, and at those rates the position lags
+so badly that everything else falls apart.
+
+**The two halves.** Half (ii), the persistence-weighted aim, is a NULL: over
+144 paired grid cells the median |relative difference| in final balance
+against the flat vote is 0.15%, and 0.02% for a >= 0.2; on inner-validation
+against v4 its paired-bootstrap growth difference is -0.001 [-0.003, +0.001]
+at 0.10% and -0.001 [-0.005, +0.002] at 0.40%. Half (i) moves things, but
+the minimum-step filter does the moving: across the grid, min_step swings
+log10(fill count) by 2.49 decades while ``a`` swings it by 0.67.
+
+**The category error is confirmed.** min_step = 0 -- the literal GP smooth
+rate -- costs 13k-176k fills and loses on every window. It loses two
+different ways at the two ends of ``a``: at a = 1 through fees ($687 vs v4's
+$509 on inner-train), at a = 0.002 through lag (fees only $380, still
+16,884 vs 18,477). This is failure mode 1 as pre-registered, plus failure
+mode 3 underneath it.
+
+**And the surviving cells do not survive the split.** The Spearman rank
+correlation between inner-train and inner-validation growth-vs-v4 across the
+72 (a, min_step, vote-mode) cells is **-0.02** (Pearson -0.06); 34 of 72
+cells even agree in sign, which is worse than a coin flip. The cell the
+inner-validation selection rule picks, a = 0.2 / min_step = 0.20, is
++0.124 log on inner-validation and **-0.168** on inner-train, and its D5
+neighbourhood spans 0.41 Sharpe against a +/-0.2 noise floor. The branch's
+own read is therefore NEGATIVE before the holdout is opened.
+
 Usage::
 
     python experiments/r64_novel_aim_partial_adjustment.py verify

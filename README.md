@@ -79,6 +79,18 @@ that carry one.
 > what sets the rate. Read every futures figure below as an upper bound;
 > detail in [docs/VALIDATION.md](docs/VALIDATION.md#funding-the-cost-that-was-missing-and-what-it-does),
 > reproduce with `python scripts/funding_study.py all`.
+>
+> **And funding is not the only thing that column is measuring.** The
+> broker ignores same-sign target adjustments below `REBALANCE_DEADBAND
+> = 5%` of *max* notional, which at 5x leverage is **25% of equity** —
+> so on futures it silently discards about **half** of a strategy's
+> intended rebalances. Measured on `kelly_regime_v4` itself, intended
+> rebalances become fills 86.0% / 96.2% of the time on spot but only
+> **48.1% / 53.8%** on `futures_5x`. A futures figure for any strategy
+> routing through `order_notional` is therefore partly a measurement of
+> that band rather than of the strategy. Found and reproduced three
+> times independently in R-64; filed as **B-30** in
+> [docs/LEDGER.md](docs/LEDGER.md) and not yet settled.
 
 > 🚨 **This is a ranking of point estimates, and the ordering is mostly
 > not real.** Testing every adjacent pair with a paired block bootstrap,

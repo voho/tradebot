@@ -150,6 +150,185 @@ entry that replaced it — nothing was dropped in the conversion. Rounds
 before R-28 were backfilled from the long-form docs and carry only the
 fields their original row had.
 
+### R-64 · 08-20 · NEGATIVE (both branches), MEASURES — the trading-rate axis: both canonical policies fail, and the harness turns out to be sizing half of v4's futures rebalances
+
+**Direction.** The first round here to leave the *target* alone and attack
+the **position-update rule that consumes it**. `kelly_regime_v4` computes
+`desired = frac × scale` and then answers a second question nobody in this
+project had examined: given that I am at `pos` and want `desired`, how far do
+I move? Its answer, unchanged since L-04 and inherited by every variant since,
+is `if abs(desired - pos) > deadband: pos = desired` — a no-trade band with a
+**trade-to-target** destination. Twenty-two attempts across R-34 → R-63
+retuned `frac` or `scale`; not one touched that line. Constraint attacked:
+**COST**.
+
+Why now: R-62 and R-63 compose into it. R-62 found v4's surviving property
+lives entirely in the vote, and that deleting the volatility target leaves a
+trend rule whose turnover is unaffordable — so the vol target is empirically a
+*cost-control device*, making cost control the live axis. R-63 then priced a
+genuinely real signal against its own turnover bill for the first time here
+and lost 16:1. If a real signal's problem is the bill, the object to attack is
+the trading policy.
+
+The round's actual question is that the literature has **two** answers and they
+disagree about what this repo should do. Under **proportional** costs — a taker
+fee, no impact, which is exactly what `MarketSpec` charges — the optimum is a
+no-trade region with a **trade-to-the-nearest-boundary** destination
+(Constantinides 1986, *JPE* 94(4); Davis & Norman 1990, *Math. OR* 15(4);
+Shreve & Soner 1994, *Ann. Appl. Prob.* 4(3); Liu 2004, *J. Finance* 59(1)).
+Under **quadratic/impact** costs it is a **smooth partial adjustment**
+`x_t = (1−a)x_{t−1} + a·aim_t` toward an aim that over-weights slowly-decaying
+signals (Gârleanu & Pedersen 2013, *J. Finance* 68(6), Props. 2–4; GP 2016,
+*JET* 165). **v4 implements neither** — it has the first's trigger and neither's
+destination. So the two arms are the two canonical policies, run against each
+other on data whose cost structure makes the theory falsifiable.
+
+**Not a duplicate of.** L-05/L-06 derive the **width** of the no-trade band
+(`|Δf| > 2·fee/(H·σ²)`) and leave the destination as "jump to target" — width
+and destination are orthogonal, and this round holds width fixed. R-56 changed
+the **microstructure of each fill** (patient limit orders) at a fixed set of
+rebalance instants; this round changes how large those rebalances are at a
+fixed taker fill model. R-34 → R-63 all modify `frac`, `scale` or the universe.
+R-12/R-13 (section C, "tuning turnover to fit a fee tier") is the nearest
+ruled-out neighbour and D2 was designed specifically so that a tier-fitted rule
+fails it by construction.
+
+**What was done.** Two parallel branches over a shared, frozen
+pre-registration committed one commit ahead of any measurement
+(`experiments/r64_shared.py`, commit `785847b` — `git log` records the
+ordering). Decision rules as frozen: **D0** risk-match gate (|c_arm − c_v4|/c_v4
+> 10% voids the growth comparison), **D1** holdout log-growth vs v4 with the
+95% paired block-bootstrap interval excluding zero, **D2** the cost-mechanism
+test — *the advantage must GROW as the fee quadruples to 0.40%*, else the
+mechanism claimed is not the mechanism operating — **D3** ETH falsification,
+**D4** turnover must actually fall, **D5** plateau not peak, **D6** funding.
+Default REJECT. Splits: inner-train (→2020-12-31), inner-validation
+(2021→2022), holdout (2023+) untouched until a config is frozen. ETH-A =
+Bitfinex 2016-03→2019-12 (+0 holdout).
+
+- **Conservative** (`experiments/r64_conservative_trade_to_boundary.py`):
+  trade-to-the-boundary, `pos = desired ∓ k·band`, indexed by k ∈ {0, 0.25,
+  0.5, 0.75, 1.0} where **k=0 is v4 itself** and k=1 the literal
+  proportional-cost optimum. **Zero new fitted parameters** — `band` is v4's
+  own shipped `deadband=0.10`, re-used.
+- **Novel** (`experiments/r64_novel_aim_partial_adjustment.py`): GP partial
+  adjustment toward a **persistence-weighted aim**, with each anchor's decay
+  rate φ_k estimated causally (expanding, strictly-lagged Bayesian flip rate,
+  a shared a-priori prior across anchors) and weights `1/(1+φ_k·a/γ)` per GP
+  Prop. 4; paired with a minimum-step filter so the smooth rule is tested at
+  its strongest rather than as a strawman, per the pre-registration.
+
+**Configs evaluated: 460** (68 conservative + 376 novel + 16 operator
+verification). **Holdout consultations: +0** — both branches hard-truncate BTC
+at 2022-12-31 on load, and both fail their pre-registered bar before any
+holdout read is authorized.
+
+**Result.**
+
+*Conservative — NEGATIVE, and it fails its own falsification test.* k=0
+reproduces v4 bit-for-bit (the copied-loop regression check). **D3 fires
+decisively**: on ETH-A the arm's log-growth difference vs v4 is **−0.430
+[−0.791, −0.101]** at k=1 and −0.309 [−0.598, −0.043] at k=0.5 — the only
+intervals in the entire round that exclude zero, and both on the wrong side.
+Operator reproduced both bit-for-bit. The cause is structural, not statistical
+and not a fee effect: a no-trade region means the position never returns to
+*exactly* flat, so the arm carries a residual long (≤10% of equity) through
+every bear regime v4 sits out. Fees explain ~13% of the ETH gap; the residual
+long explains the rest. The same mechanism shows up on BTC as **max drawdown
+rising monotonically with k on the 2022 bear split** (33.2 → 33.9 → 34.3 → 35.3
+→ 37.0%). On BTC growth, no cell's interval excludes zero at either tier, and
+the response to k — the mechanism's own index — is **non-monotone on three of
+four split×tier cells**, which is the signature that something other than the
+step-length change is moving the numbers. D2 is the one clean positive: the
+advantage grows with the fee at every k>0 on both splits (inner-train
+−0.036 → +0.145; inner-val +0.021 → +0.128), so the cost mechanism is real and
+its crossover fee simply sits above the tier this project trades at.
+
+*Novel — NEGATIVE, and a confirmed category error, which is the pre-registered
+failure mode 1.* The literal GP rule (`min_step=0`) loses on every window and
+loses **two different ways**: at a=1 through fees (73,541 fills on inner-train),
+and at a=0.002 through **lag** — fees $380 against v4's $509, *cheaper*, and it
+still returns 16,884 against 18,477. Rescued with the required minimum-step
+filter, the filter turns out to be doing all the work: across the grid
+`min_step` swings log₁₀(fill count) by **2.49 decades** and the trading rate `a`
+by **0.67**. The smooth-rate object does nothing; the no-trade region does
+everything, which is the theory's own scope condition confirmed rather than a
+discovery. D5 **fails** (neighbour Sharpe spread 0.41 against the ±0.2 noise
+floor, with a cliff to −0.06 on one neighbour). D3 is nominally positive but
+**D0-void at a 17.7% risk mismatch**, with max drawdown 55.0% against v4's
+36.5% — the R-31/R-32/R-33 exposure pattern the gate exists to catch — and its
+BTC-indistinguishable flat-vote twin is refuted at −0.469 on the same data.
+Selection surface is noise: Spearman ρ(inner-train, inner-val) = **−0.02** over
+72 cells, **34 of 72** sign agreements, worse than a coin flip.
+
+*The genuinely novel half is a measured null, with a mechanical explanation
+that is worth more than the arm.* The anchors' decay rates are ordered exactly
+as GP predicts — causal half-lives **2.5 / 3.0 / 4.6 days** for the 20/40/80-day
+anchors — but they are ~1e-3 per bar, so at any trading rate fast enough to
+track a trend signal the shrinkage factors `1/(1+φ_k/a)` agree to four decimals
+and the aim collapses onto v4's flat ⅓ mean. Isolated by ablation, the
+persistence-weighted aim moves log growth by **−0.0007 [−0.003, +0.001]** —
+identical fills, identical fees, identical mean notional to three decimals.
+**GP's signal-weighting result cannot bite on this signal set at all**, and no
+better estimator can rescue it: it needs anchors whose decay rates differ by
+orders of magnitude, not by 2×.
+
+*What the literature review adds, and it is not a footnote.* An independent
+survey (Muhle-Karbe, Reppen & Soner 2017, *Ann. Rev. Fin. Econ.* 9, §6.3;
+Martin 2012/2014, arXiv:1204.6488 and *Risk* 27(8); de Lataillade, Deremble,
+Potters & Bouchaud 2012, arXiv:1203.5957) confirms the pre-registration's
+framing — under proportional fees the band is the right object and GP is a
+category error at the level of fine structure, though only ~5–25% of the
+friction budget, since both policies carry welfare loss of order ε^(2/3).
+Novy-Marx & Velikov (2016, *RFS* 29(1), Table 5) is the one published
+head-to-head: at *identical* transaction costs a hysteresis band preserves 0.77
+of gross return against 0.62 for trade-smoothing, i.e. **38% more net return**.
+So the conservative arm had the theoretically favored mechanism and the
+empirical precedent, and still failed — which makes its failure informative
+rather than merely negative. The review also flags why the published magnitudes
+were never going to transfer: NMV's band is cheap because a 500-name
+cross-section has **close substitutes**, and this project has **one instrument
+and zero netting**.
+
+**A harness finding that outlives the round, measured independently by both
+branches and reproduced by the operator.** `broker.py`'s
+`REBALANCE_DEADBAND = 0.05` ignores same-sign target adjustments below 5% of
+**max** notional — which on 5x futures is **25% of equity**. Measured on
+`kelly_regime_v4` itself: intended rebalances → actual fills is **467/543 =
+86.0%** and **256/266 = 96.2%** on spot, but **261/543 = 48.1%** and **143/266
+= 53.8%** on 5x futures. **The broker silently discards about half of the
+incumbent's own intended rebalances on futures.** Re-routing the identical
+target column through explicit quantities instead of `order_notional` changed
+inner-train futures final balance by 45% for the novel arm and −13% for v4's
+own rule. Every futures figure in this project for a strategy that uses
+`order_notional` is therefore partly a measurement of the broker's rebalance
+band, on top of the standing funding caveat. Neither branch edited the broker.
+
+**Skeptic reproduction.** The operator independently re-derived, from scratch
+rather than from either branch's reporting code: the k=0 ≡ v4 identity (exact);
+the band-exit diagnostic (median overshoot **2.13 band-widths**, 43.0% of
+turnover removable — refuting the pre-registration's *own* most-likely-outcome,
+which was that the deadband already did the work and the arm would be a
+rounding error); the ETH-A intervals (bit-for-bit); and the futures fill-through
+numbers above.
+
+**Verdict.** **NEGATIVE, both branches.** One-line lesson: **when two
+literatures prescribe different policies, the cost structure decides which one
+you are in — and here the winner of that argument still lost, because a
+no-trade region silently changes the exposure it is supposed to leave alone.**
+The conservative arm's failure is the sharper result: it removes a real 43% of
+turnover, its advantage grows with the fee exactly as a cost mechanism must,
+and it is killed by a side effect nobody had named — never returning to flat.
+**Holdout counter: +0 this round; running total ~627** (unchanged from R-63 —
+both branches failed their pre-registered bar before a holdout read was
+authorized, and the frozen configs were never run on 2023+). **The decision
+rule did not move**; D3 and D5 fired as written and no threshold was revisited
+after any number was read. **Next step:** the destination question is
+confounded here with the never-goes-flat consequence, and separating them is a
+clean, cheap follow-up — filed as **B-29**. The broker finding is filed as
+**B-30**, and it is methodology, not strategy: it should be settled before the
+next round that reads a futures number.
+
 ### R-63 · 08-20 · NEGATIVE (both branches), MEASURES — widening the universe fails, and the panel's own breadth says why: eight instruments carry 1.5 independent bets
 
 **Direction.** The first round in this project to use its committed multi-asset
@@ -6596,6 +6775,8 @@ trip.
 | The same z-score reversion vote, additionally gated by this project's own rolling causal Hurst exponent (R-46, reused not reimplemented) — trading only while H(t)<0.5 | 57 configurations; passes causality (independently reproduced bit-for-bit by the operator); fails D1 (3/6) and D4 (3/6); D3 confirms predicted BTC/ETH underperformance without the ungated version's catastrophic whipsaw — the gate holds the candidate flat 91-93% of the time on BTC/ETH, directly reproducing R-46's own BTC-Hurst finding (mean H≈0.62). An ablation shows the gate genuinely helps vs. the same signal ungated (better final balance on 5/6 panel assets, better max drawdown on 6/6) but the underlying signal it gates is itself worse than `buy_and_hold` on 5/6 assets, so the gate is damage control, not a hidden edge. The round's own motivating hypothesis (R-59/R-60's "buy-the-dip" framing) is only weakly supported: measured panel Hurst (mean 0.601) is modestly below BTC's (0.622) but both sit solidly in H>0.5 (trend-persistent) territory most of the time — the panel is not measurably mean-reverting. Do not re-try a signal-family swap (trend vs. reversion) on this panel without a different explanation for the matched-exposure advantage than "the panel rewards buy-the-dip," which this round's own Hurst measurement weakens; Hurst-gating itself is not ruled out as a general risk-control technique for other signals, only as a fix for this specific reversion vote's promotion bar. | R-61 (novel), see **B-27** |
 | **B-27**: `kelly_regime_v4`'s conditional volatility-target `scale` factor ALONE, with the directional vote deleted (`frac≡1.0`, never stands aside) — the literal isolation B-27 named | 60 backtests; zero new parameters (every constant is v4's own shipped default, nothing swept, a component removed rather than replaced). Passes causality (tamper probe, BCH/LTC; full 461-test suite green). Fails D1 on the panel (**2/6**, exact binomial p=0.891) with **zero of six** bootstrap intervals excluding zero in either direction — the effect is not merely absent but unmeasurable. More decisively, it fails the BTC/ETH control (**D3 0/2**), *inverting* on both assets where the full strategy has the property (+3.05pp BTC, +3.70pp ETH, vs v4's own −5.55/−11.46pp). D4=4/6 at the 0.40% tier is recorded as context only — the identical 4/6 holds at 0.10% and its drawdowns run 63–80% throughout, so it is a return count on a near-fully-invested arm, not a risk finding. **Do not re-try any variant that attributes v4's matched-exposure drawdown property to its volatility-targeting machinery**: run alone that machinery produces the property nowhere, including on the two assets that have it, so the tail benefit of vol-targeting here is about the exposure level it selects and not the path it takes. | R-62 (conservative), closes B-27 (factor 1 of 2) |
 | **B-27**: `kelly_regime_v4`'s latched 20/40/80-day trend vote ALONE, at a constant full-notional multiplier with the volatility target deleted entirely (`desired=frac×1.0`, no vol measurement anywhere in the class) | 60 backtests; zero new parameters (`c_const=1.0` fixed by the pre-registration, not swept). Passes causality (BCH/LTC). **Reproduces v4's entire signature on both axes**: D3 **2/2** on the BTC/ETH control (−10.56pp BTC, −2.24pp ETH, matching v4's own 2/2, though both intervals contain zero at n=2) *and* D1 **0/6** on the panel — the same failure as v4 at larger magnitude, with 4 of 6 intervals excluding zero, all four against it. Not promotable on any reading: D4 **0/6** at the 0.40% tier by wide margins (LTC $121 vs $1,190; XTZ $87 vs $132), only 2/6 even at 0.10%, panel drawdowns 77–91% — deleting the vol target removes what makes a trend rule's turnover affordable. A named prediction failed usefully: this arm's mean notional came out **1.5×–2.2× HIGHER** than v4's (0.40–0.50 vs 0.19–0.31), not lower as pre-registered, because v4's conditional target divides by these high-volatility altcoins' realized vol even in its non-breakout "steady" state — the scale factor was shrinking the position most of the time, not occasionally enlarging it. **Do not re-try a bare vote-only or constant-exposure trend rule as a tradeable candidate**; but note the diagnostic value, which is this round's actual product: the property and its asset-specificity both live in this factor. | R-62 (novel), closes B-27 (factor 2 of 2) |
+| Trade-to-the-boundary of `kelly_regime_v4`'s no-trade band (`pos = desired ∓ k·band`), the proportional-cost optimum of Constantinides 1986 / Davis & Norman 1990 / Liu 2004 | 68 configurations, zero new fitted parameters (k=0 reproduces v4 bit-for-bit). The mechanism is real and large — median overshoot at a band exit is 2.13 band-widths, so 43% of all turnover is removable, and D2 passes cleanly (the advantage grows at every k>0 on both splits as the fee quadruples). It still fails, on a side effect nobody had named: a no-trade region means the position never returns to *exactly* flat, so the arm carries a residual long ≤10% of equity through every bear regime v4 sits out. ETH-A **−0.430 [−0.791, −0.101]**, the only interval in the round excluding zero and on the wrong side; BTC max drawdown rises monotonically with k on the 2022 bear split. Do not re-try a boundary/partial-boundary destination on this family without first separating the destination from the never-goes-flat consequence — which is B-29, not a rescue of this arm. | R-64 (conservative) |
+| Gârleanu–Pedersen (2013) smooth partial adjustment toward a persistence-weighted aim, on this simulator's purely proportional taker fee | 376 configurations. A confirmed **category error**, and the theory's own scope condition: GP is derived for quadratic/impact costs, and with a proportional fee the smooth rate has no purchase. The literal rule (`min_step=0`) loses through fees at a=1 (73,541 fills) *and* through lag at a=0.002 (fees $380 vs v4's $509 — cheaper, and still worse). Rescued with a minimum-step filter, the filter does all the work: `min_step` swings log₁₀(fills) by 2.49 decades, `a` by 0.67. Selection surface is noise (Spearman ρ = −0.02 across splits, 34/72 sign agreements). Separately, the persistence-weighted aim — the genuinely novel half — is a **measured null with a mechanical explanation**: v4's anchors have causal half-lives of 2.5/3.0/4.6 days (~1e-3 per bar), so at any usable trading rate the GP shrinkage factors agree to four decimals and the aim collapses onto the flat ⅓ mean. Do not re-try GP-style signal-decay weighting on a signal set whose decay rates differ by ~2× rather than by orders of magnitude; and do not re-try a smooth trading rate under a proportional fee at all. | R-64 (novel) |
 
 ---
 
@@ -7430,8 +7611,58 @@ vote (R-62), and this asset universe is too correlated for more trend votes to
 help (R-63). The next well-motivated question on this line is about breadth or
 holding period, both of which are named in B-28.
 
+**Re-ranked 08-20 after R-64.** The first round to attack the position-update
+rule rather than the target it consumes. **Both branches NEGATIVE**, and for the
+first time in this project the backlog comes out of a round *longer* than it
+went in, with two items that are actionable today rather than blocked on data.
+
+What changed. The conservative arm carried the theoretically-favored mechanism
+(under a proportional fee the band-with-boundary is the optimum, and Novy-Marx &
+Velikov 2016 is the published head-to-head showing bands beat trade-smoothing by
+38% of net return at identical cost) and it still lost — but not for the reason
+the pre-registration predicted. Its own most-likely-outcome, that v4's deadband
+already did the work and the change would be a rounding error, is **refuted**:
+median overshoot at a band exit is 2.13 band-widths, so 43% of all turnover is
+genuinely removable, and D2's slope is in the mechanism's favour on both splits.
+It died on a side effect nobody had named — a no-trade region never returns to
+*exactly* flat, so it carries a residual long through the bear regimes v4 sits
+out, which is what ETH-A's −0.430 [−0.791, −0.101] is measuring. That
+confound is separable in one line, which is **B-29**, and B-29 goes to the top of
+the actionable list: it inherits R-64's entire pre-registered battery unchanged,
+needs no new data and no new fitted parameter, and has its own named failure mode
+already written down.
+
+The novel arm closed its axis by explaining it, as R-62 and R-63 did before it.
+GP's smooth rate is a category error under a proportional fee — confirmed, not
+merely observed, since the min-step filter moves turnover 2.49 decades against
+the trading rate's 0.67 — and GP's signal-decay weighting, the one part of that
+framework the literature says should survive a change of cost structure, is a
+**measured null for a mechanical reason specific to this incumbent**: v4's three
+anchors have causal half-lives of 2.5/3.0/4.6 days, a ~2× spread, where GP's own
+demonstration ran on a ~100× spread. That is a fact about the signal set, so it
+rules the idea out here without ruling it out in general.
+
+The round's most consequential product is neither arm. Both branches
+independently measured, and the operator reproduced, that
+`broker.REBALANCE_DEADBAND = 0.05` discards **about half of `kelly_regime_v4`'s
+own intended rebalances on 5x futures** (48.1% / 53.8% fill-through, against
+86.0% / 96.2% on spot) because 5% of *max* notional is 25% of equity at 5x
+leverage. Every futures figure in this project for a strategy routing through
+`order_notional` is partly a measurement of that band. Filed as **B-30**, and it
+is a methodology item that should be settled *before* the next round that reads a
+futures number, not after.
+
+What that does to the order: **B-29 and B-30 are now the top of the actionable
+list**, ahead of B-28 (still blocked on data this repo does not have) and
+alongside **B-06 (forward paper trading), which remains the standing zero-cost
+recommendation and the only source of uncontaminated evidence this project can
+generate.** For the first time since R-58 a session has two well-specified,
+data-free, same-day items to choose from.
+
 | ID | item | attacks | status | note |
 |---|---|---|---|---|
+| **B-29** | Separate the two things R-64's conservative arm confounded: a trade-to-the-boundary destination **that still snaps to exactly flat when `desired == 0`**. R-64 measured the destination change as worth a real 43% of turnover with a D2 slope in its favour, and killed it on the residual long the band leaves behind in bear regimes — but those are two independent consequences of one line, and only one of them is fatal | COST | **OPEN, actionable today** | Filed by R-64. Cheapest live item on the list: one conditional in a loop this project already has two implementations of, zero new data, zero new fitted parameters, and it inherits R-64's whole pre-registered battery (D0–D5) unchanged so the comparison is already specified. Its own named failure mode: the snap-to-flat may just re-introduce the turnover the boundary saved, at exactly the moments (regime exits) when the step is largest — in which case the 43% figure was never bankable and the answer is a number rather than another attempt. |
+| **B-30** | Settle what `broker.REBALANCE_DEADBAND = 0.05` is doing to every futures figure in this project before another round reads one. Measured on `kelly_regime_v4` itself, intended rebalances → fills is 86.0% / 96.2% on spot but **48.1% / 53.8% on 5x futures**: the broker silently discards about half the incumbent's own rebalances, because 5% of *max* notional is 25% of equity at 5x | methodology (not one of the four constraints) | **OPEN, actionable today** | Filed by R-64, measured independently by both its branches and reproduced by the operator. Not a strategy question and not a bug to "fix" unasked — the band exists so strategies can re-emit a target every bar without churning fees, and changing it would move every number in the comparison table. What is needed is the measurement made explicit: how much of each registered strategy's futures column is the band, and whether the leverage-scaling of the threshold (5% of equity×leverage rather than 5% of equity) is intended. Until then the futures column carries a second caveat alongside funding, and README says so. |
 | **B-28** | Reopen "more instruments" only against a universe whose **breadth** — not whose asset count — clears the bar R-63 measured: mean pairwise daily-return correlation materially below 0.634, or a Grinold equal-correlation breadth materially above 1.47, or a holding period long enough that the 2.86 leader-changes-per-day that cost the novel arm 8.02 log units stops being the binding cost. R-63 established that the cross-sectional signal here is real and merely unaffordable, so the axis is closed for this data rather than on principle | INFO, N≈3 | OPEN, but blocked on data this repo does not have | Filed by R-63. Not actionable from inside a session today: the eight committed instruments are the universe, and R-63 measured them at 1.47 effective bets. Reopening needs either genuinely less-correlated instruments (a different asset class, which this project cannot fetch or simulate) or a lower-frequency bar series that would cut the leader-change rate — note that this project's entire dataset is 5-minute bars, so the second is a data-acquisition task, not a strategy task. Recorded so the idea is not re-tried blind on the same eight assets, which is exactly what section C exists to prevent. |
 | ~~B-01~~ | ~~E-process regime detection with unified Kelly sizing~~ | ERR, N≈3 | **DONE → R-28**, qualified by R-31 | NEGATIVE on the promotion bar. It read as the strongest risk result in the project — 0 of 40 windows deeper than the incumbent — until B-11 compared the two at equal risk and found that number was about exposure, not about the gate. (R-26's null round listed this as untried; R-28 is the round that actually ran it.) |
 | ~~B-04~~ | ~~Purged CV, deflated Sharpe, block-bootstrap CIs on every headline~~ | ERR | **DONE → R-29** | The guess was right: 10 of 96 adjacent pairs distinguishable, none of them in the top eight. Also closes R-25. `tradebot.inference` is now a permanent module with 27 tests; step 4 of the routine can be mechanical from here. |
@@ -7525,6 +7756,17 @@ Rules that the format exists to enforce:
 Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
+
+- **08-20 · ~627** — R-64: **+0** on top of R-63's ~627. Neither branch read a
+  bar dated 2023-01-01 or later: both hard-truncate the BTC frame at 2022-12-31
+  on load (the conservative branch with an assertion, the novel branch likewise),
+  and the shared pre-registration makes a holdout read conditional on clearing a
+  bar that both arms failed first — the conservative on D3 (ETH-A, interval
+  excluding zero on the wrong side), the novel on D5 and on a D0-void D3. ETH-A
+  is Bitfinex 2016-03 → 2019-12 and costs +0 by the R-19/R-28 convention. The
+  frozen configurations were written down and never run on the holdout, which is
+  the outcome pre-registration is supposed to produce when the answer arrives
+  early: the round spent 460 configurations and zero holdout.
 
 - **08-20 · ~627** — R-63: **+0** on top of R-62's ~627. Neither branch read
   the W_HOLD window (2023-01-01 →) at all: both failed the further-work bar
