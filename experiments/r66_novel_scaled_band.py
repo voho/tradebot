@@ -237,6 +237,7 @@ Usage::
     python experiments/r66_novel_scaled_band.py diagnostic
     python experiments/r66_novel_scaled_band.py signature
     python experiments/r66_novel_scaled_band.py ablation
+    python experiments/r66_novel_scaled_band.py isolate
     python experiments/r66_novel_scaled_band.py futures
     python experiments/r66_novel_scaled_band.py causality
 """
@@ -538,6 +539,51 @@ def cmd_ablation(df: pd.DataFrame, rows: list) -> list[dict]:
             show(row)
             out.append(row)
             rows.append(row)
+    return out
+
+
+def cmd_isolate(df: pd.DataFrame, rows: list) -> list[dict]:
+    """(4c) SEPARATING THE RULE'S TWO CONSEQUENCES, which is the round's theme.
+
+    ``band(f) = 0.10 * f**p`` does two independent things at once:
+
+      (i)  it makes the band NARROWER at every f < 1  -> more trades, better
+           tracking (the confound);
+      (ii) it makes the band EXACTLY ZERO at f = 0    -> snap-to-flat (the
+           claimed mechanism).
+
+    They separate cleanly in the limit ``p -> 0+``. At p = 0.01 the band is
+    ``0.10 * f**0.01``, which is 0.0993 at f = 0.5 and 0.0954 at f = 0.01 --
+    i.e. **indistinguishable from v4's constant 0.10 everywhere the strategy
+    trades** -- yet it is still exactly 0 at f = 0, so consequence (ii)
+    survives in full and consequence (i) is switched off.
+
+    So: if a small p already reproduces the arm's ETH-A loss, the damage is
+    the snap-to-flat itself, not the width profile. If a small p is neutral
+    and the loss only appears at large p, the damage is the narrower band.
+    One conditional's worth of evidence, and it is the difference between
+    "this round refutes R-64's residual-long diagnosis" and "this round only
+    measured a turnover confound".
+    """
+    _print_header("(4c) ISOLATING SNAP-TO-FLAT FROM THE WIDTH CHANGE (p -> 0+)")
+    print("  At p=0.01 the band is 0.0993 at f=0.5 and 0.0954 at f=0.01 -- v4's 0.10")
+    print("  for all practical purposes -- but still EXACTLY 0 at f=0. So p=0.01")
+    print("  carries the snap-to-flat consequence and (almost) none of the width one.\n")
+    out = []
+    eth = R.load_eth_a()
+    for p in (0.01, 0.05):
+        row = _row(R.compare(arm(p), eth, (None, None), R.spot(R.FEE_BASE),
+                             label=f"isolate p={p}"), p, "eth-a", tag="isolate")
+        show(row)
+        out.append(row)
+        rows.append(row)
+    print("  control: BTC inner-val, where v4 is NEVER stranded (0 bars), so p=0.01")
+    print("  should be indistinguishable from v4 -- if it is not, the probe is broken.\n")
+    row = _row(R.compare(arm(0.01), df, R.INNER_VAL, R.spot(R.FEE_BASE),
+                         label="isolate p=0.01"), 0.01, "inner-val", tag="isolate")
+    show(row)
+    out.append(row)
+    rows.append(row)
     return out
 
 
@@ -985,6 +1031,8 @@ def main(argv: list[str] | None = None) -> None:
         cmd_eth(rows)
     if cmd in ("all", "ablation"):
         cmd_ablation(df, rows)
+    if cmd in ("all", "ablation", "isolate"):
+        cmd_isolate(df, rows)
     if cmd in ("all", "futures"):
         cmd_futures(df, rows)
 
