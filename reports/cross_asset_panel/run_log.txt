@@ -1,0 +1,93 @@
+====================================================================================================
+PANEL SELECTION — rule 1(d) as amended: largest gap <= 7 days (no listing hole) and coverage >= 80% of the 5m grid
+====================================================================================================
+  BCH   bars= 697,063 2020-01-01->2026-08-20 coverage= 99.9% max_gap=     0 days 06:35:00 20d-anchor spans  20.0d QUALIFIES
+  LTC   bars= 697,357 2020-01-01->2026-08-20 coverage= 99.9% max_gap=     0 days 06:35:00 20d-anchor spans  20.0d QUALIFIES
+  ETC   bars= 638,633 2020-01-01->2026-08-20 coverage= 91.5% max_gap=     0 days 06:40:00 20d-anchor spans  21.9d QUALIFIES
+  XRP   bars= 436,839 2020-01-01->2026-08-20 coverage= 62.6% max_gap=   905 days 02:55:00 20d-anchor spans  31.9d EXCLUDED
+  DASH  bars= 572,840 2020-01-01->2026-08-20 coverage= 82.1% max_gap=     0 days 06:35:00 20d-anchor spans  24.4d QUALIFIES
+  LINK  bars= 697,301 2020-01-01->2026-08-20 coverage= 99.9% max_gap=     0 days 06:35:00 20d-anchor spans  20.0d QUALIFIES
+  XTZ   bars= 635,163 2020-01-01->2026-08-20 coverage= 91.0% max_gap=     0 days 06:40:00 20d-anchor spans  22.0d QUALIFIES
+
+Panel (6): BCH, LTC, ETC, DASH, LINK, XTZ
+
+====================================================================================================
+CAUSALITY TAMPER PROBE — kelly_regime_v4 on each panel asset
+====================================================================================================
+  BCH   decisions identical under opposite post-cut tampers: PASS
+  LTC   decisions identical under opposite post-cut tampers: PASS
+  ETC   decisions identical under opposite post-cut tampers: PASS
+  DASH  decisions identical under opposite post-cut tampers: PASS
+  LINK  decisions identical under opposite post-cut tampers: PASS
+  XTZ   decisions identical under opposite post-cut tampers: PASS
+
+====================================================================================================
+FULL WINDOW 2020-04-01 -> end — spot @0.10% (D1 primary, D3 context)
+====================================================================================================
+  BCH   FULL    spot        fee=0.10%  v4 $     1,270 DD  52.3% | hold $       974 DD  94.7% | matched(c=0.29) $     1,751 DD  47.5% | dDD_matched   +5.2pp [  -6.1, +45.7]
+  LTC   FULL    spot        fee=0.10%  v4 $       680 DD  74.7% | hold $     1,193 DD  90.4% | matched(c=0.31) $     1,883 DD  42.5% | dDD_matched  +33.8pp [  +2.1, +53.1]
+  ETC   FULL    spot        fee=0.10%  v4 $     2,085 DD  51.3% | hold $     1,320 DD  96.3% | matched(c=0.22) $     2,110 DD  29.5% | dDD_matched  +23.6pp [  +5.3, +45.9]
+  DASH  FULL    spot        fee=0.10%  v4 $     1,768 DD  58.7% | hold $       488 DD  96.3% | matched(c=0.19) $     1,641 DD  29.7% | dDD_matched  +29.8pp [  +2.5, +41.8]
+  LINK  FULL    spot        fee=0.10%  v4 $     2,342 DD  47.8% | hold $     4,630 DD  90.6% | matched(c=0.28) $     3,103 DD  38.1% | dDD_matched  +13.4pp [  -5.1, +39.8]
+  XTZ   FULL    spot        fee=0.10%  v4 $       815 DD  55.0% | hold $       133 DD  97.9% | matched(c=0.20) $     1,167 DD  35.4% | dDD_matched  +19.3pp [  +3.3, +44.8]
+
+====================================================================================================
+FULL WINDOW — futures 5x @0.05%, funding NOT charged (upper bound)
+====================================================================================================
+  BCH   FULL    futures_5x  fee=0.05%  v4 $     1,355 DD  51.6% | hold $        18 DD  99.9% | matched(c=0.29) $     1,797 DD  47.9% | dDD_matched   +3.8pp [  -7.2, +43.8]
+  LTC   FULL    futures_5x  fee=0.05%  v4 $       630 DD  73.0% | hold $     1,967 DD  97.9% | matched(c=0.31) $     1,887 DD  43.5% | dDD_matched  +31.9pp [  +0.9, +53.5]
+  ETC   FULL    futures_5x  fee=0.05%  v4 $     2,288 DD  49.9% | hold $     2,602 DD  98.7% | matched(c=0.22) $     2,121 DD  29.4% | dDD_matched  +19.9pp [  +0.2, +41.2]
+  DASH  FULL    futures_5x  fee=0.05%  v4 $     1,677 DD  60.3% | hold $        18 DD  99.9% | matched(c=0.19) $     1,649 DD  29.6% | dDD_matched  +31.5pp [  +2.6, +44.0]
+  LINK  FULL    futures_5x  fee=0.05%  v4 $     3,866 DD  42.5% | hold $    19,127 DD  93.8% | matched(c=0.28) $     3,096 DD  38.2% | dDD_matched   +6.2pp [ -11.0, +31.6]
+  XTZ   FULL    futures_5x  fee=0.05%  v4 $     1,097 DD  42.4% | hold $        18 DD  99.9% | matched(c=0.20) $     1,172 DD  35.3% | dDD_matched   +5.9pp [  -5.6, +36.2]
+
+====================================================================================================
+FULL WINDOW — spot @0.40% Bitstamp entry tier (D2 falsification test)
+====================================================================================================
+  BCH   FULL    spot        fee=0.40%  v4 $       609 DD  71.1% | hold $       971 DD  94.7% | matched(c=0.29) $     1,724 DD  48.0% | dDD_matched  +23.7pp [  +2.8, +55.1]
+  LTC   FULL    spot        fee=0.40%  v4 $       324 DD  86.1% | hold $     1,190 DD  90.4% | matched(c=0.31) $     1,838 DD  42.7% | dDD_matched  +45.4pp [ +12.0, +61.5]
+  ETC   FULL    spot        fee=0.40%  v4 $     1,089 DD  68.1% | hold $     1,316 DD  96.3% | matched(c=0.22) $     2,064 DD  29.6% | dDD_matched  +40.5pp [ +12.6, +55.1]
+  DASH  FULL    spot        fee=0.40%  v4 $     1,022 DD  68.9% | hold $       487 DD  96.3% | matched(c=0.19) $     1,592 DD  30.6% | dDD_matched  +39.3pp [  +7.6, +51.5]
+  LINK  FULL    spot        fee=0.40%  v4 $     1,136 DD  60.5% | hold $     4,616 DD  90.6% | matched(c=0.28) $     2,990 DD  38.3% | dDD_matched  +25.2pp [  +3.1, +50.7]
+  XTZ   FULL    spot        fee=0.40%  v4 $       452 DD  67.7% | hold $       132 DD  97.9% | matched(c=0.20) $     1,137 DD  36.4% | dDD_matched  +31.4pp [ +12.5, +54.9]
+
+====================================================================================================
+BEAR22 2022-05-01..2022-11-30 — spot @0.10% and futures 5x (D4)
+====================================================================================================
+  BCH   BEAR22  spot        fee=0.10%  v4 $       851 DD  26.1% | hold $       399 DD  71.0% | matched(c=0.15) $       903 DD  14.2% | dDD_matched   +9.4pp [ -11.9, +21.4]
+  LTC   BEAR22  spot        fee=0.10%  v4 $       981 DD  20.7% | hold $       792 DD  62.1% | matched(c=0.22) $       989 DD  17.9% | dDD_matched   +1.0pp [  -9.9, +21.0]
+  ETC   BEAR22  spot        fee=0.10%  v4 $     1,251 DD  20.9% | hold $       747 DD  62.2% | matched(c=0.14) $     1,013 DD  11.0% | dDD_matched   +8.8pp [  -5.2, +17.1]
+  DASH  BEAR22  spot        fee=0.10%  v4 $       881 DD  17.6% | hold $       510 DD  68.1% | matched(c=0.11) $       956 DD   9.6% | dDD_matched   +7.3pp [  -3.2, +16.0]
+  LINK  BEAR22  spot        fee=0.10%  v4 $       850 DD  22.5% | hold $       667 DD  56.4% | matched(c=0.18) $       981 DD  12.5% | dDD_matched  +11.0pp [  -1.0, +24.8]
+  XTZ   BEAR22  spot        fee=0.10%  v4 $       800 DD  20.2% | hold $       385 DD  68.2% | matched(c=0.11) $       923 DD   9.8% | dDD_matched  +11.2pp [  -1.2, +21.9]
+  BCH   BEAR22  futures_5x  fee=0.05%  v4 $       799 DD  28.4% | hold $        18 DD  98.7% | matched(c=0.15) $       904 DD  14.2% | dDD_matched  +11.8pp [ -10.8, +25.4]
+  LTC   BEAR22  futures_5x  fee=0.05%  v4 $       977 DD  24.1% | hold $        18 DD  98.8% | matched(c=0.22) $       990 DD  18.0% | dDD_matched   +3.2pp [ -10.1, +23.5]
+  ETC   BEAR22  futures_5x  fee=0.05%  v4 $     1,286 DD  18.4% | hold $        18 DD  99.2% | matched(c=0.14) $     1,014 DD  11.0% | dDD_matched   +5.1pp [  -7.1, +13.4]
+  DASH  BEAR22  futures_5x  fee=0.05%  v4 $       820 DD  22.1% | hold $        18 DD  98.9% | matched(c=0.11) $       956 DD   9.5% | dDD_matched  +11.9pp [  +0.3, +21.5]
+  LINK  BEAR22  futures_5x  fee=0.05%  v4 $       825 DD  24.7% | hold $        18 DD  98.8% | matched(c=0.18) $       982 DD  12.5% | dDD_matched  +13.3pp [  -2.0, +27.6]
+  XTZ   BEAR22  futures_5x  fee=0.05%  v4 $       862 DD  16.7% | hold $        18 DD  98.9% | matched(c=0.11) $       923 DD   9.7% | dDD_matched   +6.7pp [  -8.3, +18.6]
+
+====================================================================================================
+ROBUSTNESS — equal-realized-volatility matching, FULL window, spot
+====================================================================================================
+  BCH   c=0.418 target_vol=0.386 achieved=0.385 resid= 0.3% VALID | v4 DD  52.3% vs vol-matched hold DD  63.5% | v4 $     1,270 vs $     1,933
+  LTC   c=0.446 target_vol=0.374 achieved=0.373 resid= 0.2% VALID | v4 DD  74.7% vs vol-matched hold DD  56.0% | v4 $       680 vs $     2,130
+  ETC   c=0.369 target_vol=0.372 achieved=0.372 resid= 0.1% VALID | v4 DD  51.3% vs vol-matched hold DD  48.0% | v4 $     2,085 vs $     2,744
+  DASH  c=0.317 target_vol=0.337 achieved=0.334 resid= 0.8% VALID | v4 DD  58.7% vs vol-matched hold DD  48.6% | v4 $     1,768 vs $     1,906
+  LINK  c=0.369 target_vol=0.373 achieved=0.372 resid= 0.2% VALID | v4 DD  47.8% vs vol-matched hold DD  47.2% | v4 $     2,342 vs $     3,924
+  XTZ   c=0.355 target_vol=0.350 achieved=0.348 resid= 0.7% VALID | v4 DD  55.0% vs vol-matched hold DD  61.5% | v4 $       815 vs $     1,007
+
+====================================================================================================
+PRE-REGISTERED DECISION RULES
+====================================================================================================
+D1 (primary, matched-exposure drawdown, spot @0.10%, FULL): 0/6 assets, exact binomial p=1.0000 -> FAILS TO REPLICATE
+    paired bootstrap: 4/6 intervals exclude zero (0/6 of them in v4's favour)
+D2 (falsification test, 0.40% taker, beats buy_and_hold): 2/6 -> FAILS (as predicted)
+D3 (context only — UNMATCHED drawdown vs fully-invested hold, spot @0.10%): 6/6
+D3 (context only — UNMATCHED drawdown vs fully-invested hold, futures 5x): 6/6
+D4 (BEAR22, spot @0.10%): matched 0/6, unmatched 6/6 (descriptive — one window per asset)
+D4 (BEAR22, futures 5x): matched 0/6, unmatched 6/6 (descriptive — one window per asset)
+Robustness (equal-realized-vol matching, spot, FULL): 2/6 of the 6 valid cells favour v4 (0 cells void — match residual > 5%)
+
+Total backtest configurations evaluated: 114
+Holdout consultations added by this round: 0 (the BTC 2023+ file is never read here; no panel asset fitted anything)

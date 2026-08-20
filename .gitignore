@@ -43,6 +43,18 @@ venv/
 # daily aggregate USDT circulating supply (R-54): a crypto-native
 # liquidity-flow signal, from CoinMetrics' free community API
 !/data/stablecoin_supply_daily.csv.gz
+# the six-instrument Coinbase panel (R-56), plus the XRP series its own
+# continuity rule excludes - committed rather than regenerated because the
+# panel IS the evidence for the scope of this project's drawdown finding,
+# and because a future candidate can now be failed on six independent
+# instruments before a holdout consultation is spent on it
+!/data/bchusd_coinbase_spot_5m.csv.gz
+!/data/ltcusd_coinbase_spot_5m.csv.gz
+!/data/etcusd_coinbase_spot_5m.csv.gz
+!/data/dashusd_coinbase_spot_5m.csv.gz
+!/data/linkusd_coinbase_spot_5m.csv.gz
+!/data/xtzusd_coinbase_spot_5m.csv.gz
+!/data/xrpusd_coinbase_spot_5m.csv.gz
 /reports/*
 !/reports/comparison.md
 !/reports/comparison.csv
@@ -102,3 +114,10 @@ venv/
 !/reports/paper_trading/
 !/reports/paper_trading/*.json
 !/reports/paper_trading/*.csv
+# the cross-asset panel round (R-56). Same reasoning as matched_hold: the
+# per-cell numbers are what VALIDATION.md's tables cite, and the run log is
+# the receipt that the pre-registered rules were read in the order claimed.
+!/reports/cross_asset_panel/
+!/reports/cross_asset_panel/*.csv
+!/reports/cross_asset_panel/*.png
+!/reports/cross_asset_panel/*.txt
