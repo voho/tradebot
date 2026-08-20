@@ -195,6 +195,153 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-70 · 08-20 · METHOD — B-36 closed: two independent Sharpe-difference test estimators built and applied; ENTRY_ONLY's edge over its predecessor is now significant by all three methods on one window, while D1 against the volatility-matched hold still fails
+
+**Direction.** Backlog item **B-36**, top of the ranked list after R-69
+closed B-37. Constraint attacked: **ERR** (no error control in the signal
+path) — methodology, not a new mechanism, per R-67/R-68's own repeated
+finding that a sixth mechanism round on this axis is a worse use of a
+session than fixing the inference. R-68's own `experiments/r68_inference.py`
+ran a "difference test" between R-67's δ=0.080 arm and R-65's δ=0.000
+baseline and called it Ledoit & Wolf (2008), but it was not: it reused the
+existing `paired_bootstrap` — a plain percentile stationary bootstrap of
+`total_log_return(a) - total_log_return(b)` — with no studentization at
+all. B-36 asked for the actual construction: studentize the *Sharpe-ratio*
+difference by an estimate of its own standard error before doing
+inference, as a reusable function in `tradebot.inference`, applied
+retroactively to the axis's near-clearing arms. Not a duplicate of R-68's
+own difference test (that reused an existing function on a growth
+statistic; this builds two new ones on the Sharpe statistic), nor of R-63–
+R-69's mechanism sweeps (nothing here sweeps a parameter or builds a new
+targets function — every candidate/baseline series is imported unchanged
+from the round that froze it).
+
+**What was done.** `experiments/r70_shared.py`, frozen and committed before
+either branch ran, reproduces R-68's own published difference-test pair
+(`r67_hysteresis_0.080` vs `r65_winner_targets`) bit-for-bit (growth_diff
+matches 0.452512/0.427575 to 6 decimals against
+`reports/r68_band/r68_difference_test.csv`), then extends the same
+construction — arm vs its own unbanded predecessor, not vs a synthetic
+hold — to two pairs R-68 selected but never difference-tested directly:
+its own ENTRY_ONLY winner (δ_in=0.080, δ_out=0.0) and its zero-fitted-
+parameter novel derived threshold (mult=1.0). Six cells (3 arms × 2
+windows), W_TRAIN/W_VAL only (W_FULL6 excluded per R-68's own convention;
+B-33 is still open).
+
+**Conservative branch** (`experiments/r70_conservative_ledoit_wolf.py`):
+the literal Ledoit-Wolf (2008) construction — Parzen-kernel HAC estimate of
+the long-run covariance of the four return moments, Newey-West (1994)
+automatic bandwidth, delta-method gradient, studentized normal CI — built
+following the reference practical realization in the `PeerPerformance` R
+package's `sharpeTesting()`. Pre-registered mechanism and falsification
+test (>15% false-rejection rate on a placebo = miscalibrated) written
+before any real number was read. The task's suggested circular-shift
+placebo was found and disclosed as degenerate for a full-sample statistic
+(mean and E[X²] are shift-invariant, so the point estimate is exactly zero
+on every draw — confirmed, max|diff|=6.9e-18) and replaced with two
+independent stationary-bootstrap resamples of the same real series (same
+population Sharpe by construction, real autocorrelation preserved).
+
+**Novel branch** (`experiments/r70_novel_bootstrap_studentized.py`): the
+same studentized statistic, standard error estimated via this project's
+own paired stationary bootstrap (30-day mean block, the convention every
+other interval in this repo already uses) instead of a kernel — a genuine
+methodological fork, not a relabeling, since a kernel assumes a decay
+shape while a block bootstrap at an already-adopted, literature-external
+block length does not. Pre-registered a synthetic coverage gate (both
+interval types must land in [0.88, 0.99] at nominal 95%, 4 settings) and a
+real-data agreement flag against the existing plain-percentile-bootstrap
+reference.
+
+**Configs evaluated: 24**, entirely from `r70_shared.build_all_cells()`'s
+own 8 `_arm_daily` calls (independently confirmed by both branches and by
+the operator, all three runs from a clean shell reporting `config_count()
+== 24`); neither branch's own statistical code calls `simulate_portfolio`.
+**The operator independently reproduced both branches' full 6-cell tables
+from a clean shell** — every point estimate, standard error, tstat and CI
+matched to displayed precision — and independently verified the point
+estimates of the two new functions agree with each other to 5 decimals
+once merged into `tradebot/inference.py` (they are not expected to be
+exactly bit-identical: the HAC construction's delta method requires the
+population-moment convention `ddof=0`, the bootstrap construction reuses
+this module's existing `annualized_sharpe`, `ddof=1`; the gap is the
+standard `sqrt(T/(T-1))` small-sample correction and is documented in both
+docstrings and a dedicated test).
+
+**Result.**
+
+*Calibration, both branches, before real data.* Conservative: finite-
+difference gradient check passed (max relative error 2.6e-5); synthetic
+i.i.d. coverage 95.1–95.2% over 2,000 reps at two true Sharpe gaps; the
+1,000-draw block-bootstrap placebo (population difference exactly zero by
+construction) rejected at 5.40% against nominal 5% and a 15% failure
+threshold — **PASS**. Novel: synthetic AR(1) coverage 0.908–0.944 across
+4 settings (n×φ) against a pre-registered [0.88, 0.99] band — **PASS**.
+Both gates cleared honestly, before either branch read a real cell.
+
+*The six real cells, three independent methods on the same underlying
+series* (growth-difference percentile bootstrap already existed from
+R-68's own script; the HAC and bootstrap-studentized Sharpe-difference
+tests are this round's product):
+
+| arm | window | growth (percentile) | Sharpe (HAC) | Sharpe (boot-studentized) |
+|---|---|---|---|---|
+| r67_hysteresis_0.080 | W_TRAIN | not sig | not sig (p=0.072) | not sig (t=+1.44) |
+| r68_entry_only_0.080 | W_TRAIN | not sig | **sig (p=0.025)** | not sig (t=+1.42) |
+| r68_novel_derived_mult1.0 | W_TRAIN | **sig** ([0.05,1.47]) | **sig (p=0.046)** | not sig (t=+1.84) |
+| r67_hysteresis_0.080 | W_VAL | not sig | not sig (t=+1.44) | not sig (t=+1.52) |
+| r68_entry_only_0.080 | W_VAL | **sig** ([0.28,1.29]) | **sig (p=0.0056)** | **sig (t=+2.94)** |
+| r68_novel_derived_mult1.0 | W_VAL | not sig | not sig (t=+1.34) | not sig (t=+1.18) |
+
+Two cells split 2-1 across methods (`r68_entry_only_0.080`/W_TRAIN: HAC
+alone finds significance; `r68_novel_derived_mult1.0`/W_TRAIN: the
+bootstrap-studentized test alone does not) — pre-registered as informative
+rather than adjudicated, per both branches' own falsification design. One
+cell, **`r68_entry_only_0.080` on W_VAL, is significant by all three
+independent methods and both statistics** (growth and Sharpe): the
+tightest, most method-robust positive number this axis has produced in
+seven rounds (R-63–R-70).
+
+**What this does and does not establish.** This is a comparison of
+`r68_entry_only_0.080` against R-65's own unbanded winner — the arm it is
+meant to improve on — not against the volatility-matched hold. **D1 (vs.
+the matched hold) already failed for this exact arm in R-68's own report**
+(`further_work=False` on `(D1 or D2)`, both branches, unchanged by this
+round). The two comparisons are not in tension: two highly-correlated
+arms trading the same signal at different speeds resolve their own
+difference far more precisely than either resolves its gap to an
+independent benchmark, so an incremental step can be statistically
+distinguishable from its predecessor while both still lose the harder
+comparison. Read this as confirmation that the entry-threshold change is a
+*real, reproducible improvement in the arm's own Sharpe ratio*, not as a
+promotion signal.
+
+**Verdict.** **METHOD.** Two new, tested, documented functions
+(`ledoit_wolf_sharpe_diff`, `bootstrap_studentized_sharpe_diff`) are now
+permanent in `tradebot/inference.py`, with 15 new tests in
+`tests/test_ledoit_wolf.py` (full suite: 476 passed). B-36 closes: the
+literal Ledoit-Wolf construction is built, applied retroactively to every
+near-clearing COST-axis arm this round could identify, and — the part B-36
+itself did not predict — the two independent standard-error estimators
+disagree on 2 of 6 cells, which this round reports as a finding rather
+than resolving by picking a favourite. **One-line lesson: R-67's own
+lesson keeps being right in the specific direction it predicted — no
+mechanism has moved this axis's D1 interval in seven rounds, but the
+*right inference*, twice now (R-68's difference test, this round's
+studentization), keeps finding the sharpest numbers the axis has ever
+produced, on a statistic one step removed from D1.** Holdout counter: **+0
+this round; running total unchanged at ~627** (both branches restricted to
+W_TRAIN/W_VAL by `r70_shared.py`'s own assertion, independently confirmed
+by the operator). Decision rule did not move: both branches' pre-
+registrations were written before any real-data number was read, and
+neither branch's own honest verdict was adjusted afterward. Next step:
+B-36 is done. No new mechanism round is recommended — **B-06 (forward
+paper-trading, advanced by one more decision this session) remains the
+standing zero-cost recommendation**, on the same grounds R-67 first stated
+it: this axis's binding constraint is the amount of independent evidence
+available, and inference improvements are now the second time (not the
+first) they have out-performed a fresh mechanism attempt.
+
 ### R-69 · 08-20 · NEGATIVE (both branches), ANSWERED — B-37: the entry-only gate needs R-65's buffer and hold_days; alone it does not merely fail to help, it makes turnover and the D1/D2 point estimates worse than R-68's coupled construction
 
 **Direction.** Backlog item **B-37**, filed by R-68 and the item immediately
@@ -9216,10 +9363,31 @@ different mechanisms — a sixth mechanism variant on this axis is a
 materially worse use of a session than writing the paper-trading recorder's
 first uncontaminated read.
 
+**Re-ranked 08-20 after R-70.** B-36 is done: two independent, tested
+Sharpe-difference test estimators (Parzen-kernel HAC per the literal paper,
+and a stationary-bootstrap studentization matching this project's own
+convention) are now permanent in `tradebot.inference`, applied to every
+near-clearing COST-axis arm this round could identify. The result
+sharpens, rather than settles, the axis: `r68_entry_only_0.080`'s edge over
+its own unbanded predecessor is now significant by all three independent
+methods on W_VAL — the tightest, most method-robust number this axis has
+produced in seven rounds — while D1 against the volatility-matched hold
+still fails for the same arm, unchanged from R-68's own report. Two other
+cells split across methods, reported as a finding rather than adjudicated.
+**Nothing here reopens a mechanism round**: this is the second time in two
+rounds (R-68's own difference test, now this one) that an inference
+improvement has produced this axis's sharpest number, exactly the pattern
+R-67 predicted when it wrote "no mechanism can narrow an interval — only
+more data, more breadth, or forward evidence can." **B-06 remains the
+standing zero-cost recommendation**, strengthened again: six consecutive
+rounds (R-63, R-65, R-67, R-68, R-69, R-70) have now converged on the same
+diagnosis — the axis needs evidence this dataset has not already spent,
+which only forward paper trading can supply.
+
 | ID | item | attacks | status | note |
 |---|---|---|---|---|
+| ~~B-36~~ | ~~Formalize a Ledoit & Wolf (2008)-style **paired difference test** between a candidate arm and the frozen arm it's meant to improve on, as a reusable function in `tradebot.inference` rather than a one-off script, and apply it retroactively to every surviving (`further_work`-clearing or near-clearing) arm on the COST axis before a fifth mechanism round is run~~ | ERR (methodology gap) | **DONE → R-70** | Filed by R-68. Built as TWO independent standard-error estimators (Parzen-kernel HAC per the literal paper, and a stationary-bootstrap studentization matching this project's own convention) rather than one, since a single estimator cannot say whether disagreement on a near-zero cell is real. Applied to R-68's own published pair plus two never-before-tested ones (ENTRY_ONLY, novel derived threshold): `r68_entry_only_0.080`/W_VAL is significant by all three methods (growth-percentile, HAC-Sharpe, bootstrap-Sharpe) — the sharpest number this axis has produced — while D1 against the matched hold still fails for that arm, unchanged. Two cells split 2-1 across the two new methods, reported rather than adjudicated. Not reopened; the two functions and 15 tests are the permanent product. |
 | ~~B-37~~ | ~~Does a rule that tightens ONLY the entry threshold (`enter_eligible = s > +delta`, exit left at R-63's original `s > 0`) reproduce R-68 conservative's ENTRY_ONLY edge with a single free parameter, now that the round found the exit half (B-31's original target) carries none of it?~~ | COST | **DONE → R-69, ANSWERED (NO)** | Filed by R-68. Answered cleanly: with R-65's `buffer`/`hold_days` genuinely removed (not merely isolated inside R-68's own ENTRY_ONLY sub-arm, which still inherited both), turnover inflates 4-29x and membership-change rate 4-23x relative to R-68's own published ENTRY_ONLY cell at a comparable or larger delta, and the D1 point estimate flips sign on both a fitted sweep (+1.07 -> -2.98) and an independently-derived, zero-fitted-parameter threshold (+1.07 -> -0.36). Both branches' `further_work` was `False`; neither read the holdout. The coupling ENTRY_ONLY's isolated read could not see turns out to be load-bearing: the buffer and timer were suppressing one-bar rank-flicker swaps the entry threshold alone cannot substitute for. Not reopened — this closes the entry/exit decomposition line R-67 opened. |
-| **B-36** | Formalize a Ledoit & Wolf (2008)-style **paired difference test** between a candidate arm and the frozen arm it's meant to improve on, as a reusable function in `tradebot.inference` rather than a one-off script, and apply it retroactively to every surviving (`further_work`-clearing or near-clearing) arm on the COST axis before a fifth mechanism round is run | ERR (methodology gap) | **NEXT** | Filed by R-68. R-68's own difference test (R-67's δ=0.080 vs R-65's δ=0.000, both pre-specified by earlier rounds so nothing was selected on to produce it) resolved to +0.4525 [-0.069,+1.105] (W_TRAIN) and +0.4276 [-0.111,+0.933] (W_VAL) — about 5x tighter than any level D1 cell this axis has produced, on two independent windows agreeing to 0.025 log units, and still just short of significance. No round on this axis had run this comparison; R-67's own lesson ("no mechanism can narrow an interval") implicitly calls for exactly this, and this round is the first to test whether the *right inference* can, where the answer was "almost." Making it a shared, tested function rather than a bespoke script is what lets every future round apply it without re-deriving it, and running it retroactively costs nothing new (no new backtest, no new holdout read) since every candidate P&L series is already committed. |
 | **B-37** | Does a rule that tightens ONLY the entry threshold (`enter_eligible = s > +delta`, exit left at R-63's original `s > 0`) reproduce R-68 conservative's ENTRY_ONLY edge with a single free parameter, now that the round found the exit half (B-31's original target) carries none of it? | COST | **NEXT** | Filed by R-68. R-68's own decomposition found EXIT_ONLY (soften only the exit, R-67's original framing) worse than the coupled rule at every matched delta on both windows with a *negative* cross-window rank correlation (-0.227), while ENTRY_ONLY dominates COUPLED at delta>=0.080 on W_VAL and holds the top three W_TRAIN ranks with a *positive* one (+0.500). This item asks the cheap follow-up directly: is a one-parameter entry-only gate (no `buffer`, no `hold_days` retuning, no exit threshold at all) sufficient, or does the coupling still matter for reasons ENTRY_ONLY's isolated read cannot see. Cheapest possible test of the round's central finding — one predicate change, R-68's own harness and gates apply unmodified. |
 | ~~B-34~~ | ~~Extend both R-67 grids past the edges their winners leaned against, and — the more important half — run a SYMMETRIC deadband as a matched arm beside the asymmetric one~~ | COST | **DONE → R-68, ANSWERED** | Filed by R-67. Ran as a two-threshold decomposition (contains R-67's symmetric-in-magnitude arm as its diagonal) rather than the literal symmetric arm, since a symmetric band on a long/flat gate coincides with R-67's rule (amendment recorded and justified in R-68's write-up, backed after the fact by Guan–Peng–Xu's no-symmetry result). **Both questions answered.** The curve turns over: hump-shaped, peaking at δ≈0.16 on both selection windows (confirmed independently by the sweep and by a Patton–Timmermann monotonicity test), degrading past ≈0.22 — F3's worry (an unbounded far-end improvement) does not materialize. And the confound separates: ENTRY_ONLY (tighten only the entrant threshold) carries the edge R-67 attributed to the coupled rule; EXIT_ONLY (soften only the exit, R-67's original framing) is worse than the coupled diagonal at every matched δ with a *negative* cross-window rank correlation. `further_work=False` on the selected configuration regardless. The grid cap this item's own note cited (dLC's 1.6σ) was found miscalibrated — it is a full-width saturation applied as a half-width cap — and is corrected to 0.80σ in R-68's write-up. Reopens as **B-37** (does entry-only alone reproduce the edge with one parameter). |
 | ~~B-35~~ | ~~Measure the stopping premium of the forced exit (Kaminski & Lo 2014)~~ | COST | **DONE → R-68, ANSWERED** | Filed by R-67. Measured before either R-68 branch ran (`experiments/r68_stopping_premium.py`). At the horizon the mechanism acts on (mean grace span 0.17 days at δ=0.080) the incumbent's forward return after a downward crossing is **positive** (+0.00504 at H=1d vs +0.00048 unconditional) — a **negative** stopping premium, Kaminski–Lo's random-walk case reproduced, consistent with score autocorrelation of −0.078/+0.059/−0.061 at 1/5/14 days. Priced: grace periods cost +0.311 log units at δ=0.080 against +1.044 saved in avoided round trips, net +1.355 — and the saving **asymptotes** while grace span keeps growing, which correctly predicted the sweep's hump shape found later the same round. Every interval contains zero. Closes with a nameable reason: the exit was never informative on this signal, which is also why R-68's ENTRY_ONLY beat EXIT_ONLY. |
@@ -9322,6 +9490,13 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-20 · ~627** — R-70: **+0** on top of R-69's ~627. `experiments/r70_shared.py`
+  asserts, at build time, that no index it hands to either branch reaches
+  `2023-01-01` (`W_TRAIN`/`W_VAL` only, W_FULL6 deliberately excluded per
+  R-68's own convention — B-33 is still open). Neither branch's own
+  statistical code calls `simulate_portfolio`; both `config_count() == 24`
+  reports are entirely `r70_shared.build_all_cells()`'s own 8 `_arm_daily`
+  calls, independently confirmed by the operator from a clean shell.
 - **08-20 · ~627** — R-69: **+0** on top of R-68's ~627. Neither branch imports
   or slices `W_HOLD`; both `load_universe`/`align_frames` call sites in both
   branch files are grepped and confirmed to never reference a date literal

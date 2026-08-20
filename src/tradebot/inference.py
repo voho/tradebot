@@ -16,10 +16,26 @@ the framework can back-test:
    *paired* difference between two strategies on identical resamples.
    Paired matters: two strategies on the same market share most of their
    variance, and comparing independent intervals throws that away.
-2. :func:`deflated_sharpe_ratio` — Bailey & López de Prado (2014). How
+2. :func:`ledoit_wolf_sharpe_diff` and :func:`bootstrap_studentized_sharpe_diff`
+   — Ledoit & Wolf (2008). ``paired_bootstrap`` above answers "is the
+   difference between two strategies' *log growth* distinguishable from
+   zero"; these answer the same question for the *Sharpe ratio*, and do it
+   by **studentizing** the difference by an estimate of its own standard
+   error before doing inference, rather than treating a raw percentile
+   interval as already pivotal — the correction that gives L&W's test its
+   improved finite-sample coverage on autocorrelated, heavy-tailed returns.
+   Two independent estimators of that standard error are provided —
+   ``ledoit_wolf_sharpe_diff``'s Parzen-kernel HAC estimate (the paper's own
+   construction) and ``bootstrap_studentized_sharpe_diff``'s nonparametric
+   stationary-bootstrap estimate, at this module's own 30-day-block
+   convention — because R-70 (``docs/LEDGER.md``) found they do not always
+   agree on this project's data, and that disagreement is itself the honest
+   answer on a cell where it occurs, not a discrepancy to paper over by
+   picking whichever one says "significant".
+3. :func:`deflated_sharpe_ratio` — Bailey & López de Prado (2014). How
    high a Sharpe the *best of N trials* reaches by luck alone when the
    true Sharpe is zero, and whether the observed one clears it.
-3. :func:`cpcv_splits` with :func:`purged_train_mask` — combinatorially
+4. :func:`cpcv_splits` with :func:`purged_train_mask` — combinatorially
    purged cross-validation (López de Prado 2018), which turns one
    walk-forward number into a distribution of out-of-fold paths.
 
@@ -34,6 +50,10 @@ slightly from the per-bar figure in the comparison table.
 References
 ----------
 Politis & Romano (1994), "The stationary bootstrap", JASA 89(428).
+Ledoit & Wolf (2008), "Robust performance hypothesis testing with the
+Sharpe ratio", J. Empirical Finance 15(5), 850-859.
+Newey & West (1994), "Automatic lag selection in covariance matrix
+estimation", Review of Economic Studies 61(4), 631-653.
 Bailey & López de Prado (2014), "The deflated Sharpe ratio", J. Portfolio
 Management 40(5).
 López de Prado (2018), *Advances in Financial Machine Learning*, ch. 7 & 12.
@@ -224,6 +244,245 @@ def paired_bootstrap(a: np.ndarray, b: np.ndarray, stat, *,
     return PairedResult(stat_a=float(stat(a)), stat_b=float(stat(b)),
                         diff=interval,
                         p_positive=float(np.mean(draws > 0.0)))
+
+
+# ------------------------------------------- Ledoit-Wolf Sharpe-diff tests
+
+@dataclass
+class LedoitWolfResult:
+    """HAC-studentized Sharpe-ratio-difference test, Ledoit & Wolf (2008).
+
+    Studentizes ``SR(a) - SR(b)`` by the delta-method standard error of a
+    Parzen-kernel HAC estimate of the long-run covariance of the four
+    return moments the Sharpe ratio is a function of, with an automatic
+    Newey-West (1994) bandwidth. See :func:`ledoit_wolf_sharpe_diff`.
+    """
+
+    sr_a: float
+    sr_b: float
+    diff: Interval          # point = sr_a - sr_b, HAC-studentized 95% CI
+    se: float
+    tstat: float
+    pvalue: float
+    bandwidth: float        # S* (Parzen kernel automatic bandwidth, in bars)
+    alpha_hat: float        # Newey-West (1994) plug-in used to derive S*
+    n: int
+
+    @property
+    def significant(self) -> bool:
+        return self.diff.lo > 0.0 or self.diff.hi < 0.0
+
+
+def _sharpe_moments(x: np.ndarray) -> tuple[float, float, float]:
+    mu = float(np.mean(x))
+    gamma = float(np.mean(x ** 2))
+    denom = gamma - mu * mu
+    sr = mu / sqrt(denom) if denom > 0 else 0.0
+    return mu, gamma, sr
+
+
+def _lw_gradient(mu1: float, gamma1: float, mu2: float, gamma2: float) -> np.ndarray:
+    """Gradient of ``SR_1 - SR_2`` w.r.t. ``(mu1, mu2, gamma1, gamma2)``.
+
+    ``SR_1 = mu1 * (gamma1 - mu1**2)**-0.5``, so
+    ``d(SR_1)/d(mu1) = gamma1 / (gamma1-mu1**2)**1.5`` and
+    ``d(SR_1)/d(gamma1) = -0.5*mu1 / (gamma1-mu1**2)**1.5``, symmetrically
+    for the ``b`` leg (with a sign flip, since the statistic is ``a - b``).
+    Verified by finite differences in ``tests/test_ledoit_wolf.py``.
+    """
+    s1 = (gamma1 - mu1 * mu1) ** 1.5
+    s2 = (gamma2 - mu2 * mu2) ** 1.5
+    return np.array([gamma1 / s1, -gamma2 / s2, -0.5 * mu1 / s1, 0.5 * mu2 / s2])
+
+
+def _parzen_kernel(x: float) -> float:
+    ax = abs(x)
+    if ax <= 0.5:
+        return 1.0 - 6.0 * ax * ax + 6.0 * ax ** 3
+    if ax <= 1.0:
+        return 2.0 * (1.0 - ax) ** 3
+    return 0.0
+
+
+def _nw_bandwidth(V: np.ndarray) -> tuple[float, float]:
+    """Newey & West (1994) automatic Parzen-kernel bandwidth: an AR(1)
+    plug-in fit to each of ``V``'s columns, combined with equal weights (the
+    standard multivariate generalisation used by e.g. R's
+    ``sandwich::bwNeweyWest`` and the ``PeerPerformance`` package's
+    ``sharpeTesting()``). Returns ``(S_star, alpha_hat)``."""
+    T, k = V.shape
+    num, den = 0.0, 0.0
+    for j in range(k):
+        x = V[:, j]
+        x0, x1 = x[:-1], x[1:]
+        denom_ols = float(np.sum(x0 * x0))
+        rho = float(np.sum(x0 * x1) / denom_ols) if denom_ols > 0 else 0.0
+        rho = float(np.clip(rho, -0.97, 0.97))  # numerical guard only
+        resid = x1 - rho * x0
+        sigma2 = float(np.var(resid, ddof=1)) if len(resid) > 1 else float(np.var(resid))
+        num += 4.0 * rho * rho * sigma2 * sigma2 / (((1 - rho) ** 6) * ((1 + rho) ** 2))
+        den += sigma2 * sigma2 / ((1 - rho) ** 4)
+    alpha_hat = num / den if den > 0 else 0.0
+    s_star = 2.6614 * (alpha_hat * T) ** 0.2
+    return float(s_star), float(alpha_hat)
+
+
+def _hac_long_run_cov(V: np.ndarray, s_star: float) -> np.ndarray:
+    """Parzen-kernel HAC estimate of ``V_t``'s long-run covariance,
+    degrees-of-freedom corrected by ``T/(T-k)`` for the ``k`` estimated
+    moments."""
+    T, k = V.shape
+    gamma0 = V.T @ V / T
+    psi = gamma0.copy()
+    s_int = int(np.floor(s_star))
+    for j in range(1, s_int + 1):
+        w = _parzen_kernel(j / s_star)
+        if w == 0.0:
+            continue
+        gj = V[j:].T @ V[:-j] / T
+        psi += w * (gj + gj.T)
+    return psi * (T / (T - k))
+
+
+def ledoit_wolf_sharpe_diff(a: np.ndarray, b: np.ndarray,
+                            level: float = 0.95) -> LedoitWolfResult:
+    """The literal Ledoit & Wolf (2008) HAC-studentized Sharpe-ratio
+    difference test between two aligned, equal-length return series.
+
+    ``a`` and ``b`` must be aligned (same dates, same length) — as in
+    :func:`paired_bootstrap`, the point is that the two series' shared
+    variance is what makes the difference well resolved. Unlike
+    :func:`paired_bootstrap`, this needs no resampling: the standard error
+    comes from a closed-form delta-method/HAC estimate, so the result is
+    deterministic given ``a`` and ``b``. Only the 95% two-sided CI
+    (``z=1.959964``) is implemented.
+
+    See :func:`bootstrap_studentized_sharpe_diff` for a second, independent
+    estimator of the same studentized statistic's standard error (a
+    nonparametric stationary bootstrap in place of this function's kernel
+    HAC) — R-70 (``docs/LEDGER.md``) found the two do not always agree, and
+    recommends reporting both rather than treating either as authoritative.
+    Note the Sharpe ratio here uses the population std (``ddof=0``, the
+    only form available to the delta method over the two smooth sample
+    means ``mu`` and ``gamma=E[X**2]``) rather than this module's usual
+    ``ddof=1`` (:func:`annualized_sharpe`); the difference is the standard
+    ``sqrt(T/(T-1))`` small-sample correction, negligible at this project's
+    sample sizes.
+    """
+    a = np.asarray(a, dtype=float)
+    b = np.asarray(b, dtype=float)
+    if len(a) != len(b):
+        raise ValueError(f"unaligned series: {len(a)} vs {len(b)}")
+    if level != 0.95:
+        raise NotImplementedError("only the 95% CI (z=1.959964) is implemented")
+    T = len(a)
+
+    mu1, gamma1, sr1 = _sharpe_moments(a)
+    mu2, gamma2, sr2 = _sharpe_moments(b)
+    diff = sr1 - sr2
+
+    V = np.column_stack([a - mu1, b - mu2, a ** 2 - gamma1, b ** 2 - gamma2])
+    s_star, alpha_hat = _nw_bandwidth(V)
+    psi = _hac_long_run_cov(V, s_star)
+    grad = _lw_gradient(mu1, gamma1, mu2, gamma2)
+
+    var = float(grad @ psi @ grad) / T
+    se = sqrt(var) if var > 0 else 0.0
+    tstat = diff / se if se > 0 else 0.0
+    pvalue = 2.0 * (1.0 - norm_cdf(abs(tstat))) if se > 0 else 1.0
+
+    z95 = 1.959964
+    ci = Interval(diff, diff - z95 * se, diff + z95 * se, level)
+    return LedoitWolfResult(sr_a=sr1, sr_b=sr2, diff=ci, se=se, tstat=tstat,
+                            pvalue=pvalue, bandwidth=s_star, alpha_hat=alpha_hat, n=T)
+
+
+@dataclass
+class StudentizedSharpeDiff:
+    """Bootstrap-studentized Sharpe-ratio-difference test.
+
+    Same statistic as :class:`LedoitWolfResult`, with the standard error
+    estimated by a paired stationary bootstrap (:func:`stationary_bootstrap_indices`)
+    instead of a kernel HAC estimate. ``studentized_ci`` is a single-bootstrap
+    studentized-t interval (not the fully general double bootstrap — each
+    replicate's own standard error is approximated by the one ``se_boot``
+    computed on the original sample, the standard practical compromise).
+    """
+
+    sr_a: float
+    sr_b: float
+    diff: float
+    se_boot: float
+    tstat: float
+    normal_ci: Interval
+    studentized_ci: Interval
+    n_boot: int
+    mean_block: float
+    n: int
+
+    @property
+    def significant_normal(self) -> bool:
+        return self.normal_ci.lo > 0.0 or self.normal_ci.hi < 0.0
+
+    @property
+    def significant_studentized(self) -> bool:
+        return self.studentized_ci.lo > 0.0 or self.studentized_ci.hi < 0.0
+
+
+def bootstrap_studentized_sharpe_diff(
+    a: np.ndarray, b: np.ndarray, *,
+    mean_block: float = 30.0, n_boot: int = 2_000,
+    level: float = 0.95, seed: int = 7,
+    indices: np.ndarray | None = None, ddof: int = 1,
+) -> StudentizedSharpeDiff:
+    """Ledoit-Wolf (2008)-style studentized Sharpe-difference test, with the
+    standard error estimated via this module's own stationary-bootstrap
+    convention (Politis & Romano 1994) instead of a kernel HAC estimate.
+
+    ``a`` and ``b`` must be aligned, equal-length return series from the
+    same period — exactly :func:`paired_bootstrap`'s own precondition: the
+    resample has to draw the same days from both series so their shared
+    variance cancels in the difference. See :func:`ledoit_wolf_sharpe_diff`
+    for the analytic HAC alternative this is meant to be checked against.
+    """
+    a = np.asarray(a, dtype=float)
+    b = np.asarray(b, dtype=float)
+    if len(a) != len(b):
+        raise ValueError(f"unaligned series: {len(a)} vs {len(b)}")
+    n = len(a)
+    if n < 3:
+        raise ValueError("need at least 3 paired observations")
+
+    idx = _indices(n, mean_block, n_boot, seed, indices)
+
+    sr_a = annualized_sharpe(a, periods_per_year=1.0)
+    sr_b = annualized_sharpe(b, periods_per_year=1.0)
+    diff = float(sr_a - sr_b)
+
+    boot_diff = (annualized_sharpe(a[idx], periods_per_year=1.0)
+                - annualized_sharpe(b[idx], periods_per_year=1.0))
+    se_boot = float(np.std(boot_diff, ddof=1))
+
+    tail = (1.0 - level) / 2.0
+    if se_boot <= 0.0 or not np.isfinite(se_boot):
+        tstat = float("nan")
+        normal_ci = Interval(diff, float("nan"), float("nan"), level)
+        studentized_ci = Interval(diff, float("nan"), float("nan"), level)
+    else:
+        tstat = diff / se_boot
+        z = norm_ppf(1.0 - tail)
+        normal_ci = Interval(diff, diff - z * se_boot, diff + z * se_boot, level)
+
+        studentized = (boot_diff - diff) / se_boot
+        q_lo, q_hi = np.percentile(studentized, [100 * tail, 100 * (1 - tail)])
+        studentized_ci = Interval(
+            diff, diff - se_boot * q_hi, diff - se_boot * q_lo, level)
+
+    return StudentizedSharpeDiff(
+        sr_a=float(sr_a), sr_b=float(sr_b), diff=diff,
+        se_boot=se_boot, tstat=float(tstat),
+        normal_ci=normal_ci, studentized_ci=studentized_ci,
+        n_boot=int(idx.shape[0]), mean_block=float(mean_block), n=n)
 
 
 # ---------------------------------------------------------- deflated Sharpe
