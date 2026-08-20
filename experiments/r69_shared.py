@@ -36,16 +36,33 @@ one-parameter entry-only gate -- no buffer, no hold_days retuning, no exit
 threshold at all -- sufficient, or does the coupling with R-65's machinery
 still matter for reasons ENTRY_ONLY's isolated read cannot see?**
 
-This round answers exactly that, and nothing more. It changes ONE thing
-relative to R-63's ORIGINAL, unmodified selection rule
-(`r63_novel_xsmom_rank.build_targets`: `sel = (s > 0) & (rank < k)`,
-recomputed fresh every bar, no persistence, no buffer, no timer): a newly
-entering asset must additionally clear `s > delta_in` on the bar it enters.
-An asset already held needs only `s > 0` and `rank < k` to remain, exactly
-as R-63's original rule already required of every asset, held or not. No
-buffer margin gates a swap; no timer blocks one. The only state this
-introduces is "was asset a held at bar i-1", which is the minimum needed to
-distinguish "entering" from "remaining" at all.
+This round answers exactly that, and nothing more. It reuses R-68
+conservative's own event-loop construction (`_band` in
+`r68_conservative_band_decomposition.py`: forced exits on `hold_eligible`
+failing, entries into free slots ranked by score, voluntary swaps gated by
+`buffer` and a `hold_days` timer) UNCHANGED, and sets exactly three of its
+inputs to the values that delete R-65's machinery rather than retuning it:
+`buffer = 0.0` (no margin -- any strictly-better eligible challenger swaps
+immediately), `hold_days = 0` (no minimum tenure -- the timer never blocks),
+`delta_out = 0.0` (exit purely at `s > 0`, R-63's original rule, never
+retuned). The ONLY swept quantity is `delta_in`, gating which challengers are
+even eligible to be considered for a swap or a free-slot entry.
+
+**Why this is provably R-63's original rule at `delta_in = 0`.** With
+`buffer = hold_days = 0`, a voluntary swap fires whenever `row[best] >
+row[worst]` with no margin and no cooldown -- i.e. the incumbent is replaced
+on the very next bar by any higher-scoring eligible asset, which is exactly
+what a fresh per-bar top-k recomputation does. At `delta_in = 0` every
+positive-score asset is eligible, so "the best eligible challenger, swapped
+in immediately" IS "the top-ranked positive-score asset, every bar" -- R-63's
+`(s > 0) & (rank < k)`, recomputed fresh. This is the round's own identity
+check, required before any other number is reported, and it is why the
+event-loop is reused rather than reimplemented: a hand-rolled version that
+instead required `rank < k` to hold onto a slot (rather than only to win one)
+would NOT reduce to R-63's original at k=1, because at k=1 exactly one asset
+can ever satisfy `rank < k` at a time and an incumbent would be evicted
+without a swap. This was caught and fixed in this file before either branch
+ran, not discovered by one of them.
 
 =====================================================================
 WHY THIS IS NOT A DUPLICATE
