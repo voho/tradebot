@@ -1,0 +1,2 @@
+trunc60_exact,trunc60_atol1e12,trunc60_max_abs_diff,aim_first_live_row,trunc60_cut_row,causality_at_a,causality_at_a_over_64,a_over_64,perturbation_probe,max_row_sum,min_entry,turnover_monotone_in_a
+True,True,0.0,26748,126316,True,True,0.0003125,True,1.0,0.0,True

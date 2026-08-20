@@ -112,6 +112,25 @@ estimate is favourable and every 95% interval contains zero, which is the
 ceiling R-63's own frictionless edge already carried. **COST is the one
 constraint in this table that has now moved.**
 
+**Closed by R-67 (08-20), and this is the line that supersedes the four
+above it as the project's live problem:** *when three successive rounds
+improve a signal's economics by a large factor and not one of them moves the
+verdict, the binding constraint has stopped being the mechanism.* R-65 named
+a forced-exit floor it could not touch — invariant at 0.386/day across its
+whole grid — and left open whether it was the gate's threshold or the score's
+own noise. R-67 broke it **30-fold** (242 → 8 events) with every other channel
+untouched, drove turnover from R-63's 3.44/day to **0.102/day**, passed the
+0.40% fee tier for the first time on this axis, and watched the *frictionless*
+edge rise again (+0.480 → +1.281 / **+2.017**). The predicted cost never
+arrived: drawdown improved at every step. And D1 moved from +0.589 to +1.246
+while its interval got **wider**. The arithmetic is now explicit: R-63's
+frictionless edge already carried [−2.58, +3.65], the net statistic is
+strictly noisier than the gross one, and **no mechanism can narrow an
+interval — only more data, more breadth, or forward evidence can.** Three
+rounds (R-63 → R-65 → R-67) have converged on this from three different
+mechanisms. It is the strongest argument the ledger has ever contained for
+**B-06**, and against a fourth variant on the same axis.
+
 ---
 
 ## A. Strategies (registered)
@@ -170,6 +189,284 @@ as raw pipe-separated text. Every row's text is reproduced verbatim in the
 entry that replaced it — nothing was dropped in the conversion. Rounds
 before R-28 were backfilled from the long-form docs and carry only the
 fields their original row had.
+
+### R-67 · 08-20 · NEGATIVE (both branches), MEASURES — B-31 answered: R-65's forced-exit floor was a threshold artifact, breaking it is nearly free, and the interval still does not move
+
+**Direction.** Backlog item **B-31**, filed by R-65 and top of the ranked
+actionable list. R-65's conservative arm bought a 3.9x turnover cut
+essentially for free and still missed break-even by **1.38:1**, and it named
+the reason precisely: R-63's frozen selection rule is `eligible = (score >
+0)`, so every zero-crossing forces an exit, and that channel measured
+**invariant at 0.386/day across all 20 cells** of its buffer × hold_days grid
+while voluntary swaps fell 16-fold. Neither of its two parameters governs
+that channel. Constraint attacked: **COST**. Not a duplicate of R-65
+(which retunes `buffer`/`hold_days` with the eligibility test itself frozen —
+this round freezes those at R-65's own selected winner and retunes the
+eligibility test instead), of L-05/L-06 (a band on a *continuous
+single-asset exposure fraction*, not a discrete cross-sectional membership),
+or of R-64/R-66 (a single-asset SIZE-axis deadband's *destination*, on
+`kelly_regime_v4`, in a different codepath).
+
+Two branches soften the gate by mechanisms that disagree on how.
+**Conservative** (`experiments/r67_conservative_hysteresis.py`): asymmetric
+hysteresis — a new entrant needs `score > +δ`, an incumbent is kept until
+`score < −δ` — the literal fix B-31 names, one new parameter. **Novel**
+(`experiments/r67_novel_smoothed_score.py`): B-31's third named candidate,
+letting a partial-adjustment recursion carry the position *through* a
+crossing, `x_t = x_{t-1} + a(aim_t − x_{t-1})` applied to R-63's own k=1
+target matrix byte-for-byte.
+
+**What was done.** `experiments/r67_shared.py` (frozen pre-registration,
+committed before either branch ran; inherits R-63/R-65's windows,
+benchmarks, cost tiers, bootstrap and D1/D2/D3/D5 *by import* rather than
+restating them, so the round cannot drift from the number it extends).
+It adds exactly one gate of its own, **M1**: the selected configuration must
+cut held-set membership changes/day by **≥25%** against R-65's own frozen
+winner on W_TRAIN. A branch failing M1 never touched the mechanism B-31
+named, and its D-cells are a diagnostic only. Three failure modes were named
+before any code ran, including the one the round predicted for itself
+(**F1**, R-64/R-66's precedent in mirror image: softening an exit means
+holding a declining asset longer). Grids and selection criteria were frozen
+in each branch's docstring before its sweep; both were honoured as written,
+and neither branch edited a frozen file (`git diff` empty on all six).
+
+**Configs evaluated: 266** (125 conservative + 141 novel), of which **13
+distinct parameter points** (6 δ + 7 `a`), **26** by the two-selection-window
+convention. **Holdout consultations: +0** — verified by grep in both files,
+not taken on report: `W_HOLD` is never imported or sliced by either branch,
+and both index-hygiene gates confirm **zero bars dated ≥2023-01-01** in
+W_TRAIN and W_VAL.
+
+**Result. Both branches NEGATIVE, and both fail on the same clause.**
+
+*Conservative (δ=0.080).* Identity check exact (max|diff| **0.0** vs R-65's
+winner at δ=0). **M1 PASSES and the invariant is broken**: membership
+changes 0.850→**0.142**/day (−83.3%), forced exits **242→8 events**
+(0.3781→0.0125/day, a **30× cut**) — while `swap`, `blocked_by_timer` and
+`blocked_by_buffer` are **flat at every δ** (swaps 0.117–0.122/day), so δ
+reaches exactly and only the channel R-65 said neither of its parameters
+could reach. Mean tenure 1.71→6.32 days with flat bars rising only
+15.4%→18.0%, so the reduction is real tenure, not extra flatness. **D5
++1.2809** (5.3× the frozen bar, 3.7× R-65's corrected one) — gross edge did
+*not* fall as turnover fell 17×; on W_TRAIN it *improved*. D3 PASS. **D4
+PASS — $3,256.45 vs EW_HOLD's $1,453.94**, the first arm on this axis to
+survive the 0.40% tier (R-63 failed it; both R-65 arms failed it). Both
+scramble forms reject **0/10**. **D1 +1.0928 [−2.0191, +4.1062] FAIL; D2
+−11.48pp [−23.38, +16.25] FAIL.** `further_work = False`.
+
+*Novel (a=0.02).* Identity exact on one frame, 1.11e-16 on the other (IEEE
+non-associativity, predicted in the docstring before the run). Turnover
+**0.336/day** — a 10.2× cut against R-63 and 62.7% against R-65's winner,
+**below R-65's own 0.641/day break-even**. **D5 +2.017** (8.4× the bar), the
+largest frictionless edge this axis has produced. D3 PASS. Fixed-permutation
+scramble beaten **10/10** at *identical* turnover. **D1 +1.2462 [−1.795,
++4.325] FAIL; D2 −10.66pp FAIL; D4 FAILS** ($789.11 vs $1,453.94).
+**Its M1 "pass" is vacuous and the branch says so itself**: with no dust
+floor the arm holds all 6 assets on 91.7% of bars and never releases one, so
+`membership_change_rate` returns the same 98.53% "reduction" for `a=0.5`
+(which turns over 4.8× the baseline) as for `a=0.01` (half of it). On the
+honest thresholded statistic (>1% of equity) it is **−13.79%, which FAILS
+the 25% bar**; on turnover it is −29.0%, which passes. Recorded as a split,
+not banked as a pass.
+
+**The two findings that outlive the verdict.**
+
+1. **F2 is REFUTED: the floor was a threshold artifact.** R-65 could not
+   distinguish "the gate's threshold is the problem" from "the score crosses
+   zero this often regardless." One parameter neither R-65 arm contained
+   moves it 30-fold with every other channel untouched. The mechanism B-31
+   named was real, attackable, and is now closed with a number.
+2. **Slowing down earns more, again, and more strongly.** R-63's
+   frictionless edge was +0.480; buffered (R-65) it rose to +1.017; here it
+   reaches **+1.281** (conservative) and **+2.017** (novel) as turnover falls
+   10–33×. That is R-65's finding 2 reproduced by two further independent
+   mechanisms, and it is now the most-replicated result on this axis.
+
+**And F1 is NOT confirmed.** The round predicted that holding a declining
+asset longer would trade turnover for drawdown. It did not: drawdown
+*improved* at every step, on both branches. What killed both arms is the
+error bar, for the third round running.
+
+**The axis transfers, unlike R-65's.** Spearman ρ of net growth between the
+two selection windows: **+0.486** (conservative, winner ranks 1 of 6 on
+*both*) and **+0.964** (novel, near-monotone on both). R-65's holding-period
+axis scored **−0.316** with its winner 19th of 20 — it anti-transferred, and
+that was the strongest evidence the axis was noise. This one does the
+opposite. **But both winners sit against a grid edge** (δ=0.080 is the
+top corner; a=0.02 is second-slowest on a grid stopping at 0.01, still
+improving on W_TRAIN), so **(F3) stays live** and neither branch extended
+its grid after seeing a number.
+
+**The derived rate replicates R-65's strongest single piece of evidence.**
+The novel branch's cost-based `a_GP = 0.0073088` reproduces R-65's published
+0.00730886 to 8 significant figures on a *different aim construction*, and
+interpolates to ≈0.24 turnover/day — **inside R-65's independently measured
+affordable window of 0.06–0.33/day**. The W_VAL-selected winner is 2.74×
+faster and lands at the window's top edge. The signal-matched rate (half-life
+5.99 days) is 25× slower than the winner and far below the grid: on this data
+the cost-based derivation is the one that agrees with the sweep.
+
+**Skeptic reproduction, operator-side and independent.** The operator
+re-typed the eligibility rule from its spec (importing neither branch's file
+nor R-65's implementation) and measured, *before either branch reported*:
+forced exits **0.378/day** at δ=0 (R-65 published 0.386; conservative branch
+0.3781; novel branch 0.3547 on the raw aim), collapsing to **0.013/day** at
+δ=0.080, with voluntary swaps invariant at 0.117–0.122/day — matching the
+branch's committed CSV to four decimals on every cell. The operator
+additionally ran a **turnover decomposition neither branch was asked for**,
+separating membership changes from volatility-scale resizes of an unchanged
+holding: the sizing channel — the one channel *no* R-67 branch can reduce —
+is **0.009/day, about 1.5% of turnover**. Had it been large, the round's
+ceiling would have been fixed before either branch ran; it is not, and
+membership is essentially the whole bill. (Caveat recorded rather than
+glossed: that measurement is W_TRAIN/U8, whereas R-65's 0.641/0.900 figures
+are a W_FULL6/U6 cell, so the two are not directly comparable and the
+branches' own frontier rows are the authority.) Both branches also
+independently reproduced R-63's committed reference point to every published
+digit (turnover 3.4411 vs 3.44, net −7.5372 vs −7.537, balance $1.4419).
+
+The operator then re-ran **both** headline W_FULL6/U6 cells from a re-typed
+rule, and **made an error worth recording rather than dropping**: it
+evaluated on the warm-inclusive index (from 2020-01-01) instead of slicing
+to the W_FULL6 evaluation window (2020-04-01 →), so its *benchmark* arms buy
+three months earlier — across the COVID crash — and its EW_HOLD is $2,711.13
+against the branches' $1,453.94. Its D1/D2/D5 numbers are therefore **not
+comparable to the branches'** and are not quoted as a reproduction. What the
+run *does* confirm, because a candidate holds nothing through the warm
+prefix while a hold does not, is the candidate side **exactly**: final
+balance @0.10% **$6,736.24** (conservative) and **$8,201.22** (novel), and
+D4 candidate balances **$3,256.45** and **$789.11** — every digit matching
+the branches. Both D4 verdicts survive the different benchmark
+(conservative PASS, novel FAIL), the signs of D1/D2/D5 agree on both arms,
+and **every D1 and D2 interval contains zero in the operator's run too**, so
+the round's verdict is independently confirmed even though its point
+estimates are not.
+
+#### R-67 literature commission — the warrant this axis was missing, and three findings against it
+
+A survey was commissioned in parallel. **Process note, disclosed: it landed
+*after* both branches were dispatched**, so neither could use it, and the
+pre-registration was written from this repo's existing literature memory.
+Its findings are recorded as corrections and as inputs to the next round —
+never as post-hoc justification for a result already measured.
+
+**The warrant this project did not have.** **Dai, M., Zhang, Q., & Zhu, Q. J.
+(2010), "Trend Following Trading under a Regime Switching Model," *SIAM
+Journal on Financial Mathematics* 1(1), 780–810**, solve exactly the
+**long/flat** problem under **proportional** costs with a signal; **Guan, C.,
+Peng, J., & Xu, Z. Q. (2020), arXiv:2008.07082, Thm 3.1** prove the
+free-boundary ordering `p₁,₀(t) < p₀ < p₀,₁(t)` — entry strictly *above* and
+exit strictly *below* the frictionless indifference point, the gap opened by
+the fee. **That is the conservative branch's rule, derived.** Neither paper
+was previously cited here. Four conditions attach and are recorded rather
+than waved through: the signal must be a sufficient statistic (a posterior
+over a persistent hidden state, which R-63's raw deviation is not); the state
+must be persistent; **the theorem gives no symmetry**, so a single δ on both
+sides is a simplification it does not endorse; and it is single-asset, so it
+says nothing about a joint top-k decision.
+
+**Three findings that cut against the round, at full strength.**
+(i) **The closest empirical analogue in the literature is negative.** Baltas
+& Kosowski put a significance deadband on time-series momentum across **75
+futures**, cut turnover **~two-thirds** for only ~5% of gross Sharpe (1.04 →
+0.99), and still report that it "does not lead to significantly higher
+risk-adjusted performance." Their costs were only ~10% of gross, where ours
+exceed the edge — which is the reason the arithmetic could go our way, and
+equally the warning that *"turnover fell a lot" is not "net performance
+improved."* (ii) **Novy-Marx & Velikov's banding fails in our turnover
+regime**: on their six highest-turnover anomalies a 10%/50% band cuts
+turnover only ~36% and **four of six remain net-negative**; their stated
+cutoff is 50% one-sided monthly turnover, and R-63's rate is roughly
+2,700%/month. Their mechanism is also **substitution among close
+substitutes**, which needs breadth we do not have at k=1 of 8 — a direct
+instance of the panel-size import error R-05 cost this project.
+(iii) **Crypto signal decay is far worse than the equity prior.** Fieberg,
+Liedtke, Poddig, Walker & Zaremba (*JFQA* 60(7), 2025, 3116–3153; **3,244
+coins**) find that merely *halving* rebalancing frequency destroys **~39% of
+gross weekly return** (3.87% → 2.34%), against ~10% erosion in NMV's equity
+anomalies. Budget 30–40%, not 10%.
+
+**Citation corrections, annotated in place per this file's rules.**
+`de Lataillade & Chaouki (2020)` is titled **"Equations and Shape of the
+Optimal Band Strategy," arXiv:2003.04646** — not "Dynamic programming with
+transaction costs" as R-66 recorded — and the relevant result is **§5.2.1**,
+not §6; its **Eq. (11) caps the mechanism**, the optimal tolerance around
+zero saturating at ≈**1.6 σ_signal** so a larger fee does *not* justify a
+wider band. R-66's Muhle-Karbe/Reppen/Soner reading is **confirmed at π=0 but
+too strong as stated**: the band does not vanish at zero, but it does vanish
+at two other levels (§5.2, Eq. 4.15), so "keeps a strictly positive floor"
+should read "does not vanish at zero target weight." R-66's Novy-Marx &
+Velikov correction is **confirmed verbatim** from Table 5 (hysteresis net
+**0.51 [t=2.87]** vs staggered **0.37 [t=2.34]** at identical 0.26 costs).
+Gârleanu & Pedersen **disclaim the proportional-cost case in their own text**
+("qualitatively different from the optimal strategy with proportional or
+fixed transaction costs"), confirming R-64's category-error verdict from the
+source — and meaning the novel branch is honestly an **EWMA smoothing of a
+discrete target**, warranted by Dao et al. rather than by GP.
+
+#### R-67 disclosed flaws — four in this round's own instrument
+
+Every one was found by a branch and **reported rather than fixed**, per the
+round's rules.
+
+1. **M1 is structurally invalid for a continuous-weight arm**, and it fails
+   *flatteringly*. It counts `weight > 0`, so an unfloored recursion that
+   never releases an asset scores a 98.53% "reduction" identically at
+   `a=0.5` and `a=0.01`. The pre-registration's claim that this is "the one
+   quantity both branches' target matrices share by construction" is true
+   only in that both can be *computed*; only one is meaningful. A future
+   round should pre-register a **thresholded** membership statistic or
+   turnover.
+2. **`membership_change_rate` has a latent bug**: it round-trips through
+   `holding_period_days` and returns `1/days` instead of `0` for an arm that
+   never changes its held set, and `m1_pass` divides by that. Not triggered
+   here (the sparsest cell had 91 changes).
+3. **`D5_BAR` is inherited uncorrected.** R-65 recorded `D5_BAR_CORRECTED =
+   +0.342` with the note "use this next"; `r67_shared.py` imports only the
+   +0.240 R-65 had already retired. No verdict moves (both arms clear both by
+   4–8×). D5's **non-portability** also holds: on W_TRAIN **0 of 6**
+   conservative cells clear it and the novel arm's gross is negative at every
+   `a` but 0.01 — D5 is a statement about W_FULL6 and nothing else.
+4. **The further-work bar names a control the shared file does not
+   provide.** It specifies the fixed-permutation form but exports only
+   `scramble_targets`, so each branch re-implements it — an invitation to two
+   incomparable controls in one round. Both used R-65's construction and wrote
+   every permutation to CSV. The pre-registered redraw-per-change control was
+   **invalid again for the novel arm exactly as R-65 documented**: a **739×
+   turnover over-charge** (248.19/day against 0.3359/day) sending every seed
+   to $0.00, a bias running *in the candidate's favour*. For the conservative
+   (discrete) arm the same control distorts by only **1.23×** and agrees with
+   the honest one — the regime R-63 built it for.
+
+**And the caveat that sits on both headlines.** `W_FULL6` runs to the last
+bar, so D1/D2/D4/D5 are scored on a window **~57% of which is after
+`OOS_START`**. This is R-63's inherited convention, recorded as +0 because
+the reserved BTC/ETH holdout is untouched by a U6 read. **B-33 is still
+unresolved and is now load-bearing on two rounds' headline cells.** If it
+resolves against the convention, both branches contributed reads rather than
+zero.
+
+**Verdict.** **NEGATIVE, both branches.** Neither cleared the further-work
+bar; both failed on `(D1 or D2)` alone, with every other clause passing on
+the conservative arm. Nothing is registered, and separately **nothing here
+*can* be registered**: both are bar-by-bar cross-asset allocators, which
+R-49/B-17's own docstring says the registration infrastructure cannot
+express (**B-32**). Filing that as the blocker rather than forcing a row is
+the honest move, and it is the second round running to hit it.
+
+One-line lesson: **the mechanism was real, the fix was nearly free, and it
+still did not matter — three rounds have now improved this signal's
+economics by 10–80× and every one of them died on the same interval, which
+is no longer a fact about any mechanism but a fact about how much this
+dataset can resolve.** Holdout counter: **+0 this round; running total ~627**
+(unchanged). **The decision rule did not move** — grids, selection criteria
+and M1 were frozen before their sweeps and every gate fired as written.
+Next steps: **B-34** (extend both grids past their edges, and run the
+*symmetric* deadband as a matched arm — the literature backs that shape with
+both theory and evidence, and it separates "the band works" from "the
+asymmetry works", which is exactly the confound R-64 and R-66 each died of);
+**B-35** (the Kaminski–Lo stopping-premium measurement, one script, which
+decides this axis before another grid is run); **B-33** rises.
 
 ### R-66 · 08-20 · NEGATIVE (both branches), REFUTES — B-29 answered: the residual long was never what sank R-64's boundary arm, and both fixes agree from opposite directions
 
@@ -8397,11 +8694,66 @@ it above is unchanged and if anything reinforced: on this axis too the
 intervals, not the mechanisms, are what fail.
 
 
+**Re-ranked 08-20 after R-67.** Two parallel branches attacked **B-31**
+directly, and **B-31 is now CLOSED, ANSWERED** — the mechanism it named was
+real and is broken, and the round still failed. R-65 measured a forced-exit
+floor invariant at 0.386/day across its whole 20-cell grid and could not tell
+whether that was a property of the *gate's threshold* or of the *score's own
+noise*. One parameter neither R-65 arm contained moves it **30-fold** (242 → 8
+events on W_TRAIN) with the voluntary-swap channel untouched at 0.117–0.122/day
+throughout. **F2 is refuted: it was a threshold artifact.** The predicted cost
+of breaking it — F1, that holding a declining asset longer trades turnover for
+drawdown — **did not materialise on either branch**; drawdown improved at every
+step. And the gross edge went the *right* way again: R-63's +0.480 became
++1.281 (conservative) and **+2.017** (novel) as turnover fell 10–33×, which is
+now the most-replicated finding on this axis, reproduced by three independent
+mechanisms across two rounds.
+
+Both branches still failed, on `(D1 or D2)` and nothing else: +1.093
+[−2.019, +4.106] and +1.246 [−1.795, +4.325]. **That is three consecutive
+rounds in which this signal's economics improved by a large factor and the
+verdict did not move**, and it is the reason the standing diagnosis above now
+reads the way it does. The honest reading is no longer about any mechanism:
+improving the point estimate cannot narrow an interval that was already
+[−2.58, +3.65] on R-63's *frictionless* edge. Only more data, more breadth, or
+forward evidence can.
+
+Two things nonetheless changed that are worth carrying. **The conservative arm
+is the first on this axis to pass the 0.40% fee tier** ($3,256.45 against
+EW_HOLD's $1,453.94, independently reproduced by the operator) — R-63 failed
+it and both R-65 arms failed it, so affordability at the realistic tier is no
+longer purely aspirational on this family. And **the axis transfers**: Spearman
+ρ between the two selection windows is +0.486 and +0.964, against R-65's
+**−0.316** with its winner ranked 19th of 20. R-65's own strongest evidence
+also replicated — the cost-derived trading rate reproduced to 8 significant
+figures on a different aim construction and again landed inside the
+independently measured affordable window.
+
+What that does to the order. **B-34 goes to the top**: both winners sit against
+a grid edge (F3 is live), and the commissioned literature says the arm with
+*both* theoretical and empirical support is the **symmetric** deadband, not the
+asymmetric one — running it as a matched arm separates "the band works" from
+"the asymmetry works", which is precisely the confound R-64 and R-66 each died
+of. **B-35 is filed directly beneath it and is cheaper**: Kaminski & Lo (2014)
+reduce this round's own named failure mode to a single measurement — the
+stopping premium of the forced exit — which decides the whole axis before
+another grid is run, and which no round here has taken. **B-33 rises and is now
+load-bearing**: `W_FULL6` is ~57% post-`OOS_START` and two rounds' headline
+cells now rest on the convention that a U6 read is free. **B-32 is reconfirmed
+as a hard blocker** for the second round running: neither R-67 arm can enter
+the comparison table at all, whatever its numbers. **B-30 is untouched** by
+this round and stays where R-66 left it. **B-06 remains the standing zero-cost
+recommendation**, and R-67 strengthens the case for it more than any round
+since R-29: when three successive mechanism wins cannot move an interval, the
+binding constraint is evidence, not design.
+
 | ID | item | attacks | status | note |
 |---|---|---|---|---|
+| **B-34** | Extend both R-67 grids past the edges their winners leaned against, and — the more important half — run a **SYMMETRIC** deadband (require `\|score\| > δ` to change state at all, holding through a crossing) as a **matched arm** beside the asymmetric one. R-67's conservative winner is the top corner δ=0.080 with only a lower neighbour tested; its novel winner is second-slowest on a grid stopping at `a=0.01`, still improving on W_TRAIN, and 1.37× faster than the theory-derived `a_GP = 0.0073` | COST | **NEXT** | Filed by R-67. Two reasons it leads. (i) **F3 is live and unresolved**: neither branch extended its grid after seeing a number (correctly — that would have moved the goalposts), so whether the curve turns over past the edge is simply untested, and the far end converges on a concentrated buy-and-hold that D5 exists to catch. (ii) **The literature backs the symmetric shape and only conditionally backs the asymmetric one.** de Lataillade–Deremble–Potters–Bouchaud (2012, *JIS* 1(3), 91–115) prove a signal-space switching threshold `q*` is the optimal structure for a position-capped rule under linear costs, and Baltas & Kosowski's deadband is the empirical version; the asymmetric ordering is licensed only by Dai–Zhang–Zhu (2010) / Guan–Peng–Xu (2020) under four conditions this setting does not clearly meet (sufficient-statistic signal, persistent hidden state, single asset, unconstrained long/flat). Running both separates the band from the asymmetry. Note the ceiling that comes with it: dLC (2020) Eq. (11) says the optimal tolerance around zero **saturates at ≈1.6 σ_signal**, so δ ≫ σ_score is not defensible and the grid should not be extended indefinitely. |
+| **B-35** | Measure the **stopping premium of the forced exit** (Kaminski & Lo 2014, *Journal of Financial Markets* 18, 234–254): `E[forward return of the incumbent over the next H bars \| its score just crossed zero downward]` against the flat alternative, plus the incumbent's return autocorrelation at horizon H. Prices-only, no backtest, no holdout | COST | **NEXT (cheapest live item)** | Filed by R-67 on the commissioned literature's own recommendation. Kaminski–Lo prove the stopping premium is **negative under a random walk** — a stop rule then just forces you out of higher-yielding assets for nothing — and positive only in proportion to return persistence. R-67's forced exit *is* a stop rule triggered by a zero crossing. This converts the round's named failure mode from a literature question into one script: if the crossing predicts continued decline, softening it is expensive and the whole axis fails for a nameable reason; if it is noise, the exit has a negative stopping premium and δ is close to free. Kaminski–Lo also find stop-losses "of no value at short sampling frequencies", which cuts *for* softening at 5m bars. One measurement, decides the axis, and no round here has taken it. |
 | **B-29** | Separate the two things R-64's conservative arm confounded: a trade-to-the-boundary destination **that still snaps to exactly flat when `desired == 0`**. R-64 measured the destination change as worth a real 43% of turnover with a D2 slope in its favour, and killed it on the residual long the band leaves behind in bear regimes — but those are two independent consequences of one line, and only one of them is fatal | COST | **DONE -> R-66, REJECTED** | Filed by R-64. Cheapest live item on the list: one conditional in a loop this project already has two implementations of, zero new data, zero new fitted parameters, and it inherits R-64's whole pre-registered battery (D0–D5) unchanged so the comparison is already specified. Its own named failure mode: the snap-to-flat may just re-introduce the turnover the boundary saved, at exactly the moments (regime exits) when the step is largest — in which case the 43% figure was never bankable and the answer is a number rather than another attempt. | **ANSWERED, and the answer is a refutation rather than a rescue.** R-66 ran both readings of this item — the literal conditional (conservative) and a derived vanishing-width band that reaches flat without a special case (novel). Both NEGATIVE, and between them they refute the premise the item was filed on: separating the destination from the never-goes-flat consequence closes only **14.5%** of R-64's ETH-A gap against a pre-registered 50% bar, the dose-response inverts, and the novel arm's isolation probe puts **70% of the loss** at a setting where the width change is switched off and fees are *lower* than v4's. The item's own named failure mode (the snap gives back the turnover the boundary saved) was only partly realised — ~75% of R-64's saving is retained and turnover still falls 41% — so the mechanism worked and the story motivating it was wrong. The residual long **does** explain R-64's BTC drawdown escalation, which disappears once flat is reachable; it does not explain the ETH-A growth loss. Live diagnosis is tracking lag.
 | **B-30** | Settle what `broker.REBALANCE_DEADBAND = 0.05` is doing to every futures figure in this project before another round reads one. Measured on `kelly_regime_v4` itself, intended rebalances → fills is 86.0% / 96.2% on spot but **48.1% / 53.8% on 5x futures**: the broker silently discards about half the incumbent's own rebalances, because 5% of *max* notional is 25% of equity at 5x | methodology (not one of the four constraints) | **OPEN, actionable today** | Filed by R-64, measured independently by both its branches and reproduced by the operator. Not a strategy question and not a bug to "fix" unasked — the band exists so strategies can re-emit a target every bar without churning fees, and changing it would move every number in the comparison table. What is needed is the measurement made explicit: how much of each registered strategy's futures column is the band, and whether the leverage-scaling of the threshold (5% of equity×leverage rather than 5% of equity) is intended. Until then the futures column carries a second caveat alongside funding, and README says so. |
-| **B-31** | Attack the **long/flat gate**, which R-65 identified as where the remaining turnover lives once buffering has done its work. R-63's frozen rule holds only positive-scoring assets and stands flat otherwise, so every zero-crossing of the incumbent's score forces an exit — a channel R-65's conservative branch measured as **invariant at 0.386/day across all 20 cells of a holding-period grid** while voluntary swaps fell 16-fold. Candidate fixes: a hysteresis band around zero (enter above +δ, exit below −δ), a continuous rather than binary positivity weight, or letting the partial-adjustment recursion carry the position through a crossing instead of resetting it | COST | **NEXT** | Filed by R-65. The single most specific, cheapest, best-motivated item on this list: the mechanism is measured, the number is known (0.386 forced exits/day against a 0.641/day break-even), the fix is local to one line of R-63's `build_targets`, and the harness, benchmark and decision rules all exist. R-65's conservative arm stalled at a **1.38:1** deficit with break-even needing turnover ≤0.641/day against the 0.900/day it achieved — this channel is the whole gap. Note the honest prior: R-65's novel arm already reaches 0.192/day without touching the gate, so this may turn out to matter only for the discrete-selection family. |
+| ~~B-31~~ | ~~Attack the **long/flat gate**, which R-65 identified as where the remaining turnover lives once buffering has done its work. R-63's frozen rule holds only positive-scoring assets and stands flat otherwise, so every zero-crossing of the incumbent's score forces an exit — a channel R-65's conservative branch measured as **invariant at 0.386/day across all 20 cells of a holding-period grid** while voluntary swaps fell 16-fold. Candidate fixes: a hysteresis band around zero (enter above +δ, exit below −δ), a continuous rather than binary positivity weight, or letting the partial-adjustment recursion carry the position through a crossing instead of resetting it~~ | COST | **DONE → R-67, ANSWERED** | Filed by R-65. **The mechanism was real and R-67 broke it; the round failed anyway.** Two of the three fixes this row names were run — asymmetric hysteresis on the eligibility test (conservative) and the partial-adjustment recursion (novel). Forced exits fall **242 → 8 events** on W_TRAIN (0.3781 → 0.0125/day, a 30× cut) with the voluntary-swap channel **invariant at 0.117–0.122/day** at every δ, so the fix reaches exactly and only the channel this row named — **the floor was a threshold artifact, not score noise (F2 refuted)**. Turnover reaches 0.102/day (conservative) and 0.336/day (novel), both **below the 0.641/day break-even this row quotes**, and the conservative arm becomes the first on this axis to pass the 0.40% fee tier. The predicted price — holding a declining asset longer — **was not paid**: drawdown improved at every step on both arms. Both still fail `(D1 or D2)`: +1.093 [−2.019, +4.106] and +1.246 [−1.795, +4.325]. This row's own honest prior was half right: the gate mattered for the discrete-selection family (0.900 → 0.102/day) and the smoothed arm did reach a low rate without a gate fix — but the smoothed arm also **failed D4**, which the gate-fixed discrete arm passed. Reopens only as **B-34** (extend the grids; run the symmetric deadband as a matched arm) and **B-35** (measure whether the exit was informative at all). |
 | **B-32** | Multi-asset strategy **registration**, so that a bar-by-bar cross-asset allocator can enter the comparison table at all. R-49/B-17 built the "can it be done" infrastructure and its own docstring says it cannot express this shape; R-65 is the first round to produce a candidate whose numbers would have been worth a row (net +0.589 vs a volatility-matched hold at 0.19 turnover/day, $1,000 → $5,043) and which the table therefore cannot hold | ERR (methodology gap) | **OPEN** | Filed by R-65, promoted from B-17's deferred half. Until this exists, every result on the cross-sectional axis is confined to `experiments/` and the ledger, and cannot carry a measured interval in `reports/inference/bootstrap.csv` beside the single-asset rows — the exact asymmetry R-30 built the interval requirement to prevent. Not urgent while every candidate fails its interval anyway; it becomes blocking the moment one does not. |
 | **B-33** | Settle the **holdout convention for panel reads**. `W_FULL6` runs to the last bar and therefore includes post-2023 U6 data; R-47/B-08, R-57, R-63 and now R-65 have all recorded such reads as **+0** on the grounds that the reserved BTC/ETH holdout is untouched. That is a convention, not a derivation, and it has now been applied often enough that it is load-bearing | ERR | **OPEN** | Flagged by R-65's novel branch rather than inherited silently. The question is whether a U6 read past 2023-01-01 is genuinely free for deflated-Sharpe purposes or whether the running ~627 understates the program's true consultation count. If the convention is rejected, R-65 contributed ~+2 and every prior panel round needs the same correction. Cheap to settle and it changes the denominator of every significance claim on the panel; the count is deliberately left at ~627 pending it rather than moved on one session's unilateral reading. |
 | **B-28** | Reopen "more instruments" only against a universe whose **breadth** — not whose asset count — clears the bar R-63 measured: mean pairwise daily-return correlation materially below 0.634, or a Grinold equal-correlation breadth materially above 1.47, or a holding period long enough that the 2.86 leader-changes-per-day that cost the novel arm 8.02 log units stops being the binding cost. R-63 established that the cross-sectional signal here is real and merely unaffordable, so the axis is closed for this data rather than on principle | INFO, N≈3 | **HALF-CLOSED → R-65**; breadth clause still blocked on data this repo does not have | Filed by R-63. **Its holding-period clause is answered: R-65 ran it and the value/cost curves cross** — the affordable window is turnover 0.06–0.33/day, holding 1.4–5 days, and at a derived trading rate the same signal costs 0.43 log units instead of 8.02 while its frictionless edge rises. Still NEGATIVE on the interval. The **breadth** clause is untouched and remains blocked. Not actionable from inside a session today: the eight committed instruments are the universe, and R-63 measured them at 1.47 effective bets. Reopening needs either genuinely less-correlated instruments (a different asset class, which this project cannot fetch or simulate) or a lower-frequency bar series that would cut the leader-change rate — note that this project's entire dataset is 5-minute bars, so the second is a data-acquisition task, not a strategy task. Recorded so the idea is not re-tried blind on the same eight assets, which is exactly what section C exists to prevent. |

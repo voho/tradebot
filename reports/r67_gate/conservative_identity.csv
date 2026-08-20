@@ -1,0 +1,9 @@
+check,universe,window,n_bars,max_abs_diff,bit_identical,allclose_1e12,delta,n_eq_plus_delta,n_eq_minus_delta,n_finite_scores
+identity_delta0,U8,"('2020-04-01', '2021-12-31')",210528,0.0,True,True,,,,
+identity_delta0,U6,"('2020-04-01', None)",697459,0.0,True,True,,,,
+boundary_ties,U8,"('2020-04-01', '2021-12-31')",,,,,0.0,0,0,1499912
+boundary_ties,U8,"('2020-04-01', '2021-12-31')",,,,,0.005,0,0,1499912
+boundary_ties,U8,"('2020-04-01', '2021-12-31')",,,,,0.01,0,0,1499912
+boundary_ties,U8,"('2020-04-01', '2021-12-31')",,,,,0.02,0,0,1499912
+boundary_ties,U8,"('2020-04-01', '2021-12-31')",,,,,0.04,0,0,1499912
+boundary_ties,U8,"('2020-04-01', '2021-12-31')",,,,,0.08,0,0,1499912

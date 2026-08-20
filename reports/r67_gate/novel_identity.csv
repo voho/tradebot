@@ -1,0 +1,3 @@
+universe,window,n_bars,max_abs_diff_preregistered,bit_identical_preregistered,max_abs_diff_convex,bit_identical_convex,max_row_sum
+U8,2020-04-01..2021-12-31,210528,1.1102230246251565e-16,False,0.0,True,1.0
+U6,2020-04-01..None,697459,0.0,True,0.0,True,1.0

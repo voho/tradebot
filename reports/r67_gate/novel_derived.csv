@@ -1,0 +1,4 @@
+quantity,rho_per_bar,phi_per_bar,half_life_days,rho_raw,half_life_days_raw,n_bars,sigma_bar_train,delta_star,lambda_quad,gamma,fee,a_gp_cost_based,a_hl_signal_matched,a_gp_half_life_days,a_hl_half_life_days,r65_a_derived_published
+composite_score_xs_demeaned,0.9995982416969809,0.0004018390295085777,5.9893660567372695,0.9997466628322651,9.499025315709934,184320,,,,,,,,,,
+aim_k1_weights_demeaned_SECONDARY,0.9843997450503549,0.015723219455157155,0.15307049872801418,,,184320,,,,,,,,,,
+derivation,,,,,,,0.0029907558154125516,0.011944444444444445,0.16744186046511628,1.0,0.001,0.007308848090378309,0.0004018390295085777,0.3292941669945621,5.9893660567372695,0.00730886

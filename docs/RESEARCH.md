@@ -241,7 +241,62 @@ validation here leans on Monte Carlo windows rather than one path.
    0.10% fee, and at 0.40% the band exceeds 1.0, meaning **no rebalance
    is ever worth its cost** — an analytic derivation of the result
    `scripts/fee_study.py` reached by brute force.
-8. **A warmup prefix is not free.** Letting a strategy trade through the
+8. **A band on a *signal threshold* is a different object from a band on
+   a *position*, and this repo has repeatedly cited the wrong literature
+   for it.** Finding 7's chain (Constantinides 1986; Davis & Norman 1990;
+   Janeček & Shreve 2004; Gerhold et al. 2014) is **constant-target,
+   single-asset, no signal** — the right family for `kelly_regime_ev` and
+   the wrong one for any rule whose target moves with a signal. Corrected
+   and extended by a literature commission run alongside R-67:
+   - **For a signal-driven target the band does not vanish at zero
+     position** (Muhle-Karbe, Reppen & Soner 2017, *Annual Review of
+     Financial Economics* 9, 301–331, §5.2 and Eq. 4.15). R-66's reading
+     is confirmed at that point but was stated too broadly — the band
+     still vanishes, at two *other* levels set by the model parameters,
+     so "keeps a strictly positive floor" should read "does not vanish at
+     zero target weight."
+   - **For a position-capped rule under linear costs, the optimal policy
+     *is* a signal-space switching threshold** — de Lataillade, Deremble,
+     Potters & Bouchaud (2012), *Journal of Investment Strategies* 1(3),
+     91–115. This repo previously cited it only for the cube-root law.
+     Its §6.3 also says the leading-order band is **symmetric** about the
+     target and any asymmetry is higher order in Γ^(1/3).
+   - **The asymmetric long/flat case is a theorem, under conditions.**
+     Dai, Zhang & Zhu (2010), *SIAM Journal on Financial Mathematics*
+     1(1), 780–810, and Guan, Peng & Xu (2020), arXiv:2008.07082 Thm 3.1:
+     with proportional costs and a persistent hidden state, entry sits
+     strictly above and exit strictly below the frictionless indifference
+     point, the gap opened by the fee. It requires the signal to be a
+     sufficient statistic and is single-asset — neither holds cleanly for
+     a cross-sectional top-k rule.
+   - **The band width is capped.** de Lataillade & Chaouki (2020),
+     "Equations and Shape of the Optimal Band Strategy," arXiv:2003.04646
+     — note the title, which R-66 recorded wrongly — Eq. (11): the optimal
+     tolerance around zero **saturates at ≈1.6 σ_signal**. A larger fee
+     does *not* justify a wider band, because the risk cost of waiting
+     grows exponentially while the fee saving grows linearly.
+   - **Gârleanu & Pedersen (2013) does not cover proportional costs**, in
+     their own text: their partial-adjustment rule is "qualitatively
+     different from the optimal strategy with proportional or fixed
+     transaction costs, which exhibits periods of no trading." Any
+     smoothing rule here is an EWMA of a discrete target, warranted by
+     Dao et al. (2016) — not by GP.
+9. **Turnover reduction is not the finding; net performance is** — and
+   the closest published analogue to this repo's cost work is negative.
+   Baltas & Kosowski put a significance deadband on time-series momentum
+   across **75 futures**, cut turnover **~two-thirds** for ~5% of gross
+   Sharpe (1.04 → 0.99), and still found it "does not lead to
+   significantly higher risk-adjusted performance." Two calibrations to
+   carry with it: Novy-Marx & Velikov (2016, *RFS* 29(1)) find banding
+   **fails on high-turnover strategies** (four of six of their fastest
+   anomalies stay net-negative after a 10%/50% band, and their stated
+   cutoff is 50% one-sided monthly turnover); and in crypto specifically,
+   Fieberg, Liedtke, Poddig, Walker & Zaremba (*JFQA* 60(7), 2025,
+   3116–3153, **3,244 coins**) find that merely *halving* rebalancing
+   frequency destroys **~39% of gross weekly return**, against ~10%
+   erosion in NMV's equity anomalies. Budget crypto signal decay at
+   30–40%, not 10%.
+10. **A warmup prefix is not free.** Letting a strategy trade through the
    prefix of a resampled window lets it be liquidated before the window
    opens (19 of buy-and-hold's 23 stress-test liquidations were of this
    kind), and slicing a frame to an out-of-sample date range leaves a

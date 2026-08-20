@@ -1,0 +1,7 @@
+check,delta,passed,max_abs_diff,n_bars,first,last,bars_in_holdout,first_bar_warm
+check_causality,0.08,True,,,,,,
+truncation_60pct,0.0,True,0.0,,,,,
+truncation_60pct,0.08,True,0.0,,,,,
+tail_x10,0.08,True,0.0,,,,,
+index_W_TRAIN,0.08,True,,184320,2020-04-01 00:00:00+00:00,2021-12-31 23:55:00+00:00,0,True
+index_W_VAL,0.08,True,,105120,2022-01-01 00:00:00+00:00,2022-12-31 23:55:00+00:00,0,True
