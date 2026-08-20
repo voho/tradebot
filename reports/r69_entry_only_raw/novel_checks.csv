@@ -1,0 +1,9 @@
+check,max_abs_diff,passed,relative_error,mult,n_bars,first,last,bars_in_holdout,first_bar_warm
+loop_identity_delta_in_0,0.0,True,,,,,,,
+check_against_engine,,True,0.00499759646690768,,,,,,
+check_causality,,True,,1.0,,,,,
+truncation_60pct,0.0,True,,1.0,,,,,
+tail_x10_perturbation,0.0,True,,1.0,,,,,
+index_W_TRAIN,,True,,,184320,2020-04-01 00:00:00+00:00,2021-12-31 23:55:00+00:00,0,True
+index_W_VAL,,True,,,105120,2022-01-01 00:00:00+00:00,2022-12-31 23:55:00+00:00,0,True
+index_W_FULL6_informational,,True,,,671271,2020-04-01 00:00:00+00:00,2026-08-20 00:00:00+00:00,,True

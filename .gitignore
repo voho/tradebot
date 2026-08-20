@@ -146,3 +146,9 @@ uv.lock
 # pre-registered rules were read in the order the ledger claims.
 !/reports/r68_band/
 !/reports/r68_band/*.csv
+# R-69 (B-37, the entry-only gate stripped of R-65's buffer/hold_days): both
+# branches' identity/self-check/decision-cell/scramble CSVs. Same reasoning
+# as r68_band above -- the per-cell numbers are the receipt that the
+# pre-registered rules were read in the order the ledger claims.
+!/reports/r69_entry_only_raw/
+!/reports/r69_entry_only_raw/*.csv

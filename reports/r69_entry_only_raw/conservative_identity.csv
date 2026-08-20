@@ -1,0 +1,2 @@
+check,universe,window,n_bars,max_abs_diff,bit_identical,allclose_1e12,passed
+identity_delta_in_0,U8,"('2020-04-01', '2021-12-31')",210528,0.0,True,True,True

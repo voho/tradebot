@@ -1,0 +1,2 @@
+cand_membership_per_day,baseline_membership_per_day,membership_reduction,cand_turnover_per_day,baseline_turnover_per_day,turnover_reduction,membership_passed,turnover_passed,passed
+0.13385949936761754,2.6733286556398235,0.9499277804525759,0.12921593467881468,3.2383705773483777,0.9600984718726606,True,True,True

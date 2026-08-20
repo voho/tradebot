@@ -195,6 +195,177 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-69 · 08-20 · NEGATIVE (both branches), ANSWERED — B-37: the entry-only gate needs R-65's buffer and hold_days; alone it does not merely fail to help, it makes turnover and the D1/D2 point estimates worse than R-68's coupled construction
+
+**Direction.** Backlog item **B-37**, filed by R-68 and the item immediately
+below B-36 (an infrastructure item, not a candidate) on the ranked list.
+Constraint attacked: **COST**. R-68's conservative branch decomposed R-67's
+single coupled threshold into `(delta_in, delta_out)` and found ENTRY_ONLY
+(`delta_in=d, delta_out=0`) dominates both EXIT_ONLY and the coupled
+diagonal — but every R-68 cell, ENTRY_ONLY included, still inherited R-65's
+`buffer=0.05`/`hold_days=1` unchanged ("frozen ... byte-for-byte where not
+explicitly varied," per `r68_shared.py`). B-37 asked directly: is the entry
+bar alone — no buffer, no hold_days, no exit threshold at all — sufficient,
+now that the exit half is known to carry none of the edge, or does the
+coupling with R-65's machinery still matter for reasons ENTRY_ONLY's
+isolated read could not see?
+
+Not a duplicate of **R-68 conservative's ENTRY_ONLY sub-arm**: identical
+predicate (`s > delta_in` to enter, `s > 0` to remain), but that cell ran
+inside R-65's slot/buffer/hold_days event loop, so a swap there still needed
+to clear a margin and a cooldown; this round sets `buffer=0`, `hold_days=0`
+and reuses the SAME event loop otherwise, so a swap fires immediately once a
+challenger clears `delta_in`. Not a duplicate of **R-68 novel**, which
+applied its derived threshold on the coupled diagonal
+(`delta_in=delta_out=delta_B(t)`), not as an isolated entry-only gate on the
+bufferless construction. Not a duplicate of **R-65**, which is the buffer/
+hold_days axis itself, held here at zero rather than at its fitted values.
+
+## What would make it fail, named in advance (from `experiments/r69_shared.py`,
+committed before either branch ran; see that file for the full text)
+
+**(F1)** the buffer/timer were doing real work — turnover and membership-
+change rate come back HIGHER than R-68's ENTRY_ONLY cell at a comparable
+delta, because a challenger can now displace an incumbent on the very next
+bar with no margin and no cooldown. **(F2)** the edge was never in the entry
+bar at all, and turnover comes back comparable to R-68 while D1/D2 still
+fail similarly — a clean, informative negative. **(F3)** the axis's
+standing base case, restated from R-67/R-68: `(D1 or D2)` fails again,
+regardless of what M1' says. **(F4)** theory and data disagree — the
+derived threshold lands far from the region the conservative sweep prefers.
+
+**What was done.** Two branches, `experiments/r69_conservative_entry_gate.py`
+and `experiments/r69_novel_derived_entry.py`, both importing the frozen
+`experiments/r69_shared.py` (committed 08-20, two commits, before either
+branch ran) and, through it, `r63_shared.py` / `r63_novel_xsmom_rank.py` /
+`r65_shared.py` / `r68_shared.py` unchanged. Both reuse R-68 conservative's
+own `held`-list event loop (forced exits at `s <= 0`, entries into free
+slots ranked by score, voluntary swaps) with `buffer=0.0`, `hold_days=0`,
+`delta_out=0.0` fixed — never swept, never retuned — so the loop is
+provably R-63's original per-bar top-k recompute at `delta_in=0` (proved in
+`r69_shared.py`'s own docstring before any code ran, after an earlier draft
+of the construction — one that required `rank<k` to *hold* a slot rather
+than only to *win* one — was caught failing that identity at k=1 and fixed
+before either branch started).
+
+**Conservative**: sweeps `delta_in` over R-68's own 11-point extended grid
+(`DELTA_GRID_EXT`, 0.000–0.350, capped at the dLC 2020 saturation already
+derived by R-68), selects on W_VAL exactly as R-68 did.
+**Novel**: zero fitted parameters — `delta_in(t) = mult × sigma_ds(t) ×
+sqrt(T*)`, R-68's own cost-matched first-passage threshold
+(`sigma_dscore_series`/`t_star_bars` imported READ-ONLY from
+`r68_novel_derived_threshold.py`, not re-derived), `mult=1.0` primary, a
+{0.5, 0.75, 1.5, 2.0} neighbourhood reported as context. Gates inherited
+unchanged from R-65/R-68 (D1/D2/D3/D4/D5, `VOLMATCH_HOLD`, the
+fixed-permutation scramble); the one new rule is **M1' measured against
+R-63's ORIGINAL rule** on each branch's own aligned frame, not against
+R-65's already-reduced baseline, since this round's own question is whether
+the entry gate alone — not the entry gate on top of R-65's other cuts —
+reduces turnover.
+
+**Configs evaluated: 296** (conservative 175 — 169 for the frontier/self-
+checks/decision cells plus 6 for a supplementary delta=0.08 comparison cell;
+novel 121). **Holdout consultations: +0**, both branches — see the bullet
+above.
+
+Both branches ran in isolated worktrees and reported directly rather than
+committing; **the operator independently reproduced, from a clean shell,
+both branches' identity checks and each branch's primary decision cell**
+(`run_identity`/`run_decision_cells(0.350)` for conservative;
+`check_loop_identity_at_zero`/`run_mult_cell(1.0, primary=True)` for novel).
+Every number matched the branches' own reports exactly, including the
+bit-identical identity checks (max|diff| = 0.0 for both, against
+`r63_baseline_targets(k=1)`).
+
+**Result.**
+
+*Identity and self-checks, both branches.* Bit-identical at `delta_in=0`
+(max|diff| = 0.0 against R-63's original rule, 210,528×8 bars).
+`check_against_engine` True (0.50% error, well inside the 5% tolerance).
+`check_causality` True on each branch's own construction. Novel additionally
+ran a 60%-truncation probe and a tail-×10 perturbation probe, both exact
+(max|diff| = 0.0).
+
+*Conservative.* W_VAL sweep: every cell 0.000–0.350 net-positive against
+`VOLMATCH_HOLD` (every interval still touches zero), a broad noisy plateau
+from d=0.08 (+0.624) to d=0.35 (+0.679) with **no interior peak** — the
+selected point is the grid's **top corner**, not an interior cell the way
+R-68's own d=0.080 winner was. At the selected `delta_in=0.350`, W_FULL6/U6:
+D1 net −0.159 [−3.429, +2.980] **FAIL**; D2 dd −13.30pp [−30.45, +26.50]
+**FAIL**; D5 gross +0.135 **FAIL** (bar +0.342 — the grid-edge winner is
+closer to a concentrated hold than a signal, the F2 concern named in earlier
+rounds); M1' **PASS** (membership −95.0%, turnover −96.0% vs R-63's raw
+rule); scramble **SURVIVED** (real −0.159 > p90 −0.873, informative only in
+that the result is less bad than a randomly-scrambled concentrated basket,
+not evidence of a positive edge); D3 **PASS** (W_VAL +0.679 > 0, dd −17.28pp
+< 0); D4 **FAIL** ($982 vs EW_HOLD's $1,454 at 0.40%).
+
+At the delta=0.080 shared with R-68's own published ENTRY_ONLY cell,
+measured separately: turnover/day **0.1183 → 3.442** (29×), membership-
+changes/day **0.1163 → 2.680** (23×) — R-68's W_TRAIN/U8 M1' cell vs this
+round's bufferless equivalent. On the W_FULL6/U6 D-cell itself, D1 flips
+from R-68's +1.066 [−2.13, +4.30] to **−2.980** [−7.54, +1.55], and D2 flips
+sign from R-68's −9.54pp to **+9.69pp** [−8.36, +32.86] (wrong sign for a
+drawdown improvement) — **(F1) fired exactly as predicted**.
+
+*Novel.* `h* = 7.00 days` (`T* = 2,016` bars, from R-65's frozen decay
+table, subgradient condition holds, interior optimum landing on a table
+node). At `mult=1.0` the derived `delta_in(t)` averages **0.2075** on
+W_FULL6/U6 — inside the conservative grid's [0, 0.350] range (never exceeds
+it), but **2.59× R-68's own fitted winner (0.080)**, exceeding it on
+**99.18%** of evaluated bars — theory and data disagree by roughly the same
+2–3× margin R-68's own D-A cube-root arm missed by, i.e. **(F4) partially
+fires**: inside the licensed range, but nowhere near the region a fitted
+sweep prefers. At `mult=1.0`: D1 net −0.359 [−4.144, +3.442] **FAIL**; D2 dd
+−9.09pp [−24.83, +26.38] **FAIL**; D5 gross +0.825 **PASS** (clears the
++0.342 bar comfortably, unlike the conservative branch's selected point);
+M1' **PASS** (membership −83.9%, turnover −84.1%); scramble **SURVIVED**
+(real −0.359 > p90 −0.753); D3 **PASS** (W_VAL +0.509 > 0, dd −5.08pp < 0);
+D4 **FAIL** ($45 vs EW_HOLD's $1,454). Against R-68's published ENTRY_ONLY
+at delta=0.080: turnover/day **0.1183 → 0.5164** (4.4×), membership-
+changes/day **0.1163 → 0.4295** (3.7×), D1 flips from **+1.066 to −0.359** —
+**(F1) fires again**, on an independently-constructed, zero-fitted-parameter
+threshold that is *larger*, not smaller, than R-68's own winner. The
+{0.5, 0.75, 1.5, 2.0} neighbourhood is monotone (net growth rises from
+−2.71 at mult=0.5 toward +0.13 at mult=2.0, i.e. the less the derived
+threshold is discounted the closer it tracks R-68's winner region) but
+`further_work = False` at every point on the ladder — D1/D2/D4 fail
+throughout, D5 fails only at mult=1.5.
+
+**Both branches: `further_work(m1'=True, d1=False, d2=False, d3=True,
+d5=<True novel / False conservative>, scramble=True) = False`.** Neither
+reached, nor needed, a holdout read — this round's own pre-registered base
+case (F3).
+
+**Verdict.** **NEGATIVE, both branches — and B-37's own question is answered
+cleanly rather than left open.** The entry-only gate does **not** reproduce
+R-68's ENTRY_ONLY behaviour once R-65's buffer and hold_days are actually
+removed (not merely wrapped around an isolated read, as R-68's own sub-arm
+was): at a comparable or larger delta, both a fitted sweep and an
+independently-derived, zero-fitted-parameter threshold show turnover
+inflating by one to two orders of magnitude and the D1 point estimate
+flipping sign relative to R-68's coupled construction. Two structurally
+different constructions of the same predicate — one swept, one derived —
+converge on the identical diagnosis, which is the strongest form of
+agreement this round could have produced. **One-line lesson: the coupling
+R-68's isolated ENTRY_ONLY read could not see turns out to be load-bearing
+— the buffer and the minimum-tenure timer were suppressing one-bar
+rank-flicker swaps that the entry threshold, however it is set, cannot
+substitute for.** This closes B-37 as answered, not as inconclusive: "is one
+parameter sufficient" gets a clear no, and the mechanism of the no (turnover
+inflation from removing the swap-gating, not a weaker signal) is now
+understood rather than merely observed. Neither branch's decision rule moved
+after seeing any number; both were frozen in `r69_shared.py` before either
+ran. **Holdout counter: +0 this round; running total ~627** (see the bullet
+above — this round also backfills two missing bullets, R-67 and R-68, whose
+own verdict paragraphs already stated +0/~627 but were never added to this
+list). Next step: this closes the entry/exit decomposition line R-67 opened
+and R-68/R-69 have now both answered; the standing recommendation is
+unchanged and strengthened further — five consecutive rounds on this axis
+(R-63, R-65, R-67, R-68, R-69) have converged on the same interval-width
+diagnosis by five different mechanisms, and **B-06 (forward paper trading)**
+remains the only source of evidence this dataset has not already spent.
+
 ### R-68 · 08-20 · NEGATIVE (both branches), MEASURES — B-34 answered: the frontier is hump-shaped and both windows agree where it peaks, the band's own difference test resolves five times better than any level cell, and the literature the axis leans on is not established on this signal
 
 **Direction.** Backlog item **B-34**, filed by R-67 and top of the ranked
@@ -9021,8 +9192,33 @@ kind of evidence-quality work B-06 is the forward-looking analogue of, and it
 is the first round on this axis where an inference change moved a result
 materially rather than a mechanism change failing to.
 
+**Re-ranked 08-20 after R-69.** B-37 is done, answered cleanly rather than
+left open: the entry-only gate does not reproduce R-68's ENTRY_ONLY
+behaviour once R-65's buffer and hold_days are genuinely removed rather
+than merely isolated-read inside them — both a fitted sweep and an
+independently-derived, zero-fitted-parameter threshold show turnover
+inflating one to two orders of magnitude and the D1 point estimate flipping
+sign relative to R-68's coupled construction. **B-36 stays at the top**,
+untouched by this round: formalize the Ledoit-Wolf-style paired difference
+test in `tradebot.inference` and apply it to every surviving arm on this
+axis, since R-68's own inference attack is still the best-resolved number
+this axis has produced and no round has used that construction
+deliberately since. **B-33 is unchanged and is now load-bearing on three
+rounds' headline W_FULL6 cells.** **B-32 is reconfirmed as a hard blocker**
+for the fourth round running — this round's own further-work bar was never
+cleared on either branch, so B-32 was not reached, but every round on this
+axis since R-63 has been a bar-by-bar cross-asset allocator the
+registration infrastructure still cannot express. **B-06 remains the
+standing zero-cost recommendation**, strengthened by the same argument
+R-68's re-ranking made: five consecutive rounds (R-63, R-65, R-67, R-68,
+R-69) have now converged on the same interval-width diagnosis by five
+different mechanisms — a sixth mechanism variant on this axis is a
+materially worse use of a session than writing the paper-trading recorder's
+first uncontaminated read.
+
 | ID | item | attacks | status | note |
 |---|---|---|---|---|
+| ~~B-37~~ | ~~Does a rule that tightens ONLY the entry threshold (`enter_eligible = s > +delta`, exit left at R-63's original `s > 0`) reproduce R-68 conservative's ENTRY_ONLY edge with a single free parameter, now that the round found the exit half (B-31's original target) carries none of it?~~ | COST | **DONE → R-69, ANSWERED (NO)** | Filed by R-68. Answered cleanly: with R-65's `buffer`/`hold_days` genuinely removed (not merely isolated inside R-68's own ENTRY_ONLY sub-arm, which still inherited both), turnover inflates 4-29x and membership-change rate 4-23x relative to R-68's own published ENTRY_ONLY cell at a comparable or larger delta, and the D1 point estimate flips sign on both a fitted sweep (+1.07 -> -2.98) and an independently-derived, zero-fitted-parameter threshold (+1.07 -> -0.36). Both branches' `further_work` was `False`; neither read the holdout. The coupling ENTRY_ONLY's isolated read could not see turns out to be load-bearing: the buffer and timer were suppressing one-bar rank-flicker swaps the entry threshold alone cannot substitute for. Not reopened — this closes the entry/exit decomposition line R-67 opened. |
 | **B-36** | Formalize a Ledoit & Wolf (2008)-style **paired difference test** between a candidate arm and the frozen arm it's meant to improve on, as a reusable function in `tradebot.inference` rather than a one-off script, and apply it retroactively to every surviving (`further_work`-clearing or near-clearing) arm on the COST axis before a fifth mechanism round is run | ERR (methodology gap) | **NEXT** | Filed by R-68. R-68's own difference test (R-67's δ=0.080 vs R-65's δ=0.000, both pre-specified by earlier rounds so nothing was selected on to produce it) resolved to +0.4525 [-0.069,+1.105] (W_TRAIN) and +0.4276 [-0.111,+0.933] (W_VAL) — about 5x tighter than any level D1 cell this axis has produced, on two independent windows agreeing to 0.025 log units, and still just short of significance. No round on this axis had run this comparison; R-67's own lesson ("no mechanism can narrow an interval") implicitly calls for exactly this, and this round is the first to test whether the *right inference* can, where the answer was "almost." Making it a shared, tested function rather than a bespoke script is what lets every future round apply it without re-deriving it, and running it retroactively costs nothing new (no new backtest, no new holdout read) since every candidate P&L series is already committed. |
 | **B-37** | Does a rule that tightens ONLY the entry threshold (`enter_eligible = s > +delta`, exit left at R-63's original `s > 0`) reproduce R-68 conservative's ENTRY_ONLY edge with a single free parameter, now that the round found the exit half (B-31's original target) carries none of it? | COST | **NEXT** | Filed by R-68. R-68's own decomposition found EXIT_ONLY (soften only the exit, R-67's original framing) worse than the coupled rule at every matched delta on both windows with a *negative* cross-window rank correlation (-0.227), while ENTRY_ONLY dominates COUPLED at delta>=0.080 on W_VAL and holds the top three W_TRAIN ranks with a *positive* one (+0.500). This item asks the cheap follow-up directly: is a one-parameter entry-only gate (no `buffer`, no `hold_days` retuning, no exit threshold at all) sufficient, or does the coupling still matter for reasons ENTRY_ONLY's isolated read cannot see. Cheapest possible test of the round's central finding — one predicate change, R-68's own harness and gates apply unmodified. |
 | ~~B-34~~ | ~~Extend both R-67 grids past the edges their winners leaned against, and — the more important half — run a SYMMETRIC deadband as a matched arm beside the asymmetric one~~ | COST | **DONE → R-68, ANSWERED** | Filed by R-67. Ran as a two-threshold decomposition (contains R-67's symmetric-in-magnitude arm as its diagonal) rather than the literal symmetric arm, since a symmetric band on a long/flat gate coincides with R-67's rule (amendment recorded and justified in R-68's write-up, backed after the fact by Guan–Peng–Xu's no-symmetry result). **Both questions answered.** The curve turns over: hump-shaped, peaking at δ≈0.16 on both selection windows (confirmed independently by the sweep and by a Patton–Timmermann monotonicity test), degrading past ≈0.22 — F3's worry (an unbounded far-end improvement) does not materialize. And the confound separates: ENTRY_ONLY (tighten only the entrant threshold) carries the edge R-67 attributed to the coupled rule; EXIT_ONLY (soften only the exit, R-67's original framing) is worse than the coupled diagonal at every matched δ with a *negative* cross-window rank correlation. `further_work=False` on the selected configuration regardless. The grid cap this item's own note cited (dLC's 1.6σ) was found miscalibrated — it is a full-width saturation applied as a half-width cap — and is corrected to 0.80σ in R-68's write-up. Reopens as **B-37** (does entry-only alone reproduce the edge with one parameter). |
@@ -9126,6 +9322,37 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-20 · ~627** — R-69: **+0** on top of R-68's ~627. Neither branch imports
+  or slices `W_HOLD`; both `load_universe`/`align_frames` call sites in both
+  branch files are grepped and confirmed to never reference a date literal
+  `202[3-9]` outside a comment, and every D-cell reads `W_TRAIN`, `W_VAL` or
+  `W_FULL6` (U6-only, no BTC/ETH, doesn't touch the reserved holdout by the
+  R-47/R-57/R-63 convention). Both branches failed `(D1 or D2)` on their one
+  primary cell (conservative at its W_VAL-selected delta_in=0.350;
+  novel at its derived mult=1.0), so `further_work` was `False` on both and
+  neither reached, nor needed, a holdout read — exactly this round's own
+  pre-registered base case (F3). The operator independently reproduced both
+  branches' identity checks and primary decision cells from a clean shell
+  (`run_identity`/`run_decision_cells(0.350)` and
+  `check_loop_identity_at_zero`/`run_mult_cell(1.0, primary=True)`); every
+  number matched to the reported precision.
+- **08-20 · ~627** — R-68: **+0** on top of R-67's ~627 (backfilled here; the
+  round's own verdict paragraph states "+0 this round; running total ~627"
+  but no bullet was added to this list at the time — an omission, not a
+  finding, corrected now rather than left to compound). Neither the
+  conservative (band decomposition, extended grid) nor the novel (derived
+  threshold) branch read `W_HOLD`: `further_work` was `False` on both, gated
+  behind `(D1 or D2)`, which both failed on their frozen selections. The four
+  operator prices-only measurements run alongside (`r68_stopping_premium`,
+  `r68_inference`, `r68_signal_slope`, `r68_block_sensitivity`) are all
+  prices/derived-statistics only and read no 2023+ BTC or ETH bar either.
+- **08-20 · ~627** — R-67: **+0** on top of R-66's ~627 (backfilled here for
+  the same reason as the R-68 bullet above: the round's own verdict states
+  "+0 this round; running total ~627", no bullet was added at the time).
+  Neither the conservative (asymmetric hysteresis) nor the novel (smoothed
+  partial-adjustment) branch read `W_HOLD`: both failed `(D1 or D2)` on their
+  frozen selections and `further_work` was `False` on both, so no holdout
+  read was authorized or taken.
 - **08-20 · ~627** — R-66: **+0** on top of R-63's ~627. Neither branch reads
   a BTC bar dated 2023-01-01 or later: both load BTC exclusively through
   `R.load_btc_inner()`, which hard-truncates at 2022-12-31, and the operator
