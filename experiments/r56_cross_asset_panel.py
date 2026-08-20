@@ -566,6 +566,143 @@ def verdicts(rows: list[dict], vol_rows: list[dict], n: int) -> None:
           f"({len(vdf) - len(valid)} cells void — match residual > 5%)")
 
 
+def cmd_control(panel: list[Asset]) -> None:
+    """POST-HOC control, run AFTER D1 returned 0/6 and clearly labelled as such.
+
+    It cannot change D1's verdict — that is already recorded — and it is not a
+    second decision rule. It answers the one question D1's result raises and
+    cannot itself settle: is the matched-exposure drawdown advantage *absent
+    outside BTC/ETH*, or was it absent *in this period* everywhere? So the
+    identical comparison is run on BTC (the fitted asset) and ETH (R-47's
+    asset) over a window every panel asset shares, truncated at 2022-12-31 so
+    **no 2023+ BTC bar is read and the holdout counter stays at +0**.
+    """
+    from tradebot.data import load_coinbase_spot, load_dataset
+
+    print("=" * 100)
+    print("POST-HOC CONTROL (not a decision rule) — same comparison on BTC and "
+          "ETH, 2020-04-01..2022-12-31, spot @0.10%")
+    print("=" * 100)
+    window = ("2020-04-01", "2022-12-31")
+    btc, _ = load_dataset(DATA_DIR, "spot")
+    frames = [("BTC", btc), ("ETH", load_coinbase_spot(DATA_DIR, "ETH"))]
+    frames += [(a.ticker, a.df) for a in panel]
+    rows = []
+    for ticker, df in frames:
+        if df is None:
+            continue
+        v4_res, v4 = measure(get_strategy(INCUMBENT), df, *window, SPOT_BASE)
+        c = mean_notional(v4_res)
+        mh_res, mh = measure(ConstantExposureHold(c), df, *window, SPOT_BASE)
+        v4_ret = daily_returns(v4_res.equity).to_numpy(dtype=float)
+        mh_ret = daily_returns(mh_res.equity).to_numpy(dtype=float)
+        n = min(len(v4_ret), len(mh_ret))
+        dd = paired_bootstrap(v4_ret[:n], mh_ret[:n],
+                              max_drawdown_from_returns, **BOOT_KW)
+        rows.append({"asset": ticker, "c_mean_notional": c,
+                     "v4_dd": v4.max_drawdown_pct, "mh_dd": mh.max_drawdown_pct,
+                     "v4_final": v4.final_balance, "mh_final": mh.final_balance,
+                     "dd_diff": dd.diff.point, "dd_lo": dd.diff.lo,
+                     "dd_hi": dd.diff.hi})
+        print(f"  {ticker:5s} c={c:4.2f} v4 DD {v4.max_drawdown_pct:5.1f}% vs "
+              f"matched hold DD {mh.max_drawdown_pct:5.1f}% "
+              f"(dDD {dd.diff.point:+6.1f}pp [{dd.diff.lo:+6.1f},{dd.diff.hi:+6.1f}], "
+              f"negative = v4 better) | v4 ${v4.final_balance:>9,.0f} vs "
+              f"${mh.final_balance:>9,.0f}")
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(rows).to_csv(OUT_DIR / "control_pre2023.csv", index=False)
+    better = [r["asset"] for r in rows if r["v4_dd"] < r["mh_dd"]]
+    print(f"\n  v4's drawdown lower than the matched hold's in "
+          f"{len(better)}/{len(rows)} cells: {', '.join(better) if better else 'none'}")
+    print(f"  Configurations added by this control: counted in the total below. "
+          f"Holdout consultations added: 0 (window ends 2022-12-31).")
+
+
+def cmd_chart() -> None:
+    """The picture D1 and D3 disagree about, drawn in the project's forest style.
+
+    Left: each panel asset's drawdown difference against the MATCHED hold on
+    the FULL window, with its paired-bootstrap interval. Right: the same
+    difference against the fully-invested ``buy_and_hold`` — the comparison
+    the README table makes. The two panels are the whole result.
+    """
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    from tradebot.report import (BASELINE, CRITICAL, GOOD, GRID, INK, MUTED,
+                                 PAGE, SURFACE)
+
+    cells = pd.read_csv(OUT_DIR / "cells.csv")
+    ctrl = pd.read_csv(OUT_DIR / "control_pre2023.csv")
+    full = cells[(cells.window == "FULL") & (cells.market == "spot")
+                 & (cells.fee == 0.001)].set_index("asset")
+
+    fig, axes = plt.subplots(1, 2, figsize=(15, 6))
+    fig.patch.set_facecolor(PAGE)
+
+    # left: matched, with intervals (the pre-registered comparison)
+    ax = axes[0]
+    order = list(full.index)
+    y = np.arange(len(order))
+    point = full.loc[order, "dd_matched_diff"].to_numpy()
+    lo = full.loc[order, "dd_matched_lo"].to_numpy()
+    hi = full.loc[order, "dd_matched_hi"].to_numpy()
+    excl = (lo > 0) | (hi < 0)
+    colors = [GOOD if p < 0 and e else CRITICAL if p > 0 and e else MUTED
+              for p, e in zip(point, excl)]
+    ax.set_facecolor(SURFACE)
+    for side in ("top", "right", "left"):
+        ax.spines[side].set_visible(False)
+    ax.spines["bottom"].set_color(BASELINE)
+    ax.grid(True, axis="x", color=GRID, linewidth=1.0)
+    ax.hlines(y, lo, hi, color=colors, linewidth=2.4, alpha=0.55)
+    ax.scatter(point, y, s=40, color=colors, zorder=3,
+               edgecolors=SURFACE, linewidths=1.2)
+    ax.axvline(0.0, color=INK, linewidth=1.2)
+    ax.set_yticks(y)
+    ax.set_yticklabels(order, fontsize=9, color=MUTED)
+    ax.tick_params(colors=MUTED, labelsize=8, length=0)
+    ax.set_title("vs a hold carrying v4's OWN mean exposure  ·  "
+                 "left of zero = v4 draws down less",
+                 color=INK, fontsize=10, loc="left")
+
+    # right: the same six against the fully-invested benchmark
+    ax = axes[1]
+    gap = (full.loc[order, "v4_dd"] - full.loc[order, "hold_dd"]).to_numpy()
+    ax.set_facecolor(SURFACE)
+    for side in ("top", "right", "left"):
+        ax.spines[side].set_visible(False)
+    ax.spines["bottom"].set_color(BASELINE)
+    ax.grid(True, axis="x", color=GRID, linewidth=1.0)
+    # deliberately NOT the "good" colour: this panel is the artifact,
+    # and colouring it green would be the picture arguing for itself.
+    ax.barh(y, gap, color=MUTED, alpha=0.65, height=0.55)
+    ax.axvline(0.0, color=INK, linewidth=1.2)
+    ax.set_yticks(y)
+    ax.set_yticklabels(order, fontsize=9, color=MUTED)
+    ax.tick_params(colors=MUTED, labelsize=8, length=0)
+    ax.set_title("vs the fully-invested buy_and_hold  ·  the comparison the "
+                 "README table makes  ·  every bar is exposure, not gating",
+                 color=INK, fontsize=10, loc="left")
+
+    ctrl_line = ", ".join(
+        f"{r.asset} {r.dd_diff:+.1f}pp" for r in ctrl.itertuples()
+        if r.asset in ("BTC", "ETH"))
+    fig.suptitle(
+        "R-56 · kelly_regime_v4's drawdown advantage on six instruments it "
+        "was never fitted on\n"
+        "spot, 0.10% taker, 2020-04-01 -> 2026-08-20 · Δ max drawdown (pp) · "
+        f"same comparison 2020-04..2022-12 on the fitted assets: {ctrl_line}",
+        color=INK, fontsize=12, x=0.02, ha="left")
+    fig.tight_layout(rect=(0, 0, 1, 0.90))
+    path = OUT_DIR / "panel_drawdown.png"
+    fig.savefig(path, dpi=110, bbox_inches="tight", facecolor=PAGE)
+    plt.close(fig)
+    print(f"chart: {path}")
+
+
 def main() -> None:
     cmd = sys.argv[1] if len(sys.argv) > 1 else "panel"
     panel = cmd_panel()
@@ -583,7 +720,16 @@ def main() -> None:
         print()
         cmd_run(panel)
         return
-    raise SystemExit(f"unknown command {cmd!r} (panel | causality | run)")
+    if cmd == "chart":
+        cmd_chart()
+        return
+    if cmd == "control":
+        cmd_control(panel)
+        print(f"\nTotal backtest configurations evaluated by this command: "
+              f"{CONFIG_COUNT}")
+        return
+    raise SystemExit(f"unknown command {cmd!r} "
+                     f"(panel | causality | run | control | chart)")
 
 
 if __name__ == "__main__":

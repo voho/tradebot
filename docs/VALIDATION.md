@@ -491,7 +491,17 @@ What remains unanswered: this window shares the 2018 bear with the main
 dataset, so the two tests are not fully independent, and 2020–2026 ETH
 was not reachable. A second bear on a second asset in a *different*
 period is still the missing experiment (backlog item B-08 in
-[LEDGER.md](LEDGER.md)).
+[LEDGER.md](LEDGER.md)) — since answered by R-47, which found the
+drawdown property replicating on ETH's own 2022 bear while the return
+edge died at the 0.40% tier.
+
+> 🚨 **"Not BTC-specific" was measured on one other asset, and R-56
+> measured it on six more.** The claim in the verdict above — the
+> drawdown reduction transfers — holds against a *fully-invested*
+> benchmark on every asset tried, BCH, LTC, ETC, DASH, LINK and XTZ
+> included. Against a benchmark carrying the strategy's **own exposure**
+> it holds on BTC and ETH and **inverts on all six others**. The
+> measurement is [the next section](#six-instruments-it-was-never-fitted-on-the-cross-asset-panel).
 
 > ⚠️ **And one more, raised after R-31 and answered by R-33.** Every
 > drawdown comparison on this page — including this one — is against a
@@ -503,6 +513,83 @@ period is still the missing experiment (backlog item B-08 in
 > Read every "cuts drawdown versus holding" figure on this page with that
 > attached; the measurement is
 > [below](#the-benchmark-de-levered-what-is-left-of-the-drawdown-finding).
+
+## Six instruments it was never fitted on — the cross-asset panel
+
+The ETH test above, and R-47's 2020–2026 follow-up, are both **n=1
+asset**, and one of the two assets in this project's evidence base is the
+one the strategy was fitted on. That cannot distinguish a mechanism from a
+calibration. R-56 fetched six further Coinbase USD 5-minute series and ran
+the **frozen, byte-identical** `kelly_regime_v4` on all of them.
+
+### Design
+
+- Panel: **BCH, LTC, ETC, DASH, LINK, XTZ**, 2020-01-01 → 2026-08-20,
+  selected by a mechanical liquidity rule fixed before any backtest (three
+  fixed 2020 probe days, ranked by dollar volume, then a continuity and
+  coverage gate that excludes XRP's 905-day Coinbase suspension). Rebuild
+  with `python scripts/fetch_coinbase_panel.py --products BCH-USD …`.
+- Measured window 2020-04-01 → end, so the 80-day warmup comes from bars
+  *before* the period (R-22). Zero parameters changed, nothing swept.
+- Three arms per cell: the strategy, the fully-invested `buy_and_hold`,
+  and a passive long holding **v4's own mean notional** — the R-33 matched
+  arm. Decision rules pre-registered and committed two commits ahead of
+  the first backtest ([LEDGER.md](LEDGER.md), "R-56 pre-registration").
+- Reproduce: `python experiments/r56_cross_asset_panel.py run` and
+  `… control`. Cells in `reports/cross_asset_panel/`.
+
+### Result — spot, 0.10% taker, 2020-04-01 → 2026-08-20
+
+| asset | v4 max DD | matched hold DD | Δ DD (pp, + = v4 worse) | 95% paired interval | vs fully-invested hold |
+|---|---|---|---|---|---|
+| BCH | 52.3% | 47.5% | +5.2 | [−6.1, +45.7] | −42.4pp |
+| LTC | 74.7% | 42.5% | **+33.8** | [+2.1, +53.1] | −15.7pp |
+| ETC | 51.3% | 29.5% | **+23.6** | [+5.3, +45.9] | −45.0pp |
+| DASH | 58.7% | 29.7% | **+29.8** | [+2.5, +41.8] | −37.6pp |
+| LINK | 47.8% | 38.1% | +13.4 | [−5.1, +39.8] | −42.8pp |
+| XTZ | 55.0% | 35.4% | **+19.3** | [+3.3, +44.8] | −42.9pp |
+
+**Six of six against the fully-invested benchmark. Zero of six against
+the matched one**, with four intervals excluding zero, all four against
+the strategy. Same assets, same runs, opposite conclusions — which is what
+the exposure artifact looks like when it is measured rather than assumed.
+
+### Is it the assets, or the period?
+
+The same comparison over a window every asset shares, truncated at
+2022-12-31 so no holdout bar is read:
+
+| asset | Δ DD (pp) | 95% interval |
+|---|---|---|
+| **BTC** | **−5.6** | [−20.0, +16.4] |
+| **ETH** | **−11.5** | [−17.3, +19.6] |
+| BCH / LTC / ETC / DASH / LINK / XTZ | +6.0 / +0.0 / +15.4 / +17.1 / +14.5 / +11.6 | — |
+
+**2 of 8, and they are exactly the two assets this project has always
+measured on.** The property is asset-specific, not period-specific.
+
+### The other two claims, on the same panel
+
+- **Return at the real fee tier** (the pre-registered falsification test):
+  v4 beats holding at 0.40% on **2 of 6**, and both are assets where
+  holding lost 51% and 87% — cleared by holding less, not by trading
+  well. Predicted to fail before the run, and it failed.
+- **Return per unit of risk**, the claim R-36 pre-registered and confirmed
+  on BTC: v4 out-returns the matched hold on **1 of 6** (every growth
+  interval contains zero) and **0 of 6** on the equal-volatility axis.
+
+![cross-asset panel drawdown](../reports/cross_asset_panel/panel_drawdown.png)
+
+### Verdict
+
+The sample-size objection is answered in the direction nobody wanted.
+`kelly_regime_v4` is not a general regime-sizing mechanism whose drawdown
+property travels; it is a mechanism whose measured scope is **BTC and
+ETH**. Nothing already recorded is retracted — R-33 had established that
+88–92% of the headline gap was exposure, and R-17/R-47's ETH numbers
+reproduce here — but the scope of what those rounds left standing is now
+measured instead of assumed. Full write-up:
+`experiments/reports/r56_cross_asset_panel_report.md`.
 
 ## Comparing at matched risk, and what it costs a finding
 

@@ -35,7 +35,7 @@ anything not listed here has been folded into one of these:
 | document | its one job |
 |---|---|
 | **[docs/ROUTINE.md](docs/ROUTINE.md)** | **The process.** The single procedure for researching and adding a strategy — from idea selection through holdout evaluation to the ledger record, including the mechanics of registering one. |
-| **[docs/LEDGER.md](docs/LEDGER.md)** | **The memory.** Everything already tried — 25 registered strategies, 37 research directions — the four binding constraints, the ruled-out list, and the ranked backlog. Read before a session, appended after it. |
+| **[docs/LEDGER.md](docs/LEDGER.md)** | **The memory.** Everything already tried — 25 registered strategies, 56 research directions — the four binding constraints, the ruled-out list, and the ranked backlog. Read before a session, appended after it. |
 | **[docs/VALIDATION.md](docs/VALIDATION.md)** | **The evidence.** The single comparison protocol and benchmark, and every robustness result: walk-forward, bootstrap intervals, deflated Sharpe, Monte Carlo stress windows, fees, funding, and the ETH replication test. |
 | **[docs/STRATEGIES.md](docs/STRATEGIES.md)** | **The strategies.** What each registered strategy is, how it works, and the principles it rests on, with citations. |
 | **[docs/RESEARCH.md](docs/RESEARCH.md)** | **The literature.** The survey behind the strategies, and the methodology findings that changed how this repo tests. |
@@ -127,6 +127,24 @@ that carry one.
 > R-37), reproduce with `python experiments/run_matched_hold.py windows`
 > and `python experiments/b14_regime_breakdown.py`.
 
+> 🚨 **And both of those claims are about BTC and ETH specifically — on six
+> instruments the strategy was never fitted on, they invert.** R-56 ran the
+> frozen `kelly_regime_v4` on BCH, LTC, ETC, DASH, LINK and XTZ (Coinbase
+> 5m, 2020-04 → 2026-08). Against the fully-invested `buy_and_hold` this
+> table uses, its drawdown is lower on **6 of 6**, by 16–46pp. Against a
+> passive long carrying **v4's own mean exposure**, it is lower on **0 of
+> 6** — the sign inverts on every asset (Δ max drawdown +5.2 to +33.8pp,
+> four of six intervals excluding zero, all against v4). The equal-risk
+> *return* advantage confirmed above does not reproduce either: 1 of 6 on
+> the mean-notional axis, 0 of 6 on the volatility-matched one. A control
+> over a window every asset shares puts BTC at −5.6pp and ETH at −11.5pp in
+> v4's favour and all six panel assets against it, so the failure is
+> asset-specific rather than period-specific. **Read the drawdown finding
+> with its measured scope attached: BTC and ETH, 2 of 8.** Detail in
+> [docs/VALIDATION.md](docs/VALIDATION.md#six-instruments-it-was-never-fitted-on-the-cross-asset-panel)
+> and [docs/LEDGER.md](docs/LEDGER.md) (R-56), reproduce with
+> `python experiments/r56_cross_asset_panel.py run`.
+
 One full-history number can hide a lucky path, so the top three are also
 resampled over 40 random windows
 (`python scripts/stress_test.py`, charts in
@@ -198,7 +216,7 @@ default-reject promotion bar — beat buy-and-hold out-of-sample after
 funding and at the real fee tier, by more than the ±0.2 Sharpe noise
 floor, and survive a falsification test chosen in advance.
 
-Everything already tried — 25 registered strategies, 37 research
+Everything already tried — 25 registered strategies, 56 research
 directions, the ruled-out list and the ranked backlog — is in
 **[docs/LEDGER.md](docs/LEDGER.md)**, which is read before a session
 starts and appended to when it ends. A documented negative result is a
@@ -247,6 +265,14 @@ that was never about the gate
 
 ![drawdown at matched risk](reports/matched_hold/matched_drawdown.png)
 
+**Does the mechanism travel?** — the same comparison on six instruments the
+strategy was never fitted on. Left: against a hold carrying v4's *own*
+exposure, the advantage inverts on all six. Right: against the
+fully-invested benchmark this README's table uses, all six look like wins
+([analysis](docs/VALIDATION.md#six-instruments-it-was-never-fitted-on-the-cross-asset-panel)):
+
+![cross-asset panel drawdown](reports/cross_asset_panel/panel_drawdown.png)
+
 ## Data
 
 **Committed dataset**: `data/btcusd_spot_5m.csv.gz` — real Bitstamp
@@ -282,6 +308,15 @@ perp + aligned-spot pair, which then takes precedence automatically.
 Real Binance BTCUSDT **funding rates** for 2020–2023 are also committed
 (`data/btcusdt_perp_funding_8h.csv.gz`), and the ETH/BTC pair used by the
 cross-asset test ships as `data/{btcusd,ethusd}_bitfinex_5m.csv.gz`.
+
+A **six-instrument Coinbase panel** ships too — `data/{bch,ltc,etc,dash,link,xtz}usd_coinbase_spot_5m.csv.gz`,
+5-minute, 2020-01 → 2026-08, plus `xrpusd_…` (excluded by R-56's continuity
+rule: Coinbase suspended XRP-USD for 905 days) and `ethusd_coinbase_spot_5m.csv.gz`.
+It exists so a strategy can be failed on six independent instruments before
+a holdout consultation is spent on it — which is what
+[R-56](docs/VALIDATION.md#six-instruments-it-was-never-fitted-on-the-cross-asset-panel)
+did to this project's own incumbent. Refresh with
+`python scripts/fetch_coinbase_panel.py --products BCH-USD LTC-USD …`.
 
 ## Adding a strategy
 
