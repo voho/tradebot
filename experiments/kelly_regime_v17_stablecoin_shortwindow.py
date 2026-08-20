@@ -121,10 +121,16 @@ this file's entire reason for existing. The hard-veto combination
 architecture (`stable_vote` latched 0/1 with hysteresis
 `thresh_lo=thresh_hi-gap`, `frac=0` while latched "stress", v4's
 unmodified 3-anchor average otherwise) is reused BYTE-FOR-BYTE from
-`kelly_regime_v15_stablecoin_veto.py`. `thresh_hi`/`gap` are swept over
-R-54's own identical grid (`{0.75, 1.0, 1.25}` x `{0.0, 0.75, 1.25}`) at
-every window, so the veto-sensitivity axis is held constant too --
-whatever differs is attributable only to the growth window N.
+`kelly_regime_v15_stablecoin_veto.py`. `thresh_hi`/`gap` were ORIGINALLY
+pre-registered to sweep R-54's own identical grid (`{0.75, 1.0, 1.25}` x
+`{0.0, 0.75, 1.25}`) at every window (45 configs total), so the
+veto-sensitivity axis would be held constant too -- whatever differs
+attributable only to the growth window N. **Scoped down mid-session, see
+`_grid()`'s own docstring for the exact reasoning:** Step A (below) killed
+the branch cleanly and decisively before the 45-config grid finished
+running; the grid actually executed fixes `thresh_hi` at the primary 1.0
+and sweeps `gap` over its full range at every window (15 configs), which
+still preserves a genuine parameter-neighbourhood axis at every window.
 
 Code reuse decision, stated plainly
 -------------------------------------
@@ -412,12 +418,28 @@ class KellyRegimeV17StablecoinShortWindow(KellyRegimeV3):
 
 
 def _grid():
+    """SCOPED DOWN mid-run after Step A returned a clean, monotonic,
+    decisive kill (0/5 windows passed the pre-registered lead-time gate --
+    see leadtime_by_window()'s output, reproduced in the report). The
+    original pre-registration specified the full THRESH_HIS x GAPS 3x3
+    grid at every window (45 configs); that grid ran for several minutes
+    without finishing and, per the operator's explicit instruction that a
+    smaller COMPLETED sweep beats a stalled larger one, this was cut to a
+    still-real plateau check: thresh_hi held at the primary 1.0 (R-54's
+    own pre-registered point) while gap sweeps its full {0.0, 0.75, 1.25}
+    range, at every window. This keeps a genuine parameter-neighbourhood
+    axis (gap) at every window (15 configs total) rather than dropping to
+    a single point per window, while cutting the run to 1/3 of the
+    original cost. Because Step A already killed the branch on mechanism
+    grounds (every window monotonically worse than the 14-day reference,
+    not a borderline call), this scope-down changes no conclusion -- it
+    only trims how much confirmatory Sharpe evidence is gathered for a
+    result already decided."""
     out = []
     for w in WINDOWS:
-        for thresh_hi in THRESH_HIS:
-            for gap in GAPS:
-                label = f"w={w:>2d}d thresh={thresh_hi:.2f} gap={gap:.2f}"
-                out.append((label, dict(growth_window_days=w, thresh_hi=thresh_hi, gap=gap)))
+        for gap in GAPS:
+            label = f"w={w:>2d}d thresh={PRIMARY_THRESH['thresh_hi']:.2f} gap={gap:.2f}"
+            out.append((label, dict(growth_window_days=w, thresh_hi=PRIMARY_THRESH["thresh_hi"], gap=gap)))
     return out
 
 
@@ -582,18 +604,16 @@ def select():
         print(f"    candidate - v4 (valid): Delta sharpe={m_valid.sharpe - m_valid_v4.sharpe:+.3f}  "
               f"Delta DD={m_valid.max_drawdown_pct - m_valid_v4.max_drawdown_pct:+.1f}pp")
 
-    print("\nparameter-neighbourhood plateau check (spot, inner-validation Sharpe, per window, all 9 thresh/gap cells):")
+    print("\nparameter-neighbourhood plateau check (spot, inner-validation Sharpe, per window, "
+          f"gap swept at fixed thresh_hi={PRIMARY_THRESH['thresh_hi']:.2f} -- see _grid()'s scope-down note):")
     for w in WINDOWS:
-        grid_by_key = {}
+        row = []
         for label, kw in _grid():
             if kw["growth_window_days"] != w:
                 continue
             m, _ = measure(KellyRegimeV17StablecoinShortWindow(**kw), *VALID, market=SPOT)
-            grid_by_key[(kw["thresh_hi"], kw["gap"])] = m.sharpe
-        print(f"  window={w}d:")
-        for thresh_hi in THRESH_HIS:
-            row = "  ".join(f"gap={g:.2f}:{grid_by_key[(thresh_hi, g)]:.2f}" for g in GAPS)
-            print(f"    thresh={thresh_hi:.2f}  {row}")
+            row.append(f"gap={kw['gap']:.2f}:{m.sharpe:.2f}")
+        print(f"  window={w}d:  " + "  ".join(row))
 
     print("\ncross-window plateau check (spot, inner-validation Sharpe, primary thresh/gap fixed, window varied):")
     for w in WINDOWS:
