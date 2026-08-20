@@ -1,0 +1,34 @@
+check,subarm,universe,window,n_bars,max_abs_diff,bit_identical,allclose_1e12,passed,d,n_eq_plus_d,n_eq_minus_d,n_finite_scores,field,r67_published,this_branch,abs_diff
+identity_d0,EXIT_ONLY,U8,"('2020-04-01', '2021-12-31')",210528,0.0,True,True,True,,,,,,,,
+identity_d0,ENTRY_ONLY,U8,"('2020-04-01', '2021-12-31')",210528,0.0,True,True,True,,,,,,,,
+identity_d0,COUPLED,U8,"('2020-04-01', '2021-12-31')",210528,0.0,True,True,True,,,,,,,,
+identity_d0,EXIT_ONLY,U6,"('2020-04-01', None)",697459,0.0,True,True,True,,,,,,,,
+identity_d0,ENTRY_ONLY,U6,"('2020-04-01', None)",697459,0.0,True,True,True,,,,,,,,
+identity_d0,COUPLED,U6,"('2020-04-01', None)",697459,0.0,True,True,True,,,,,,,,
+boundary_ties,,U8,"('2020-04-01', '2021-12-31')",,,,,True,0.0,0,0,1499912,,,,
+boundary_ties,,U8,"('2020-04-01', '2021-12-31')",,,,,True,0.005,0,0,1499912,,,,
+boundary_ties,,U8,"('2020-04-01', '2021-12-31')",,,,,True,0.01,0,0,1499912,,,,
+boundary_ties,,U8,"('2020-04-01', '2021-12-31')",,,,,True,0.02,0,0,1499912,,,,
+boundary_ties,,U8,"('2020-04-01', '2021-12-31')",,,,,True,0.04,0,0,1499912,,,,
+boundary_ties,,U8,"('2020-04-01', '2021-12-31')",,,,,True,0.08,0,0,1499912,,,,
+boundary_ties,,U8,"('2020-04-01', '2021-12-31')",,,,,True,0.12,0,0,1499912,,,,
+boundary_ties,,U8,"('2020-04-01', '2021-12-31')",,,,,True,0.16,0,0,1499912,,,,
+boundary_ties,,U8,"('2020-04-01', '2021-12-31')",,,,,True,0.22,0,0,1499912,,,,
+boundary_ties,,U8,"('2020-04-01', '2021-12-31')",,,,,True,0.28,0,0,1499912,,,,
+boundary_ties,,U8,"('2020-04-01', '2021-12-31')",,,,,True,0.35,0,0,1499912,,,,
+identity_r67_coupled_0080,,,,,,,,True,,,,,turnover_per_day,0.1735890364719704,0.1735890364719704,0.0
+identity_r67_coupled_0080,,,,,,,,True,,,,,hold_days,7.032967032967033,7.032967032967033,0.0
+identity_r67_coupled_0080,,,,,,,,True,,,,,tenure_days,6.320783132530121,6.320783132530121,0.0
+identity_r67_coupled_0080,,,,,,,,True,,,,,mean_notional,0.5254997510094529,0.5254997510094529,0.0
+identity_r67_coupled_0080,,,,,,,,True,,,,,gross_growth_diff,-0.875682549492625,-0.875682549492625,0.0
+identity_r67_coupled_0080,,,,,,,,True,,,,,gross_growth_lo,-2.9555904447667767,-2.9555904447667767,0.0
+identity_r67_coupled_0080,,,,,,,,True,,,,,gross_growth_hi,1.2058876111571482,1.2058876111571482,0.0
+identity_r67_coupled_0080,,,,,,,,True,,,,,net_growth_diff,-0.9671502845633148,-0.9671502845633149,1.1102230246251565e-16
+identity_r67_coupled_0080,,,,,,,,True,,,,,net_growth_lo,-3.0729793456346077,-3.0729793456346073,4.440892098500626e-16
+identity_r67_coupled_0080,,,,,,,,True,,,,,net_growth_hi,1.1467609289199516,1.1467609289199516,0.0
+identity_r67_coupled_0080,,,,,,,,True,,,,,net_dd_diff,-4.1971261403180975,-4.1971261403180975,0.0
+identity_r67_coupled_0080,,,,,,,,True,,,,,cand_final,2886.876361473473,2886.8763614734726,4.547473508864641e-13
+identity_r67_coupled_0080,,,,,,,,True,,,,,bench_final,7614.001413944976,7614.001413944976,0.0
+identity_r67_coupled_0080,,,,,,,,True,,,,,membership_changes_per_day,0.1421882714207433,0.14218827142074336,5.551115123125783e-17
+identity_r67_coupled_0080,,,,,,,,True,,,,,raw_turnover_per_day,0.1735899782578767,0.1735899782578767,0.0
+identity_r67_coupled_0080,,,,,,,,True,,,,,n_days,639.0,639.0,0.0
