@@ -277,6 +277,48 @@ def _count(n: int = 1) -> None:
     N_BACKTESTS_TOTAL += n
 
 
+# A caching bug found while building this file, fixed here without
+# touching R-50's file
+# --------------------------------------------------------------------------
+# `kelly_regime_covkelly_v3_continuous.py::continuous_leg_equity` caches on
+# `(id(df), market.name, v4_kwargs, start, end, start_balance)`. It never
+# needed `market.fee_rate` in that key because R-50 always ran at ONE fixed
+# fee tier per process. This file's F2 fee-tier stress test and holdout()
+# both call the SAME leg dataframe at TWO fee tiers (0.10% and 0.40%)
+# within one process -- `MarketSpec.spot(fee_rate=0.001)` and `MarketSpec.
+# spot(fee_rate=0.004)` both have `market.name == "spot"`, so the imported
+# cache silently returns the WRONG (first-computed) fee tier's curve on the
+# second call. Caught by hand: an early draft's `feetier` run and its
+# `all`-run counterpart printed two different 0.40%-tier balances for the
+# identical config (one correct cache-miss, one wrong cache-hit reusing the
+# 0.10% curve) -- exactly the kind of silent, non-crashing numeric bug this
+# project's routine warns is worth taking seriously (R-21's lookahead bug
+# passed a green test suite too). Fixed here with a locally, CORRECTLY
+# keyed cache that includes `market.fee_rate` and `market.leverage`, built
+# on the identical underlying call (`run_period(KellyRegimeV4(**kwargs),
+# df, ...)`) `continuous_leg_equity` itself makes -- the continuous-replay
+# MECHANISM (run once, never restart) is unchanged and still reused from
+# R-50; only the memoization key, which is purely a performance detail,
+# is corrected. `continuous_leg_equity` stays imported (for `FULL_START`/
+# `FULL_END` re-export and to document what this supersedes) but this
+# file's own runs go through `leg_equity` below instead.
+_SAFE_LEG_CACHE: dict = {}
+
+
+def leg_equity(df: pd.DataFrame, market: MarketSpec, v4_kwargs: dict | None = None,
+               start: str = FULL_START, end: str = FULL_END,
+               start_balance: float = 1000.0) -> pd.Series:
+    from tradebot.strategies.kelly_regime_v4 import KellyRegimeV4  # noqa: E402 (local, avoids unused-import lint upstream)
+    key = (id(df), market.name, round(market.fee_rate, 6), round(market.leverage, 4),
+          tuple(sorted((v4_kwargs or {}).items())), start, end, start_balance)
+    if key in _SAFE_LEG_CACHE:
+        return _SAFE_LEG_CACHE[key]
+    result = run_period(KellyRegimeV4(**(v4_kwargs or {})), df, start=start, end=end,
+                        market=market, start_balance=start_balance)
+    _SAFE_LEG_CACHE[key] = result.equity
+    return result.equity
+
+
 # ============================================================ vol weights
 
 def trailing_vol_series(df: pd.DataFrame, lookback_days: int) -> pd.Series:
@@ -350,10 +392,10 @@ def run_portfolio_continuous_costed(
     if rebalance_fee_rate is None:
         rebalance_fee_rate = market.fee_rate
 
-    btc_full = continuous_leg_equity(btc_df, market, v4_kwargs,
+    btc_full = leg_equity(btc_df, market, v4_kwargs,
                                      start=full_start, end=full_end,
                                      start_balance=start_balance)
-    eth_full = continuous_leg_equity(eth_df, market, v4_kwargs,
+    eth_full = leg_equity(eth_df, market, v4_kwargs,
                                      start=full_start, end=full_end,
                                      start_balance=start_balance)
 
@@ -509,7 +551,7 @@ def _bh_metrics(df: pd.DataFrame, start: str, end: str, market: MarketSpec,
 def _solo_metrics(btc_df: pd.DataFrame, market: MarketSpec = SPOT) -> dict:
     global N_BACKTESTS_TOTAL
     N_BACKTESTS_TOTAL += 1
-    eq = continuous_leg_equity(btc_df, market, None, start=FULL_START, end=FULL_END)
+    eq = leg_equity(btc_df, market, None, start=FULL_START, end=FULL_END)
     return {"train": period_metrics(eq, TRAIN_START, TRAIN_END),
            "valid": period_metrics(eq, VALID_START, VALID_END), "_equity": eq}
 
@@ -525,7 +567,7 @@ def run_headline(data_dir: str = "data", market: MarketSpec = SPOT) -> dict:
 
     invvol_res = run_portfolio_continuous_costed(btc_df, eth_df, freq, "invvol", lb, market=market)
     fixed_res = run_portfolio_continuous_costed(btc_df, eth_df, freq, "fixed5050", market=market)
-    solo_eq = continuous_leg_equity(btc_df, market, None, start=FULL_START, end=FULL_END)
+    solo_eq = leg_equity(btc_df, market, None, start=FULL_START, end=FULL_END)
 
     invvol = {"train": period_metrics(invvol_res["equity"], TRAIN_START, TRAIN_END),
              "valid": period_metrics(invvol_res["equity"], VALID_START, VALID_END)}
@@ -613,7 +655,7 @@ def artifact_check(btc_df, eth_df, lookback_days: int, rebalance_freq: str,
                                                  lookback_days, market=market)
     fixed_res = run_portfolio_continuous_costed(btc_df, eth_df, rebalance_freq, "fixed5050",
                                                 market=market)
-    solo_eq = continuous_leg_equity(btc_df, market, None, start=FULL_START, end=FULL_END)
+    solo_eq = leg_equity(btc_df, market, None, start=FULL_START, end=FULL_END)
 
     out = {}
     fail = False
@@ -682,7 +724,7 @@ def run_headline_for_market(btc_df, eth_df, lookback_days: int, rebalance_freq: 
                                                  lookback_days, market=market)
     fixed_res = run_portfolio_continuous_costed(btc_df, eth_df, rebalance_freq, "fixed5050",
                                                 market=market)
-    solo_eq = continuous_leg_equity(btc_df, market, None, start=FULL_START, end=FULL_END)
+    solo_eq = leg_equity(btc_df, market, None, start=FULL_START, end=FULL_END)
     bh = {"train": _bh_metrics(btc_df, TRAIN_START, TRAIN_END, market),
          "valid": _bh_metrics(btc_df, VALID_START, VALID_END, market)}
 
@@ -730,7 +772,7 @@ def holdout(lookback_days: int, rebalance_freq: str) -> dict:
         fixed_res = run_portfolio_continuous_costed(
             btc_h, eth_h, rebalance_freq, "fixed5050", market=market,
             full_start=OOS_START, full_end=holdout_end)
-        solo_eq = continuous_leg_equity(btc_h, market, None, start=OOS_START, end=holdout_end)
+        solo_eq = leg_equity(btc_h, market, None, start=OOS_START, end=holdout_end)
         bh = _bh_metrics(btc_h, OOS_START, holdout_end, market)
 
         cand = period_metrics(invvol_res["equity"], OOS_START, holdout_end)
