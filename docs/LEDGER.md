@@ -112,6 +112,150 @@ entry that replaced it — nothing was dropped in the conversion. Rounds
 before R-28 were backfilled from the long-form docs and carry only the
 fields their original row had.
 
+### R-56 · 08-20 · NEGATIVE — Maker/limit-order execution model for `kelly_regime_v4`'s rebalances (COST)
+
+**Direction.** Backlog was empty except B-06 (ongoing, zero-cost) and B-23
+(LOW, not recommended) after R-55; per ROUTINE.md step 0 this licensed a
+genuinely new direction rather than the backlog. Web research first (Baker
+& McHale 2013, *Decision Analysis* 10(3), on Kelly under parameter
+uncertainty; Sukhov 2025, SSRN) turned up a shrinkage-Kelly idea, but a
+ledger grep found it already tried and NEGATIVE as R-40's novel branch
+(`kelly_regime_v8_uncertainty_shrink.py`) — discarded per Step 1, and the
+search continued to an unexplored axis: **COST**, the constraint R-12/R-13/
+R-14 found most damaging ("no rebalance is ever worth its cost" at
+Bitstamp's real 0.40% taker tier), attacked via *execution* — how an
+already-decided trade fills — rather than a 17th tweak to the SIZE/vote
+axis (exhausted, R-34–R-52) or a 4th INFO-axis combination rule on the same
+stablecoin signal (B-23). This project's engine has always filled every
+trade as taker (verified: no `maker`/`limit_order`/`post_only` token
+anywhere in `src/` or the ledger before this round), even though v4's own
+no-trade band (L-05) already limits it to ~150–260 non-urgent rebalances
+over 9 years. Real Bitstamp fee schedule verified via web search: entry
+tier 0.40% taker / 0.30% maker, top tier 0.03%/0.00% (cited "Bitstamp fee
+schedule, accessed 2026-08-20"). Not a duplicate of L-05/L-06 (which decide
+*when* to trade; this round assumes that decision is already made and asks
+whether the trade can fill cheaper), R-12/R-13 (taker-only fee-tier
+sweeps), or R-40 (SIZE/vote-signal shrinkage — this round never touches the
+signal).
+
+**What was done.** Two parallel unregistered branches, each on a disjoint
+new file, neither modifying `kelly_regime_v4.py`/`_v3.py`/`kelly_regime.py`/
+`engine.py`/`broker.py` — both reuse `KellyRegimeV4.prepare()`'s causal
+target series and the real `PaperBroker`/`build_trades`/`compute_metrics`
+read-only, so fee/leverage/liquidation accounting is byte-identical to
+production; only the fill mechanism is new code. **Conservative**
+(`experiments/kelly_regime_exec_limit_conservative.py`): post a resting
+limit at the signal bar's close, check bars i+1..i+N-1's high/low for a
+touch (100% fill on touch — the standard textbook assumption), forced taker
+fallback at bar i+N's open if untouched; N∈{1,2,3,6,12,24,72,288} × 2 fee
+tiers × 2 markets × 2 inner periods (72 backtests) + 16 falsification + 8
+crash-lag diagnostics = **96 pre-registered configurations** (123 actually
+executed counting diagnostics, honest-count convention per R-39). **Novel**
+(`experiments/kelly_regime_exec_limit_novel.py`): deliberately more
+realistic — fill probability is a deterministic function of how far the
+touching bar's range penetrated past the limit (Cont & Kukanov 2017,
+*Quantitative Finance* 17(1), queue-position-dependent fill probability —
+the operator's originally suggested Cont/Kukanov/Stoikov 2014 citation was
+checked by the agent, found to be the wrong paper (price impact, not fill
+probability), and corrected), with posting aggressiveness scaled by v4's
+own conditional-vol-targeting `scale[i]` as a conviction proxy; **51
+distinct configurations** (27-point main grid + 12 sensitivity/extension +
+12 ablation) validated across 8 slices (2 markets × 2 periods × 2 fee
+tiers) + 3 falsification slices against 12 uncounted baseline references.
+**Configs evaluated: 147** (conservative 96, novel 51), the total across
+both branches per the parallel-round convention. Both ran an explicit
+causality/tamper probe (multiply/divide-tamper of everything after a cut
+bar, matching `test_causality_strict.py`'s pattern, plus a deterministic
+synthetic guard-the-guard construction) and both pre-registered, before
+running anything: the ETH (Bitfinex, pre-2020) and BTC-control (Bitfinex,
+pre-2020) falsification pair, and a crash-transition-lag check (does the
+model delay a regime-flip-to-flat flatten by more than 1-2 bars vs. the
+always-taker baseline, since L-01's entire edge is "the windows that
+contain a crash"). The operator independently reproduced, from a clean
+shell: both branches' causality probes bit-for-bit (conservative: 105
+pre-cut events/85 fills identical under both tampers, $5,956.00/$768.84
+post-cut divergence, exact match; novel: PASS); the conservative branch's
+full 16-configuration ETH+BTC-control falsification table (every number
+matched exactly, e.g. BTC-control spot N=288 $9,992.2, ETH-falsification
+spot N=3 $4,419.0); and the novel branch's 128-event crash-transition-lag
+check (mean lag 5.7 bars, max 9, exact match).
+
+**Result.** **Conservative — mechanically clean, decisively insufficient.**
+Fee savings are real and monotonic in every one of 4 (market×tier)
+inner-train cells (maker-fill rate 95%→99.8% as N rises, $150–384 saved per
+4-year window depending on tier, plateau with no cliff), and N=1 reduces
+bit-for-bit to the as-shipped baseline (a correctness check, not a result).
+But **no Sharpe improvement anywhere — inner-train, inner-validation, ETH,
+or BTC-control, either fee tier, either market — clears this project's own
+±0.2 noise floor** (best: Δ+0.07, inner-train futures N=12; everywhere else
+Δ+0.01 to +0.05). ETH and BTC-control falsification both PASS directionally
+(same sign, same sub-noise-floor magnitude) but that only shows the *lack*
+of an effect replicates too. The pre-registered crash-transition-lag test
+**FAILS on its literal threshold for N≥3**: 124/128 flip-to-flat events
+resolve within 1-2 bars regardless of N, but one severe Jan-2019 near-miss
+(missed a touch by $1.61, fell through the entire window, cost ≈$17-20 in
+worse execution) and several 3-9 bar delays exist — though none fall inside
+the project's three marquee crash windows (Nov 2018, COVID Mar 2020, FTX
+Oct/Nov 2022 all resolved 0-2 bars, indistinguishable from baseline).
+Separately, futures inner-validation reverses sign at N≥72 (several 25-71
+bar delays during the 2021-22 trend that net worse than earlier forced
+fallback would have been) — a real, if diffuse, over-patience cost distinct
+from the near-miss mechanism. **Novel — decisively NEGATIVE, and its own
+ablations show why the conservative branch's headline is optimistic, not
+just insufficient.** The literature-grounded, less-than-certain
+fill-probability model underperforms the always-taker baseline in **every
+one of 8 inner slices** (−4.3% to −23.3%) and both falsification slices
+(ETH −12.1%, BTC-control −15.1%, same sign/magnitude as inner-train —
+decisively PASS as a falsification, i.e. the negative result is real and
+replicates) — the delay/adverse-price cost of waiting for a resting order
+exceeds the maker/taker fee gap every time, and drawdown is *worse*, not
+better, in every slice. Both "sophistications" independently fail their own
+ablations: a flat, non-adaptive fill probability (P=0.7) beats the
+literature-grounded penetration-based model by ~21% in 9/9 head-to-head
+comparisons (the "more realistic" model is *more conservative* about
+fills, pushing more volume to the costly taker fallback), and
+conviction-adaptive posting is statistically indistinguishable from a fixed
+offset (<1% apart, inside the noise floor). Crash-transition lag: mean 5.7
+bars / ~28.5 min (vs. baseline's fixed 1 bar), max 9 (the patience
+ceiling) — bounded by construction so it narrowly avoids being
+catastrophic, but a real, quantified structural weakness (posting a SELL
+limit above a falling market during exactly the de-risking events that are
+v4's edge is disproportionately likely to go unfilled).
+
+**Verdict.** **NEGATIVE (both branches).** One-line lesson: **the
+conservative branch's 100%-fill-on-touch assumption is the optimistic edge
+case of a spectrum the novel branch's more realistic model shows collapses
+to a loss once fill uncertainty and adverse selection during de-risking
+events are priced in** — the true answer likely sits between the two, and
+given the conservative branch's own headline never cleared the noise floor
+even at its most optimistic, a more realistic accounting is very unlikely
+to do better. Both branches independently confirm the same mechanistic risk
+this project has repeatedly found in other forms (R-08's sign-inversion,
+R-46's floor-saturation): a change that looks clean in aggregate can still
+be quietly wrong at exactly the moments — crash de-risking — that make up
+the whole strategy's edge, and only an explicit crash-transition check (not
+in either branch's original brief until the operator required it) surfaces
+that. No holdout read on either branch — correctly withheld, since neither
+cleared its own pre-registered bar. Holdout counter: **+0** on top of
+R-55's ~627 (program total remains ~627) — neither branch constructed,
+read, or printed any bar dated 2023-01-01 or later; both branches' own
+runtime assertions plus the operator's independent grep of both files
+confirm this (conservative: the sole 2023+ token is an unused, unreferenced
+`OOS_START` constant; novel: no 2023+ literal at all). Decision rule did
+not move — both pre-registered thresholds were read as written. Not
+registered — no code under `src/tradebot/` touched, no candidate cleared
+the promotion bar; both files stay in `experiments/` per ROUTINE.md step 5.
+`pytest`: 457 passed, unchanged, confirmed independently by the operator
+after both branches. **Next step.** The conservative branch's own
+"least-bad" N∈[2,24] residual is **not** promoted here (it was not the
+pre-registered decision subset, and per ROUTINE.md that would be
+goalpost-moving) — filed as new backlog item **B-24**, LOW priority: even
+that subset never cleared the noise floor, so a re-run is a weak bet.
+**B-06 (forward paper trading, ongoing since R-48) remains this project's
+standing zero-cost recommendation.**
+
+---
+
 ### R-55 · 08-20 · NEGATIVE — B-22: stablecoin persistence filter vs confirming-vote architecture
 
 **Direction.** **B-22**: neither of R-54's two named fixes was ever tried
@@ -5869,6 +6013,37 @@ on the backlog; B-06 and B-22 are what remain.** `scripts/paper_trade.py`
 (B-06, ongoing since R-48) remains the standing zero-cost recommendation
 alongside B-22 for a future session.
 
+**Re-ranked 08-20 after R-56.** With the backlog empty of open SIZE/N≈3/INFO
+items, this round attacked **COST** instead — via execution (maker/limit
+fills on v4's already-decided rebalances) rather than turnover (L-05/L-06,
+already closed) or the fee tier itself (R-12/R-13, already closed) — the
+first round in this project's history to build a fill-risk simulation
+capability at all. **Both branches NEGATIVE.** The conservative branch (100%
+fill-on-touch, the optimistic textbook case) produced real, monotonic fee
+savings but no Sharpe improvement clearing the noise floor anywhere, and
+failed its own pre-registered crash-transition-lag test for N≥3. The novel
+branch, built specifically to be more realistic about fill uncertainty
+(literature-grounded fill probability, not certainty-on-touch), lost to the
+always-taker baseline in every slice tested, including both falsification
+legs — showing the conservative branch's headline was already the best case
+this mechanism has to offer, and even that never cleared this project's own
+bar. One-line lesson: COST is not automatically easier to exploit than
+SIZE/INFO just because it targets execution rather than signal — the
+maker/taker fee gap at real venue tiers is simply too narrow relative to the
+adverse-selection cost of waiting, especially during the crash de-risking
+events that are this strategy's entire edge. The conservative branch's own
+unpromoted "least-bad" N∈[2,24] residual is filed as **B-24**, LOW priority
+— it was not pre-registered as the decision subset, and even at its most
+favorable reading never cleared the noise floor either, so a dedicated
+re-run is a weak bet. **Nothing is left genuinely OPEN on the backlog that
+is not B-06 (ongoing, zero-cost), B-23 (LOW priority), or B-24 (LOW
+priority).** `scripts/paper_trade.py` (B-06, ongoing since R-48) remains
+this project's standing zero-cost recommendation — the only item left that
+is not a further re-derivation of a research line (SIZE-axis sizing/
+diversification, INFO-axis stablecoin combination rules, now COST-axis
+execution modeling) this project has already run to exhaustion at least
+once.
+
 **Re-ranked 08-20 after R-55.** Two parallel branches attacked **B-22**
 directly — both of R-54's own named fixes, each on the exact grounds R-54
 proposed them. **B-22 is now CLOSED, REJECTED.** The persistence filter
@@ -5921,6 +6096,7 @@ outperforms a genuinely different one.
 | ~~B-21~~ | ~~A hard, unweighted macro-veto (`frac=0` while VIX/DXY `stress_z` is above threshold, v4's own anchor average otherwise — no precision-weighted averaging) as a `kelly_regime_v4` regime-gate override~~ | INFO, SIZE | **DONE → R-54, REJECTED** | Given its own pre-registration and falsification battery at last: fails the primary test (lead-time vs. the 3-anchor majority, leads only 4/12 episodes, median −5.5 days, replicating R-53's averaged-vote lag almost exactly), fails the plateau check (best-scoring point is the explicit no-hysteresis negative control), and fails the ETH falsification (5/10 cells show an asset-specific pattern). The tension named above is resolved, not assumed away: blunting the combination rule does not fix the timing, because both the averaged and hard-override versions are built on the identical, laggy `stress_z`. |
 | ~~B-22~~ | ~~A magnitude-*and*-duration filter (or a confirming, non-overriding combination rule) on the aggregate-USDT-stablecoin-supply-deceleration signal R-54's novel branch built~~ | INFO | **DONE → R-55, REJECTED** | Both of R-54's own named fixes tested, both NEGATIVE. Persistence filter: fails worse than R-54's original — the "transient" onsets don't reverse within a few days (they persist as long as genuine episodes, since the 14-day growth window already smooths shorter noise), so duration and precision are not separable axes here; tightening enough to matter erodes the confirmed lead time into a lag. Confirming-vote architecture: beats an equivalent hard override 16/16 cells once fed a genuinely leading signal (a real result, resolving R-53's lag-vs-lead confound) but still fails ETH falsification and inner-validation Sharpe against v4 — the signal's specificity problem is independent of the combination rule. Reopens only as **B-23**, LOW priority. |
 | **B-23** | A materially different mechanism on the same aggregate-USDT-stablecoin-supply-deceleration signal — e.g. a shorter growth window matched to genuine-stress duration rather than a persistence filter bolted onto the existing 14-day feature, or corroboration from a second independent signal rather than filtering one signal alone | INFO | LOW | Filed by R-55 after both of R-54's named fixes failed. Three consecutive INFO-axis rounds (R-53, R-54, R-55) and, within this one signal alone, four structurally different combination rules (averaged vote, hard veto, duration-filtered veto, precision-weighted confirming vote) have now failed — the two genuinely novel findings across that run (R-54's confirmed lead-time, R-55's confirmed architecture ordering) are both about mechanism quality, not about whether the signal itself carries anything left to extract cheaply. A fourth attempt on the identical feature is a weaker bet than `scripts/paper_trade.py` (B-06) or a genuinely different research direction; not recommended as the next thing to try. |
+| **B-24** | A narrower pre-registration (N capped at ≤24, deliberately excluding the N≥72 near-miss/trend-drift failure modes R-56's conservative branch found) of the patient-limit/taker-fallback execution model on `kelly_regime_v4`'s COST axis, tested against the same falsification battery (ETH, BTC control, crash-transition-lag) | COST | LOW | Filed by R-56 after its own conservative branch's full N∈{1,...,288} sweep failed to clear the noise floor anywhere and failed its crash-lag test for N≥3. The N∈[2,24] region looked least-bad in the same sweep (captures most of the fee saving, avoids the N≥72 failure modes, stays directionally positive in inner-validation) but was never the pre-registered decision subset, so R-56 correctly declined to promote it. Not recommended as a priority: even this "least bad" reading never cleared the ±0.2 Sharpe noise floor in the original sweep, and R-56's novel branch independently showed the conservative branch's fill assumption (100% on touch) is already the optimistic end of the spectrum — a more realistic accounting is more likely to find less here, not more. |
 
 ---
 
@@ -5986,6 +6162,18 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-20 · ~627** — R-56: **+0** on top of R-55's ~627. Neither the
+  conservative (patient-limit/taker-fallback) nor the novel (probabilistic
+  fill-model) execution-model branch read any 2023+ bar — both restricted to
+  inner-train/inner-validation/pre-2020 BTC-control+ETH falsification by
+  design; both branches' own runtime assertions plus the operator's
+  independent grep of both files confirm this. The operator independently
+  reproduced, from a clean shell: both branches' causality/tamper probes
+  bit-for-bit; the conservative branch's full 16-configuration ETH+
+  BTC-control falsification table (every number matched exactly); and the
+  novel branch's 128-event crash-transition-lag check (mean 5.7 bars, max 9,
+  exact match). Neither branch cleared its own pre-registered promotion bar,
+  so neither reached, nor needed, a holdout read.
 - **08-20 · ~627** — R-55: **+0** on top of R-54's ~627. Neither the
   conservative (persistence-filtered stablecoin hard veto) nor the novel
   (stablecoin confirming-vote) branch read any 2023+ bar — both restricted
