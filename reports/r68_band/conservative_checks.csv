@@ -32,12 +32,12 @@ identity_r67_coupled_0080,nan,nan,nan,nan,nan,nan,nan,True,nan,nan,nan,nan,bench
 identity_r67_coupled_0080,nan,nan,nan,nan,nan,nan,nan,True,nan,nan,nan,nan,membership_changes_per_day,0.1421882714207433,0.1421882714207433,5.551115123125783e-17,,,,,,
 identity_r67_coupled_0080,nan,nan,nan,nan,nan,nan,nan,True,nan,nan,nan,nan,raw_turnover_per_day,0.1735899782578767,0.1735899782578767,0.0,,,,,,
 identity_r67_coupled_0080,nan,nan,nan,nan,nan,nan,nan,True,nan,nan,nan,nan,n_days,639.0,639.0,0.0,,,,,,
-check_causality,COUPLED,,,,,,,True,0.08,,,,,,,,0.08,0.08,,,,
-truncation_60pct,COUPLED,,,,0.0,,,True,0.08,,,,,,,,0.08,0.08,,,,
+check_causality,ENTRY_ONLY,,,,,,,True,0.08,,,,,,,,0.08,0.0,,,,
+truncation_60pct,ENTRY_ONLY,,,,0.0,,,True,0.08,,,,,,,,0.08,0.0,,,,
 truncation_60pct,COUPLED,,,,0.0,,,True,0.0,,,,,,,,0.0,0.0,,,,
 truncation_60pct,EXIT_ONLY,,,,0.0,,,True,0.35,,,,,,,,0.0,0.35,,,,
 truncation_60pct,ENTRY_ONLY,,,,0.0,,,True,0.35,,,,,,,,0.35,0.0,,,,
 truncation_60pct,COUPLED,,,,0.0,,,True,0.35,,,,,,,,0.35,0.35,,,,
-tail_x10,COUPLED,,,,0.0,,,True,0.08,,,,,,,,0.08,0.08,,,,
-index_W_TRAIN,COUPLED,,,184320,,,,True,0.08,,,,,,,,,,2020-04-01 00:00:00+00:00,2021-12-31 23:55:00+00:00,0,True
-index_W_VAL,COUPLED,,,105120,,,,True,0.08,,,,,,,,,,2022-01-01 00:00:00+00:00,2022-12-31 23:55:00+00:00,0,True
+tail_x10,ENTRY_ONLY,,,,0.0,,,True,0.08,,,,,,,,0.08,0.0,,,,
+index_W_TRAIN,ENTRY_ONLY,,,184320,,,,True,0.08,,,,,,,,,,2020-04-01 00:00:00+00:00,2021-12-31 23:55:00+00:00,0,True
+index_W_VAL,ENTRY_ONLY,,,105120,,,,True,0.08,,,,,,,,,,2022-01-01 00:00:00+00:00,2022-12-31 23:55:00+00:00,0,True
