@@ -158,6 +158,23 @@ R-63, and `EW_HOLD` / `BTC_HOLD` as context.
         candidate's D1 point estimate exceeds the scrambles' 90th
         percentile.
 
+        THIS CONTROL IS STRUCTURALLY INVALID FOR A CONTINUOUS-WEIGHT ARM,
+        found by the novel branch and recorded here after both reported.
+        `scramble_targets` redraws a permutation on every bar whose target
+        vector CHANGED. R-63's discrete top-k arm changed rarely, so the
+        control preserved its turnover and isolated exactly the intended
+        quantity. A partial-adjustment arm changes its weights on almost
+        every bar by construction, so the control traded 138/day against the
+        candidate's 0.19/day -- a 720x over-charge that sends every seed to
+        zero and makes the arm "survive" vacuously. The bias runs in the
+        CANDIDATE'S FAVOUR, so a pass here is worth nothing.
+
+        The novel branch ran it as pre-registered and added the control that
+        actually works: ONE fixed asset relabeling held for the whole run,
+        which is an L1 isometry and preserves turnover bar-for-bar. Believe
+        that one. Any future round with a continuous-weight arm should
+        pre-register the fixed-permutation form instead.
+
     FURTHER-WORK BAR = (D1 or D2) and D3 and D5 and scramble_survived.
 
 Clearing it authorizes exactly ONE holdout read on W_HOLD, which is a
@@ -260,8 +277,32 @@ SPOT_FREE = SPOT_BASE.__class__.spot(fee_rate=0.0)
 
 # R-63's measured frictionless edge of the cross-sectional ranking, and the
 # D5 bar at half of it. Both frozen here, from the committed R-63 report.
-R63_GROSS_EDGE = 0.480
-D5_BAR = 0.5 * R63_GROSS_EDGE  # +0.240 log units
+#
+# A FLAW IN THIS ROUND'S OWN PRE-REGISTRATION, found independently by both
+# branches and recorded rather than quietly corrected. R-63 measured +0.480
+# against MATCHED_HOLD (notional-matched). D5 as written applies half of it
+# against VOLMATCH_HOLD (volatility-matched), which is a DIFFERENT and more
+# demanding yardstick -- VOLMATCH_HOLD holds far more notional (c up to
+# 1.000 vs 0.525) in order to reach a concentrated arm's volatility. The two
+# numbers are not commensurable and the bar was therefore ~30% too low.
+#
+# Both branches measured the missing like-for-like number before touching a
+# candidate D-cell, and agree: R-63's own k=1 arm scores +0.683 against
+# VOLMATCH_HOLD on the W_FULL6 0-bps cell, so the correct bar is +0.342.
+#
+# NO VERDICT IS AFFECTED -- the conservative arm scored +1.494 and the novel
+# arm +1.017, clearing both the stated bar and the corrected one by 3-6x.
+# The stated bar is left in place as D5_BAR because it is what the round was
+# actually judged against; the corrected one is recorded beside it and is
+# what a future round should use. Nothing is deleted (LEDGER.md's rule).
+#
+# A third caveat neither branch could fix: the bar is not window-portable.
+# R-63's own arm scores -2.097 against VOLMATCH_HOLD on W_TRAIN and would
+# fail D5 outright there. D5 is a statement about W_FULL6 and nothing else.
+R63_GROSS_EDGE = 0.480  # vs MATCHED_HOLD
+R63_GROSS_EDGE_VS_VOLMATCH = 0.683  # the like-for-like number, measured 08-20
+D5_BAR = 0.5 * R63_GROSS_EDGE  # +0.240 -- as frozen, and as judged
+D5_BAR_CORRECTED = 0.5 * R63_GROSS_EDGE_VS_VOLMATCH  # +0.342 -- use this next
 
 # R-63's measured cost side, for the frontier's reference point.
 R63_TURNOVER_PER_DAY = 3.44
@@ -276,8 +317,17 @@ def turnover_stats(targets: pd.DataFrame, fee_rate: float = 0.001) -> dict:
 
     Charged on the SAME terms as :func:`simulate_portfolio` -- a rebalance
     is skipped entirely unless the requested change in total traded notional
-    exceeds the 5% band -- so this is the cost the simulator actually pays,
-    not an idealized upper bound on it.
+    exceeds the 5% band.
+
+    CAVEAT, added after the branches reported. This compares each target row
+    against the last APPLIED TARGET, whereas the simulator holds fixed
+    quantities whose weights drift with prices between rebalances, so this
+    slightly UNDERSTATES traded notional and is not exactly "the cost the
+    simulator actually pays" as this docstring originally claimed. The
+    conservative branch checked the gap and it is immaterial at R-64's
+    turnover levels: banded and raw turnover agree to three decimals on
+    every one of its 44 rows, and measured `gross - net` tracks
+    `fee x turnover x days` to within a few percent throughout.
     """
     w = np.clip(np.nan_to_num(targets.to_numpy(dtype=float), nan=0.0), 0.0, 1.0)
     gross = w.sum(axis=1)
@@ -313,6 +363,16 @@ def holding_period_days(targets: pd.DataFrame) -> float:
     The direct analogue of R-63's 2.86 leader-changes per day, and the axis
     this round varies. Membership, not weight: a weight moved by the
     volatility scale is not a holding-period event.
+
+    CAVEAT, added after the branches reported. For a long/FLAT arm this
+    counts a flat spell as a holding, so going flat and re-entering the same
+    asset reads as two holding periods and the number understates how long
+    the arm actually owns anything. The conservative branch measured both
+    and the gap is real: its `hold_days=30` cell reads 1.32 days here
+    against a 2.10-day mean continuous ownership tenure. Read this column as
+    "time between changes to the held set", which is the quantity the cost
+    side cares about, and measure tenure separately if the question is how
+    long a position is held.
     """
     w = np.nan_to_num(targets.to_numpy(dtype=float), nan=0.0)
     held = w > 0.0
@@ -364,7 +424,31 @@ def volmatched_hold_equity(cand_eq: pd.Series, aligned: dict, assets, market,
         eq = simulate_portfolio(matched_hold_targets(idx, assets, c), aligned, market)
         vol = realized_vol(eq)
         if c >= 1.0 and vol < target_vol:  # the long-only cap binds
-            return eq, c, vol, False
+            # AMENDMENT, 2026-08-20, applied after BOTH branches reported.
+            #
+            # This return originally read `return eq, c, vol, False` and
+            # declared the cell unmatched WITHOUT testing the freshly
+            # computed `vol` against the tolerance. Whenever the long-only
+            # cap binds -- which is exactly the case for a concentrated arm
+            # whose realized volatility approaches the fully-invested
+            # basket's -- a genuine match was reported as a void. Both R-64
+            # branches found it independently and both reported it rather
+            # than editing this frozen file, as the round's rules require:
+            # it fired on the R-63 REFERENCE POINT (gaps of 0.86-1.0%
+            # against a 2% tolerance), which would have spuriously voided
+            # the frontier's own anchor.
+            #
+            # NO VERDICT IS AFFECTED. Every cell either branch scored had
+            # matched=True on its own merits; the conservative branch
+            # recomputed only the boolean, using this function's own final
+            # -line criterion and inventing no threshold, and wrote BOTH
+            # flags to every CSV row so the difference is auditable.
+            #
+            # The timing is the R-63 lesson applied: R-63's operator patched
+            # its shared file after both branches had stopped computing but
+            # before both had reported, and recorded that as a process
+            # violation. This patch waited for both reports.
+            return eq, c, vol, abs(vol - target_vol) <= tol * target_vol
     return eq, c, vol, abs(vol - target_vol) <= tol * target_vol
 
 
