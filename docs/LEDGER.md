@@ -112,6 +112,149 @@ entry that replaced it — nothing was dropped in the conversion. Rounds
 before R-28 were backfilled from the long-form docs and carry only the
 fields their original row had.
 
+### R-56 · 08-20 · NEGATIVE — B-23: shorter stablecoin window vs on-chain corroboration, closing B-23 for good
+
+**Direction.** **B-23** (filed by R-55, LOW priority): "a materially
+different mechanism on the same aggregate-USDT-stablecoin-supply-
+deceleration signal — e.g. a shorter growth window matched to genuine-
+stress duration ..., or corroboration from a second independent signal
+rather than filtering one signal alone." Backlog was otherwise empty of
+anything OPEN besides B-06 (ongoing, zero-cost) at session start, so this
+was the only genuinely open research item available — attempted with the
+ledger's own accumulated skepticism about it stated up front (LOW
+priority, "a fourth attempt on the identical feature is a weaker bet than
+... a genuinely different research direction"). Attacks INFO, sixth
+consecutive round on this axis (R-44, R-53, R-54, R-55, this round), and
+the fourth/fifth attempt on this specific signal. Not a duplicate of
+R-54 (fixed 14-day window, hard override), R-55-conservative (duration
+filter bolted onto the unmodified 14-day feature), or R-55-novel
+(combination-rule swap on the unmodified feature) — see each branch's own
+"not a duplicate of" section for the precise distinctions.
+
+**What was done.** Two parallel unregistered branches, each on a disjoint
+new file, neither editing `_stablecoin_signal.py`,
+`kelly_regime_v15_stablecoin_veto.py`, `kelly_regime_v16_stablecoin_persist.py`,
+`kelly_regime_v16_stablecoin_confirm.py`, `kelly_regime_v4.py`/`_v3.py`/
+`kelly_regime.py`, or each other's files. **Conservative**
+(`experiments/kelly_regime_v17_stablecoin_shortwindow.py`): B-23's first
+named fix — the growth window itself made a swept parameter
+(`{2,3,5,7,10}` days in place of the fixed 14), everything else (365-day
+z-score window, hysteresis grid, hard-veto architecture) reused
+byte-for-byte from R-54. Literature basis for the window grid (new this
+round, via web search): ESRB Oct-2025 and 2025-2026 industry technical
+write-ups converge on ~48–72-hour acute stablecoin-redemption-stress
+timescales, motivating the 2–10-day grid — with the risk **named in
+advance** that this acute-redemption timescale and the multi-week
+capital-flight dynamic R-54's signal actually leads might not be the same
+clock. Pre-registered a Step-A gate, run *before* any Sharpe number: a
+candidate window passes only if its lead-time result (R-54's own
+`leadtime()` methodology) matches or beats the N=14 reference (≥9/12
+episodes leading, median ≥+16.5d) on both axes; if none pass, decision is
+fixed as NOT TO PROMOTE regardless of anything computed afterward. **15
+configurations** (`growth_window_days`×`gap` at fixed `thresh_hi`;
+pre-registration specified a fuller 45-config grid, scoped down
+mid-session after Step A already returned a clean, decisive kill and the
+full grid had not finished in a reasonable window — stated explicitly,
+not a goalpost move, since Step A alone (not a borderline Sharpe read)
+already decided the outcome). **Novel**
+(`experiments/kelly_regime_v17_stablecoin_corroborate.py`): B-23's second
+named fix — an AND-gate requiring BTC on-chain active-address-growth
+stress (`data/btc_onchain_daily.csv.gz`, B-07/R-44's existing
+price-independent channel) to *also* read "stress" before the stablecoin
+signal's dilution/override is allowed to apply, rather than any further
+filter on the stablecoin series alone. Hash Ribbons was screened as an
+alternative corroborator and rejected up front (corroborates only 1/12 of
+R-54's matched onsets — too coarse). Pre-registered five falsification
+gates plus a holdout rule requiring all five to pass before any 2023+ read
+(full list, and the pre-sweep mechanism check run *before* the sweep per
+this round's own instruction, in the branch's report). **33
+configurations** (21 confirming-vote-dilution + 4 no-corroboration
+ablation + 8 hard-override-architecture ablation). **Round total: 48
+configurations.** Both branches ran the standard multi-pathway causality
+tamper probe (price, plus each branch's own new data pathway,
+individually and combined) and an identity-recovery check. The operator
+independently reproduced, from a clean shell: the conservative branch's
+`leadtime_by_window()` (all 6 windows, exact match including the
+monotonic +16.5d→−15.0d flip); the novel branch's `mechanism_check()`
+(the 7/9-vs-3/3 corroboration-rate finding, the 24→28 flip-count
+non-reduction, the 1/12 Hash-Ribbons rate, all exact matches) and
+`override()` (all 8 cells of the exposure-artifact-explained
+hard-override rescue, exact match to the report's Δ Sharpe figures). Full
+suite: `pytest` 457 passed on both branches' final state, unchanged.
+
+**Result.** **Conservative — Step A (the pre-registered gate) already
+decides it before any Sharpe number**: 0/5 candidate windows preserve or
+improve the N=14 reference lead-time result. The flip is monotonic, not
+noisy — lead fraction 75%→50%→41%→40%→33%→31% and median offset from
++16.5d down through 0d (N=10) to −15.0d (N=2) as the window shrinks —
+diagnosed as the acute-redemption timescale (~2-3 days, per this round's
+own literature search) and the actual multi-week capital-flight lead
+being genuinely different clocks, so shortening the window substitutes a
+faster but less useful signal. Every downstream check corroborates rather
+than reopens the question: no window clears v4 on inner-validation Sharpe
+(best −0.049 spot vs the required +0.2); no plateau (many cells sharply
+negative to −0.54); the one near-tied config (w=3d) is an exposure-level
+artifact (R²=0.98, near-relabeling of v4's own vote); the one config with
+a genuinely different exposure shape (w=10d, R²=0.57, comparable to
+R-54's own 0.61 at N=14) is also the one that fails ETH falsification
+outright (BTC ratio 1.041×, ETH ratio 0.992×). Pre-2020 BTC control
+passes cleanly (all windows within ±0.17 Sharpe of v4). **Novel — the
+pre-sweep mechanism check already predicts the outcome**: at the natural,
+non-cherry-picked onchain threshold, corroboration does not discriminate
+genuine leads from noise (7/9 leading episodes corroborate vs. 3/3
+lagging/unmatched episodes *also* corroborate — both mostly just read
+"broadly a downtrend"), and AND-gating the tightest config's vote
+*increases* its raw flip count (24→28) rather than reducing it. The full
+sweep confirms: no non-identity configuration beats v4 on
+inner-validation spot Sharpe (best 0.11 vs. 0.14, identical qualitative
+pattern to R-55's own uncorroborated confirming vote); ETH falsification
+fails (18/42 cells, concentrated on spot, the same asymmetry R-55 already
+found); corroboration-vs-plain ablation is a wash on inner-validation and
+uniformly worse on inner-train (8/8 cells) — not the clean "earns its
+keep" result required. The round's one striking-looking number —
+corroboration turning R-54's decisively negative hard-override
+architecture into one that ties/marginally beats v4 (Δ Sharpe up to
++0.81) — is fully explained and closed by an exposure-artifact check
+(R²=0.9971, mean exposure within 0.3% of v4's own): corroboration mostly
+just *disables* the override back toward v4's own path, the same
+exposure-relabeling trap R-33/R-34 already named, now caught a third
+time. Causality passes cleanly on both branches, all pathways, both
+identity checks exact. **Holdout: never consulted by either branch** —
+both pre-registered rules required a genuine inner-validation +
+falsification win before any 2023+ read, and neither branch produced one;
+grep-verified by each branch's own author and independently re-verified
+by the operator (every `OOS_START="2023-01-01"` call site checked:
+exclusive upper bound restricting the causality probe only, never a data
+read past the boundary).
+
+**Verdict.** **NEGATIVE, both branches.** One-line lesson: B-23 assumed
+its two named fixes attacked the stablecoin signal's precision problem
+from genuinely different angles, and they did — a feature-timescale
+change and a second-signal corroboration are not the same axis as R-55's
+duration filter — but both still failed, for two different, well-
+diagnosed reasons (a timescale mismatch between acute-redemption and
+capital-flight dynamics; an available corroborating signal that tracks
+the same broad-downtrend state as the noise it was meant to filter out,
+not the specific distinction needed). This closes the stablecoin-signal
+research line's fourth and fifth structurally distinct mechanism
+attempts (R-54 hard veto, R-55 persistence filter, R-55 confirming vote,
+this round's window/corroboration pair) with the identical qualitative
+shape every time: a genuinely new, real information channel, but no
+combination mechanism yet converts it into a working strategy on this
+project's data. **Holdout counter: +0, running total ~627** (unchanged
+from R-55). Decision rule did not move on either branch — both were
+fixed and reported exactly as pre-registered. **Next step**: B-23 is
+CLOSED, both named fixes tried and failed. Nothing is left genuinely OPEN
+on the backlog. `scripts/paper_trade.py` (B-06, ongoing since R-48,
+advanced by +1 decision this session) remains the standing zero-cost
+recommendation; a future session with a fresh idea should treat the
+entire stablecoin-signal line, and arguably the whole INFO axis after six
+consecutive rounds (R-44 through this one), as exhausted absent a
+genuinely new information channel or a materially different combination
+architecture neither named-fix attempt here anticipated.
+
+---
+
 ### R-55 · 08-20 · NEGATIVE — B-22: stablecoin persistence filter vs confirming-vote architecture
 
 **Direction.** **B-22**: neither of R-54's two named fixes was ever tried
@@ -5306,6 +5449,8 @@ trip.
 | Aggregate USDT stablecoin-supply-deceleration hard veto (`frac=0` while a 14-day log-growth z-score is latched "stress") on `kelly_regime_v4`'s regime gate — same architecture as B-21, different (crypto-native, capital-flow) signal | 9 configurations; the pre-registered lead-time test PASSES (leads the 3-anchor majority in 9/12 matched episodes, median +16.5 days — the reverse of every prior INFO-axis attempt's lag) but the strategy still fails decisively: no configuration beats v4 on inner-validation Sharpe (best cell 0.13 vs. 0.14, inside the noise floor, no plateau), 8/9 cells are substantially worse, and every configuration loses to v4 across the full pre-2020 BTC control in absolute terms (ratio 0.13×–0.90×) — a threshold tight enough to buy real lead time also fires on transient supply noise, and standing flat through the false alarms costs more than the early exits recover. Passes causality and the exposure-artifact check (R²=0.61) cleanly. Do not re-try a single-threshold hard veto on raw stablecoin-supply growth without adding a magnitude-*and*-duration filter or a confirming (not overriding) combination rule — see **B-22**. | R-54 (novel) |
 | A minimum-persistence/duration requirement (`persist_days`, swept 0–14) on the stablecoin hard veto above, before it is allowed to force `frac=0` | 24 configurations; fails worse than the un-filtered veto, not better — the pre-registered falsification test fails outright (median lead flips from +16.5 days to a 10-day lag by `persist_days=5`, independently reproduced), because the "transient" onsets it targets don't reverse within a few days at this feature's native 14-day-growth cadence, they persist about as long as genuine stress episodes do. No configuration among all 24 beats v4 on inner-validation Sharpe. Passes causality and the exposure-artifact check (R²=0.61) cleanly. Do not re-try a persistence/duration filter on this specific feature (14-day log-growth z-score) without first shortening the feature's own smoothing window to match genuine-stress timescales — a duration requirement bolted onto an already-smoothed feature mostly re-measures the smoothing, not the noise. | R-55 (conservative), closes B-22 (fix 1 of 2) |
 | Feeding the stablecoin-stress vote into R-53's precision-weighted CONFIRMING-vote architecture (`frac=(anchor_sum+weight·vote)/(3+weight)`) instead of a unilateral hard override | 21 configurations (17 confirming-vote cells + 4 ablation cells); the architecture question is answered — confirming beats an equivalent hard override in 16/16 matched cells once fed a genuinely leading signal (independently reproduced), the reverse of R-53's finding under a lagging one, so **the combination rule itself is not what was wrong** — but no non-identity configuration clears v4 on inner-validation spot Sharpe (best 0.10 vs. 0.14) and ETH falsification fails decisively (a majority of non-identity spot configurations underperform v4 on ETH by more than on the BTC control, independently reproduced at 14/16). Passes causality cleanly; exposure-artifact R²=0.9407 passes but with little margin. Do not re-try this specific signal in this or the hard-override architecture without first improving the feature's own precision (fewer false stress-onsets) — the combination rule is not the binding constraint, the signal's specificity is. See **B-23**. | R-55 (novel), closes B-22 (fix 2 of 2) |
+| Shortening the stablecoin-supply-deceleration feature's own growth window (2/3/5/7/10 calendar days, in place of R-54's fixed 14) to match literature-reported acute-redemption timescales, hard-veto architecture otherwise unchanged | 15 configurations (grid scoped down mid-session from a pre-registered 45 after the pre-registered Step-A gate, run before any Sharpe number, already returned a clean, decisive kill); 0/5 windows preserve or improve the N=14 reference lead-time result — the flip is monotonic (lead fraction 75%→31%, median offset +16.5d→−15.0d as the window shrinks from 14 to 2 days), diagnosed as a genuine timescale mismatch between ~2-3-day acute redemption stress and the multi-week capital-flight dynamic the signal actually leads on, independently reproduced exactly by the operator. No window clears v4 on inner-validation Sharpe (best −0.049 spot), no plateau, the one near-tied config is an exposure-level artifact (R²=0.98), and the one config with a genuinely different exposure shape (w=10d, R²=0.57) fails ETH falsification outright. Do not re-try shortening this feature's growth window without a different justification for the target timescale than acute-redemption-stress literature, which this round found measurably wrong for this signal's purpose. | R-56 (conservative), closes B-23 (fix 1 of 2) |
+| AND-gating the stablecoin-supply-deceleration signal with a second, structurally independent on-chain signal (BTC active-address-growth stress, B-07/R-44's channel; Hash Ribbons screened and rejected as too coarse, 1/12 corroboration) before allowing the stablecoin dilution/override to apply | 33 configurations (21 confirming-vote-dilution + 4 no-corroboration ablation + 8 hard-override-architecture ablation); the pre-sweep mechanism check, run before the sweep, already predicts failure — corroboration does not discriminate genuine leading episodes from noise (7/9 leads corroborate vs. 3/3 lags/noise also corroborate, both independently reproduced exactly) and *increases* the raw false-onset flip count (24→28) rather than reducing it. No non-identity configuration clears v4 on inner-validation spot Sharpe (best 0.11 vs. 0.14) and ETH falsification fails (18/42 cells, concentrated on spot). A striking secondary number — corroboration turning R-54's failed hard-override architecture into a tie/marginal win over v4 (Δ Sharpe up to +0.81) — is fully explained and closed by an exposure-artifact check (R²=0.9971, independently reproduced): corroboration mostly disables the override back toward v4's own exposure path, the same relabeling trap R-33/R-34 already caught, now a third time. Passes causality cleanly on all three data pathways. Do not re-try AND-gate corroboration with active-address growth or Hash Ribbons on this signal without a corroborating source that tracks something more specific than "broadly a downtrend." | R-56 (novel), closes B-23 (fix 2 of 2) |
 
 ---
 
@@ -5896,6 +6041,37 @@ not a high-priority, option — this project's own repeated experience
 R-52) is that a fourth or fifth attempt on the same signal rarely
 outperforms a genuinely different one.
 
+**Re-ranked 08-20 after R-56.** Two parallel branches attacked **B-23**
+directly — both of its own named fixes. **B-23 is now CLOSED, REJECTED.**
+The shorter-growth-window branch (conservative) found a clean, monotonic
+kill at its own pre-registered gate, run before any Sharpe number:
+shrinking the window from 14 to 2 days flips the confirmed lead time from
++16.5 days to a −15.0-day lag, because the ~2-3-day acute-redemption
+timescale recent literature reports and the multi-week capital-flight
+dynamic the signal actually leads on are evidently different clocks. The
+on-chain-corroboration branch (novel) found its AND-gate does not
+discriminate genuine leading episodes from noise at any threshold tested
+(7/9 leads corroborate vs. 3/3 lags/noise also corroborate) and *increases*
+the raw false-onset count rather than reducing it; its one striking
+secondary number, corroboration rescuing R-54's failed hard-override
+architecture into a tie/marginal win, is fully explained by an
+exposure-artifact check (R²=0.9971) as v4 relabeled, not a real edge — the
+same trap R-33/R-34 already caught, now a third time. Both branches were
+independently reproduced by the operator before this row was written.
+**Nothing is left genuinely OPEN on the backlog; B-06 is what remains.**
+With this round, the stablecoin-signal research line has tried five
+structurally distinct mechanisms (R-54 hard veto, R-55 persistence
+filter, R-55 confirming vote, R-56 shorter window, R-56 on-chain
+corroboration) and the whole INFO axis has now failed across six
+consecutive rounds (R-44, R-53, R-54, R-55, R-56×2) — a future session
+should treat this axis, on the data currently in hand, as exhausted
+absent either a genuinely new information channel or a materially
+different architecture idea neither this round nor its five predecessors
+anticipated. `scripts/paper_trade.py` (B-06, ongoing since R-48, advanced
+by one more decision this session) is the standing zero-cost
+recommendation, and is now the only backlog item left with any open
+status at all.
+
 | ID | item | attacks | status | note |
 |---|---|---|---|---|
 | ~~B-01~~ | ~~E-process regime detection with unified Kelly sizing~~ | ERR, N≈3 | **DONE → R-28**, qualified by R-31 | NEGATIVE on the promotion bar. It read as the strongest risk result in the project — 0 of 40 windows deeper than the incumbent — until B-11 compared the two at equal risk and found that number was about exposure, not about the gate. (R-26's null round listed this as untried; R-28 is the round that actually ran it.) |
@@ -5920,7 +6096,7 @@ outperforms a genuinely different one.
 | ~~B-20~~ | ~~Does the LITERAL periodically-rebalanced (monthly, or another single cadence fixed before running), fixed-50/50 BTC+ETH `kelly_regime_v4` portfolio — R-50's own original candidate, run through its continuous (non-restarting) engine, unmodified split, unmodified cadence discipline — survive its own pre-registered falsification test and a first, single holdout read?~~ | SIZE, N≈3, COST | **DONE → R-52, NEITHER BRANCH PROMOTED** | Two parallel branches, both cleared every inner-validation/falsification/plateau gate, both decisively REJECTED on their one pre-registered holdout read. Conservative (literal monthly calendar): reproduces R-50's own inner-validation number almost exactly, then loses to `buy_and_hold` by 22–45% on the holdout. Novel (drift-band trigger, same 50/50 target): confirms a real, holdout-robust 70–90% turnover reduction vs. a calendar cadence for statistically identical risk-adjusted performance, but the underlying candidate still loses to `buy_and_hold` by 48–61%. This is the fifth independent trigger/target implementation of this research line's periodic-rebalancing premium to fail the 2023-2026 holdout; the line is now considered exhausted for this asset pair absent a materially different mechanism. |
 | ~~B-21~~ | ~~A hard, unweighted macro-veto (`frac=0` while VIX/DXY `stress_z` is above threshold, v4's own anchor average otherwise — no precision-weighted averaging) as a `kelly_regime_v4` regime-gate override~~ | INFO, SIZE | **DONE → R-54, REJECTED** | Given its own pre-registration and falsification battery at last: fails the primary test (lead-time vs. the 3-anchor majority, leads only 4/12 episodes, median −5.5 days, replicating R-53's averaged-vote lag almost exactly), fails the plateau check (best-scoring point is the explicit no-hysteresis negative control), and fails the ETH falsification (5/10 cells show an asset-specific pattern). The tension named above is resolved, not assumed away: blunting the combination rule does not fix the timing, because both the averaged and hard-override versions are built on the identical, laggy `stress_z`. |
 | ~~B-22~~ | ~~A magnitude-*and*-duration filter (or a confirming, non-overriding combination rule) on the aggregate-USDT-stablecoin-supply-deceleration signal R-54's novel branch built~~ | INFO | **DONE → R-55, REJECTED** | Both of R-54's own named fixes tested, both NEGATIVE. Persistence filter: fails worse than R-54's original — the "transient" onsets don't reverse within a few days (they persist as long as genuine episodes, since the 14-day growth window already smooths shorter noise), so duration and precision are not separable axes here; tightening enough to matter erodes the confirmed lead time into a lag. Confirming-vote architecture: beats an equivalent hard override 16/16 cells once fed a genuinely leading signal (a real result, resolving R-53's lag-vs-lead confound) but still fails ETH falsification and inner-validation Sharpe against v4 — the signal's specificity problem is independent of the combination rule. Reopens only as **B-23**, LOW priority. |
-| **B-23** | A materially different mechanism on the same aggregate-USDT-stablecoin-supply-deceleration signal — e.g. a shorter growth window matched to genuine-stress duration rather than a persistence filter bolted onto the existing 14-day feature, or corroboration from a second independent signal rather than filtering one signal alone | INFO | LOW | Filed by R-55 after both of R-54's named fixes failed. Three consecutive INFO-axis rounds (R-53, R-54, R-55) and, within this one signal alone, four structurally different combination rules (averaged vote, hard veto, duration-filtered veto, precision-weighted confirming vote) have now failed — the two genuinely novel findings across that run (R-54's confirmed lead-time, R-55's confirmed architecture ordering) are both about mechanism quality, not about whether the signal itself carries anything left to extract cheaply. A fourth attempt on the identical feature is a weaker bet than `scripts/paper_trade.py` (B-06) or a genuinely different research direction; not recommended as the next thing to try. |
+| ~~B-23~~ | ~~A materially different mechanism on the same aggregate-USDT-stablecoin-supply-deceleration signal — e.g. a shorter growth window matched to genuine-stress duration rather than a persistence filter bolted onto the existing 14-day feature, or corroboration from a second independent signal rather than filtering one signal alone~~ | INFO | **DONE → R-56, REJECTED** | Both of B-23's own named fixes tested, both NEGATIVE. Shorter window: fails its own pre-registered Step-A gate before any Sharpe number — lead time flips monotonically from +16.5d (N=14) to −15.0d (N=2) as the window shrinks, a timescale mismatch between acute redemption (~2-3d) and the multi-week capital-flight dynamic the signal actually leads on. On-chain corroboration: the AND-gate does not separate genuine leads from noise (7/9 vs 3/3 corroboration rate) and increases the false-onset count (24→28); its one striking number (rescuing R-54's failed hard override into a tie/win) is an exposure-level artifact (R²=0.9971), not a real edge. This closes the stablecoin-signal research line's fifth mechanism attempt and the INFO axis's sixth consecutive failed round (R-44, R-53, R-54, R-55, R-56×2) — not recommended for further pursuit absent a genuinely new information channel. |
 
 ---
 
@@ -5986,6 +6162,14 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-20 · ~627** — R-56: **+0** on top of R-55's ~627. Neither the
+  conservative (shorter stablecoin growth window) nor the novel (on-chain
+  active-address corroboration gate) branch read any 2023+ bar — both
+  pre-registered a holdout rule requiring a genuine inner-validation +
+  falsification win first, neither produced one (the conservative branch's
+  own Step-A gate decided it before any Sharpe number was computed at all),
+  and both grepped their own single new file for every `202[3-9]` literal
+  as proof, independently re-verified by the operator.
 - **08-20 · ~627** — R-55: **+0** on top of R-54's ~627. Neither the
   conservative (persistence-filtered stablecoin hard veto) nor the novel
   (stablecoin confirming-vote) branch read any 2023+ bar — both restricted
