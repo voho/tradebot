@@ -4,7 +4,10 @@ import pytest
 
 from tradebot.data import (
     align,
+    coinbase_spot_file,
     generate_synthetic_pair,
+    load_coinbase_eth_spot,
+    load_coinbase_spot,
     load_dataset,
     load_ohlcv_csv,
     save_ohlcv_csv,
@@ -90,3 +93,28 @@ def test_align():
     a2, b2 = align(a, b)
     assert a2.index.equals(b2.index)
     assert len(a2) == 90
+
+
+def test_coinbase_spot_file_naming():
+    assert coinbase_spot_file("ETH") == "ethusd_coinbase_spot_5m.csv.gz"
+    assert coinbase_spot_file("bch") == "bchusd_coinbase_spot_5m.csv.gz"
+
+
+def test_load_coinbase_spot_missing_returns_none(tmp_path):
+    assert load_coinbase_spot(tmp_path, "LTC") is None
+    assert load_coinbase_eth_spot(tmp_path) is None
+
+
+def test_load_coinbase_spot_reads_panel_file(tmp_path):
+    df, _ = generate_synthetic_pair(n_bars=300)
+    save_ohlcv_csv(df, tmp_path / coinbase_spot_file("LTC"))
+    out = load_coinbase_spot(tmp_path, "LTC")
+    assert out is not None and len(out) == 300
+    assert list(out.columns) == ["open", "high", "low", "close", "volume"]
+
+
+def test_load_coinbase_eth_spot_uses_the_same_path(tmp_path):
+    df, _ = generate_synthetic_pair(n_bars=120)
+    save_ohlcv_csv(df, tmp_path / coinbase_spot_file("ETH"))
+    pd.testing.assert_frame_equal(load_coinbase_eth_spot(tmp_path),
+                                  load_coinbase_spot(tmp_path, "ETH"))
