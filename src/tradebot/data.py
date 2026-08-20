@@ -431,3 +431,47 @@ def align(perp: pd.DataFrame, spot: pd.DataFrame) -> tuple[pd.DataFrame, pd.Data
     """Restrict both frames to their common timestamps."""
     common = perp.index.intersection(spot.index)
     return perp.loc[common], spot.loc[common]
+
+
+STABLECOIN_FILE = "stablecoin_supply_daily.csv.gz"
+
+
+def load_stablecoin_supply(data_dir: str | Path) -> pd.DataFrame | None:
+    """Daily aggregate stablecoin (USDT) circulating supply, or None if absent.
+
+    Fetched by ``scripts/fetch_stablecoin_supply.py`` from CoinMetrics'
+    free community API (R-54 NOVEL branch), the same endpoint family
+    ``load_onchain_metrics`` already uses for BTC/ETH chain metrics
+    (B-07/R-44). Unlike on-chain activity metrics (which describe BTC's own
+    network) or VIX/DXY macro stress (which describe the rest of the
+    financial system, R-53), this describes dollar capital actually inside
+    the crypto trading system: stablecoin issuance is the on-ramp for new
+    dollar capital entering crypto, redemption the off-ramp. USDT alone
+    (2017-01-01 -> present, 0 NaN, 0 gaps as committed); USDC's community-tier
+    history is real but starts materially later (placeholder/near-zero
+    until 2018-09-25) and is deliberately NOT combined in here -- see
+    ``experiments/_stablecoin_signal.py``'s module docstring for the reason
+    stated plainly rather than silently blended. Indexed by UTC day
+    (midnight), single column ``supply``.
+    """
+    path = Path(data_dir) / STABLECOIN_FILE
+    if not path.exists():
+        return None
+    df = pd.read_csv(path, parse_dates=["timestamp"], index_col="timestamp")
+    df.index = df.index.tz_localize("UTC")
+    out = df.rename(columns={"usdt_SplyCur": "supply"})[["supply"]].astype(float)
+    return out.sort_index()
+
+
+def align_stablecoin_causal(supply: pd.DataFrame, bars: pd.DataFrame) -> pd.DataFrame:
+    """Reindex daily stablecoin supply onto ``bars``' index, causally.
+
+    CoinMetrics reports day D's supply only after day D has closed, so --
+    exactly like ``align_onchain_causal``/``align_macro_causal`` -- a bar at
+    time T may only see the row for the most recent day that closed
+    strictly before T's own day. Bars before the first visible row get NaN,
+    never filled or back-cast.
+    """
+    shifted = supply.copy()
+    shifted.index = shifted.index + pd.Timedelta(days=1)
+    return shifted.reindex(shifted.index.union(bars.index)).sort_index().ffill().reindex(bars.index)

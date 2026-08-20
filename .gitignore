@@ -40,6 +40,9 @@ venv/
 !/data/spx_daily.csv.gz
 !/data/vix_daily.csv.gz
 !/data/dxy_daily.csv.gz
+# daily aggregate USDT circulating supply (R-54): a crypto-native
+# liquidity-flow signal, from CoinMetrics' free community API
+!/data/stablecoin_supply_daily.csv.gz
 /reports/*
 !/reports/comparison.md
 !/reports/comparison.csv
