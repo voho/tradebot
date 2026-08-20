@@ -340,16 +340,37 @@ def extra_config_count() -> int:
     return _EXTRA_CONFIGS[0]
 
 
-def d1_from_rows(rows: list[dict], label: str, market: str, fee: float, n: int = 6) -> tuple[int, "pd.DataFrame"]:
+def _slice(rows: list[dict], label: str, market: str, fee: float,
+           window: str | None) -> "pd.DataFrame":
+    """Rows for one (arm, market, fee, window) cell group.
+
+    ``window`` is REQUIRED in practice and defaults to None only so the
+    signature stays backward-compatible with the first draft of this file.
+    Passing None pools every window sharing the same (market, fee) key --
+    BEAR22 and the D3 BTC/ETH control both run at spot/0.10%, the identical
+    key as the D1 FULL slice, so pooling silently inflates the counts (it
+    reported 7 and 2 where the true D1 counts are 2/6 and 0/6). Caught by
+    the R-62 novel branch before either arm's verdict was recorded; the
+    decision rules in the pre-registration above were always stated
+    per-window and did not move, only this helper was wrong.
+    """
     df = pd.DataFrame(rows)
-    d1 = df[(df.arm == label) & (df.market == market) & (df.fee == fee)]
+    sel = (df.arm == label) & (df.market == market) & (df.fee == fee)
+    if window is not None:
+        sel &= df.window == window
+    return df[sel]
+
+
+def d1_from_rows(rows: list[dict], label: str, market: str, fee: float,
+                 window: str | None = None, n: int = 6) -> tuple[int, "pd.DataFrame"]:
+    d1 = _slice(rows, label, market, fee, window)
     k = int((d1.cand_dd < d1.mh_dd).sum())
     return k, d1
 
 
-def d4_from_rows(rows: list[dict], label: str, market: str, fee: float, n: int = 6) -> int:
-    df = pd.DataFrame(rows)
-    d4 = df[(df.arm == label) & (df.market == market) & (df.fee == fee)]
+def d4_from_rows(rows: list[dict], label: str, market: str, fee: float,
+                 window: str | None = None, n: int = 6) -> int:
+    d4 = _slice(rows, label, market, fee, window)
     return int((d4.cand_final > d4.hold_final).sum())
 
 

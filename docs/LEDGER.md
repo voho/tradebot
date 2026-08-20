@@ -63,6 +63,19 @@ window they all share. Every "does it replicate" check in this ledger
 before R-57 was n=1 asset, which cannot tell a mechanism from a
 calibration.
 
+**Localized by R-62 (08-20), which closes the line R-57 opened:** *when a
+mechanism is a product, test the factors before retuning either.*
+`kelly_regime_v4` sizes by `frac × scale` — a directional trend vote times a
+conditional volatility target — and twenty-one SIZE-axis attempts across
+R-34 → R-60 retuned one factor or the other while always keeping both. Run
+alone, the **vote** reproduces v4's whole signature (the BTC/ETH
+matched-exposure drawdown property, 2/2, *and* its failure on the panel,
+0/6) and the **volatility target** reproduces neither (0/2 and 2/6). The one
+surviving property is return timing, not volatility timing — so four of
+those branches (R-59, R-60) were retuning a factor that never carried it,
+and the panel failure is the trend signal failing on those instruments
+rather than sizing being miscalibrated for them.
+
 ---
 
 ## A. Strategies (registered)
@@ -121,6 +134,145 @@ as raw pipe-separated text. Every row's text is reproduced verbatim in the
 entry that replaced it — nothing was dropped in the conversion. Rounds
 before R-28 were backfilled from the long-form docs and carry only the
 fields their original row had.
+
+### R-62 · 08-20 · NEGATIVE (both branches), IDENTIFIES — B-27 answered: v4's matched-exposure property lives entirely in the vote, not the volatility target
+
+**Direction.** Backlog item **B-27** (filed by R-61), the third distinct
+hypothesis on R-57's puzzle and the first to attack it at the level of *which
+ingredient* rather than *which calibration of an ingredient*.
+`kelly_regime_v4`'s exposure is a product of two independent factors —
+`desired[i] = frac[i] * scale[i]`, where `frac` is the latched 20/40/80-day
+multi-anchor trend vote and `scale` is `kelly_regime_v3`'s conditional
+extreme-only volatility target. Twenty-one prior SIZE-axis attempts (R-34 →
+R-46, R-53 → R-56, R-59×2, R-60×2) all kept *both* factors: R-59 varied
+`scale`'s magnitude and dimensional form, R-60 varied `frac`'s timing
+mechanism. None asked what either factor does **alone**, which is B-27's
+literal wording ("does the SAME matched-exposure advantage appear for a
+strategy that holds a constant vol-targeted exposure with no directional vote
+at all … isolating the SIZE machinery's own turnover/rebalancing behavior from
+any signal, trend or reversion?"). Constraint attacked: **SIZE** (structural
+decomposition of the mechanism behind every profitable strategy here) and
+**N≈3** (the panel's independent price paths). Not a duplicate of R-59/R-60
+(both retune, neither deletes), R-61 (replaces the vote's *sign rule*, always
+retains a directional signal and the vol target), or R-34/R-37/R-38/R-40–R-46
+(all preserve the `frac × scale` product form). Literature: Wang & Yan (2021,
+*Journal of Banking & Finance* 131, 106198) decompose volatility-managed
+portfolio performance into a **volatility timing** and a **return timing**
+component — the decomposition logic this round borrows, on a different
+statistic (drawdown, not mean-return alpha) and asset class, so it is cited
+for the method and not for a transferable magnitude. Also Bongaerts, Kang &
+van Dijk (2020, FAJ 76(4)), Baur & Dimpfl (2018, *Economics Letters* 173),
+Moreira & Muir (2017, *J. Finance* 72(4)) and Harvey et al. (2018, JPM 45(1))
+— already v3/v4's own grounding, and the conservative arm is the closest this
+project has come to testing the vol-targeting half of it in isolation.
+
+**What was done.** Two parallel branches against a shared, frozen
+pre-registration committed one commit before either branch read a number
+(`experiments/r62_shared.py`; neither branch edited it). **Conservative**
+(`experiments/r62_conservative_voltarget_only.py`, class `VolTargetOnly`):
+`KellyRegimeV3.prepare()` byte-for-byte with the vote block replaced by
+`frac = np.ones(len(df))` — the vol target alone, never standing aside.
+**Novel** (`experiments/r62_novel_vote_constant_exposure.py`, class
+`VoteConstantExposure`): `KellyRegime.prepare()`'s vote loop byte-for-byte
+with `scale` replaced by a bare constant `c_const = 1.0` — the vote alone, no
+volatility measurement anywhere in the class. Both arms carry **zero new
+parameters**: every constant is v4's own shipped default and nothing is swept
+or selected, so neither arm has a training step to protect. Data: R-57's
+frozen six-asset Coinbase panel (BCH, LTC, ETC, DASH, LINK, XTZ), FULL window
+2020-04-01 → last bar at spot 0.10% (D1) and 0.40% (D4), BEAR22 descriptive,
+plus the BTC/ETH control window 2020-04-01 → 2022-12-31 (D3). Every cell
+matches the candidate against a `ConstantExposureHold` carrying **the
+candidate's own** mean clipped notional, per the standing R-33 rule. Frozen
+decision rules: **D1** (primary) count of panel assets where the candidate's
+max drawdown beats its own matched hold's, 6/6 REPLICATES / 5/6 SUGGESTIVE /
+≤4/6 FAILS; **D3** the same on BTC/ETH, diagnostic; **D4** beats
+`buy_and_hold` at the 0.40% tier, *predicted in advance to fail*;
+further-work bar D1 ≥ 5/6 AND D3 ≥ 1/2 AND D4 ≥ 4/6, which explicitly does
+**not** authorize a holdout consultation. Pre-registered falsification: D1 ≤
+4/6 for both arms. **Configurations evaluated: 120 backtests total across
+both branches** (60 each).
+
+**Result.** The decomposition is clean and both arms are NEGATIVE for
+promotion:
+
+| arm | BTC/ETH control (D3) | panel (D1) | D4 (0.40%) |
+|---|---|---|---|
+| `kelly_regime_v4` — both factors (R-57) | **2/2** (−5.55, −11.46pp) | **0/6** | 0/6 |
+| conservative — `scale` only, no vote | **0/2** (+3.05, +3.70pp) | 2/6 | 4/6 |
+| novel — vote only, no `scale` | **2/2** (−10.56, −2.24pp) | **0/6** | 0/6 |
+
+The vote-only arm reproduces v4's **entire** signature on both axes — the
+BTC/ETH property *and* the panel failure — while the vol-target-only arm
+reproduces neither. Conservative D1 = 2/6 (p = 0.891) with **zero of six
+intervals excluding zero in either direction**, and its D3 = 0/2 *inverts* on
+the two assets where the full strategy demonstrably has the property.
+Novel D1 = 0/6 with 4 of 6 intervals excluding zero, all four against it —
+the same direction as v4's own panel failure at larger magnitude. Novel D4 =
+0/6 as predicted and by wide margins (LTC $121 vs $1,190; XTZ $87 vs $132),
+with 77–91% panel drawdowns: deleting the vol target removes what makes a
+trend rule's turnover affordable. Conservative D4 = 4/6 is the round's one
+unpredicted pass and is recorded as **context, not support** — the identical
+4/6 holds at 0.10%, its drawdowns run 63–80% throughout, and the
+exposure-controlled comparison goes the other way. Causality tamper probe
+PASS on both arms (BCH, LTC); full suite 461 passed. Both branches were
+re-run and their verdict counts independently recomputed from the saved CSVs
+by the operator before this entry was written.
+
+**A harness bug, found by a branch and fixed before any verdict was
+recorded.** The shared file's `d1_from_rows`/`d4_from_rows` helpers filtered
+rows on `(arm, market, fee)` only, with no `window` term — and BEAR22 and the
+D3 BTC/ETH control both run at spot/0.10%, the *identical* key as the D1 FULL
+slice. A runner that accumulated every cell into one list and then asked for
+D1 therefore pooled three windows into one count, reporting **7** and **2**
+where the true per-window D1 counts are **2/6** and **0/6**. The novel
+branch caught it, reported it rather than silently patching the shared file
+(as the round's own parallelism rules require), and the operator confirmed it
+against the saved CSVs, recomputed both arms' rules with an explicit window
+filter, and then fixed the helper to take a `window` argument. The
+pre-registered decision rules were always stated per-window in the docstring
+and did **not** move — only the helper implementing them was wrong, which is
+the "fix a bug" case ROUTINE step 4 explicitly permits. Worth recording for
+the same reason R-21 and R-50 are: a filter that silently pools cells sharing
+a key is invisible in a green run, and this one would have turned a 0/6 into
+a "2" in the direction that flatters the candidate.
+
+**A named prediction that failed, in the round's favour as evidence.** The
+pre-registration predicted (D2, context) that the vote-only arm's mean
+notional would be *lower* than v4's, reasoning that `c_const = 1.0` without a
+vol boost is smaller than v4's occasional 2x breakout sizing. It is the
+opposite: **1.5x–2.2x higher on every panel asset** (0.40–0.50 vs v4's
+0.19–0.31). The mechanism is visible once measured — v4's conditional target
+divides by these high-volatility altcoins' realized volatility even in its
+"steady" non-breakout state, so the scale factor is what was *shrinking* the
+position most of the time, not what occasionally enlarged it. This matters
+for reading D1: the vote-only arm's worse drawdowns are not simply a bigger
+position being compared against a smaller one, because each arm is matched
+against a hold at **its own** mean notional — but it does explain why
+deleting the vol target raises turnover cost so sharply, and it is the
+cleanest statement yet of what v4's `scale` factor actually does on
+high-volatility instruments.
+
+**Verdict.** **NEGATIVE** for promotion on both branches — neither meets the
+further-work bar (D1 2/6 and 0/6, both far under 5/6), so neither reached nor
+needed a holdout read. But the round **answers B-27**, which is what it was
+filed to do: `kelly_regime_v4`'s matched-exposure drawdown property, *and the
+asset-specificity that makes it fail on the panel*, both travel with the
+**directional vote**; the conditional volatility target contributes none of
+it. In Wang & Yan's terms the effect is **return timing, not volatility
+timing**. Two consequences worth stating plainly. First, R-59's and R-60's
+four branches spent themselves retuning a factor that never carried the
+property — the scale axis was the wrong place to look, and this round says so
+structurally rather than by another failed retune. Second, the panel failure
+is a failure of *the trend signal on those instruments*, not a miscalibration
+of sizing, which retires the "sizing constant" family of explanations
+entirely rather than adding a twenty-third negative to it. One-line lesson:
+**when a mechanism is a product, test the factors before retuning either — 21
+attempts on the wrong factor is what not doing so costs.** Holdout counter:
+**+0** (running total ~627 — the control window ends 2022-12-31 and no panel
+asset ever fitted anything). The decision rule did not move. Next step: B-27
+closes; the remaining live explanation for R-57's puzzle is a property of the
+panel's own trend dynamics, and R-61's Hurst measurement (panel mean 0.601 vs
+BTC 0.622) is the only direct evidence on it so far.
 
 ### R-61 · 08-20 · NEGATIVE — a genuinely different strategy family (mean-reversion + kelly_regime's own SIZE machinery) fails the panel too, and mildly refutes its own motivating hypothesis
 
@@ -6134,6 +6286,8 @@ trip.
 | Self-normalizing relative-vol exposure scale on `kelly_regime_v4` — `target_vol/(vol/long_run_vol)` with a 720-day structural (not fitted) long-run reference, replacing the absolute-vol scale terms with a dimensionless one that is mean≈1 on every asset by construction, zero new fitted parameters | 60 configurations; passes causality (3/3) and the falsification control (D2 PASSES, BTC −4.5pp vs. R-57's −5.6pp, ETH −10.8pp vs. −11.5pp); the self-consistency check confirms the normalization works exactly as designed (`vol_rel` averages 0.90–0.98 on all 8 assets) — the mechanism is not the failure. Still does not restore the matched-exposure drawdown property (D1 0/6, sign never flips, corroborated on PANEL_TEST D3 0/6); mean notional rose modestly (0.18–0.26→0.25–0.32) without changing the sign of a single cell. Confirms, independently of the conservative branch's different mechanism, that the failure is not about the sizing constant's magnitude or its dimensional (absolute vs. relative) form. Do not re-try a scale-only fix (fitted or self-normalizing) on this strategy family's panel drawdown inversion without changing the vote/gate's timing. | R-59 (novel), closes B-25 (fix 2 of 2) |
 | A genuinely different strategy family on the panel — a short-horizon (1/3/7-day) rolling z-score mean-reversion vote replacing `kelly_regime_v4`'s trend vote, on the same unmodified fractional-Kelly vol-targeted sizing loop | 57 configurations; passes causality (truncation + tamper probe, independently reproduced bit-for-bit by the operator); fails D1 decisively at every swept `z_thresh` (2/6 best, never near 5/6) and D4 (1/6); D3 confirms predicted BTC/ETH underperformance more severely than expected — 1-2 orders of magnitude worse than both `buy_and_hold` and v4, a fast reversion vote whipsawing against BTC/ETH's dominant trend and paying fees on every flip. Do not re-try an ungated short-horizon reversion vote on this panel or on BTC/ETH without a regime filter to suppress it during trending periods — see the Hurst-gated variant immediately below, which fixes the whipsaw but still fails promotion. | R-61 (conservative) |
 | The same z-score reversion vote, additionally gated by this project's own rolling causal Hurst exponent (R-46, reused not reimplemented) — trading only while H(t)<0.5 | 57 configurations; passes causality (independently reproduced bit-for-bit by the operator); fails D1 (3/6) and D4 (3/6); D3 confirms predicted BTC/ETH underperformance without the ungated version's catastrophic whipsaw — the gate holds the candidate flat 91-93% of the time on BTC/ETH, directly reproducing R-46's own BTC-Hurst finding (mean H≈0.62). An ablation shows the gate genuinely helps vs. the same signal ungated (better final balance on 5/6 panel assets, better max drawdown on 6/6) but the underlying signal it gates is itself worse than `buy_and_hold` on 5/6 assets, so the gate is damage control, not a hidden edge. The round's own motivating hypothesis (R-59/R-60's "buy-the-dip" framing) is only weakly supported: measured panel Hurst (mean 0.601) is modestly below BTC's (0.622) but both sit solidly in H>0.5 (trend-persistent) territory most of the time — the panel is not measurably mean-reverting. Do not re-try a signal-family swap (trend vs. reversion) on this panel without a different explanation for the matched-exposure advantage than "the panel rewards buy-the-dip," which this round's own Hurst measurement weakens; Hurst-gating itself is not ruled out as a general risk-control technique for other signals, only as a fix for this specific reversion vote's promotion bar. | R-61 (novel), see **B-27** |
+| **B-27**: `kelly_regime_v4`'s conditional volatility-target `scale` factor ALONE, with the directional vote deleted (`frac≡1.0`, never stands aside) — the literal isolation B-27 named | 60 backtests; zero new parameters (every constant is v4's own shipped default, nothing swept, a component removed rather than replaced). Passes causality (tamper probe, BCH/LTC; full 461-test suite green). Fails D1 on the panel (**2/6**, exact binomial p=0.891) with **zero of six** bootstrap intervals excluding zero in either direction — the effect is not merely absent but unmeasurable. More decisively, it fails the BTC/ETH control (**D3 0/2**), *inverting* on both assets where the full strategy has the property (+3.05pp BTC, +3.70pp ETH, vs v4's own −5.55/−11.46pp). D4=4/6 at the 0.40% tier is recorded as context only — the identical 4/6 holds at 0.10% and its drawdowns run 63–80% throughout, so it is a return count on a near-fully-invested arm, not a risk finding. **Do not re-try any variant that attributes v4's matched-exposure drawdown property to its volatility-targeting machinery**: run alone that machinery produces the property nowhere, including on the two assets that have it, so the tail benefit of vol-targeting here is about the exposure level it selects and not the path it takes. | R-62 (conservative), closes B-27 (factor 1 of 2) |
+| **B-27**: `kelly_regime_v4`'s latched 20/40/80-day trend vote ALONE, at a constant full-notional multiplier with the volatility target deleted entirely (`desired=frac×1.0`, no vol measurement anywhere in the class) | 60 backtests; zero new parameters (`c_const=1.0` fixed by the pre-registration, not swept). Passes causality (BCH/LTC). **Reproduces v4's entire signature on both axes**: D3 **2/2** on the BTC/ETH control (−10.56pp BTC, −2.24pp ETH, matching v4's own 2/2, though both intervals contain zero at n=2) *and* D1 **0/6** on the panel — the same failure as v4 at larger magnitude, with 4 of 6 intervals excluding zero, all four against it. Not promotable on any reading: D4 **0/6** at the 0.40% tier by wide margins (LTC $121 vs $1,190; XTZ $87 vs $132), only 2/6 even at 0.10%, panel drawdowns 77–91% — deleting the vol target removes what makes a trend rule's turnover affordable. A named prediction failed usefully: this arm's mean notional came out **1.5×–2.2× HIGHER** than v4's (0.40–0.50 vs 0.19–0.31), not lower as pre-registered, because v4's conditional target divides by these high-volatility altcoins' realized vol even in its non-breakout "steady" state — the scale factor was shrinking the position most of the time, not occasionally enlarging it. **Do not re-try a bare vote-only or constant-exposure trend rule as a tradeable candidate**; but note the diagnostic value, which is this round's actual product: the property and its asset-specificity both live in this factor. | R-62 (novel), closes B-27 (factor 2 of 2) |
 
 ---
 
@@ -6908,6 +7062,35 @@ preferring a fresh idea unrelated to the panel puzzle remains free to pick
 one, per ROUTINE's usual rule that the backlog is worked first only when it
 has something OPEN and unblocked — B-27 is now that item.
 
+**Re-ranked 08-20 after R-62.** Two parallel branches attacked **B-27**
+directly — the decomposition question R-61 filed. **B-27 is now CLOSED,
+ANSWERED.** Neither branch is promotable (D1 2/6 and 0/6 against a 5/6 bar),
+but between them they identify where `kelly_regime_v4`'s one surviving
+property lives, which is what B-27 asked and what twenty-one prior SIZE-axis
+retunes could not establish: **the vote-only arm reproduces v4's entire
+signature — the BTC/ETH matched-exposure drawdown property (2/2, matching
+v4's own) *and* the panel failure (0/6, matching v4's own) — while the
+vol-target-only arm reproduces neither (0/2 and 2/6).** The property, and the
+asset-specificity that makes it fail off BTC/ETH, both travel with the
+**directional vote**; the conditional volatility target contributes none of
+it. Read against R-59 and R-60, that is a retrospective diagnosis of four
+wasted branches: they retuned `scale`'s magnitude and dimensional form, and
+`scale` was never carrying the property. It also retires the whole
+"miscalibrated sizing" family of explanations for R-57's puzzle rather than
+adding a twenty-third negative to it — what remains is a property of the
+panel's own trend dynamics, on which R-61's Hurst measurement (panel mean
+0.601 vs BTC 0.622) is still the only direct evidence. One-line lesson, and
+the most reusable thing this round produced: **when a mechanism is a product,
+test the factors before retuning either.** What that does to the order:
+**B-06 remains the standing zero-cost recommendation** at the top, and with
+B-27 closed **nothing is left genuinely OPEN on the backlog** that is not
+B-06 (ongoing) or the LOW-priority B-09/B-10/B-24. A session preferring a
+fresh idea should note that this round closed the SIZE axis by *explaining*
+it rather than by failing on it again — the next well-motivated question on
+this line is about the panel assets' trend dynamics themselves, not about any
+variant of the incumbent, and no such item is currently filed because R-62
+did not produce a specific enough one to be worth pre-committing to.
+
 | ID | item | attacks | status | note |
 |---|---|---|---|---|
 | ~~B-01~~ | ~~E-process regime detection with unified Kelly sizing~~ | ERR, N≈3 | **DONE → R-28**, qualified by R-31 | NEGATIVE on the promotion bar. It read as the strongest risk result in the project — 0 of 40 windows deeper than the incumbent — until B-11 compared the two at equal risk and found that number was about exposure, not about the gate. (R-26's null round listed this as untried; R-28 is the round that actually ran it.) |
@@ -6937,7 +7120,7 @@ has something OPEN and unblocked — B-27 is now that item.
 | ~~B-25~~ | ~~Is `kelly_regime_v4`'s BTC-calibrated `target_vol` (0.55) / `max_leverage` (2.0) the reason its matched-exposure drawdown property does not travel? R-57 found the mechanism's mean notional collapses to 0.18–0.26 on higher-volatility instruments (vs 0.38 BTC / 0.34 ETH), leaving mostly the vote's timing — a per-asset volatility-normalized target is the obvious test~~ | SIZE, N≈3 | **DONE → R-59, REJECTED** | Both readings tested. Per-asset `target_vol` calibration (conservative) and a self-normalizing relative-vol scale with zero new fitted parameters (novel) both pass their falsification control (BTC/ETH unregressed) and both fail to restore the panel drawdown property (D1 0/6, both branches). Neither the magnitude nor the dimensional form of the sizing constant is the binding constraint — both branches converge on R-57's own alternative hypothesis: the matched hold's advantage on the panel looks like a buy-the-dip effect these higher-volatility instruments reward, not a sizing mismatch. Reopens only as **B-26**, on the timing axis rather than the scale axis. |
 | ~~B-26~~ | ~~Does changing `kelly_regime_v4`'s vote/gate **timing** — rather than its exposure **scale**, which R-59 tested twice and twice found not to be the binding constraint — restore the matched-exposure drawdown property on R-57's six-asset panel? E.g. faster/asset-adaptive anchor horizons, or a different hysteresis band, tested against the same matched-exposure D1 bar~~ | SIZE, N≈3 | **DONE → R-60, REJECTED** | Both readings tested. Per-asset OU half-life-adaptive anchor rescaling (conservative) landed near-null (D1 1/6, a near-tie that failed to generalize) and cleanly passed the BTC/ETH control; a CUSUM change-point vote (novel) failed more decisively (D1 0/6) and, for the first time in 21 attempts on this family's SIZE axis, also broke the BTC/ETH control — plus a crash-lag check whose passing mean concealed a 1381-bar regression on the 2018-11 window specifically, and 1.8×–3.3× turnover. Neither the anchor ladder's calendar length (R-07), its cross-sectional scale (R-59), nor its timing mechanism (this round, both a retuned moving average and a genuinely different sequential detector) restores the property — both branches converge on R-57's own alternative: the matched hold's advantage on the panel is a property of the panel's own price dynamics, not a miscalibration of this strategy family on any axis it exposes. SIZE-axis record: 0-for-21. Not reopened — the operator's recommendation is a genuinely different strategy family on the panel (R-57's own suggestion) rather than a 22nd variant of the incumbent, should this question be pursued further. |
 | ~~—~~ | ~~R-57's own suggestion, acted on directly: a genuinely different strategy family (mean-reversion vote on `kelly_regime`'s unmodified SIZE machinery, plain and Hurst-gated) on the panel, before any holdout consultation~~ | SIZE, INFO | **DONE → R-61, REJECTED** | Both branches fail D1 and D4 well short of the promotion bar (2/6, 3/6 and 1/6, 3/6). The panel's own measured Hurst exponent (mean 0.601, vs. BTC's 0.622) shows it is not measurably mean-reverting — mildly refuting the "buy-the-dip" explanation R-59/R-60 both proposed for why v4's matched-exposure advantage doesn't travel there. Reopens as **B-27**: why does the advantage exist at all, if neither a miscalibrated trend mechanism nor a reversion signal explains it? |
-| **B-27** | Why does `kelly_regime_v4`'s matched-exposure drawdown advantage over a fully-invested hold exist on the panel at all (R-57), given R-59/R-60 ruled out a SIZE-axis miscalibration (scale, then timing) and R-61 ruled out "the panel wants the opposite trading direction" (reversion, plain and Hurst-gated)? Candidate angles named by R-61, untested: a volatility-regime or turnover/whipsaw-cost artifact specific to v4's own 3-anchor vote mechanics interacting with higher-volatility instruments, independent of which direction the vote points — e.g. does the SAME matched-exposure advantage appear for a strategy that holds a **constant** vol-targeted exposure with no directional vote at all (isolating the SIZE machinery's own turnover/rebalancing behavior from any signal, trend or reversion)? | SIZE, N≈3 | OPEN | Filed by R-61. Ranked below B-06 (still the standing zero-cost recommendation): this is the third distinct hypothesis on R-57's original puzzle, not a further retune of a mechanism already 0-for-21/0-for-2, so it is a legitimately fresh angle rather than a 24th variant — but it is still the panel puzzle rather than a new idea, so a session with a genuinely unrelated direction should weigh that on its own merits too. |
+| ~~B-27~~ | ~~Why does `kelly_regime_v4`'s matched-exposure drawdown advantage over a fully-invested hold exist on the panel at all (R-57), given R-59/R-60 ruled out a SIZE-axis miscalibration (scale, then timing) and R-61 ruled out "the panel wants the opposite trading direction"? Named angle: does the SAME advantage appear for a strategy holding a **constant** vol-targeted exposure with no directional vote at all, isolating the SIZE machinery from any signal?~~ | SIZE, N≈3 | **DONE → R-62, ANSWERED** | Both factors of `desired = frac × scale` tested alone, zero new parameters in either arm. The **vote-only** arm reproduces v4's entire signature (D3 2/2 on BTC/ETH, D1 0/6 on the panel — both matching v4's own counts); the **vol-target-only** arm reproduces neither (D3 0/2, inverting on the two assets that have the property; D1 2/6 with zero of six intervals excluding zero). So the property *and* its asset-specificity live in the directional vote, and the conditional volatility target contributes none of it — return timing, not volatility timing, in Wang & Yan's (2021, JBF 131) decomposition language. Neither arm is promotable (further-work bar needs D1 ≥ 5/6): the vote alone is 0/6 against holding at the 0.40% tier with 77–91% panel drawdowns, because deleting the vol target removes what makes a trend rule's turnover affordable. Retires the "miscalibrated sizing" family of explanations for R-57's puzzle and retrospectively diagnoses R-59/R-60's four branches as having retuned the wrong factor. A harness bug (window-pooling in the shared verdict helpers, which would have read a 0/6 as a 2) was caught by a branch, reported rather than patched, and fixed before any verdict was recorded. |
 
 ---
 
@@ -7003,6 +7186,16 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-20 · ~627** — R-62: **+0** on top of R-61's ~627. Neither branch reads
+  a BTC or ETH bar dated 2023-01-01 or later: the only BTC/ETH cells in the
+  round come from `r62_shared.run_control`, whose `CONTROL_WINDOW` is fixed at
+  `("2020-04-01", "2022-12-31")` in the shared pre-registration and is the
+  single call site either branch uses to load BTC or ETH. Panel reads cost +0
+  by the established R-47/B-08/R-57 convention. Operator-verified against the
+  saved `r62_conservative_cells.csv` / `r62_novel_cells.csv`, whose BTC and
+  ETH rows both carry `window = 2020-04-01:2022-12-31`. Neither branch cleared
+  its further-work bar (D1 2/6 and 0/6 against a 5/6 bar), so neither reached,
+  nor needed, a holdout read.
 - **08-20 · ~627** — R-61: **+0** on top of R-60's ~627. Neither branch
   reads a BTC or ETH bar dated 2023-01-01 or later anywhere — both restricted
   to PANEL_TRAIN/PANEL_TEST (panel assets only, +0 by the established

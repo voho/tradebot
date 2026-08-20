@@ -190,39 +190,49 @@ def main() -> None:
     causality_ok = cmd_causality(panel)
     print()
 
-    rows: list[dict] = []
     strat = VolTargetOnly()
+
+    # NOTE ON A SHARED-HARNESS BUG (r62_shared.py, not edited -- see the
+    # docstring above and the final report): `d1_from_rows`/`d4_from_rows`
+    # filter rows only by (arm, market, fee), NOT by window. FULL, BEAR22
+    # and CONTROL_WINDOW all share market="spot", fee=0.001, so calling
+    # either helper on one `rows` list accumulated across all of this
+    # round's cells (exactly what the task's own step-2/step-3 sequence
+    # builds) silently pools rows from three different windows -- an
+    # earlier run of this script did exactly that and printed the
+    # impossible "D1 7/6". Fixed here on the caller's side, without
+    # touching the frozen shared file, by keeping the FULL-window panel
+    # cells in their own list (`full_rows`) and passing THAT to
+    # `d1_from_rows`/`d4_from_rows`, never the grand `rows` list. D3
+    # already used this pattern correctly (`ctrl_rows`, kept below).
+    full_rows: list[dict] = []
+    bear_rows: list[dict] = []
+    ctrl_rows: list[dict] = []
 
     print("=" * 100)
     print("FULL window, spot @0.10% (D1 primary, D2 context)")
     print("=" * 100)
     for a in panel:
-        r62.cell(strat, "conservative", a, FULL, SPOT_BASE, rows)
+        r62.cell(strat, "conservative", a, FULL, SPOT_BASE, full_rows)
 
     print("\n" + "=" * 100)
     print("FULL window, spot @0.40% (D4 context -- Bitstamp entry-tier fee)")
     print("=" * 100)
     for a in panel:
-        r62.cell(strat, "conservative", a, FULL, SPOT_REAL, rows)
+        r62.cell(strat, "conservative", a, FULL, SPOT_REAL, full_rows)
 
     print("\n" + "=" * 100)
     print("BEAR22 2022-05-01..2022-11-30, spot @0.10% (descriptive, R-57 D4 style)")
     print("=" * 100)
     for a in panel:
-        r62.cell(strat, "conservative", a, BEAR22, SPOT_BASE, rows)
+        r62.cell(strat, "conservative", a, BEAR22, SPOT_BASE, bear_rows)
 
     print("\n" + "=" * 100)
     print("D3 control: BTC/ETH, CONTROL_WINDOW 2020-04-01..2022-12-31, spot @0.10%")
     print("=" * 100)
-    # run_control appends into a dedicated list (run once -- each cell is a
-    # real backtest, not free) so D3's count is computed from exactly the
-    # BTC/ETH control cells, never mixed with the panel's FULL@0.10% cells
-    # that share the same (arm, market, fee) key; the control rows are then
-    # folded into `rows` so they land in the saved CSV too.
-    ctrl_rows: list[dict] = []
     r62.run_control(strat, "conservative", ctrl_rows)
-    rows.extend(ctrl_rows)
 
+    rows: list[dict] = full_rows + bear_rows + ctrl_rows
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     out_path = OUT_DIR / "r62_conservative_cells.csv"
     pd.DataFrame(rows).to_csv(out_path, index=False)
@@ -233,7 +243,7 @@ def main() -> None:
     print("PRE-REGISTERED DECISION RULES (r62_shared.py)")
     print("=" * 100)
 
-    d1_k, d1_df = r62.d1_from_rows(rows, "conservative", "spot", 0.001)
+    d1_k, d1_df = r62.d1_from_rows(full_rows, "conservative", "spot", 0.001)
     d1_p = r57.binomial_tail(d1_k, 6)
     d1_v = r62.d1_verdict(d1_k, 6)
     print(f"D1 (primary, matched-exposure DD, FULL, spot@0.10%): {d1_k}/6, "
@@ -245,7 +255,7 @@ def main() -> None:
     print(f"D3 (BTC/ETH control, matched-exposure DD, CONTROL_WINDOW, "
           f"spot@0.10%): {d3_k}/2, exact binomial p={d3_p:.4f} -> {d3_v}")
 
-    d4_k = r62.d4_from_rows(rows, "conservative", "spot", 0.004)
+    d4_k = r62.d4_from_rows(full_rows, "conservative", "spot", 0.004)
     print(f"D4 (0.40% fee, FULL, beats buy_and_hold final balance): {d4_k}/6")
 
     fw = r62.further_work(d1_k, d3_k, d4_k)

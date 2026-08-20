@@ -200,20 +200,32 @@ def cmd_run(panel) -> None:
     print("PRE-REGISTERED DECISION RULES")
     print("=" * 100)
 
-    d1_k, d1_df = shared.d1_from_rows(rows, "novel", "spot", 0.001)
+    # IMPORTANT: shared.d1_from_rows/d4_from_rows filter only on
+    # (arm, market, fee), not window. BEAR22 and the D3 control window both
+    # also run at market="spot", fee=0.001 -- the same (market, fee) pair as
+    # the D1 FULL-window slice -- so calling them against the full,
+    # multi-window `rows` list silently pools cells from different windows
+    # into one count. Discovered while building this runner; not a defect
+    # introduced here but a latent trap in the shared helper's signature
+    # (no `window` parameter to disambiguate). Fixed at the call site by
+    # pre-filtering to each decision rule's own window before calling the
+    # frozen shared functions -- the functions themselves are used exactly
+    # as pre-registered, not reimplemented; only the input slice changes.
+    full_label = f"{FULL[0]}:{FULL[1]}"
+    ctrl_label = f"{shared.CONTROL_WINDOW[0]}:{shared.CONTROL_WINDOW[1]}"
+    full_rows = [r for r in rows if r["window"] == full_label]
+    ctrl_rows = [r for r in rows if r["window"] == ctrl_label]
+
+    d1_k, d1_df = shared.d1_from_rows(full_rows, "novel", "spot", 0.001)
     print(f"D1 (primary, matched-exposure drawdown, spot @0.10%, FULL): "
           f"{d1_k}/6 assets -> {shared.d1_verdict(d1_k)}")
 
-    d3_df = pd.DataFrame(rows)
-    ctrl_window_label = f"{shared.CONTROL_WINDOW[0]}:{shared.CONTROL_WINDOW[1]}"
-    d3_ctrl = d3_df[(d3_df.arm == "novel") & (d3_df.window == ctrl_window_label)
-                     & (d3_df.asset.isin(["BTC", "ETH"]))]
-    assert len(d3_ctrl) == 2, f"expected 2 D3 control rows (BTC, ETH), got {len(d3_ctrl)}"
-    d3_k = int((d3_ctrl.cand_dd < d3_ctrl.mh_dd).sum())
-    print(f"D3 (BTC/ETH control, identical D1 methodology, {shared.CONTROL_WINDOW}): "
-          f"{d3_k}/2 -> {shared.d1_verdict(d3_k, n=2)}")
+    d3_k, d3_df = shared.d1_from_rows(ctrl_rows, "novel", "spot", 0.001, n=2)
+    assert len(d3_df) == 2, f"expected 2 D3 control rows (BTC, ETH), got {len(d3_df)}"
+    print(f"D3 (BTC/ETH control, identical D1 methodology via shared.d1_from_rows, "
+          f"{shared.CONTROL_WINDOW}): {d3_k}/2 -> {shared.d1_verdict(d3_k, n=2)}")
 
-    d4_k = shared.d4_from_rows(rows, "novel", "spot", 0.004)
+    d4_k = shared.d4_from_rows(full_rows, "novel", "spot", 0.004)
     print(f"D4 (0.40% fee context, beats buy_and_hold final balance): {d4_k}/6")
 
     fw = shared.further_work(d1_k, d3_k, d4_k)
