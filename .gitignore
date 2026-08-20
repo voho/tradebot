@@ -6,6 +6,7 @@ __pycache__/
 .pytest_cache/
 .venv/
 venv/
+uv.lock
 # transient agent working directories, not project content
 /.claude/worktrees/
 /data/*
