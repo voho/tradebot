@@ -582,10 +582,13 @@ def cmd_turnover(df: pd.DataFrame) -> list[dict]:
                       f"{snap_notl / st['tv'] if st['tv'] else float('nan'):>8.1%}")
                 out.append(dict(split=split, arm=name, k=k, snaps=len(snaps),
                                 snap_notional=snap_notl, **st))
-    print("\n  'snaps' is only recorded for the arms that have the conditional; for")
-    print("  R-64's arm the recorder tags exits-to-a-flat-target the same way, which")
-    print("  is why its snap column is nonzero -- those are the steps that leave a")
-    print("  residual long behind rather than reaching zero.")
+    print("\n  'snaps' counts events of the conditional, so R-64's arm reports 0 by")
+    print("  construction -- it has no such event; its exits to a flat target stop at")
+    print("  k*band and leave the residual long behind (see the residual diagnostic).")
+    print("  'changes' are INTENDED position changes, not fills: at k=1 the re-trigger")
+    print("  band collapses to zero and the rule re-trades on any drift, so the count")
+    print("  explodes while most of it is below broker.REBALANCE_DEADBAND and never")
+    print("  executes. Backtest trade counts are in the sweep tables; do not conflate.")
     return out
 
 
