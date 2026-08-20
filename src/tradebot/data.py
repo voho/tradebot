@@ -198,7 +198,30 @@ def load_coinbase_eth_spot(data_dir: str | Path) -> pd.DataFrame | None:
     (``scripts/fetch_coinbase_spot.py``) to give the ETH basis a spot
     reference that spans its full available window.
     """
-    path = Path(data_dir) / COINBASE_ETH_SPOT_FILE
+    return load_coinbase_spot(data_dir, "ETH")
+
+
+def coinbase_spot_file(asset: str) -> str:
+    """Filename convention for a Coinbase USD 5m spot series (R-57's panel).
+
+    ``ETH`` -> ``ethusd_coinbase_spot_5m.csv.gz``, matching the file
+    ``scripts/fetch_coinbase_spot.py`` already wrote and the names
+    ``scripts/fetch_coinbase_panel.py`` writes for the rest of the panel.
+    """
+    return f"{asset.lower()}usd_coinbase_spot_5m.csv.gz"
+
+
+def load_coinbase_spot(data_dir: str | Path, asset: str) -> pd.DataFrame | None:
+    """Real Coinbase ``{asset}-USD`` 5m spot OHLCV, or None if not fetched.
+
+    The generic form of :func:`load_coinbase_eth_spot`. R-57 fetched a panel
+    of six further Coinbase USD series (2020-01 -> 2026-08) to ask whether
+    ``kelly_regime_v4``'s drawdown property replicates on instruments it was
+    never fitted on; this is the loader those files share. Nothing is
+    computed over the whole series here (no scaler, mean or std), so the
+    loading path carries no full-series-fit lookahead risk.
+    """
+    path = Path(data_dir) / coinbase_spot_file(asset)
     if not path.exists():
         return None
     return load_ohlcv_csv(path)

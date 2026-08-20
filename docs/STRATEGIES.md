@@ -533,6 +533,17 @@ rather than a tuned peak. The beta-test harness promotes it: it beats the
 base on the full period, drawdown, out-of-sample, and the Monte Carlo
 left tail.
 
+**And the scope of that drawdown finding, measured by R-57.** It is a
+comparison against a *fully-invested* benchmark, and R-33 showed 88–92% of
+the gap is the exposure level. Run frozen on six instruments this strategy
+was never fitted on (BCH, LTC, ETC, DASH, LINK, XTZ, Coinbase 5m
+2020-04 → 2026-08), the drawdown advantage against a hold carrying v4's own
+mean exposure **inverts on 6 of 6**, while against the fully-invested
+benchmark it holds on 6 of 6. On BTC and ETH over a window all eight share
+it is present (−5.6pp, −11.5pp). Read the finding with that scope attached:
+BTC and ETH, 2 of 8 — see
+[VALIDATION.md](VALIDATION.md#six-instruments-it-was-never-fitted-on-the-cross-asset-panel).
+
 ### `kelly_regime_v3` — PROMOTED
 
 **What it is.** The leader, but it stops re-sizing continuously. It holds
