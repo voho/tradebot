@@ -122,3 +122,9 @@ uv.lock
 !/reports/cross_asset_panel/*.csv
 !/reports/cross_asset_panel/*.png
 !/reports/cross_asset_panel/*.txt
+# R-59 (B-25): per-cell numbers behind both branches' reports, same
+# reasoning as matched_hold/cross_asset_panel above.
+!/reports/r59_conservative/
+!/reports/r59_conservative/*.csv
+!/reports/r59_novel/
+!/reports/r59_novel/*.csv

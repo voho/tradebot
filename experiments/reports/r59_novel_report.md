@@ -1,8 +1,8 @@
-# R-58 (novel branch) — does self-normalizing exposure fix v4's panel drawdown inversion? (08-20)
+# R-59 (novel branch) — does self-normalizing exposure fix v4's panel drawdown inversion? (08-20)
 
 Unregistered experiment (backlog **B-25**). Code:
-`experiments/r58_novel_relative_vol_scale.py`. Shared pre-registration:
-`experiments/r58_shared.py` (windows, costs, decision rules, matched-hold
+`experiments/r59_novel_relative_vol_scale.py`. Shared pre-registration:
+`experiments/r59_shared.py` (windows, costs, decision rules, matched-hold
 harness — read there, reused here, not restated differently). Nothing under
 `src/tradebot/strategies/` is touched: `KellyRegimeRelativeVol` is a plain,
 unregistered `Strategy` subclass constructed directly, never through
@@ -51,7 +51,7 @@ conservative branch's per-asset calibration). The hysteresis state machine
 (`ratio = vol/slow` driving the +1/-1 breakout latch) is untouched — it was
 already relative and was not the diagnosed problem. Literature basis:
 Barroso & Santa-Clara (2015, JFE 116(1)); Moskowitz, Ooi & Pedersen (2012);
-Baltas & Kosowski (2013/2017) — full citations in `experiments/r58_shared.py`.
+Baltas & Kosowski (2013/2017) — full citations in `experiments/r59_shared.py`.
 
 ## 3. Self-consistency check (mechanism's own diagnostic, not a decision rule)
 
@@ -154,7 +154,7 @@ load-bearing, since D1 has already failed the primary gate.
 
 ## 6. Verdict
 
-Applying `experiments.r58_shared.promoted(k1, dd_advantage)` mechanically
+Applying `experiments.r59_shared.promoted(k1, dd_advantage)` mechanically
 (requires D1 ≥ 5/6 **and** D2 passing both BTC and ETH):
 
 - D1: 0/6 → FAILS (needed ≥5/6)
@@ -180,15 +180,15 @@ branch, extending the SIZE-axis record described in the pre-registration.
 **60** total backtests (`CONFIG_COUNT`, this branch only — causality and the
 self-consistency check use `prepare()` directly and read no backtest, so
 they cost 0): D1 6 assets × 3 arms = 18, D2 2 assets × 3 arms = 6, D3 6
-assets × 3 arms = 18, D4 6 assets × 3 arms = 18. Total across both R-58
-branches is summed separately per `experiments/r58_shared.py`'s convention.
+assets × 3 arms = 18, D4 6 assets × 3 arms = 18. Total across both R-59
+branches is summed separately per `experiments/r59_shared.py`'s convention.
 
 Holdout consultations added by this branch: **0** — no BTC/ETH bar past
-2022-12-31 is read anywhere in `experiments/r58_novel_relative_vol_scale.py`
+2022-12-31 is read anywhere in `experiments/r59_novel_relative_vol_scale.py`
 (BTC via `load_dataset` and ETH via `load_coinbase_spot` are both sliced to
 `:2022-12-31` before any use, including the causality probe).
 
 ## 8. Raw data
 
-`reports/r58_novel/d1_panel_train.csv`, `d2_control.csv`,
+`reports/r59_novel/d1_panel_train.csv`, `d2_control.csv`,
 `d3_panel_test.csv`, `d4_panel_train_040.csv`, `vol_rel_selfcheck.csv`.

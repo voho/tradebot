@@ -1,5 +1,5 @@
-"""R-58 conservative branch: per-asset calibration of `kelly_regime_v4`'s
-`target_vol` knob (backlog B-25). Pre-registration: `experiments/r58_shared.py`
+"""R-59 conservative branch: per-asset calibration of `kelly_regime_v4`'s
+`target_vol` knob (backlog B-25). Pre-registration: `experiments/r59_shared.py`
 — read it first; this file implements its "conservative branch" mechanism
 and nothing else.
 
@@ -23,9 +23,9 @@ other line of code touches the resulting frame.
 
 Usage::
 
-    uv run python experiments/r58_conservative_calibrated_target.py solve
-    uv run python experiments/r58_conservative_calibrated_target.py causality
-    uv run python experiments/r58_conservative_calibrated_target.py run     # everything, writes report + CSVs
+    uv run python experiments/r59_conservative_calibrated_target.py solve
+    uv run python experiments/r59_conservative_calibrated_target.py causality
+    uv run python experiments/r59_conservative_calibrated_target.py run     # everything, writes report + CSVs
 """
 
 from __future__ import annotations
@@ -49,7 +49,7 @@ from experiments.r57_cross_asset_panel import (  # noqa: E402
     Asset,
     binomial_tail,
 )
-from experiments.r58_shared import (  # noqa: E402
+from experiments.r59_shared import (  # noqa: E402
     CONTROL,
     D2_REGRESSION_TOLERANCE_PP,
     PANEL_TEST,
@@ -75,8 +75,8 @@ from tradebot.strategy import Context  # noqa: E402
 from tradebot.window import run_period  # noqa: E402
 
 DATA_DIR = ROOT / "data"
-OUT_DIR = ROOT / "reports" / "r58_conservative"
-REPORT_PATH = ROOT / "experiments" / "reports" / "r58_conservative_report.md"
+OUT_DIR = ROOT / "reports" / "r59_conservative"
+REPORT_PATH = ROOT / "experiments" / "reports" / "r59_conservative_report.md"
 
 MAX_LEVERAGE = 2.0            # unchanged for every asset, always
 DEFAULT_TARGET_VOL = 0.55     # v4's shipped default, the calibration seed
@@ -320,7 +320,7 @@ def cmd_run() -> None:
 def verdicts(target_vols: dict[str, float], d1_rows: list[dict], d2_rows: list[dict],
              d3_rows: list[dict], d4_rows: list[dict], n: int) -> None:
     print("\n" + "=" * 100)
-    print("PRE-REGISTERED DECISION RULES (experiments/r58_shared.py)")
+    print("PRE-REGISTERED DECISION RULES (experiments/r59_shared.py)")
     print("=" * 100)
 
     d1 = pd.DataFrame(d1_rows)

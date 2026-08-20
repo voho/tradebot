@@ -1,4 +1,4 @@
-"""R-58 NOVEL BRANCH (backlog B-25): self-normalizing, scale-invariant
+"""R-59 NOVEL BRANCH (backlog B-25): self-normalizing, scale-invariant
 exposure sizing for the `kelly_regime` family.
 
 Not registered: lives under ``experiments/`` per ROUTINE.md step 5. This is
@@ -6,7 +6,7 @@ an experiment, not a strategy the runner should discover, so
 ``KellyRegimeRelativeVol`` below is a plain ``Strategy`` subclass with no
 ``@register`` decorator.
 
-Pre-registration: ``experiments/r58_shared.py`` (read it first — this file
+Pre-registration: ``experiments/r59_shared.py`` (read it first — this file
 imports its windows, costs, panel loader and decision-rule helpers rather
 than restating them). This module implements only the NOVEL branch's
 candidate mechanism and the frozen D1-D4 measurement matrix pointed at it.
@@ -46,7 +46,7 @@ Investment Management) make for cross-instrument trend portfolios:
 instruments with structurally different volatility levels need their bet
 sized relative to their OWN volatility scale, not a shared absolute
 constant. (Full citations and the round's pre-registration:
-``experiments/r58_shared.py``.)
+``experiments/r59_shared.py``.)
 
 Concretely, one new causal series is added:
 
@@ -93,9 +93,9 @@ decision or the causality probe.
 
 Usage::
 
-    uv run python experiments/r58_novel_relative_vol_scale.py selfcheck
-    uv run python experiments/r58_novel_relative_vol_scale.py causality
-    uv run python experiments/r58_novel_relative_vol_scale.py run
+    uv run python experiments/r59_novel_relative_vol_scale.py selfcheck
+    uv run python experiments/r59_novel_relative_vol_scale.py causality
+    uv run python experiments/r59_novel_relative_vol_scale.py run
 """
 
 from __future__ import annotations
@@ -112,7 +112,7 @@ import pandas as pd  # noqa: E402
 
 from experiments.matched_hold import ConstantExposureHold, mean_notional  # noqa: E402
 from experiments.r57_cross_asset_panel import binomial_tail  # noqa: E402
-from experiments.r58_shared import (  # noqa: E402
+from experiments.r59_shared import (  # noqa: E402
     CONTROL,
     D2_REGRESSION_TOLERANCE_PP,
     PANEL_TEST,
@@ -141,7 +141,7 @@ from tradebot.strategies.kelly_regime_v3 import KellyRegimeV3  # noqa: E402
 from tradebot.strategy import Context  # noqa: E402
 from tradebot.window import run_period  # noqa: E402
 
-OUT_DIR = ROOT / "reports" / "r58_novel"
+OUT_DIR = ROOT / "reports" / "r59_novel"
 BOOT_KW = dict(mean_block=30.0, n_boot=2_000, seed=7)
 
 LONG_RUN_SPAN_DAYS = 720  # structural, ~2 years, fixed before any result read
@@ -489,7 +489,7 @@ def cmd_run() -> None:
 
     verdict = promoted(k1, dd_advantage)
     print("\n" + "=" * 100)
-    print("VERDICT (mechanical application of experiments.r58_shared.promoted)")
+    print("VERDICT (mechanical application of experiments.r59_shared.promoted)")
     print("=" * 100)
     print(f"D1: {k1}/6 -> {d1_verdict(k1)}")
     print(f"D2: {'PASSES' if d2_passes(dd_advantage) else 'FAILS'} "

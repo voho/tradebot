@@ -1,4 +1,4 @@
-"""R-58: is `kelly_regime_v4`'s BTC-calibrated `target_vol`/`max_leverage`
+"""R-59: is `kelly_regime_v4`'s BTC-calibrated `target_vol`/`max_leverage`
 the reason its matched-exposure drawdown property does not travel to other
 instruments? (backlog **B-25**, filed by R-57.)
 
