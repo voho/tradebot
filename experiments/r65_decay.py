@@ -1,15 +1,15 @@
-"""R-64 operator measurement: the signal's information decay curve, and the
+"""R-65 operator measurement: the signal's information decay curve, and the
 holding period at which it can afford itself.
 
 Prices only. No strategy, no benchmark, no decision rule, no equity curve --
 so this can neither contaminate a branch verdict nor be contaminated by one.
-It is the R-64 analogue of `experiments/r63_breadth.py`, which measured the
+It is the R-65 analogue of `experiments/r63_breadth.py`, which measured the
 panel's Grinold breadth before either R-63 branch reported and turned that
 round from an unexplained failure into a priced one.
 
 THE QUESTION. R-63 measured the cross-sectional trend signal at exactly one
 holding period -- re-select every 5-minute bar -- and found it worth +0.480
-log units gross against an 8.02 log-unit turnover bill. R-64's two branches
+log units gross against an 8.02 log-unit turnover bill. R-65's two branches
 both slow the signal down. Before either reports, this file measures what is
 geometrically available:
 
@@ -73,7 +73,7 @@ file reports that version too, as a secondary, but leads with the
 pre-holdout one because leading with the conservative number costs nothing
 here and removes the argument entirely.
 
-    python3 experiments/r64_decay.py
+    python3 experiments/r65_decay.py
 """
 
 from __future__ import annotations
@@ -88,7 +88,7 @@ sys.path.insert(0, str(ROOT))
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
-from experiments.r64_shared import (  # noqa: E402
+from experiments.r65_shared import (  # noqa: E402
     BARS_PER_DAY,
     OUT_DIR,
     UNIVERSE_8,

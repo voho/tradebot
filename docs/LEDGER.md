@@ -91,6 +91,25 @@ first time this project has priced a signal against its own cost rather than
 merely watching it lose. R-33's exposure artifact survived diversification
 intact besides, on the one construction that might have escaped it.
 
+**Reframed by R-64 (08-20), which is the first good news in this section:**
+*a signal's cost is a frequency, not a fee — price it at its own decay rate
+before calling it unaffordable.* R-63 priced the cross-sectional trend
+ranking at 16-to-1 against itself. Traded through Gârleanu–Pedersen partial
+adjustment at a **derived** rate, the same signal on the same data turns over
+**18x less** (3.44 → 0.19 round-trips/day), costs **0.43 log units instead of
+8.02**, and moves from −7.54 to **+0.59** against a volatility-matched hold —
+while its *frictionless* edge **rises**, +0.480 → +1.017, because chasing the
+fastest rank flips was destroying gross edge before any fee was charged
+(Dao et al. 2016's `σ²(T) − σ²(rebalance interval)`). The value and cost
+curves **cross**, and the affordable window — turnover 0.06–0.33/day, holding
+1.4–5 days — is agreed on by two selection windows, by a trading rate that
+was derived rather than fitted and landed inside it unaided, and by a
+prices-only decay measurement taken before either branch reported. The
+verdict is still NEGATIVE, on the interval and nothing else: every point
+estimate is favourable and every 95% interval contains zero, which is the
+ceiling R-63's own frictionless edge already carried. **COST is the one
+constraint in this table that has now moved.**
+
 ---
 
 ## A. Strategies (registered)
@@ -149,6 +168,424 @@ as raw pipe-separated text. Every row's text is reproduced verbatim in the
 entry that replaced it — nothing was dropped in the conversion. Rounds
 before R-28 were backfilled from the long-form docs and carry only the
 fields their original row had.
+
+### R-64 · 08-20 · NEGATIVE (both branches), CROSSES — the priced signal becomes nearly affordable: Gârleanu–Pedersen partial adjustment moves R-63's arm from −7.54 to +0.59, and the interval still contains zero
+
+**Direction.** The first round in this project to attack **COST** with a
+signal whose *value* was already known. Every previous COST attempt — L-05
+and L-06's no-trade band (Constantinides 1986; Davis & Norman 1990), R-12's
+turnover reduction, R-13's fee tiers, R-56's maker/limit execution — tried to
+make the cost smaller without knowing what the signal was worth, so none
+could say whether the surviving turnover was worth its price; they could only
+observe that the net number was bad. **R-63 changed that.** It priced the
+cross-sectional trend ranking for the first time: **real** (frictionless
++0.480 log units, beating 10 of 10 permutations of its own weights) and
+**unaffordable by 16 to 1** (2.86 leader-changes/day, 3.44 round-trip
+turnover/day, an 8.02 log-unit turnover bill). R-63's own closing line names
+the bar for reopening the axis — *"a holding period long enough that 2.86
+leader-changes per day stops being the binding cost"* — and this round is
+that line executed. The idea in one sentence: **measure the value and the
+cost of a known-real signal as functions of holding period, and find out
+whether the two curves cross.** Constraint attacked: **COST** (primary),
+INFO (secondary — the signal being made affordable is R-63's cross-sectional
+one). Backlog: **B-28**, the holding-period clause.
+
+**Not a duplicate of:** **L-05/L-06**, which band a *continuous single-asset
+exposure fraction* — how much BTC to hold — a scalar with a natural metric;
+the quantity here is a *discrete cross-sectional selection*, which asset is
+held, and R-63's turnover bill is entirely the "which" (its exposure
+magnitude already carried v4's shipped 0.10 deadband and still turned over
+3.44x/day). **R-56**, which reduces the price paid per unit of turnover
+rather than the number of units. **R-51/R-52**, whose calendar and drift-band
+cadences rebalance weights toward a *fixed* target and contain no signal in
+the rebalance decision at all — here the cadence *is* the signal-consumption
+rate. **R-63 itself**, which swept `k` (how many assets) and never a holding
+period, a hysteresis band or a trading rate. **R-59/R-60/R-62**, all SIZE-axis
+retunes of `frac` or `scale`; this round changes neither factor and alters
+only *when* the portfolio acts on the score.
+
+**Literature.** Gârleanu, N., & Pedersen, L. H. (2013), "Dynamic Trading with
+Predictable Returns and Transaction Costs," *Journal of Finance* 68(6),
+2309–2340, and its continuous-time companion (2016), *Journal of Economic
+Theory* 165, 487–516 — the closed form the novel branch implements: with
+quadratic costs and mean-reverting predictors the optimum is not "rebalance
+to the target" but "trade a constant fraction `a` of the way toward an *aim*
+portfolio", in which each predictor `j` is shrunk by `1/(1 + φ_j/a)` so that
+higher fees simultaneously slow trading *and* demote fast-decaying signals.
+**Their data/cost/breadth caveat**: 15 liquid commodity futures, 1996–2009,
+λ calibrated from Engle–Ferstenberg–Russell (2008), and the return regression
+is in-sample by the authors' own statement. Their Table II is the reason this
+was the *novel* arm rather than a smoothing tweak: naive Markowitz nets a
+Sharpe of **−9.84** after costs, the dynamic aim nets **0.58**, and the best
+possible *constant-speed* partial adjustment nets only **0.46** — the 0.12
+gap being attributed by the authors specifically to "giv[ing] less weight to
+the five-day signal because of its fast alpha decay". Novy-Marx, R., &
+Velikov, M. (2016), "A Taxonomy of Anomalies and Their Trading Costs,"
+*Review of Financial Studies* 29(1), 104–147 — the conservative arm's
+warrant, and the source of this round's most important *prior*: across 23
+anomalies on US stocks 1973–2012, the buy/hold spread (sS banding) is the
+single most effective mitigation at **−41% turnover, −42% costs**, staggered
+rebalancing is weak (**a 67% frequency cut buys only a 33% turnover cut**),
+and all three techniques stacked reach **−60%**. Hurst, B., Ooi, Y. H., &
+Pedersen, L. H. (2017), "A Century of Evidence on Trend-Following Investing,"
+*Journal of Portfolio Management* 44(1), 15–29 — 67 markets, 1880–2016,
+monthly rebalance, and at a **0.10% commodity cost identical to this repo's
+taker fee** a diversified trend book still gives up 18.0% gross to 11.0%
+net, i.e. **39% of gross return goes to costs**; their Exhibit 2 is an
+empirical alpha-decay curve (a one-month implementation lag costs the
+1-month signal **67%** of its Sharpe and the 12-month signal **21%**).
+Lempérière, Y., Deremble, C., Seager, P., Potters, M., & Bouchaud, J.-P.
+(2014), "Two Centuries of Trend Following," *Journal of Investment
+Strategies* 3(3) — Sharpe is **flat from 2 to 10 months** of anchor speed
+while turnover falls as 1/n, and their response function **saturates**
+(`tanh`, `s* ≈ 0.89`), so a linear vote buys turnover precisely where the
+edge has flattened; their own footnote calls their P&L "fictitious" for
+charging no costs. Dao, T.-L., et al. (2016), "Tail protection for long
+investors: trend convexity at work" — the cost-independent argument, that
+trend P&L equals `σ²(long horizon) − σ²(rebalance interval)`, so fast
+rebalancing destroys gross edge *before any fee is paid*. de Lataillade, J.,
+Deremble, C., Potters, M., & Bouchaud, J.-P. (2012), "Optimal Trading with
+Linear Costs," *Journal of Investment Strategies* 1(3) — the cube-root law
+`q* ∝ Γ^(1/3)` for a no-trade band under proportional costs, and the
+observation that an EWMA of returns *is* an OU predictor with `ε = 1−ρ`.
+Kan, R., & Zhou, G. (2007), *JFQA* 42(3), 621–656 — the estimation-error
+shrinkage `θ²/(θ² + N/T)`, which at this project's sample length is ≈ 1/3,
+and whose three-fund cross-sectional dispersion term `ψ²` is near zero for a
+panel with one factor at 68.2% of variance: R-63's breadth result reached
+from a completely different direction. Clarke, R., de Silva, H., & Thorley,
+S. (2002), *FAJ* 58(5), 48–66 — `IR = TC·IC·√BR`, where a no-trade band is a
+constraint and therefore lowers the transfer coefficient TC, which is the
+exact accounting frame for this whole round. Han, C., Kang, B., & Ryu, J.
+(2024), SSRN 4675565, and Liu, Y., Tsyvinski, A., & Wu, X. (2022), *Journal
+of Finance* 77(2), 1133–1177 — crypto cross-sectional momentum lives at 1–4
+weeks and dies beyond 8, and survives costs only at breadths two orders of
+magnitude above this panel's 1.47 (Fieberg et al. 2024, *JFQA*, report a
+1.41% break-even at ~68% weekly turnover — on hundreds of coins). Worth
+recording once, because this repo keeps re-deriving it: **Moskowitz–Ooi–
+Pedersen (2012), Liu–Tsyvinski (2021), Liu–Tsyvinski–Wu (2022) and Rozario et
+al. (2020) contain no transaction-cost analysis at all.** Their Sharpes are
+gross. None of them is evidence that a trend strategy is affordable.
+
+**Three failure modes were named in the frozen pre-registration, all
+predicting failure**, so that a pass would read as a genuine surprise:
+**(F1)** the ceiling is already below the bar — R-63's frictionless +0.480
+carries the interval [−2.58, +3.65], which contains zero, so even a perfect
+cost fix lands on an edge that was never significant; **(F2)** buffering
+trades signal for turnover at worse than 1:1; **(F3)** the frontier's far end
+is a concentrated buy-and-hold, and D5 plus the scramble control are what
+stop that being read as a signal result. The literature sharpens (F1) into
+an arithmetic prediction that neither branch was told: **closing a 16:1
+deficit needs a ~94% turnover cut, and Novy-Marx & Velikov's full stack of
+mitigations delivers 60%.**
+
+**The operator measurement, taken before either branch reported**
+(`experiments/r64_decay.py`; prices only, no strategy, no benchmark, no
+decision rule, so it can neither contaminate a verdict nor be contaminated
+by one — the R-64 analogue of `r63_breadth.py`). On the eight-asset panel the
+**cross-sectional rank IC of R-63's own score against forward returns is
+negative at every holding period below ~14 days** (−0.022 to −0.039, t = −2
+to −4), turns positive only at 21–90 days (t = 3.8 to 7.1 on the full
+window), while the **top-1 spread the k=1 arm actually harvests** peaks
+weakly around 5–7 days and is near zero or negative everywhere else. Positive
+IC with a zero top-1 spread means the information sits in the middle of the
+cross-section, not in the leader — with 8 assets and k=1 almost none of it is
+capturable. Two caveats are recorded in that file rather than carried
+silently: the 1-bar row is a microstructure artifact (its implied +0.075/day
+is inconsistent by two orders of magnitude with R-63's own simulator-measured
++0.000206/day), and its leader-change count is U8-without-a-positivity-filter
+and so is not commensurable with R-63's 2.86.
+
+**What was done.** Two parallel branches against a shared, frozen
+pre-registration committed **two commits** before either branch existed
+(`experiments/r64_shared.py`, which carries the decision rules, the
+benchmark, and the three named failure modes; both branches' `git diff` on
+it, on `r63_shared.py` and on `r63_novel_xsmom_rank.py` is empty).
+Universes, windows and costs are R-63's, unchanged, so the frontier's
+endpoint is comparable to the number it extends: **U6** = (BCH, LTC, ETC,
+DASH, LINK, XTZ), **U8** = U6 + BTC + ETH; W_TRAIN 2020-04-01→2021-12-31,
+W_VAL 2022-01-01→2022-12-31, W_FULL6 2020-04-01→last bar, **W_HOLD
+2023-01-01→ never sliced, imported or referenced by either branch.** Both
+arms start from R-63's novel arm byte-for-byte — its score, its conditional
+volatility scale, its 0.10 deadband, its shipped constants, all re-exported
+from the shared file so the substrate is provably identical — and change only
+the trading rule.
+
+**The benchmark changed, and it is this round's methodological contribution.**
+R-63 filed a correction against its own convention and R-64 is the first
+round to implement it: `MATCHED_HOLD` matches the exposure *level* (the
+candidate's own mean total notional), which is the standing R-33 rule and is
+**not a risk match for a concentrated candidate**. Both arms here are
+concentrated by construction, so the primary benchmark is **`VOLMATCH_HOLD`**
+— an equal-weight basket at the constant notional whose *realized volatility*
+matches the candidate's (R-31's convention). The difference is not cosmetic:
+the conservative arm draws down **+29.5pp more** than a notional-matched hold
+and **−0.15pp** than a volatility-matched one, on the same cell.
+
+**Conservative** (`experiments/r64_conservative_rank_buffer.py`): rank
+buffering plus a minimum holding period — Novy-Marx & Velikov's sS buy/hold
+spread transplanted onto a cross-sectional selection. An incumbent is
+retained unless its score goes non-positive or a challenger beats it by
+`buffer`, and is never swapped before `hold_days` have elapsed. Grid
+`buffer ∈ {0.00, 0.02, 0.05, 0.10}` × `hold_days ∈ {1, 3, 7, 14, 30}` = **20
+configurations**, swept on W_TRAIN, selected on W_VAL on the D1 statistic
+(criterion declared in the module docstring before the sweep ran), frozen in
+module constants before any D-cell. `k = 1` fixed at R-63's own frozen
+selection; no `k` sweep, deliberately, so the holding-period axis is not
+confounded with a concentration axis.
+
+**Novel** (`experiments/r64_novel_aim_portfolio.py`): Gârleanu–Pedersen
+partial adjustment toward a persistence-weighted aim portfolio, `x_t =
+(1−a)·x_{t−1} + a·aim_t`, holding continuous fractional weights and never
+making a discrete swap. The three horizon components are kept **separate**
+rather than averaged into R-63's single score, each one's decay rate `φ_h`
+measured causally on W_TRAIN by AR(1) on the cross-sectionally demeaned
+component, and the trading rate `a` **derived, not fitted**, from those
+measurements and the known fee. Sensitivity band ×{0.25, 0.5, 1, 2, 4} run as
+a plateau check, not a selection.
+
+**Configs evaluated, total across both branches.** **Parameter-search trials:
+56** — conservative 20 distinct `(buffer, hold_days)` points evaluated on 2
+selection windows (40 by R-63's own counting convention, which counted
+`k`×windows), novel 16 (8 trading rates × 2 weighting modes). **This 56 is
+the deflated-Sharpe trials number this round contributes.** Honest count of
+portfolio backtests actually executed: **≈547** (conservative 292, novel 255),
+rising to **≈593** including two runs the conservative branch discarded and
+re-ran after finding the shared-file bug below. Everything beyond the 56 is a
+benchmark arm, a VOLMATCH bisection iterate, a scramble control or a
+diagnostic. Both branches reported both numbers unprompted.
+
+**Result. Neither branch cleared the further-work bar; both failed only on
+interval width, and the novel branch's every point estimate is on the
+favourable side.**
+
+| cell | conservative (rank buffer, 0.05/H=1) | novel (GP aim, derived `a`) |
+|---|---|---|
+| **D1** growth vs VOLMATCH_HOLD | **−0.567** [−3.898, +2.869] — FAIL | **+0.589** [−2.058, +3.183] — FAIL *(interval)* |
+| **D2** max DD vs VOLMATCH_HOLD | **−0.15pp** [−14.53, +24.43] — FAIL | **−1.22pp** [−20.98, +20.22] — FAIL *(interval)* |
+| **D3** W_VAL, U8 | +0.143 growth, −1.82pp DD — **PASS** | +0.261 growth, −7.38pp DD — **PASS** |
+| **D4** @0.40% vs EW_HOLD | $2.26 vs $1,454 — FAIL *(predicted)* | $1,323 vs $1,454 — FAIL |
+| **D5** gross @0bps ≥ +0.240 | **+1.494** — **PASS** (6.2x the bar) | **+1.017** — **PASS** (4.2x the bar) |
+| **scramble** (pre-registered) | real −0.567 vs p90 −2.229, 0 of 10 better — **SURVIVES** | vacuous, see below — control invalid for this arm |
+| **scramble** (turnover-matched) | — | real **+0.589** vs p90 **−0.489**, **10 of 10** — **SURVIVES** |
+| further-work bar | **False** | **False** |
+| final balance, W_FULL6 | $1,225 | **$5,043** |
+
+Neither arm reached, or needed, a holdout read.
+
+**The novel branch is the first near-miss this project has produced on a
+measured mechanism, and the size of the move is the finding.** Against the
+same benchmark on the same W_FULL6 cell, turnover falls **18-fold** (3.44 →
+0.192 round-trips/day; holding period 0.35 → 2.39 days), cost falls from
+**8.02 log units to 0.43**, and net growth moves from **−7.537 to +0.589** —
+while the *frictionless* edge **rises** from +0.480 to +1.017. R-63's arm was
+not merely paying too much for a fixed edge; it was **destroying gross edge
+by chasing the fastest rank flips**, which is precisely Dao et al.'s
+`σ²(T) − σ²(rebalance interval)` and Gârleanu–Pedersen's alpha-decay
+mechanism, and it is the one thing in this round that neither the literature
+prior nor the pre-registration predicted. The account goes from **$1.44 with
+a 99.92% drawdown to $5,042.83 with a 77.70% drawdown at the identical 0.525
+mean notional.**
+
+**The curves cross, and the affordable window is measurable.** On W_TRAIN net
+crosses zero at ≈0.33 turnover/day; on W_VAL net is positive across
+0.056–1.37/day. Their intersection is **turnover ≈ 0.06–0.33/day, holding
+period ≈ 1.4–5 days** — and the *derived* trading rate (0.18–0.22/day, hold
+1.8–2.0 days) lands inside it **without having been told where it was**,
+which is the strongest single piece of evidence in the round that the
+Gârleanu–Pedersen derivation is doing real work rather than being decoration
+on a sweep. It also coincides with the operator's prices-only decay
+measurement, which independently put the only affordable band at 5–10 days.
+
+**Four things fail honestly and must be read beside that.** (i) Every
+interval contains zero; on a 2,332-day paired block bootstrap this data
+cannot separate +0.59 from zero, which is failure mode **(F1)** realized
+exactly as written. (ii) The arm **loses to simply holding BTC** over the same
+period (−0.709 log units, $5,043 against $9,804) — it beats the panel, not
+the incumbent asset. (iii) Its drawdown advantage is **entirely a function of
+which benchmark**: −1.22pp against the volatility-matched hold, **+20.4pp
+worse** against the notional-matched one. (iv) D4 fails: at a 0.40% taker the
+arm is $1,323 against EW_HOLD's $1,454, so the affordability is specific to
+the base tier.
+
+**The conservative branch failed and explained why, which is worth more than
+its verdict.** Buffering bought a **3.9x turnover cut essentially for free**
+— cost fell 5.96 log units, gross did not fall (it rose 0.81, well inside the
+interval) — narrowing R-63's deficit from 11.7:1 to **1.38:1** on this
+benchmark. Break-even needed turnover ≤ 0.641/day; the arm reached 0.900 and
+**stopped**. The reason is a hard floor the round could not touch: R-63's
+frozen *"hold only positive-scoring assets, flat otherwise"* gate forces an
+exit every time the incumbent's score crosses zero, and that channel is
+**invariant across the entire grid** — 242–248 forced exits on W_TRAIN at
+every one of the 20 cells, 0.386/day regardless of parameters — while
+voluntary swaps fall 16-fold (0.270 → 0.017/day). Turnover therefore floors,
+mean tenure saturates at ~2.1 days however large `hold_days` is, and past the
+knee `hold_days` costs signal and buys nothing: on W_VAL, going from H=1 to
+H=30 cuts turnover 3% and cost 9% while gross falls 0.70 log units — **value
+falls ~17x faster than cost saves**. **The binding cost after buffering is
+not rank churn, it is zero-crossing chatter in the long/flat gate.** That is
+Novy-Marx & Velikov's "frequency cuts have sharply diminishing returns"
+reproduced with the mechanism attached, and it is a specific, fixable target.
+
+**The holding-period axis is noise on the conservative arm, and its own sweep
+says so.** The W_VAL winner ranks **19th of 20 on W_TRAIN**; Spearman rank
+correlation of net growth across the 20 cells between the two selection
+windows is **−0.316** — the ordering does not merely fail to transfer, it
+anti-transfers. The neighbourhood is a **peak, not a plateau**: every
+immediate neighbour of the winner is worse and it is the only cell in its
+neighbourhood above zero. And the selection, run honestly, chose the **least
+sticky corner available** (`hold_days=1`) — the axis answering the round's
+question in the negative on its own. This is R-63's `k`-axis signature
+reproduced exactly, and it is why the round's promotion bar asks for a
+plateau.
+
+**Gârleanu–Pedersen part (b) is inert here, and the branch measured it rather
+than assuming it.** Partial adjustment (GP part a) moves W_FULL6 net from
+−7.537 to +0.589, ≈8.1 log units. Persistence weighting (GP part b) moves it
+by **0.024–0.027 log units of noise with an inconsistent sign**, better in 11
+of 16 paired configurations — about **0.4% of the effect** and below its own
+error bar. The reason is arithmetic, and the branch recorded it *before* any
+result: the measured half-lives are **3.34 / 5.83 / 9.52 days** (20d/40d/80d
+components, AR(1) on cross-sectionally demeaned scores, W_TRAIN only) while
+the derived trading rate has a half-life of **0.33 days**, so `a` is 10–29x
+larger than every `φ_h`, all three shrinkage factors `1/(1+φ_h/a)` sit within
+6% of 1, and the aim weights come out 0.322/0.335/0.342 against 1/3 each. **GP
+(b) only bites when the optimal trading rate is slow relative to signal
+decay**, and here it is not. Recorded because it is a decomposition nobody in
+this project had run, and because it says a future round should not expect
+persistence weighting to rescue anything on this data.
+
+**Skeptic reproduction: unusually strong, and it is cross-branch.** Both
+branches independently re-ran R-63's reference point through their own code
+paths and both reproduced **every published digit** — turnover/day 3.439 and
+3.4411 against 3.44, net D1 −7.5372 against −7.537, gross +0.4804 against
++0.480, final balance $1.4419, mean notional 0.5249, leader changes 2.859 and
+2.861 against 2.86, and 3.439 × 0.001 × 2332 = 8.02, the cost arithmetic
+closing exactly. Two independent implementations landing on the same six
+numbers is stronger evidence the substrate did not drift than a single
+skeptic re-run would have been. The operator additionally re-derived the D1
+cells, the scramble percentiles and the frontier crossing from the committed
+CSVs rather than from either report.
+
+**Correctness gates.** Both branches ran 60% truncation tests (first 60% of
+target rows bit-identical, `atol = 1e-12` / `max|diff| = 0.0`), tail-×10
+perturbation probes, and `r63_shared.check_causality`; the novel branch ran
+the causality probe additionally at `a`/64, the harder long-memory case.
+`pytest -q`: **461 passed**, run to completion by both branches after their
+final edits. No full-series statistic was found in either path — the
+conservative buffer is in raw score units so no normalization exists to leak,
+and the novel branch's `φ_h` and `σ` are frozen scalars measured on W_TRAIN
+alone, making `build_targets` a pure causal function of the price prefix.
+
+#### R-64 disclosed flaws — four in this round's own instruments, one process note
+
+Recorded here rather than carried forward, and **every fix was applied only
+after both branches had reported** — the R-63 process violation, not
+repeated.
+
+1. **`volmatched_hold_equity` voided cells it had actually matched.** The
+   long-only cap-binding early return fired *before* the freshly computed
+   volatility was tested against the tolerance, so a genuine match was
+   reported as a void whenever the cap bound. **Both branches found it
+   independently**, neither edited the frozen file, and it fired on the
+   **R-63 reference point itself** (gaps of 0.86–1.0% against a 2%
+   tolerance) — left alone it would have spuriously voided the frontier's own
+   anchor. No verdict is affected: every cell either branch scored had
+   `matched=True` on its own merits, and the conservative branch recomputed
+   only the boolean, using the function's own final-line criterion, inventing
+   no threshold, and writing both flags to every CSV row so the difference is
+   auditable. Now fixed.
+2. **This round's own D5 bar was calibrated against the wrong benchmark.**
+   D5 reads "gross vs VOLMATCH_HOLD ≥ +0.240", but the +0.480 it is half of
+   was measured by R-63 against **MATCHED_HOLD**, and the two are not
+   commensurable — VOLMATCH_HOLD holds far more notional to reach a
+   concentrated arm's volatility. Both branches measured the missing
+   like-for-like number before touching a candidate cell and agree: R-63's own
+   arm scores **+0.683** against VOLMATCH_HOLD, so the correct bar is
+   **+0.342**, and the frozen bar was ~30% too low. Both arms cleared both by
+   3–6x, so no verdict moves. The frozen value is kept as `D5_BAR` because it
+   is what the round was judged against; `D5_BAR_CORRECTED` is recorded beside
+   it. A third caveat neither branch could fix: **the bar is not
+   window-portable** — R-63's own arm scores −2.097 against VOLMATCH_HOLD on
+   W_TRAIN and would fail D5 outright there.
+3. **The inherited scramble control is structurally invalid for a
+   continuous-weight arm**, and the bias runs *in the candidate's favour*.
+   `scramble_targets` redraws a permutation on every bar whose target vector
+   changed; R-63's discrete top-k arm changed rarely, so turnover was
+   preserved and the control isolated exactly the intended quantity. A
+   partial-adjustment arm changes weights on almost every bar, so the control
+   traded **138/day against the candidate's 0.19/day — a 720x over-charge**
+   that sent every seed to zero and made the arm "survive" vacuously. The
+   novel branch ran it as pre-registered, flagged it, and added the control
+   that works: **one fixed asset relabeling held for the whole run**, an L1
+   isometry that preserves turnover bar-for-bar. On that control the arm beats
+   **10 of 10** (real +0.589 against scrambles spanning −2.03 to −0.002, p90
+   −0.489). **That is the control to believe**, and a future round with a
+   continuous-weight arm should pre-register the fixed-permutation form.
+4. **Two shared helpers are approximations, now annotated.** `turnover_stats`
+   compares each row against the last *applied target* while the simulator
+   holds fixed quantities whose weights drift with prices, so it slightly
+   understates traded notional — immaterial here (banded and raw turnover
+   agree to three decimals on all 44 conservative rows). `holding_period_days`
+   counts a flat spell as a holding, so a long/flat arm's number understates
+   true tenure (1.32 days reported against 2.10 days of continuous ownership
+   at `hold_days=30`).
+5. **Process note, disclosed by the branch that noticed it.** The two branch
+   agents share a scratchpad directory keyed on the repo path, and both wrote
+   a same-named scratch log. The novel branch saw two lines of the
+   conservative branch's output — one describing flaw (1), which it had
+   already predicted and independently re-derived from its own W_TRAIN row,
+   and one partial holding-period line — then moved to a private
+   subdirectory and reported it. No result was computed from it and nothing
+   passed in the other direction, but "no coordination" was a rule of the
+   round and it was not perfectly held.
+
+**Verdict.** **NEGATIVE** on the promotion bar for both branches. Nothing is
+registered: neither arm cleared the further-work bar, and separately **the
+comparison table cannot express either of them** — both are bar-by-bar
+cross-asset allocators, which R-49/B-17's own docstring says the registration
+infrastructure does not support. Filing that as the blocker rather than
+forcing a row is the honest move.
+
+But this is the first round in this project where **a mechanism was measured,
+priced, fixed, and the fix worked** — the failure is the error bar, not the
+idea. Four things are now known that were not:
+
+1. **The value and cost curves cross.** The affordable window for R-63's
+   signal is **turnover 0.06–0.33/day, holding period 1.4–5 days**, agreed on
+   by two selection windows, by a derived-not-fitted trading rate that landed
+   inside it unaided, and by a prices-only decay measurement taken before
+   either branch reported.
+2. **Slowing down does not merely cost less, it earns more.** The frictionless
+   edge *rose* from +0.480 to +1.017 as turnover fell 18x. R-63's arm was
+   destroying gross edge by chasing rank flips, exactly as Dao et al. (2016)
+   and Gârleanu–Pedersen predict, and no prior round here had separated that
+   from the fee.
+3. **The binding cost after buffering is the long/flat gate, not rank churn.**
+   Forced zero-crossing exits are invariant at 0.386/day across a 20-cell
+   grid while voluntary swaps fall 16-fold. That is a named, specific,
+   attackable target and it is the reason the conservative arm stalled at
+   1.38:1.
+4. **Gârleanu–Pedersen part (b) is inert on this data**, worth 0.4% of the
+   effect, because the optimal trading rate is 10–29x faster than every
+   measured signal decay. A future round should not expect persistence
+   weighting to rescue anything here.
+
+One-line lesson: **a signal that loses 16 to 1 can be worth +0.6 log units at
+the same mean notional once it is traded at its own decay rate — the cost was
+never a fee problem, it was a frequency problem — and the honest verdict is
+still NEGATIVE, because the interval that killed R-63's frictionless edge
+kills this one too.** Holdout counter: **+0** (running total ~627). W_HOLD was
+never sliced, imported or referenced by either branch. **A tension in that
+convention is flagged rather than hidden**, by the branch that found it:
+`W_FULL6` ends at the last bar and therefore *does* include post-2023 U6 data,
+which is R-63's own convention and recorded there as +0 on the grounds that
+the reserved BTC/ETH holdout is untouched by a U6 read. That convention is
+inherited here for comparability, but it is not obviously right, and settling
+it is filed as **B-31**; if it is rejected, this round contributed ~2 reads
+rather than 0. The decision rule did not move. Next steps: **B-29** (attack
+the long/flat gate, which is where the conservative arm's remaining cost
+lives), **B-30** (multi-asset registration, without which nothing on this axis
+can ever enter the table), **B-31** (settle the U6 holdout convention).
 
 ### R-63 · 08-20 · NEGATIVE (both branches), MEASURES — widening the universe fails, and the panel's own breadth says why: eight instruments carry 1.5 independent bets
 
@@ -7430,9 +7867,58 @@ vote (R-62), and this asset universe is too correlated for more trend votes to
 help (R-63). The next well-motivated question on this line is about breadth or
 holding period, both of which are named in B-28.
 
+**Re-ranked 08-20 after R-64, and this is the first re-rank in twenty rounds
+that promotes something on the strength of a positive result rather than
+demoting things on the strength of a negative one.** R-64 executed B-28's
+holding-period clause and closed it with the axis's first crossing: run at a
+**derived** trading rate, R-63's own cross-sectional signal turns over 18x
+less, costs 0.43 log units instead of 8.02, and moves from −7.54 to **+0.59**
+against a volatility-matched hold, its frictionless edge *rising* from +0.480
+to +1.017 on the way. Both branches are still NEGATIVE — every interval
+contains zero, which is failure mode (F1) as pre-registered — but the failure
+is the error bar, not the mechanism, and the round leaves three items where
+there were none actionable.
+
+**B-29 goes to the top of the ranked list.** It is the most specific item this
+backlog has carried since B-14: R-64's conservative branch measured the
+remaining turnover to a single named channel (0.386 forced zero-crossing
+exits per day, invariant across a 20-cell grid, against a 0.641/day
+break-even), the fix is local to one line of R-63's `build_targets`, and the
+harness, benchmark, decision rules and frontier all already exist. It carries
+an honest caveat, recorded now so a future session does not read the ranking
+as a promise: **R-64's novel arm already reaches 0.192/day without touching
+the gate**, so the gate may bind only for the discrete-selection family.
+
+**B-06 remains the standing zero-cost recommendation** and the only source of
+uncontaminated evidence this project can generate; it was advanced by one
+more decision this session. **B-30** (multi-asset registration) is filed but
+not urgent — it becomes blocking the moment a candidate stops failing its
+interval, and not before. **B-31** (the panel holdout convention) is cheap and
+changes the denominator of every significance claim on the panel, which is why
+the running count was left at ~627 rather than moved unilaterally. **B-28** is
+now half-closed: its holding-period clause is answered, its breadth clause is
+not and still needs data this repo does not have. B-09, B-10 and B-24 remain
+LOW and untouched.
+
+A session preferring a fresh idea over B-29 should note what R-64 changed
+about the shape of this project's problem. For twenty-two rounds the SIZE
+axis failed and the ledger accumulated reasons. R-62 localized the incumbent's
+edge in the trend vote; R-63 priced the cross-sectional signal and found it
+real but unaffordable; R-64 found the unaffordability was a **frequency**
+rather than a fee, and that trading the same signal at its own decay rate
+both costs less and earns more. The three compose into a single live
+hypothesis — *a real signal, traded at 1.4–5 day holding periods, on a panel
+whose breadth caps the gain at 1.21x* — and the binding constraint on it is
+now **statistical power**, not mechanism. That is what makes B-06 more
+valuable than it has ever been: the interval is the thing failing, and
+forward evidence is the only thing that shrinks it.
+
 | ID | item | attacks | status | note |
 |---|---|---|---|---|
-| **B-28** | Reopen "more instruments" only against a universe whose **breadth** — not whose asset count — clears the bar R-63 measured: mean pairwise daily-return correlation materially below 0.634, or a Grinold equal-correlation breadth materially above 1.47, or a holding period long enough that the 2.86 leader-changes-per-day that cost the novel arm 8.02 log units stops being the binding cost. R-63 established that the cross-sectional signal here is real and merely unaffordable, so the axis is closed for this data rather than on principle | INFO, N≈3 | OPEN, but blocked on data this repo does not have | Filed by R-63. Not actionable from inside a session today: the eight committed instruments are the universe, and R-63 measured them at 1.47 effective bets. Reopening needs either genuinely less-correlated instruments (a different asset class, which this project cannot fetch or simulate) or a lower-frequency bar series that would cut the leader-change rate — note that this project's entire dataset is 5-minute bars, so the second is a data-acquisition task, not a strategy task. Recorded so the idea is not re-tried blind on the same eight assets, which is exactly what section C exists to prevent. |
+| **B-29** | Attack the **long/flat gate**, which R-64 identified as where the remaining turnover lives once buffering has done its work. R-63's frozen rule holds only positive-scoring assets and stands flat otherwise, so every zero-crossing of the incumbent's score forces an exit — a channel R-64's conservative branch measured as **invariant at 0.386/day across all 20 cells of a holding-period grid** while voluntary swaps fell 16-fold. Candidate fixes: a hysteresis band around zero (enter above +δ, exit below −δ), a continuous rather than binary positivity weight, or letting the partial-adjustment recursion carry the position through a crossing instead of resetting it | COST | **NEXT** | Filed by R-64. The single most specific, cheapest, best-motivated item on this list: the mechanism is measured, the number is known (0.386 forced exits/day against a 0.641/day break-even), the fix is local to one line of R-63's `build_targets`, and the harness, benchmark and decision rules all exist. R-64's conservative arm stalled at a **1.38:1** deficit with break-even needing turnover ≤0.641/day against the 0.900/day it achieved — this channel is the whole gap. Note the honest prior: R-64's novel arm already reaches 0.192/day without touching the gate, so this may turn out to matter only for the discrete-selection family. |
+| **B-30** | Multi-asset strategy **registration**, so that a bar-by-bar cross-asset allocator can enter the comparison table at all. R-49/B-17 built the "can it be done" infrastructure and its own docstring says it cannot express this shape; R-64 is the first round to produce a candidate whose numbers would have been worth a row (net +0.589 vs a volatility-matched hold at 0.19 turnover/day, $1,000 → $5,043) and which the table therefore cannot hold | ERR (methodology gap) | **OPEN** | Filed by R-64, promoted from B-17's deferred half. Until this exists, every result on the cross-sectional axis is confined to `experiments/` and the ledger, and cannot carry a measured interval in `reports/inference/bootstrap.csv` beside the single-asset rows — the exact asymmetry R-30 built the interval requirement to prevent. Not urgent while every candidate fails its interval anyway; it becomes blocking the moment one does not. |
+| **B-31** | Settle the **holdout convention for panel reads**. `W_FULL6` runs to the last bar and therefore includes post-2023 U6 data; R-47/B-08, R-57, R-63 and now R-64 have all recorded such reads as **+0** on the grounds that the reserved BTC/ETH holdout is untouched. That is a convention, not a derivation, and it has now been applied often enough that it is load-bearing | ERR | **OPEN** | Flagged by R-64's novel branch rather than inherited silently. The question is whether a U6 read past 2023-01-01 is genuinely free for deflated-Sharpe purposes or whether the running ~627 understates the program's true consultation count. If the convention is rejected, R-64 contributed ~+2 and every prior panel round needs the same correction. Cheap to settle and it changes the denominator of every significance claim on the panel; the count is deliberately left at ~627 pending it rather than moved on one session's unilateral reading. |
+| **B-28** | Reopen "more instruments" only against a universe whose **breadth** — not whose asset count — clears the bar R-63 measured: mean pairwise daily-return correlation materially below 0.634, or a Grinold equal-correlation breadth materially above 1.47, or a holding period long enough that the 2.86 leader-changes-per-day that cost the novel arm 8.02 log units stops being the binding cost. R-63 established that the cross-sectional signal here is real and merely unaffordable, so the axis is closed for this data rather than on principle | INFO, N≈3 | **HALF-CLOSED → R-64**; breadth clause still blocked on data this repo does not have | Filed by R-63. **Its holding-period clause is answered: R-64 ran it and the value/cost curves cross** — the affordable window is turnover 0.06–0.33/day, holding 1.4–5 days, and at a derived trading rate the same signal costs 0.43 log units instead of 8.02 while its frictionless edge rises. Still NEGATIVE on the interval. The **breadth** clause is untouched and remains blocked. Not actionable from inside a session today: the eight committed instruments are the universe, and R-63 measured them at 1.47 effective bets. Reopening needs either genuinely less-correlated instruments (a different asset class, which this project cannot fetch or simulate) or a lower-frequency bar series that would cut the leader-change rate — note that this project's entire dataset is 5-minute bars, so the second is a data-acquisition task, not a strategy task. Recorded so the idea is not re-tried blind on the same eight assets, which is exactly what section C exists to prevent. |
 | ~~B-01~~ | ~~E-process regime detection with unified Kelly sizing~~ | ERR, N≈3 | **DONE → R-28**, qualified by R-31 | NEGATIVE on the promotion bar. It read as the strongest risk result in the project — 0 of 40 windows deeper than the incumbent — until B-11 compared the two at equal risk and found that number was about exposure, not about the gate. (R-26's null round listed this as untried; R-28 is the round that actually ran it.) |
 | ~~B-04~~ | ~~Purged CV, deflated Sharpe, block-bootstrap CIs on every headline~~ | ERR | **DONE → R-29** | The guess was right: 10 of 96 adjacent pairs distinguishable, none of them in the top eight. Also closes R-25. `tradebot.inference` is now a permanent module with 27 tests; step 4 of the routine can be mechanical from here. |
 | ~~B-12~~ | ~~Put the intervals *in* the comparison table~~ | ERR | **DONE → R-30** | The table now carries Δ growth and Δ max drawdown against `buy_and_hold`, each with a 95% interval, and a strategy without a measured interval fails CI. The by-product is the sharpest number in the project: **0 of 24 strategies are distinguishably better than holding on the criterion the table ranks by**, and v4's +0.044 edge is [−2.60, +2.85]. |
@@ -7526,6 +8012,20 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-20 · ~627** — R-64: **+0** on top of R-63's ~627. Neither branch
+  sliced, imported or referenced `W_HOLD` (2023-01-01 →) anywhere; both failed
+  the further-work bar (`(D1 or D2) and D3 and D5 and scramble`) on D1 and D2,
+  and the frozen pre-registration makes a holdout read conditional on clearing
+  it. Panel reads (U6 over W_FULL6) cost +0 by the established
+  R-47/B-08/R-57/R-63 convention. **That convention is flagged rather than
+  relied on silently**, by the branch that noticed the tension: `W_FULL6` ends
+  at the last bar and therefore *does* include post-2023 U6 data, and the +0 is
+  justified only on the grounds that the reserved BTC/ETH holdout is untouched
+  by a U6 read. Inherited here for comparability with R-63, but not obviously
+  right; settling it is **B-31**, and if the convention is rejected this round
+  contributed roughly **+2** rather than +0 (the two candidate configurations
+  whose D1/D2/D4/D5 cells run on W_FULL6). The count is left at ~627 pending
+  that decision rather than moved on one session's unilateral reading.
 - **08-20 · ~627** — R-63: **+0** on top of R-62's ~627. Neither branch read
   the W_HOLD window (2023-01-01 →) at all: both failed the further-work bar
   (`(D1 or D2) and D3 and scramble`) with D1, D2 and D3 all FAIL on both arms,

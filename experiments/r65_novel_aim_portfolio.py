@@ -1,8 +1,8 @@
-"""R-64 NOVEL branch -- partial adjustment toward a persistence-weighted AIM
+"""R-65 NOVEL branch -- partial adjustment toward a persistence-weighted AIM
 portfolio (Garleanu & Pedersen).
 
 The pre-registration for this round is the module docstring of
-`experiments/r64_shared.py`, which is FROZEN and is not edited here. This
+`experiments/r65_shared.py`, which is FROZEN and is not edited here. This
 file implements one candidate and measures it; it does not define or relax
 a decision rule.
 
@@ -43,7 +43,7 @@ THE SUBSTRATE IS R-63'S, PROVABLY
 
 `HORIZONS`, `BARS_PER_DAY`, `WARM_DAYS`, `warm_window`, `DEADBAND`,
 `conditional_vol_scale`, `basket_log_returns` and `r63_baseline_targets`
-are all imported from `r64_shared`, which re-exports them from R-63's own
+are all imported from `r65_shared`, which re-exports them from R-63's own
 novel arm. Nothing is copied. The horizon components below are literally
 the three terms R-63 averages, taken separately instead of averaged.
 
@@ -210,12 +210,12 @@ them is reported. The FROZEN configuration is and stays `a = a_derived`,
 `mode = "gp"`.
 
 Run as:
-    python3 experiments/r64_novel_aim_portfolio.py fit
-    python3 experiments/r64_novel_aim_portfolio.py checks
-    python3 experiments/r64_novel_aim_portfolio.py frontier
-    python3 experiments/r64_novel_aim_portfolio.py run
-    python3 experiments/r64_novel_aim_portfolio.py scramble
-    python3 experiments/r64_novel_aim_portfolio.py all
+    python3 experiments/r65_novel_aim_portfolio.py fit
+    python3 experiments/r65_novel_aim_portfolio.py checks
+    python3 experiments/r65_novel_aim_portfolio.py frontier
+    python3 experiments/r65_novel_aim_portfolio.py run
+    python3 experiments/r65_novel_aim_portfolio.py scramble
+    python3 experiments/r65_novel_aim_portfolio.py all
 """
 
 from __future__ import annotations
@@ -232,7 +232,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from experiments.r63_shared import check_causality  # noqa: E402
-from experiments.r64_shared import (  # noqa: E402
+from experiments.r65_shared import (  # noqa: E402
     BARS_PER_DAY,
     D5_BAR,
     DEADBAND,

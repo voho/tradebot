@@ -1,4 +1,4 @@
-"""R-64 CONSERVATIVE branch -- rank buffering plus a minimum holding period.
+"""R-65 CONSERVATIVE branch -- rank buffering plus a minimum holding period.
 
 R-63 priced this project's one genuinely-real signal at exactly one point on
 the holding-period axis: at k=1 the cross-sectional rank leader changes 2.86
@@ -34,7 +34,7 @@ THE RULE (frozen before any number was read)
 Start from R-63's novel arm BYTE-FOR-BYTE -- `cross_sectional_score`,
 `conditional_vol_scale` driven by the equal-weight all-N basket, the 0.10
 deadband on desired TOTAL notional, long-only unlevered, equal weighting among
-holdings, all imported from `experiments/r64_shared.py` rather than copied --
+holdings, all imported from `experiments/r65_shared.py` rather than copied --
 and change ONLY the selection rule's stickiness:
 
   RETENTION.  An asset currently held is retained unless
@@ -83,17 +83,17 @@ Velikov's result is that mitigation *reduces* the cost of an anomaly, not that
 it rescues one whose gross alpha is 16x smaller than its gross cost.
 
 Windows, universes, costs, D1-D5, the scramble control and the further-work bar
-all live in the frozen pre-registration in `experiments/r64_shared.py`. This
+all live in the frozen pre-registration in `experiments/r65_shared.py`. This
 file implements a candidate and measures it; it does not define or relax a
 rule, and it does not edit that file.
 
 Run as:
-    python3 experiments/r64_conservative_rank_buffer.py checks
-    python3 experiments/r64_conservative_rank_buffer.py repro
-    python3 experiments/r64_conservative_rank_buffer.py frontier
-    python3 experiments/r64_conservative_rank_buffer.py run
-    python3 experiments/r64_conservative_rank_buffer.py scramble
-    python3 experiments/r64_conservative_rank_buffer.py all
+    python3 experiments/r65_conservative_rank_buffer.py checks
+    python3 experiments/r65_conservative_rank_buffer.py repro
+    python3 experiments/r65_conservative_rank_buffer.py frontier
+    python3 experiments/r65_conservative_rank_buffer.py run
+    python3 experiments/r65_conservative_rank_buffer.py scramble
+    python3 experiments/r65_conservative_rank_buffer.py all
 """
 
 from __future__ import annotations
@@ -109,7 +109,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from experiments.r64_shared import (  # noqa: E402
+from experiments.r65_shared import (  # noqa: E402
     BARS_PER_DAY,
     D5_BAR,
     DEADBAND,
@@ -172,7 +172,7 @@ HOLD_GRID = (1, 3, 7, 14, 30)
 # `cmd_select` which prints them.
 #
 # W_VAL top of the ordering (net growth diff vs VOLMATCH_HOLD, best first);
-# full table in reports/r64_holding_period/conservative_frontier.csv:
+# full table in reports/r65_holding_period/conservative_frontier.csv:
 #   buffer=0.05 H= 1  net +0.1425  gross +0.5699   <-- SELECTED
 #   buffer=0.10 H= 1  net +0.0163  gross +0.4487
 #   buffer=0.00 H= 1  net -0.0074  gross +0.4540
@@ -388,7 +388,7 @@ def volmatch(cand_eq, aligned, assets, market, label=""):
     """`volmatched_hold_equity`, with a documented WORKAROUND for a bug in the
     frozen shared file. The shared file is NOT edited.
 
-    BUG (r64_shared.py lines 358-368). The iteration's cap-binding early
+    BUG (r65_shared.py lines 358-368). The iteration's cap-binding early
     return is evaluated in the wrong order:
 
         c = clip(c * (target/vol), 1e-3, 1.0)

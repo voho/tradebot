@@ -1,4 +1,4 @@
-"""R-64: the holding-period axis -- can the ONE signal this project has
+"""R-65: the holding-period axis -- can the ONE signal this project has
 priced be bought at a price it is worth?
 
 Shared, frozen infrastructure for a two-branch parallel round. Per
@@ -81,14 +81,14 @@ scale, its deadband, its constants, all re-exported from this file so the
 two branches provably share them) and change only the trading rule.
 
 **CONSERVATIVE -- rank buffering plus a minimum holding period**
-(`experiments/r64_conservative_rank_buffer.py`). The standard practitioner
+(`experiments/r65_conservative_rank_buffer.py`). The standard practitioner
 mitigation, and the one the cost literature says works best. An incumbent
 holding is retained until a challenger beats it by a margin, and is never
 swapped before H bars have elapsed. Two parameters (`buffer`, `H`), swept
 on W_TRAIN and selected on W_VAL before any D-cell is touched.
 
 **NOVEL -- partial adjustment toward an aim portfolio**
-(`experiments/r64_novel_aim_portfolio.py`). Garleanu & Pedersen's (2013)
+(`experiments/r65_novel_aim_portfolio.py`). Garleanu & Pedersen's (2013)
 closed form: with quadratic costs and mean-reverting signals the optimal
 policy is not "trade to the target" but "trade a constant fraction of the
 way toward an *aim* portfolio", where the fraction is set by the signal's
@@ -270,7 +270,7 @@ from experiments.r63_novel_xsmom_rank import (  # noqa: E402
 )
 from experiments.r63_novel_xsmom_rank import build_targets as r63_baseline_targets  # noqa: E402
 
-OUT_DIR = ROOT / "reports" / "r64_holding_period"
+OUT_DIR = ROOT / "reports" / "r65_holding_period"
 
 # Zero-fee spec for the D5 diagnostic column. Not a decision cell.
 SPOT_FREE = SPOT_BASE.__class__.spot(fee_rate=0.0)
@@ -324,7 +324,7 @@ def turnover_stats(targets: pd.DataFrame, fee_rate: float = 0.001) -> dict:
     quantities whose weights drift with prices between rebalances, so this
     slightly UNDERSTATES traded notional and is not exactly "the cost the
     simulator actually pays" as this docstring originally claimed. The
-    conservative branch checked the gap and it is immaterial at R-64's
+    conservative branch checked the gap and it is immaterial at R-65's
     turnover levels: banded and raw turnover agree to three decimals on
     every one of its 44 rows, and measured `gross - net` tracks
     `fee x turnover x days` to within a few percent throughout.
@@ -431,7 +431,7 @@ def volmatched_hold_equity(cand_eq: pd.Series, aligned: dict, assets, market,
             # computed `vol` against the tolerance. Whenever the long-only
             # cap binds -- which is exactly the case for a concentrated arm
             # whose realized volatility approaches the fully-invested
-            # basket's -- a genuine match was reported as a void. Both R-64
+            # basket's -- a genuine match was reported as a void. Both R-65
             # branches found it independently and both reported it rather
             # than editing this frozen file, as the round's rules require:
             # it fired on the R-63 REFERENCE POINT (gaps of 0.86-1.0%

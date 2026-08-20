@@ -138,5 +138,5 @@ uv.lock
 # operator's prices-only decay curve. Same reasoning as r60_* above -- the
 # per-cell numbers are the receipt that the pre-registered rules were read
 # in the order the ledger claims.
-!/reports/r64_holding_period/
-!/reports/r64_holding_period/*.csv
+!/reports/r65_holding_period/
+!/reports/r65_holding_period/*.csv
