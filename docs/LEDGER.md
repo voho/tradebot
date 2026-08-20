@@ -171,6 +171,167 @@ entry that replaced it — nothing was dropped in the conversion. Rounds
 before R-28 were backfilled from the long-form docs and carry only the
 fields their original row had.
 
+### R-66 · 08-20 · NEGATIVE (both branches), REFUTES — B-29 answered: the residual long was never what sank R-64's boundary arm, and both fixes agree from opposite directions
+
+**Direction.** Backlog item **B-29**, filed by R-64 and top of the actionable
+list. R-64's conservative arm (trade-to-the-boundary, Constantinides 1986 /
+Davis & Norman 1990) removed a real 43% of turnover with the cost advantage
+growing at the fee stress tier (D2 clean) — and still lost decisively on
+ETH-A (−0.430 [−0.791, −0.101]), which R-64 attributed to a **residual
+long**: a no-trade region never lets the position return to exactly flat, so
+the arm carried up to 10% of equity through every bear regime v4 sits out.
+R-64's own write-up named that confound as separable in one line and asked
+for exactly this round. Constraint attacked: **COST**. Not a duplicate of
+R-64 itself (this round is R-64's arm plus the one fix, run two independent
+ways), L-05/L-06 (band *width*, not shape or destination), or R-56
+(execution microstructure at fixed rebalance instants).
+
+Two branches make flat reachable again by mechanisms that disagree on
+*why*: **conservative** adds the literal conditional B-29 names (`if
+desired == 0.0: pos = 0.0`, composed with R-64's boundary destination);
+**novel** replaces the constant band width with the width profile the
+asymptotic transaction-cost literature actually derives, `band(f) =
+deadband · f^p` (Janeček & Shreve 2004; Gerhold, Guasoni, Muhle-Karbe &
+Schachermayer 2014), which vanishes at f=0 as a derived consequence rather
+than a special case. The pre-registration named the falsifiable content
+explicitly: R-64's diagnosis predicts the conservative arm's ETH-A number
+must beat −0.215 (half the gap closed), a bar frozen as **D3b** before any
+branch ran.
+
+**What was done.** `experiments/r66_shared.py` (frozen pre-registration,
+inherits D0–D6 from `r64_shared.py` verbatim for comparability, adds D3b).
+Two disclosed pre-measurement amendments: the round was renumbered R-65→R-66
+after a concurrently-running session claimed R-65 on `main` for a different
+round (same-day-parallel, R-31/R-32 precedent); and the conservative arm's
+snap conditional was corrected before any number was read — an
+operator-side diagnostic caught that the first draft's gated form
+(`abs(desired-pos) > band` guarding the snap) could not fire at the
+boundary rule's own resting point (`|0-0.10|` is not `> 0.10`), so it still
+left a residual long on 15.0%–34.6% of v4's flat bars. The unconditional
+form became the frozen primary; the gated form is kept as an ablation. The
+same diagnostic surfaced a fact orthogonal to either verdict: **v4 itself**
+carries a residual long on 3.3% of its own exactly-flat bars on ETH-A (mean
+0.0032, max 0.0995, zero on BTC) — its own band does not fire when a
+target falls from inside the 10% deadband to zero. A concurrent
+literature commission also corrected a citation this project has been
+carrying since R-64: Novy-Marx & Velikov (2016) Table 5's 0.77/0.62 are
+monthly gross returns in percent, not fractions of return preserved (the
+honest reading is *stronger*: net 0.51 [t=2.87] vs 0.37 [t=2.34] at
+identical cost) — annotated in `r66_shared.py` rather than silently fixed.
+The same survey found that transaction-cost theory does **not** license
+snapping to exactly flat for a signal-driven target (Muhle-Karbe, Reppen &
+Soner 2017 §5.1–5.2; de Lataillade & Chaouki 2020 §6) — the static-target
+"band vanishes at zero" result requires a *constant* target, and a
+signal-driven one keeps a strictly positive band floor. B-29 is defended on
+regime-risk grounds only, never as the proportional-cost optimum with a
+fix — recorded before either arm's number was read.
+
+**Configs evaluated: 222** (66 conservative + 96 novel + 60 operator
+verification, independently re-typed from `kelly_regime_v3.prepare` without
+importing either branch's code). **Holdout consultations: +0** — both files
+verified to reference only `R.load_btc_inner()` (hard-truncated
+2022-12-31) and `R.load_eth_a()` (Bitfinex, ends 2019-12); neither calls
+`R.load_btc()` or reads `HOLDOUT`/`OOS_START` anywhere in the file (checked
+by grep, not taken on report).
+
+**Result.**
+
+*Conservative — NEGATIVE.* D0 passes but tight (max mismatch 9.86%/9.69% on
+the two k=1 cells that carry the argument, just inside the 10% tolerance).
+D1 not evaluated (no holdout read licensed); the inner-val rehearsal is
++0.065 [−0.071, +0.206], interval containing zero. **D2 passes cleanly** —
+advantage grows with the fee at every k>0, both splits and ETH-A. **D3
+fails decisively**: ETH-A −0.3676 [−0.744,−0.028] at k=1, −0.2912
+[−0.621,−0.003] at k=0.5, both excluding zero on the wrong side — confirmed
+independently by the operator (−0.368, −0.291) before the branch reported.
+**D3b: REFUTED.** k=1 closes only **14.5%** of R-64's gap (−0.430→−0.368);
+k=0.5 closes 5.8%. The dose-response runs the wrong way: ordering by
+residual-long magnitude at k=1 (R-64 100% of flat bars → ablation 34.6% →
+primary 0%) gives −0.430 → −0.359 → −0.368 — removing the *last* of the
+residual made growth slightly worse. D4 turnover falls (41% vs v4) but
+gives back 21–33% of R-64's saving to the forced snap. D5 fails at the
+decision tier (non-monotone in k at 0.10% on both splits; monotone at
+0.40%). One half of R-64's diagnosis **is** confirmed: the drawdown
+escalation with k on the 2022 bear split is gone with the snap in place
+(33.18→33.03→32.57→32.62→33.01 vs R-64's 33.2→37.0). A caveat the branch
+flagged against itself: at k=1 the reflecting-barrier rule generates
+113,887 intended position changes against v4's 518, of which 113,592 fall
+below `broker.REBALANCE_DEADBAND` — the backtested k=1 is the rule filtered
+through an accidental minimum-step broker band (fill ratio 0.003), not the
+pre-registered rule itself.
+
+*Novel — NEGATIVE, and it fails five gates independently.* D0 passes
+cleanly (mismatch ≤1.7% everywhere). D1 not established (inner-val
+rehearsal +0.0257 [−0.006,+0.086]). **D2 fails**: advantage shrinks at 12 of
+13 cells as the fee quadruples (inner-val +0.0257→+0.0249). **D3 fails**:
+ETH-A −0.1885 [−0.400,−0.021] at the frozen p=2/3 — confirmed independently
+by the operator (−0.189) before the branch reported — negative at every
+p>0 tested. **D4 fails**: target-path turnover rises (ETH +13.5%,
+inner-train +1.2%), because the band is narrower than v4's on 92–99% of
+bars where `desired`<1, exactly the confound named in the pre-registration.
+**D5 fails**: non-monotone in p, a reproducible dip at p=0.5 on all four
+BTC cells — the D5 signature of path realization rather than the named
+mechanism, unsurprising at 52–72 round trips per split. On BTC every
+interval contains zero; on ETH-A every interval excludes zero, on the wrong
+side — the only statistically resolved result in the branch is negative.
+**The branch's own isolation probe is this round's second finding.**
+Sweeping p→0.01 switches the width change off (band ≈0.0993 at f=0.5,
+indistinguishable from v4's 0.10) while leaving the snap-to-flat
+consequence fully active (still exactly 0 at f=0). On BTC inner-val, p=0.01
+gives +0.0001 [−0.000,+0.001] — indistinguishable from v4, confirming the
+probe isolates what it claims to. **On ETH-A, p=0.01 gives −0.1324
+[−0.333,+0.002] — 70% of the full p=2/3 loss (−0.1885), already present
+with the width mechanism switched off, and at lower fees than v4** (nothing
+about this loss is a cost effect in either direction). Reaching exactly
+flat, by itself, cost log growth on ETH-A. Independently confirmed: on BTC,
+where v4 never strands a residual (median bear-exit step 0.20, always
+clearing the 0.10 band), the derived snap-to-flat is a literal no-op — it
+only ever engaged on ETH.
+
+*Both branches, from opposite directions, land on the same reading.* R-64's
+conservative arm attributes its ETH-A loss to a residual long. Removing
+that residual by fiat (conservative) closes 14.5% of the gap and marginally
+*worsens* it at k=1 vs a partial fix. Removing the same residual as a
+derived consequence of a theoretically-motivated width profile (novel)
+costs an *additional* −0.13 on the one window where it engages, isolated
+from the width change entirely. **Two independent mechanisms, agreeing:
+the residual long was not what sank R-64's arm.** What both branches'
+diagnostics point to instead is tracking lag — re-phasing every subsequent
+entry after a forced trip to exactly flat, on an instrument with only
+75–98 round trips over four years, where one re-timed trade swamps the
+effect.
+
+**Skeptic reproduction.** The operator independently re-typed
+`KellyRegimeV3.prepare`'s update loop from scratch (not importing either
+branch's file) before either branch reported, verified the identity check
+(re-typed loop reproduces `kelly_regime_v4` bit-for-bit, max|diff|=0.0),
+and reproduced both branches' headline ETH-A numbers closely before seeing
+either branch's report: boundary k=1 −0.368 (branch: −0.3676); snap k=0.5
+−0.291 (branch: −0.2912); scaled p=2/3 −0.189 (branch: −0.1885). Also
+independently confirmed v4's own flat-bar residual (ETH-A 3.3% of flat
+bars nonzero, mean 0.0032, max 0.0995; BTC 0.0%) before either branch's
+report referenced it.
+
+**Verdict.** **NEGATIVE, both branches.** One-line lesson: **a plausible
+causal explanation for a research round's failure is itself a claim, and
+this project's own routine — pre-register the test, then read it — applies
+to explanations as much as to strategies.** R-64's residual-long diagnosis
+was written down as a cause; made falsifiable, it explains at most 15% of
+what it was invoked to explain, and two independently-motivated fixes agree
+it is not the dominant mechanism. **Holdout counter: +0 this round;
+running total ~627** (unchanged — both branches failed their pre-registered
+inner-split gates before a holdout read was authorized). **The decision
+rule did not move**; D3/D3b/D5 fired as written and no threshold was
+revisited after any number was read. **Next step: B-29 is CLOSED,
+REJECTED** (see section C). B-30 (the futures fill-through band) remains
+open and is independently reconfirmed here on both arms (conservative
+0.504/0.538 fill-through matching v4's own; novel 0.47/0.53). No new
+backlog item is filed for the tracking-lag finding — it is a diagnostic
+byproduct, not a specific enough mechanism to pre-commit a future session
+to, and the concurrent session's **B-31** (the long/flat gate's forced-exit
+turnover) is the more specific, better-motivated item already at the top
+of the list.
+
 ### R-65 · 08-20 · NEGATIVE (both branches), CROSSES — the priced signal becomes nearly affordable: Gârleanu–Pedersen partial adjustment moves R-63's arm from −7.54 to +0.59, and the interval still contains zero
 
 **Direction.** The first round in this project to attack **COST** with a
@@ -7253,8 +7414,10 @@ trip.
 | The same z-score reversion vote, additionally gated by this project's own rolling causal Hurst exponent (R-46, reused not reimplemented) — trading only while H(t)<0.5 | 57 configurations; passes causality (independently reproduced bit-for-bit by the operator); fails D1 (3/6) and D4 (3/6); D3 confirms predicted BTC/ETH underperformance without the ungated version's catastrophic whipsaw — the gate holds the candidate flat 91-93% of the time on BTC/ETH, directly reproducing R-46's own BTC-Hurst finding (mean H≈0.62). An ablation shows the gate genuinely helps vs. the same signal ungated (better final balance on 5/6 panel assets, better max drawdown on 6/6) but the underlying signal it gates is itself worse than `buy_and_hold` on 5/6 assets, so the gate is damage control, not a hidden edge. The round's own motivating hypothesis (R-59/R-60's "buy-the-dip" framing) is only weakly supported: measured panel Hurst (mean 0.601) is modestly below BTC's (0.622) but both sit solidly in H>0.5 (trend-persistent) territory most of the time — the panel is not measurably mean-reverting. Do not re-try a signal-family swap (trend vs. reversion) on this panel without a different explanation for the matched-exposure advantage than "the panel rewards buy-the-dip," which this round's own Hurst measurement weakens; Hurst-gating itself is not ruled out as a general risk-control technique for other signals, only as a fix for this specific reversion vote's promotion bar. | R-61 (novel), see **B-27** |
 | **B-27**: `kelly_regime_v4`'s conditional volatility-target `scale` factor ALONE, with the directional vote deleted (`frac≡1.0`, never stands aside) — the literal isolation B-27 named | 60 backtests; zero new parameters (every constant is v4's own shipped default, nothing swept, a component removed rather than replaced). Passes causality (tamper probe, BCH/LTC; full 461-test suite green). Fails D1 on the panel (**2/6**, exact binomial p=0.891) with **zero of six** bootstrap intervals excluding zero in either direction — the effect is not merely absent but unmeasurable. More decisively, it fails the BTC/ETH control (**D3 0/2**), *inverting* on both assets where the full strategy has the property (+3.05pp BTC, +3.70pp ETH, vs v4's own −5.55/−11.46pp). D4=4/6 at the 0.40% tier is recorded as context only — the identical 4/6 holds at 0.10% and its drawdowns run 63–80% throughout, so it is a return count on a near-fully-invested arm, not a risk finding. **Do not re-try any variant that attributes v4's matched-exposure drawdown property to its volatility-targeting machinery**: run alone that machinery produces the property nowhere, including on the two assets that have it, so the tail benefit of vol-targeting here is about the exposure level it selects and not the path it takes. | R-62 (conservative), closes B-27 (factor 1 of 2) |
 | **B-27**: `kelly_regime_v4`'s latched 20/40/80-day trend vote ALONE, at a constant full-notional multiplier with the volatility target deleted entirely (`desired=frac×1.0`, no vol measurement anywhere in the class) | 60 backtests; zero new parameters (`c_const=1.0` fixed by the pre-registration, not swept). Passes causality (BCH/LTC). **Reproduces v4's entire signature on both axes**: D3 **2/2** on the BTC/ETH control (−10.56pp BTC, −2.24pp ETH, matching v4's own 2/2, though both intervals contain zero at n=2) *and* D1 **0/6** on the panel — the same failure as v4 at larger magnitude, with 4 of 6 intervals excluding zero, all four against it. Not promotable on any reading: D4 **0/6** at the 0.40% tier by wide margins (LTC $121 vs $1,190; XTZ $87 vs $132), only 2/6 even at 0.10%, panel drawdowns 77–91% — deleting the vol target removes what makes a trend rule's turnover affordable. A named prediction failed usefully: this arm's mean notional came out **1.5×–2.2× HIGHER** than v4's (0.40–0.50 vs 0.19–0.31), not lower as pre-registered, because v4's conditional target divides by these high-volatility altcoins' realized vol even in its non-breakout "steady" state — the scale factor was shrinking the position most of the time, not occasionally enlarging it. **Do not re-try a bare vote-only or constant-exposure trend rule as a tradeable candidate**; but note the diagnostic value, which is this round's actual product: the property and its asset-specificity both live in this factor. | R-62 (novel), closes B-27 (factor 2 of 2) |
-| Trade-to-the-boundary of `kelly_regime_v4`'s no-trade band (`pos = desired ∓ k·band`), the proportional-cost optimum of Constantinides 1986 / Davis & Norman 1990 / Liu 2004 | 68 configurations, zero new fitted parameters (k=0 reproduces v4 bit-for-bit). The mechanism is real and large — median overshoot at a band exit is 2.13 band-widths, so 43% of all turnover is removable, and D2 passes cleanly (the advantage grows at every k>0 on both splits as the fee quadruples). It still fails, on a side effect nobody had named: a no-trade region means the position never returns to *exactly* flat, so the arm carries a residual long ≤10% of equity through every bear regime v4 sits out. ETH-A **−0.430 [−0.791, −0.101]**, the only interval in the round excluding zero and on the wrong side; BTC max drawdown rises monotonically with k on the 2022 bear split. Do not re-try a boundary/partial-boundary destination on this family without first separating the destination from the never-goes-flat consequence — which is B-29, not a rescue of this arm. | R-64 (conservative) |
+| Trade-to-the-boundary of `kelly_regime_v4`'s no-trade band (`pos = desired ∓ k·band`), the proportional-cost optimum of Constantinides 1986 / Davis & Norman 1990 / Liu 2004 | 68 configurations, zero new fitted parameters (k=0 reproduces v4 bit-for-bit). The mechanism is real and large — median overshoot at a band exit is 2.13 band-widths, so 43% of all turnover is removable, and D2 passes cleanly (the advantage grows at every k>0 on both splits as the fee quadruples). It still fails, on a side effect nobody had named: a no-trade region means the position never returns to *exactly* flat, so the arm carries a residual long ≤10% of equity through every bear regime v4 sits out. ETH-A **−0.430 [−0.791, −0.101]**, the only interval in the round excluding zero and on the wrong side; BTC max drawdown rises monotonically with k on the 2022 bear split. Do not re-try a boundary/partial-boundary destination on this family without first separating the destination from the never-goes-flat consequence — which is B-29, not a rescue of this arm. **⚠ ANNOTATED IN PLACE BY R-66 (nothing deleted): the residual-long explanation stated in this row is REFUTED as the dominant cause.** B-29 was run; separating the two consequences closes only **14.5%** of the −0.430 ETH-A gap, and the dose-response inverts (removing the last of the residual made growth marginally *worse* than a partial fix). A second, independently-motivated arm reached exactly-flat from the theory side and *lost an additional −0.13* on the same window with the width mechanism switched off. The residual long **was** the cause of this row's BTC drawdown escalation (33.2→37.0% with k, which disappears once flat is reachable), but not of the ETH-A growth loss — two symptoms, one hypothesis, and it explains only one. The live diagnosis is tracking lag. Also annotated: this row's Novy-Marx & Velikov gloss ("preserves 0.77 of gross return against 0.62… i.e. 38% more net return") misreads Table 5 — 0.77 and 0.62 are monthly gross excess returns in *percent*; the correct comparison is net 0.51 [t=2.87] vs 0.37 [t=2.34] at identical t-costs, and NMV's own rule is an asymmetric sS rule. | R-64 (conservative), annotated by R-66 |
 | Gârleanu–Pedersen (2013) smooth partial adjustment toward a persistence-weighted aim, on this simulator's purely proportional taker fee | 376 configurations. A confirmed **category error**, and the theory's own scope condition: GP is derived for quadratic/impact costs, and with a proportional fee the smooth rate has no purchase. The literal rule (`min_step=0`) loses through fees at a=1 (73,541 fills) *and* through lag at a=0.002 (fees $380 vs v4's $509 — cheaper, and still worse). Rescued with a minimum-step filter, the filter does all the work: `min_step` swings log₁₀(fills) by 2.49 decades, `a` by 0.67. Selection surface is noise (Spearman ρ = −0.02 across splits, 34/72 sign agreements). Separately, the persistence-weighted aim — the genuinely novel half — is a **measured null with a mechanical explanation**: v4's anchors have causal half-lives of 2.5/3.0/4.6 days (~1e-3 per bar), so at any usable trading rate the GP shrinkage factors agree to four decimals and the aim collapses onto the flat ⅓ mean. Do not re-try GP-style signal-decay weighting on a signal set whose decay rates differ by ~2× rather than by orders of magnitude; and do not re-try a smooth trading rate under a proportional fee at all. | R-64 (novel) |
+| **B-29**: trade-to-the-boundary composed with an unconditional snap to exactly flat (`if desired == 0.0: pos = 0.0`), i.e. R-64's conservative arm with the one conditional that separates its destination change from its never-goes-flat consequence | 66 configurations, zero new fitted parameters (`band` is v4's shipped 0.10; `k` is R-64's own index). Passes causality (the band-guarded variant reproduces v4 bit-for-bit; truncation at two depths; x3 and /3 tamper probes). **D2 passes cleanly** — the advantage grows with the fee at every k>0 on both splits and on ETH-A — and turnover still falls 41% vs v4 while retaining ~75% of R-64's saving, so the mechanism operates as designed. It fails anyway: **D3 −0.3676 [−0.744, −0.028]** on ETH-A (interval excluding zero, wrong side, operator-reproduced at −0.368 independently), and **D5 non-monotone in k at the 0.10% decision tier** on both splits. D0 passes but tight (9.86%/9.69% on the two k=1 cells carrying the argument, so the inner-val Sharpe gain should not be quoted as evidence). **Its real product is the refutation of R-64's own published diagnosis** (D3b: 14.5% of the gap closed against a pre-registered 50% bar) — see the annotation on the R-64 row above. Do not re-try any destination change on this family motivated by the residual-long story; that story is measured and it is not the mechanism. A separate blocker is now named: at k=1 the reflecting-barrier rule emits 113,887 intended changes against v4's 518, of which 113,592 fall below `broker.REBALANCE_DEADBAND` — k=1 cannot be evaluated honestly until a minimum-step rule lives in the strategy rather than in the broker. | R-66 (conservative), closes B-29 |
+| Replacing v4's constant no-trade half-width with the asymptotic literature's own width profile, `band(f) = deadband · f**p` (Janeček & Shreve 2004; Gerhold, Guasoni, Muhle-Karbe & Schachermayer 2014), so the band vanishes where the target vanishes | 96 configurations, zero fitted parameters selected on returns (`p` is a mechanism index with a literal theoretical value 2/3 and an identity point p=0 ≡ v4 bit-for-bit; `f_ref=1.0` is structural). Passes causality including a structural assertion that the target is exactly 0.0 on all 136,434 zero-desired bars at every p>0. **Fails five gates independently**: D1 not established, **D2 fails at 12 of 13 cells** (the advantage *shrinks* as the fee quadruples — this is a tracking-quality change, not a cost mechanism), **D3 −0.1885 [−0.400, −0.021]** on ETH-A and negative at every p>0 (operator-reproduced at −0.189), **D4** turnover rises (the band is narrower than v4's on 92–99% of bars, the pre-registered confound), **D5** non-monotone with a reproducible dip at p=0.5 on all four BTC cells. The theoretical exponent is invisible in the data: p=1/6 and p=1 are indistinguishable from p=2/3 everywhere, and the whole Sharpe spread across the grid is 0.020–0.049 against a ±0.2 noise floor. **Its real product is an isolation probe** — at p=0.01 the width change is off (band ≈0.0993 at f=0.5) while snap-to-flat is fully on, and it already carries **70% of the ETH-A loss** (−0.1324) at *lower* fees than v4, while on BTC it is a literal no-op. Do not re-try a width-profile-in-f rule on this family; and note that theory does not license the snap it delivers, since the "band vanishes at zero target" result requires a *constant* target and a signal-driven one keeps a positive width floor (Muhle-Karbe, Reppen & Soner 2017 sect. 5.2; de Lataillade & Chaouki 2020 sect. 6). | R-66 (novel) |
 
 ---
 
@@ -8186,9 +8349,57 @@ now **statistical power**, not mechanism. That is what makes B-06 more
 valuable than it has ever been: the interval is the thing failing, and
 forward evidence is the only thing that shrinks it.
 
+**Re-ranked 08-20 after R-66** (the day's third independent round, recorded
+here rather than reordered ahead of R-65 above, per the R-31/R-32 same-day
+precedent this file already follows — R-66's operator discovered R-65 only by
+fetching `main` mid-round, and renumbered rather than collide). Two parallel
+branches attacked **B-29** directly. **B-29 is now CLOSED, REJECTED**, and it
+closes by *refuting its own premise* rather than by failing on it. R-64 had
+published a specific causal claim — that a residual long, not fees and not
+lag, is what sank its trade-to-the-boundary arm. R-66 made that claim
+falsifiable before running anything (D3b: the gap must close by half) and
+both branches say no from opposite directions: the literal fix closes 14.5%
+of it with an inverting dose-response, and a theoretically-derived arm that
+reaches flat as a *consequence* loses an additional −0.13 on the one window
+where the state occurs, isolated from its own width mechanism and at lower
+fees than v4. Half of R-64's diagnosis survives — the BTC drawdown
+escalation with k really was the residual long, and it disappears — so the
+lesson is not "R-64 was careless" but that **two symptoms were attributed to
+one cause and it only ever explained one of them.**
+
+The reusable methodological point, and the reason this round was worth a day:
+**a causal explanation of a failure is itself a claim, and this project's own
+routine applies to explanations as much as to strategies.** R-64's diagnosis
+was written into the ledger and into section C as settled reasoning; one
+conditional and 222 configurations later it is annotated in place as refuted.
+Nothing was deleted. Two smaller corrections ride along: `kelly_regime_v4`
+itself strands a residual long on 3.3% of its own exactly-flat bars on ETH-A
+(nobody had noticed; it is worth ~0 in growth, which is why), and R-64's
+Novy-Marx & Velikov gloss misread Table 5 — 0.77/0.62 are monthly gross
+returns in percent, and the correct reading (net 0.51 vs 0.37 at identical
+cost) is *stronger* than the version this project was carrying.
+
+What that does to the order. **B-31 stays at the top of the actionable list**
+— it is R-65's item, specific, measured and cheap, and nothing in R-66 touches
+it. **B-30 is reconfirmed and rises in urgency**: both R-66 branches
+independently reproduced the futures fill-through numbers (0.504/0.538 and
+0.47/0.53 against v4's own), and the conservative branch found the spot-side
+counterpart — at k=1 its rule emits 113,887 intended position changes of
+which 113,592 fall below `broker.REBALANCE_DEADBAND`, so what was backtested
+is the rule plus the broker acting as an accidental minimum-step filter. That
+is no longer only a futures caveat; it is a live obstacle to evaluating any
+band-geometry rule honestly, and it should be settled before another round on
+this axis. **No new backlog item is filed for the tracking-lag finding** —
+it is a diagnostic byproduct and not specific enough to pre-commit a future
+session to, which is the same judgement R-62 made in the same situation.
+**B-06 remains the standing zero-cost recommendation**, and R-65's reading of
+it above is unchanged and if anything reinforced: on this axis too the
+intervals, not the mechanisms, are what fail.
+
+
 | ID | item | attacks | status | note |
 |---|---|---|---|---|
-| **B-29** | Separate the two things R-64's conservative arm confounded: a trade-to-the-boundary destination **that still snaps to exactly flat when `desired == 0`**. R-64 measured the destination change as worth a real 43% of turnover with a D2 slope in its favour, and killed it on the residual long the band leaves behind in bear regimes — but those are two independent consequences of one line, and only one of them is fatal | COST | **OPEN, actionable today** | Filed by R-64. Cheapest live item on the list: one conditional in a loop this project already has two implementations of, zero new data, zero new fitted parameters, and it inherits R-64's whole pre-registered battery (D0–D5) unchanged so the comparison is already specified. Its own named failure mode: the snap-to-flat may just re-introduce the turnover the boundary saved, at exactly the moments (regime exits) when the step is largest — in which case the 43% figure was never bankable and the answer is a number rather than another attempt. |
+| **B-29** | Separate the two things R-64's conservative arm confounded: a trade-to-the-boundary destination **that still snaps to exactly flat when `desired == 0`**. R-64 measured the destination change as worth a real 43% of turnover with a D2 slope in its favour, and killed it on the residual long the band leaves behind in bear regimes — but those are two independent consequences of one line, and only one of them is fatal | COST | **DONE -> R-66, REJECTED** | Filed by R-64. Cheapest live item on the list: one conditional in a loop this project already has two implementations of, zero new data, zero new fitted parameters, and it inherits R-64's whole pre-registered battery (D0–D5) unchanged so the comparison is already specified. Its own named failure mode: the snap-to-flat may just re-introduce the turnover the boundary saved, at exactly the moments (regime exits) when the step is largest — in which case the 43% figure was never bankable and the answer is a number rather than another attempt. | **ANSWERED, and the answer is a refutation rather than a rescue.** R-66 ran both readings of this item — the literal conditional (conservative) and a derived vanishing-width band that reaches flat without a special case (novel). Both NEGATIVE, and between them they refute the premise the item was filed on: separating the destination from the never-goes-flat consequence closes only **14.5%** of R-64's ETH-A gap against a pre-registered 50% bar, the dose-response inverts, and the novel arm's isolation probe puts **70% of the loss** at a setting where the width change is switched off and fees are *lower* than v4's. The item's own named failure mode (the snap gives back the turnover the boundary saved) was only partly realised — ~75% of R-64's saving is retained and turnover still falls 41% — so the mechanism worked and the story motivating it was wrong. The residual long **does** explain R-64's BTC drawdown escalation, which disappears once flat is reachable; it does not explain the ETH-A growth loss. Live diagnosis is tracking lag.
 | **B-30** | Settle what `broker.REBALANCE_DEADBAND = 0.05` is doing to every futures figure in this project before another round reads one. Measured on `kelly_regime_v4` itself, intended rebalances → fills is 86.0% / 96.2% on spot but **48.1% / 53.8% on 5x futures**: the broker silently discards about half the incumbent's own rebalances, because 5% of *max* notional is 25% of equity at 5x | methodology (not one of the four constraints) | **OPEN, actionable today** | Filed by R-64, measured independently by both its branches and reproduced by the operator. Not a strategy question and not a bug to "fix" unasked — the band exists so strategies can re-emit a target every bar without churning fees, and changing it would move every number in the comparison table. What is needed is the measurement made explicit: how much of each registered strategy's futures column is the band, and whether the leverage-scaling of the threshold (5% of equity×leverage rather than 5% of equity) is intended. Until then the futures column carries a second caveat alongside funding, and README says so. |
 | **B-31** | Attack the **long/flat gate**, which R-65 identified as where the remaining turnover lives once buffering has done its work. R-63's frozen rule holds only positive-scoring assets and stands flat otherwise, so every zero-crossing of the incumbent's score forces an exit — a channel R-65's conservative branch measured as **invariant at 0.386/day across all 20 cells of a holding-period grid** while voluntary swaps fell 16-fold. Candidate fixes: a hysteresis band around zero (enter above +δ, exit below −δ), a continuous rather than binary positivity weight, or letting the partial-adjustment recursion carry the position through a crossing instead of resetting it | COST | **NEXT** | Filed by R-65. The single most specific, cheapest, best-motivated item on this list: the mechanism is measured, the number is known (0.386 forced exits/day against a 0.641/day break-even), the fix is local to one line of R-63's `build_targets`, and the harness, benchmark and decision rules all exist. R-65's conservative arm stalled at a **1.38:1** deficit with break-even needing turnover ≤0.641/day against the 0.900/day it achieved — this channel is the whole gap. Note the honest prior: R-65's novel arm already reaches 0.192/day without touching the gate, so this may turn out to matter only for the discrete-selection family. |
 | **B-32** | Multi-asset strategy **registration**, so that a bar-by-bar cross-asset allocator can enter the comparison table at all. R-49/B-17 built the "can it be done" infrastructure and its own docstring says it cannot express this shape; R-65 is the first round to produce a candidate whose numbers would have been worth a row (net +0.589 vs a volatility-matched hold at 0.19 turnover/day, $1,000 → $5,043) and which the table therefore cannot hold | ERR (methodology gap) | **OPEN** | Filed by R-65, promoted from B-17's deferred half. Until this exists, every result on the cross-sectional axis is confined to `experiments/` and the ledger, and cannot carry a measured interval in `reports/inference/bootstrap.csv` beside the single-asset rows — the exact asymmetry R-30 built the interval requirement to prevent. Not urgent while every candidate fails its interval anyway; it becomes blocking the moment one does not. |
@@ -8287,6 +8498,21 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-20 · ~627** — R-66: **+0** on top of R-63's ~627. Neither branch reads
+  a BTC bar dated 2023-01-01 or later: both load BTC exclusively through
+  `R.load_btc_inner()`, which hard-truncates at 2022-12-31, and the operator
+  verified by grep — not by report — that neither file calls `R.load_btc()`
+  or references `HOLDOUT`/`OOS_START` anywhere. The falsification instrument
+  is ETH-A (Bitfinex, ends 2019-12-31) and costs +0 by the R-19/R-28
+  convention; ETH-B was never read. Both arms failed pre-registered
+  inner-split gates (conservative on D3 and D5, novel on D2/D3/D4/D5) before
+  a holdout read was authorized, so the frozen configurations were written
+  down and never run on 2023+. The round spent 222 configurations and zero
+  holdout. *(R-65 and R-66 ran the same day, in parallel, without knowing
+  about each other until R-66's operator fetched `main` mid-round and
+  renumbered — the R-31/R-32 situation again. Both bullets stand, the total
+  is unchanged at ~627 because both contributed +0, and the day's trials
+  count for deflated Sharpe is the total across all four branches.)*
 - **08-20 · ~627** — R-65: **+0** on top of R-63's ~627. Neither branch
   sliced, imported or referenced `W_HOLD` (2023-01-01 →) anywhere; both failed
   the further-work bar (`(D1 or D2) and D3 and D5 and scramble`) on D1 and D2,
