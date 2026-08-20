@@ -76,6 +76,21 @@ those branches (R-59, R-60) were retuning a factor that never carried it,
 and the panel failure is the trend signal failing on those instruments
 rather than sizing being miscalibrated for them.
 
+**Priced by R-63 (08-20), which closes the "just add instruments" escape:**
+*count the breadth before buying the diversification.* The obvious answer to a
+thin trend edge is more instruments, and this project has had eight committed
+since R-57. Measured on prices alone they carry a mean pairwise daily-return
+correlation of **0.634**, one factor holding **68.2%** of the variance, and a
+Grinold equal-correlation breadth of **1.47 of 8** — so `IR = IC·√BR` caps the
+gain from the whole panel at **1.21x**, against 6–8x the turnover at a 0.104%
+break-even. Both arms failed accordingly, and the novel one failed *with a
+price attached*: its cross-sectional ranking is genuinely real — it beats 10 of
+10 permutations of its own weights once fees are removed — and is worth ~0.5
+log units over 6.4 years against an **8.0** log-unit turnover bill. That is the
+first time this project has priced a signal against its own cost rather than
+merely watching it lose. R-33's exposure artifact survived diversification
+intact besides, on the one construction that might have escaped it.
+
 ---
 
 ## A. Strategies (registered)
@@ -134,6 +149,297 @@ as raw pipe-separated text. Every row's text is reproduced verbatim in the
 entry that replaced it — nothing was dropped in the conversion. Rounds
 before R-28 were backfilled from the long-form docs and carry only the
 fields their original row had.
+
+### R-63 · 08-20 · NEGATIVE (both branches), MEASURES — widening the universe fails, and the panel's own breadth says why: eight instruments carry 1.5 independent bets
+
+**Direction.** The first round in this project to use its committed multi-asset
+panel as a **cross-section** rather than as six separate single-asset
+replications. The idea in one sentence: *stop improving the sizer and widen the
+universe.* R-62 localized `kelly_regime_v4`'s one surviving property in the
+directional **vote** — return timing, not volatility timing — and the
+literature's standing answer to a thin trend edge is not a better trend signal
+but **more instruments**. Moskowitz, Ooi & Pedersen get their result from a
+diversified portfolio of 58, not from any single one; this project already
+recorded the same lesson from the other side in **R-05**, where the published
+deep-learning edge turned out to come from diversifying across 88–100
+instruments at 2–3bps against our one instrument at 10bps. Constraint
+attacked: **INFO** (primary) and **N≈3** (secondary). The INFO claim is
+specific and is the reason this is not a seventh repeat of the axis that has
+failed six times (R-44, R-53, R-54, R-55, R-58×2): *relative* information
+across contemporaneous price series is not proxied out of one series the way
+L-14/L-15/L-16's Kyle/VPIN features were — the most expensive repeated mistake
+in section A — and it is not an exogenous daily feed that has to lead. The rank
+of BCH's trend against LTC's has been sitting in `data/` since R-57, unused.
+
+**Not a duplicate of:** R-42/R-43 (dual-asset BTC+ETH diversification),
+R-51 (static 50/50, inverse-vol), R-52 (monthly calendar, drift-band 50/50).
+All four are **two correlated assets carrying the same signal**, weighted by a
+rule that never compares one asset's signal to another's, so none forms a
+cross-sectional quantity at all — and **R-51's novel branch closes by asking
+for exactly this round**: "do not re-try … without a genuinely different asset
+pair (N>2, where correlation structure varies leg-to-leg)". Not R-57 → R-62,
+every one of which runs a single-asset strategy on each panel asset separately
+and counts assets, which cannot see diversification or a cross-section by
+construction. Not R-49/B-17, which is infrastructure with no candidate — and
+which is deliberately *not* used here, because its own docstring says it cannot
+express a bar-by-bar cross-asset allocator.
+
+**Literature.** Moskowitz, T. J., Ooi, Y. H., & Pedersen, L. H. (2012), "Time
+series momentum," *Journal of Financial Economics* 104(2), 228–250 — 58
+instruments, the diversified portfolio is where the return lives; cited for the
+construction, not for a transferable magnitude (their instruments are futures
+at institutional cost). Han, C., Kang, B., & Ryu, J. (2024), "Time-Series and
+Cross-Sectional Momentum in the Cryptocurrency Market: A Comprehensive Analysis
+under Realistic Assumptions," *SSRN Electronic Journal*
+(doi:10.2139/ssrn.4675565), 78 cryptocurrencies — the closest paper to this
+round's exact question, and it answers it negatively in advance: time-series
+momentum evidence is strong, cross-sectional momentum evidence is "almost
+non-existent," and once transaction costs and daily price fluctuations are
+charged many momentum portfolios are liquidated while portfolios with
+statistically significant mean returns often earn negative profits. Liu, Y.,
+Tsyvinski, A., & Wu, X. (2022), *Journal of Finance* 77(2), 1133–1177 — the
+crypto three-factor model (market, size, momentum) that makes a crypto
+cross-sectional momentum factor worth testing at all; note their cross-section
+is hundreds of coins and their strategies are long-**short**, which this round
+cannot run. Fieberg, C., Gliedtke, G., Poddig, T., Walker, T., & Zaremba, A.
+(2024), "A Trend Factor for the Cross Section of Cryptocurrency Returns,"
+*Journal of Financial and Quantitative Analysis* (doi:10.1017/S0022109024000747)
+— a trend factor prices the crypto cross-section but deteriorates on
+smaller-cap, lower-liquidity coins, which is five of this panel's six. Asness,
+Moskowitz & Pedersen (2013), *Journal of Finance* 68(3), 929–985. Grinold
+(1989), *JPM* 15(3), 30–37, and Clarke, de Silva & Thorley (2002), *FAJ* 58(5),
+48–66 — `IR = IC·√BR` and the correction that BR counts independent bets, not
+universe size. Jegadeesh & Titman (1993), *Journal of Finance* 48(1), 65–91.
+
+**Two failure modes were named in the pre-registration, both predicting
+failure**, so that a pass would read as a genuine surprise rather than as
+confirmation: **(F1)** Grinold breadth — crypto majors are one factor wearing
+eight tickers, so the cross-section adds almost no breadth over BTC alone while
+multiplying turnover against a 0.104% break-even; **(F2)** Han–Kang–Ryu's
+direct finding above, which predicts specifically that the *novel*
+(cross-sectional) arm should fail and the *conservative* (time-series,
+diversified) arm should be the stronger of the two. Recording (F2) also fixes
+the round's asymmetry honestly: the conservative arm is the one with the prior,
+so it was never the "safe" arm.
+
+**What was done.** Two parallel branches against a shared, frozen
+pre-registration committed one commit before either branch read a candidate
+number (`experiments/r63_shared.py`; `git diff` on it is empty — neither branch
+edited it). Universes: **U6** = R-57's frozen panel (BCH, LTC, ETC, DASH, LINK,
+XTZ), **U8** = U6 + BTC + ETH. Windows: W_TRAIN 2020-04-01→2021-12-31,
+W_VAL 2022-01-01→2022-12-31, W_FULL6 2020-04-01→last bar (U6 only), W_HOLD
+2023-01-01→ (**not read by either branch**). Long-only unlevered spot at 0.10%
+(D1–D3) and 0.40% (D4); a multi-asset 5x book is out of scope because this
+codebase has no shared-margin liquidation model and R-49/B-17 deliberately
+deferred building one.
+
+**Conservative** (`experiments/r63_conservative_panel_tsmom.py`): the literal
+Moskowitz–Ooi–Pedersen construction with this project's own incumbent as the
+per-asset rule — `w_i(t) = clip(v4_target_i(t), 0, 1) / N`, where `v4_target_i`
+is `KellyRegimeV3.prepare()` byte-for-byte. **Zero new parameters**: nothing
+swept, nothing selected, no cadence, no cap. **Novel**
+(`experiments/r63_novel_xsmom_rank.py`): cross-sectional relative strength —
+rank assets by v4's own vote made continuous (`mean over h∈{20,40,80}d of
+close/anchor − 1`), hold the top `k` with a positive score equal-weighted, flat
+when none is positive, sized by v4's own conditional volatility target at the
+portfolio level with every shipped constant untouched and driven by the
+equal-weight all-N basket's return series (driving it from the top-k basket
+would make the scale a function of the weights the scale determines; that
+circularity was ruled out in the branch's instructions, not discovered later).
+**One free parameter, `k`**, swept over {1,2,3,4} on W_TRAIN and selected on
+W_VAL before the D1 cell was touched.
+
+Both arms and all three benchmarks go through **one** simulator defined in the
+shared file, taking a target-weight matrix and nothing else, so a candidate and
+its benchmark differ *only* in that matrix. Benchmarks: `EW_HOLD` (1/N bought
+once, never rebalanced), `MATCHED_HOLD` (equal-weight at a constant total
+notional equal to the candidate's **own** realized mean — the standing R-33
+rule), and `BTC_HOLD`. Pre-registered falsification: the **cross-section
+scramble control** — the same weights, in the same sizes, at the same times,
+attached to the *wrong* assets, 10 fixed seeds; the arm survives only if its D1
+point estimate exceeds the scrambles' 90th percentile. **Configurations evaluated: 83 portfolio backtests across both branches**
+(conservative 20, novel 63), counted by the shared `config_count()` and
+reported by each branch. Of those, the actual **parameter search is 8** — the
+novel arm's `k`∈{1,2,3,4} on two selection windows — and the conservative arm
+contributes **0**, having no free parameter. Everything else is a benchmark
+arm, a scramble control or a post-hoc diagnostic. Both branches re-ran
+identical configurations during development; those are repeats and add no
+trials. The deflated-Sharpe trials number this round contributes is therefore
+8, not 83, but 83 is the honest count of backtests executed.
+
+**Result.** Both branches are NEGATIVE, for two different and independently
+informative reasons.
+
+| cell | conservative (diversified TSMOM) | novel (cross-sectional rank, k=1) |
+|---|---|---|
+| **D1** growth vs MATCHED_HOLD | **−0.022** [−0.74, +0.70] — FAIL | **−7.54** [−11.97, −3.11] — FAIL |
+| **D2** max DD vs MATCHED_HOLD | **+1.57pp** [−7.57, +30.53] — FAIL | **+42.65pp** [+17.20, +62.59] — FAIL |
+| **D3** W_VAL, U8 | −0.014 growth, +2.13pp DD — FAIL | −0.864 growth, +38.5pp DD — FAIL |
+| **D4** @0.40% vs EW_HOLD | $993 vs $1,454 — FAIL *(predicted)* | $4.3e−11 vs $1,454 — FAIL *(predicted)* |
+| **scramble** @0.10% | candidate −0.022 vs p90 **−0.992** — **SURVIVES** | candidate −7.54 vs p90 **−7.07** — **FAILS** (3rd of 11) |
+| **scramble** @0bps | — | real **+0.480** vs p90 **+0.016** — **SURVIVES**, 10 of 10 |
+| further-work bar | **False** | **False** |
+
+Neither arm reached, or needed, a holdout read.
+
+**The conservative arm is the cleanest re-demonstration of R-33 this project
+has produced.** Against the fully-invested `EW_HOLD` it looks like a triumph:
+$1,751 against $1,457 from a $1,000 start, and a **35.2% max drawdown against
+90.7%** — a 55-point cut, interval [−60.4, −23.1], comfortably excluding zero.
+Against a hold carrying **its own 25.6% mean notional** it is $1,751 against
+$1,794 and it draws down **more** (35.2% vs 33.6%). The entire 55-point
+headline is the exposure level, again, now on a diversified six-asset portfolio
+rather than a single instrument. Its per-asset timing is meanwhile genuinely
+non-random — scrambling the asset→signal assignment costs about **1.0 in log
+return** and the arm beats all ten scrambles decisively — so this is not a
+"the signal is noise" result. It is a *the signal is real and 1/N over six of
+them still does not beat holding the same six at the same exposure* result,
+which is precisely what named failure mode (F1) predicts.
+
+**The novel arm fails its falsification test at the real fee tier — and the
+branch then ran the control again with fees off, which is the most
+informative number in the round.** At 0.10% the candidate's D1 estimate ranks
+**3rd of 11** against random permutations of its own weights (candidate −7.54,
+scramble p90 −7.07; two scrambles did better), with the scrambles' mean total
+notional identical to the candidate's to <1e-12, so the control isolates
+exactly the intended quantity. The account goes from $1,000 to **$1.44** with a
+99.9% drawdown at the *base* tier, and to 4.3e−11 at 0.40%.
+
+With fees set to zero — a post-hoc diagnostic, not a pre-registered cell, and
+labelled as such — the same comparison **inverts cleanly**: the real ranking
+scores **+0.480** against scrambles spanning −1.88 to +0.175 (p90 **+0.016**)
+and beats **10 of 10** of them (operator-verified from the saved CSV). So the cross-sectional ranking is
+**not noise** — it is the first genuinely cross-sectional signal this project
+has ever measured, and it carries real information. The reason it loses anyway
+is arithmetic, and the branch pinned it exactly: at k=1 the top-ranked asset
+changes **2.86 times per day** (3.44 round-trip turnover/day), an implied drag
+of 0.00344 log-return per day, which over 2,332 days is **8.02 log units** —
+precisely the gap between the frictionless +0.480 and the charged −7.537.
+**The signal is worth about 0.5 log units over 6.4 years and costs 8.0 to
+harvest: a 16-to-1 deficit.** And even frictionless it does not clear the bar
+this round set, because +0.480 carries the interval **[−2.58, +3.65]**, which
+contains zero — beating a random permutation of its own weights is a weaker
+claim than beating a hold at the same exposure, and it clears only the first.
+That is Han–Kang–Ryu's (F2) prediction reproduced on this repo's own data with
+the mechanism attached. The k-sweep is monotone in the same direction on both
+selection windows (k=1 worst on W_TRAIN, improving through k=4) — a slope
+toward "hold everything", not a plateau around an optimum, which is the
+parameter-neighbourhood signature this project's promotion bar exists to catch.
+
+**The measurement that explains both, taken before either verdict was read**
+(`experiments/r63_breadth.py`, prices only, so it can neither contaminate nor
+be contaminated by a strategy verdict). Over 2020-04 → 2026-08 the eight-asset
+universe has a **mean pairwise daily-return correlation of 0.634** (range
+0.49–0.75), a single eigenvalue carrying **68.2%** of the variance, an
+eigenvalue participation ratio of **2.08 of 8**, and a Grinold
+equal-correlation breadth of **1.47** — the six-asset panel alone is **1.41 of
+6**. Eight tickers are worth about one and a half independent bets. Under
+`IR = IC·√BR` that caps the gain from widening the universe at **√1.47 ≈ 1.21x**
+— about 21% — against 6–8x the rebalancing turnover at a 0.104% break-even.
+The two branches' failures are what that arithmetic looks like from the two
+ends: the conservative arm pays a little turnover for a little diversification
+and lands at parity; the novel arm pays enormous turnover for a ranking among
+assets that are 63% the same asset, and is destroyed.
+
+**A latent bug in the shared harness, found by a branch, and an operator
+process violation, both disclosed.** The shared helper `_hi()` extended an
+`end`-dated window by a full day, so a naive read of W_VAL (ending 2022-12-31)
+would have admitted one 5-minute bar dated 2023-01-01 — the first bar of the
+reserved holdout. The conservative branch caught it and reported it rather than
+editing the frozen shared file, as the round's parallelism rules require.
+**Neither branch was actually exposed:** both independently applied their own
+strict right-exclusive slice, and the operator re-derived both evaluation
+indices afterwards — the novel branch's D3 cell is 105,120 bars running
+2022-01-01 00:00 → 2022-12-31 23:55, with **zero** bars dated 2023-01-01 or
+later. The bug was real, latent, and never reached a verdict.
+
+The operator then made it worse before making it better: the fix was applied at
+15:24:08, which was after both branches' *measurements* but **during the novel
+branch's final run**, so the frozen file was not in fact identical for both
+branches for the whole round. The novel branch noticed the mtime change on its
+own and flagged it rather than ignoring it. The fix cannot have touched any
+verdict — D1, D2 and D4 all run on W_FULL6, which uses `end=None`, where the
+old and new helper are identical by inspection, and D3's index was re-derived
+by the operator and is unchanged — but the violation is recorded because "the
+shared file was not edited during the round" was a rule of this round and the
+operator broke it. The decision rules themselves were always stated per-window
+and did not move; only the helper was wrong, which is the "fix a bug" case
+ROUTINE step 4 permits, and the right time to have applied it was after both
+branches had reported rather than after both had merely stopped computing.
+
+**A second methodological finding, and it is the mirror image of R-33.**
+`MATCHED_HOLD` matches the exposure *level* — the candidate's own mean total
+notional — which is the standing rule precisely because R-33 showed the
+unmatched comparison manufactures findings. But it does **not** match risk for
+a *concentrated* candidate. On the D1 cell the novel arm runs **86.5%
+annualized volatility against MATCHED_HOLD's 42.9%** at the identical 0.525
+mean total notional, because holding 1 of 6 assets at 52% notional is roughly
+twice the volatility of holding 6 of them at 52%. D2 is therefore partly
+arithmetic against any concentrated arm, in exactly the way the fully-invested
+comparison is partly arithmetic against a de-levered one. It changed nothing
+here — the novel arm fails every rule by margins no matching convention could
+close — but the rule as written is incomplete, and the fix is known: a
+concentrated candidate should be matched on **realized volatility** (R-31's
+convention, already implemented in `experiments/r57_cross_asset_panel.solve_c`)
+rather than on mean notional. Filed here rather than silently carried forward,
+because the standing diagnosis' single most reusable line now needs the
+qualifier: *check whether the two arms carry the same risk — and note that
+equal notional is not equal risk when one arm is concentrated.*
+
+**The `k` axis is noise, and the sweep says so out loud.** `k=1` was selected
+because it was best on the inner-validation window on both statistics, and it
+is the **worst** `k` on the inner-training window (−4.26 against −2.40 for
+`k=4`). A parameter whose ranking inverts between two adjacent windows is not a
+parameter that was fitted to anything; on W_TRAIN the ordering is monotone in
+the direction of "hold more assets", which is a slope toward the equal-weight
+basket rather than a plateau around an optimum. Reported because this project's
+promotion bar asks for a plateau and it is worth showing what the absence of
+one looks like.
+
+**A design flaw in this round's own falsification test, worth more than either
+verdict.** The scramble control is well aimed at the novel arm, where it did
+exactly its job and killed it. It is **not** aligned to the conservative arm's
+claim: that arm contains no cross-sectional quantity at all, so scrambling the
+asset→signal map measures only whether per-asset timing is non-random — which
+it is, hugely — while saying nothing about whether the cross-section adds
+anything. The conservative arm therefore *survives falsification while failing
+every gate*, and reading that survival as support would be a mistake. The
+control that actually bears on the conservative claim is MATCHED_HOLD, and
+MATCHED_HOLD says no. Flagged by the branch itself, in its own report, against
+its own arm.
+
+**Verdict.** **NEGATIVE** on both branches; neither cleared the further-work
+bar, so neither reached nor needed a holdout read. But unlike the twenty-two
+SIZE-axis retunes before it, this direction closes with a **measured reason and
+a price tag** rather than another unexplained failure. Three things are now
+known that were not:
+
+1. **The panel's breadth is 1.47 of 8** (1.41 of 6) — measured on prices
+   alone, before any verdict. Widening this universe can buy at most a 1.21x
+   information ratio, and it costs 6–8x the turnover.
+2. **A genuine cross-sectional signal exists here and has a price.** It beats
+   10 of 10 permutations of its own weights frictionlessly, and it is worth
+   ~0.5 log units over 6.4 years against an 8.0 log-unit turnover bill at the
+   base tier. That is the first time this project has *priced* a signal
+   against its own cost rather than merely observing that it lost.
+3. **R-33's exposure artifact survives diversification.** A six-asset
+   portfolio at 25.6% notional shows a 55-point drawdown "advantage" over a
+   fully-invested basket and *loses* to the same basket held at 25.6%. The
+   single most reusable line in this file just got a sixth confirmation, on
+   the one construction that might have been expected to escape it.
+
+One-line lesson: **count the breadth before buying the diversification — eight
+correlated tickers are one and a half bets, and √1.5 does not pay for 8x the
+turnover.** Holdout counter: **+0** (running total ~627; W_HOLD was never read
+by either branch, and the one-bar boundary leak above is disclosed rather than
+counted, since a single 5-minute bar cannot inform a decision and the arm that
+excluded it reached the same verdict). The decision rule did not move. Next
+step: the INFO-via-more-instruments axis is now measured rather than merely
+failed, and reopening it has an explicit bar to clear — a universe whose
+*breadth*, not whose asset count, is materially above 1.5, or a holding period
+long enough that 2.9 leader-changes per day stops being the binding cost.
+Neither is available from these eight assets on 5-minute bars, so this is
+closed for this data rather than closed on principle.
 
 ### R-62 · 08-20 · NEGATIVE (both branches), IDENTIFIES — B-27 answered: v4's matched-exposure property lives entirely in the vote, not the volatility target
 
@@ -6269,6 +6575,8 @@ trip.
 | Periodic causal walk-forward re-estimation of `kelly_regime_v4`'s `target_vol`/`max_leverage` (365d refit / 730d lookback, fee-free proxy-Sharpe grid search), replacing the frozen global constants with a re-fit loop | 3 pre-registered schedules; causality probe passes cleanly (no lookahead bug) but the mechanism is not competitive — loses to v4 on inner-train, inner-validation (both markets), the BTC control and ETH alike, and the primary candidate still trips the exposure-artifact bar (R²=0.98) despite losing. Each individual refit is a low-information estimate from only 1–2 trailing regime-events, fractalizing the N≈3 problem rather than resolving it. | R-45 (novel) |
 | Fixed-multiplier CPPI (Perold & Sharpe 1988) cushion scale replacing v4's vol-targeting, floor anchored once to starting balance and grown at a small fixed rate (deliberately not peak-following) | 24 configurations; not the standard R²>0.95 exposure artifact, but the winning region saturates `cppi_scale` at `max_leverage` almost immediately once equity compounds through a multi-year window, degenerating into "vote × constant max leverage" (candidate pinned at exactly 2.000 throughout inner-validation) — 2–3x v4's average notional, worse Sharpe and drawdown than v4 in both splits, and fails its own pre-registered BTC-control falsification decisively (ΔSharpe −0.47 spot / −0.76 futures) before ETH is even read. No point in the 24-point grid beats v4 on both Sharpe and drawdown at once. | R-46 (conservative) |
 | Hurst-exponent-adaptive CPPI multiplier (classical R/S method, Hurst 1951/Mandelbrot & Wallis 1969) layered on the same fixed-floor CPPI base | 33 configurations (32-point grid + fixed-m=4 ablation); causality PASS on all four probed columns including the new rolling-Hurst column; inherits the conservative branch's identical BTC-control falsification failure (same saturated-scale mechanism, ΔSharpe −0.47/−0.76); the adaptive multiplier barely beats its own fixed-m=4 ablation (spot ΔSharpe ≈0, futures +0.226 from one window); empirical rolling H(t) came out persistently high (mean 0.62) rather than the pre-registered ≤0.5 failure hypothesis, but did not help regardless — possibly Lo (1991)'s documented upward bias in classical R/S under volatility clustering rather than real persistence. | R-46 (novel) |
+| Diversified 1/N time-series-momentum portfolio of unmodified `kelly_regime_v4` across R-57's six-asset panel — the literal Moskowitz–Ooi–Pedersen (2012) construction, zero free parameters | 20 measured cells, exactly 1 of them a candidate configuration (there is nothing to sweep). The per-asset timing is genuinely non-random — scrambling the asset→signal assignment costs ~1.0 in log return and the arm beats 10 of 10 scrambles — and it still lands at parity-to-worse against a hold carrying its **own** 25.6% mean notional: growth −0.022 [−0.74, +0.70], max drawdown **+1.57pp against it**. The 55-point drawdown "advantage" over a fully-invested equal-weight basket (35.2% vs 90.7%) is the R-33 exposure artifact in its sixth confirmation, now surviving diversification. Fails 0.40% outright ($993 vs $1,454). Cause measured independently of any verdict: the panel's Grinold breadth is 1.47 of 8. Do not re-try 1/N diversification on this universe without materially more **breadth** — more tickers is not more breadth. | R-63 (conservative) |
+| Cross-sectional relative strength over the eight-asset panel (rank by v4's own continuous anchor deviation, hold top-`k` with positive score, v4's conditional vol target applied at portfolio level) | 27 measured cells incl. a `k`∈{1,2,3,4} sweep on two windows and 20 scrambles. **The ranking is real and it is still ruled out, which is the point:** frictionless it beats **10 of 10** permutations of its own weights (+0.480 vs p90 +0.016), but at k=1 the leader changes 2.86x/day (3.44 turnover/day) for **8.02 log units** of fee drag at 0.10% against a signal worth **0.48** — a 16-to-1 deficit that takes $1,000 to **$1.44** at 99.9% drawdown, and to 4.3e−11 at 0.40%. Fails the scramble control at the real tier (3rd of 11). Even frictionless its edge over a matched hold is +0.48 [−2.58, +3.65], containing zero, and the `k` sweep slopes monotonically toward "hold everything" rather than forming a plateau. Reproduces Han, Kang & Ryu (2024) on 78 coins. Do not re-try cross-sectional ranking on 5-minute bars at any fee tier available here; reopening needs a holding period long enough to cut the leader-change rate, not a different ranking rule. | R-63 (novel) |
 | Never-rebalanced, one-time-split 50/50 (±60/40, 40/60) BTC+ETH `kelly_regime_v4` portfolio via the promoted `multiasset.py` adapter — the cheapest form of B-19 | 13 configurations; clean on both falsification gates (R²=0.86–0.87, survives 0.40% tier) and the neighbourhood is a genuine plateau, but decisively REJECTED on the one holdout read its own pre-registration authorized: loses to `buy_and_hold` by 24–46% and is statistically indistinguishable from (or slightly worse than) BTC-solo v4 alone. Captures ~100% of R-50's inner-validation drawdown edge with zero rebalancing but only ~29% of its Sharpe edge — do not re-try the never-rebalanced form on this asset pair without a different holdout period or composition. | R-51 (conservative) |
 | Inverse-trailing-volatility weighting (Maillard/Roncalli/Teiletche 2010 ERC special case) of a periodically-rebalanced BTC+ETH `kelly_regime_v4` portfolio, swept across monthly/quarterly/semiannual cadence and 4 volatility lookbacks | 12 configurations; passes the exposure-artifact check (R²=0.58–0.94) but fails the 0.40% fee-tier falsification and, before that, never beats a correctly re-derived fixed-50/50 reference on any of 12/12 configurations, any cadence, either market (ΔSharpe −0.02 to −0.11, R²=0.996 vs. the static split it was meant to improve on — near-relabeling with added turnover). Lengthening the rebalance cadence made both arms worse, not better, contradicting the cost-driven "rebalance less" literature this branch was built to test, because rebalance fees are trivial relative to diversification-maintenance value at this pair's scale and this project's cost tier. Do not re-try inverse-vol/ERC weighting on a 2-asset BTC/ETH book without a genuinely different asset pair (N>2, where correlation structure varies leg-to-leg) or a different information source. | R-51 (novel) |
 | Literal periodically-rebalanced (monthly), fixed-50/50 BTC+ETH `kelly_regime_v4` portfolio through R-50's continuous (non-restarting) engine — R-50's own original candidate, the one form left untested by both R-51 branches | 15 configurations; clean on both falsification gates (R²=0.88, survives 0.40% tier) and the split-ratio neighbourhood is a genuine plateau, reproduces R-50's own cited byproduct number almost exactly (ΔSharpe +0.79, DD 33.2%→27.1% inner-validation) — but decisively REJECTED on the one holdout read its own pre-registration authorized: loses to `buy_and_hold` by 22–45% and its edge over BTC-solo v4 is noise, not stably signed. Do not re-try the literal calendar-rebalanced form on this asset pair without a different holdout period or composition. | R-52 (conservative) |
@@ -7091,8 +7399,40 @@ this line is about the panel assets' trend dynamics themselves, not about any
 variant of the incumbent, and no such item is currently filed because R-62
 did not produce a specific enough one to be worth pre-committing to.
 
+**Re-ranked 08-20 after R-63.** Two parallel branches attacked the one axis
+R-62's closing note pointed at — not another variant of the incumbent, but the
+universe it runs on. **Both NEGATIVE, and the direction closes with a measured
+price rather than another unexplained loss.** The conservative arm (the literal
+Moskowitz–Ooi–Pedersen 1/N diversified trend portfolio, unmodified v4 per
+asset, zero free parameters) lands at parity-to-worse against a hold carrying
+its own mean notional, and reproduces R-33's exposure artifact for the sixth
+time — its 55-point drawdown "advantage" over a fully-invested basket is the
+exposure level, on a diversified portfolio this time. The novel arm
+(cross-sectional relative strength) is the more interesting failure: its
+ranking is **genuinely real**, beating 10 of 10 permutations of its own weights
+once fees are removed, and it is unaffordable by **16 to 1** — worth ~0.5 log
+units over 6.4 years against an 8.0 log-unit turnover bill, taking $1,000 to
+$1.44. The operator-side measurement that explains both, taken on prices alone
+before either verdict was read: the panel's Grinold breadth is **1.47 of 8**
+(mean pairwise correlation 0.634, one factor at 68.2% of variance), capping the
+whole benefit of widening this universe at 1.21x against 6–8x the turnover.
+
+What that does to the order. **B-06 remains the standing zero-cost
+recommendation** at the top and is still the only source of uncontaminated
+evidence this project can generate. The "just add instruments" escape hatch —
+implicit in R-05's own diagnosis and never tested here until now — is closed
+for *this* universe, with an explicit and checkable bar for reopening it, filed
+as **B-28**. Nothing else is genuinely OPEN that is not B-06 (ongoing) or the
+LOW-priority B-09/B-10/B-24. A session preferring a fresh idea should note that
+R-63, like R-62, closed its axis by *explaining* it rather than by failing on it
+again — and that the two explanations compose: the incumbent's edge is a trend
+vote (R-62), and this asset universe is too correlated for more trend votes to
+help (R-63). The next well-motivated question on this line is about breadth or
+holding period, both of which are named in B-28.
+
 | ID | item | attacks | status | note |
 |---|---|---|---|---|
+| **B-28** | Reopen "more instruments" only against a universe whose **breadth** — not whose asset count — clears the bar R-63 measured: mean pairwise daily-return correlation materially below 0.634, or a Grinold equal-correlation breadth materially above 1.47, or a holding period long enough that the 2.86 leader-changes-per-day that cost the novel arm 8.02 log units stops being the binding cost. R-63 established that the cross-sectional signal here is real and merely unaffordable, so the axis is closed for this data rather than on principle | INFO, N≈3 | OPEN, but blocked on data this repo does not have | Filed by R-63. Not actionable from inside a session today: the eight committed instruments are the universe, and R-63 measured them at 1.47 effective bets. Reopening needs either genuinely less-correlated instruments (a different asset class, which this project cannot fetch or simulate) or a lower-frequency bar series that would cut the leader-change rate — note that this project's entire dataset is 5-minute bars, so the second is a data-acquisition task, not a strategy task. Recorded so the idea is not re-tried blind on the same eight assets, which is exactly what section C exists to prevent. |
 | ~~B-01~~ | ~~E-process regime detection with unified Kelly sizing~~ | ERR, N≈3 | **DONE → R-28**, qualified by R-31 | NEGATIVE on the promotion bar. It read as the strongest risk result in the project — 0 of 40 windows deeper than the incumbent — until B-11 compared the two at equal risk and found that number was about exposure, not about the gate. (R-26's null round listed this as untried; R-28 is the round that actually ran it.) |
 | ~~B-04~~ | ~~Purged CV, deflated Sharpe, block-bootstrap CIs on every headline~~ | ERR | **DONE → R-29** | The guess was right: 10 of 96 adjacent pairs distinguishable, none of them in the top eight. Also closes R-25. `tradebot.inference` is now a permanent module with 27 tests; step 4 of the routine can be mechanical from here. |
 | ~~B-12~~ | ~~Put the intervals *in* the comparison table~~ | ERR | **DONE → R-30** | The table now carries Δ growth and Δ max drawdown against `buy_and_hold`, each with a 95% interval, and a strategy without a measured interval fails CI. The by-product is the sharpest number in the project: **0 of 24 strategies are distinguishably better than holding on the criterion the table ranks by**, and v4's +0.044 edge is [−2.60, +2.85]. |
@@ -7186,6 +7526,21 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-20 · ~627** — R-63: **+0** on top of R-62's ~627. Neither branch read
+  the W_HOLD window (2023-01-01 →) at all: both failed the further-work bar
+  (`(D1 or D2) and D3 and scramble`) with D1, D2 and D3 all FAIL on both arms,
+  and the shared pre-registration makes a holdout read conditional on clearing
+  it. Panel reads (U6 over W_FULL6) cost +0 by the established R-47/B-08/R-57
+  convention. **A latent boundary bug was found and did not bite:** the shared
+  `_hi()` helper extended an `end`-dated window by a full day, which would have
+  admitted one 5-minute bar dated 2023-01-01 into W_VAL. Both branches
+  independently applied their own strict right-exclusive slice, and the
+  operator re-derived both evaluation indices afterwards to check rather than
+  take it on report — the novel branch's D3 index runs 2022-01-01 00:00 →
+  2022-12-31 23:55 with **zero** bars dated 2023-01-01 or later. So this is a
+  genuine +0 and not a rounded-down one. The helper is now right-exclusive; see
+  the round's own entry for the operator process violation in when that fix was
+  applied.
 - **08-20 · ~627** — R-62: **+0** on top of R-61's ~627. Neither branch reads
   a BTC or ETH bar dated 2023-01-01 or later: the only BTC/ETH cells in the
   round come from `r62_shared.run_control`, whose `CONTROL_WINDOW` is fixed at

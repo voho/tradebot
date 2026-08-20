@@ -445,7 +445,38 @@ def _lo(df: pd.DataFrame, start):
 
 
 def _hi(df: pd.DataFrame, end):
-    return df.index[-1] if end is None else pd.Timestamp(end, tz="UTC") + pd.Timedelta(days=1)
+    """Right edge of a window, EXCLUSIVE of the following day's first bar.
+
+    AMENDMENT, 2026-08-20, recorded rather than quietly applied. This
+    originally returned `end + 1 day`, which on a 5-minute grid admits the
+    00:00 bar OF THE NEXT DAY -- so a naive read of W_VAL (ending
+    2022-12-31) would have admitted one bar dated 2023-01-01, the first bar
+    of the reserved holdout. The R-63 conservative branch caught it and
+    reported it rather than editing this frozen file, as the round's
+    parallelism rules require.
+
+    NEITHER R-63 BRANCH WAS EXPOSED. Both applied their own strict
+    right-exclusive slice, and the operator re-derived both evaluation
+    indices afterwards rather than taking it on report: the novel branch's
+    D3 index runs 2022-01-01 00:00 -> 2022-12-31 23:55, 105,120 bars, zero
+    of them dated 2023-01-01 or later. The bug was real, latent, and never
+    reached a verdict.
+
+    OPERATOR PROCESS VIOLATION, disclosed. This fix was applied after both
+    branches had finished computing but *during* the novel branch's final
+    run -- so this file was not, in fact, identical for both branches for
+    the whole round, which was a rule of the round. The novel branch noticed
+    the mtime change and flagged it. It cannot have touched a verdict: D1,
+    D2 and D4 all run on W_FULL6, whose `end` is None, where the old and new
+    helper are identical by inspection, and D3's index was re-derived
+    unchanged. The decision rules were always stated per-window and did not
+    move -- only this helper was wrong, which is the "fix a bug" case
+    ROUTINE step 4 permits. The right moment to apply it was after both
+    branches had *reported*, not after both had merely stopped computing.
+    """
+    if end is None:
+        return df.index[-1]
+    return pd.Timestamp(end, tz="UTC") + pd.Timedelta(days=1) - pd.Timedelta(nanoseconds=1)
 
 
 # ----------------------------------------------------------------- simulator

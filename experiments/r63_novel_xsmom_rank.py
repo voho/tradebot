@@ -286,7 +286,7 @@ CELL_FIELDS = [
     "cand_final", "bench_final", "cand_dd", "bench_dd",
     "mean_total_notional", "growth_diff", "growth_lo", "growth_hi",
     "dd_diff", "dd_lo", "dd_hi", "n_days", "n_bars",
-    "d1_pass", "d2_pass", "d3_pass", "note",
+    "d1_pass", "d2_pass", "d3_pass", "d4_pass", "first_bar_warm", "note",
 ]
 
 
@@ -426,7 +426,7 @@ def cmd_run(frames, k=None):
 
     d1 = measure(cand, mh, targets, "MATCHED_HOLD", arm="xsmom_rank", k=k,
                  window="W_FULL6", universe="U6", market="spot", fee=0.001,
-                 n_bars=len(targets), note="D1/D2 primary")
+                 n_bars=len(targets), note="D1/D2 primary", first_bar_warm=warm_ok)
     d1["d1_pass"] = d1_pass(d1)
     d1["d2_pass"] = d2_pass(d1)
     rows.append(d1)
@@ -459,7 +459,8 @@ def cmd_run(frames, k=None):
                  window="W_FULL6", universe="U6", market="spot", fee=0.004,
                  n_bars=len(targets), note="D4 cost")
     d4_ok = d4["cand_final"] > d4["bench_final"]
-    d4["note"] = f"D4 cost; pass={d4_ok}"
+    d4["d4_pass"] = d4_ok
+    d4["first_bar_warm"] = warm_ok
     rows.append(d4)
     print(f"  [D4 @0.40%] cand {d4['cand_final']:,.0f} vs EW_HOLD "
           f"{d4['bench_final']:,.0f} -> D4 PASS={d4_ok}")
@@ -474,7 +475,8 @@ def cmd_run(frames, k=None):
                              aligned3, SPOT_BASE)
     d3 = measure(cand3, mh3, targets3, "MATCHED_HOLD", arm="xsmom_rank", k=k,
                  window="W_VAL", universe="U8", market="spot", fee=0.001,
-                 n_bars=len(targets3), note="D3 inner-validation")
+                 n_bars=len(targets3), note="D3 inner-validation",
+                 first_bar_warm=warm3)
     d3["d3_pass"] = d3_pass(d3)
     rows.append(d3)
     print(f"  [D3] mtn={c3:.3f}")
