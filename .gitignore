@@ -140,3 +140,9 @@ uv.lock
 # in the order the ledger claims.
 !/reports/r65_holding_period/
 !/reports/r65_holding_period/*.csv
+# R-68 (the band-shape axis): both branches' frontier rows plus the operator's
+# prices-only stopping-premium and grace-cost measurements. Same reasoning as
+# r65_holding_period above -- the per-cell numbers are the receipt that the
+# pre-registered rules were read in the order the ledger claims.
+!/reports/r68_band/
+!/reports/r68_band/*.csv
