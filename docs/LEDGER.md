@@ -131,6 +131,29 @@ rounds (R-63 → R-65 → R-67) have converged on this from three different
 mechanisms. It is the strongest argument the ledger has ever contained for
 **B-06**, and against a fourth variant on the same axis.
 
+**Tested directly by R-68 (08-20), which ran the fourth mechanism variant
+anyway to settle two questions the interval doesn't touch, and separately
+ran the inference attack R-67's own lesson calls for.** The mechanism half
+found what R-67 predicted it would (`further_work=False`, both branches, on
+the same `(D1 or D2)` clause) but also settled two things: the frontier
+peaks near δ=0.16 and degrades past ~0.22 rather than improving indefinitely
+(so R-67's edge selection was not the artifact its own F3 worried about),
+and the entry threshold — not the exit threshold B-31 was named for — carries
+the edge, a decomposition the coupled rule couldn't see. The inference half
+is the more important result: a **difference test** between the banded and
+unbanded arms (the comparison R-67's own lesson implies and no round had
+run) resolved to **+0.4525 [−0.069, +1.105]** and **+0.4276 [−0.111,
++0.933]** on two independent windows — about 5x tighter than any level cell
+on this axis, still missing significance by 0.07–0.11 log units. **No
+mechanism can narrow the interval; the right inference CAN, and came the
+closest to a result this axis has produced.** R-68 also found the closed-form
+literature the axis leans on requires the signal to satisfy `E[r|s]=A·s,
+A>0`, and measured that **A is not established as positive anywhere** on
+this signal (14/14 horizon cells negative in the time-series reading, sign-
+unstable and indistinguishable from zero in the cross-sectional one) — so
+the theoretical warrant for banding at all, not just its calibration, is
+now in question.
+
 ---
 
 ## A. Strategies (registered)
@@ -172,7 +195,240 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
-One section per research round, **newest first** — a new round is
+### R-68 · 08-20 · NEGATIVE (both branches), MEASURES — B-34 answered: the frontier is hump-shaped and both windows agree where it peaks, the band's own difference test resolves five times better than any level cell, and the literature the axis leans on is not established on this signal
+
+**Direction.** Backlog item **B-34**, filed by R-67 and top of the ranked
+actionable list, executed together with **B-35** ("the cheapest live item,
+which decides this axis before another grid is run") as this round's
+prices-only pre-measurement. Constraint attacked: **COST**. Not a duplicate
+of R-67 (which sweeps ONE coupled threshold, `delta_in = delta_out`, over
+`delta <= 0.080`; this round decomposes it into two thresholds swept
+independently over a grid extended to a theory-derived cap), of R-65 (which
+retunes `buffer`/`hold_days` with the eligibility test frozen — both are
+frozen here at R-65's own winner), of L-05/L-06 (a band on a *continuous
+single-asset exposure fraction*, not a discrete cross-sectional membership),
+or of R-64/R-66 (a single-asset SIZE-axis deadband's *destination* on
+`kelly_regime_v4`, a different signal in a different codepath — the named
+precedent for the confound this round exists to separate).
+
+B-34's literal text asks for a SYMMETRIC deadband as a matched arm. In a
+long/flat gate a band centred on zero with equal magnitudes on both sides
+**is** R-67's rule, so running it literally would have re-run R-67 under a
+new name. The pre-registration amended this before any code ran: the
+conservative branch decomposes R-67's coupled threshold into
+`(delta_in, delta_out)` instead, which contains R-67's arm as its diagonal
+and answers the question B-34 was actually asking (does the band's shape
+matter, and which half). The round's commissioned literature survey
+supports the amendment after the fact: Guan, Peng & Xu (2020, arXiv:2008.07082,
+Thm 3.1) give a strictly asymmetric free-boundary ordering for exactly the
+long/flat case and state the theorem gives **no symmetry**, so an
+equal-magnitude band is a simplification it does not endorse.
+
+**What was done.** `experiments/r68_shared.py` (frozen pre-registration,
+committed before either branch ran; inherits R-63/R-65/R-67's windows,
+benchmarks, cost tiers and bootstrap by import). It applies three
+corrections R-67 disclosed against itself, all of which make the bar
+harder: D5 uses R-65's corrected +0.342 bar (R-67 had inherited the retired
++0.240); M1 becomes **M1'**, on a held-set indicator thresholded at 1% of
+equity and counted directly (R-67's M1 counted `weight > 0`, which scored a
+continuous-weight arm that never fully releases an asset as a 98.53%
+"reduction" identically at two turnover levels differing 5-fold, and it
+carried a latent bug returning `1/days` instead of `0` for an arm whose held
+set never changes), and requires the reduction on **both** thresholded
+membership **and** turnover; the fixed-permutation scramble control is
+exported once rather than re-implemented per branch. The grid was extended
+to `delta <= 0.350`, capped by de Lataillade & Chaouki's (2020,
+arXiv:2003.04646) Eq. (11) saturation, `1.6 * sigma_signal = 0.367` on
+W_TRAIN — a bound later found to be miscalibrated (see disclosed flaws).
+
+**Conservative** (`experiments/r68_conservative_band_decomposition.py`):
+splits R-67's `delta` into `enter_eligible = s > +delta_in`,
+`hold_eligible = s > -delta_out`, and sweeps three named sub-arms —
+EXIT_ONLY (`delta_in=0`), ENTRY_ONLY (`delta_out=0`), COUPLED (R-67's own
+diagonal) — each over the 11-point extended grid, on both windows.
+**Novel** (`experiments/r68_novel_derived_threshold.py`): removes the grid
+and derives a threshold from measurable quantities, zero fitted parameters,
+via two independent formulae — (D-A) the small-cost cube-root band
+(Constantinides 1986; Janeček & Shreve 2004; Muhle-Karbe, Reppen & Soner
+2017, verified against the primary §5.1 text), bridged from position space
+to score units; (D-B, primary) a cost-matched first-passage threshold native
+to score units, `T(delta) = (delta/sigma_delta_s)^2` bars, `delta* =
+sigma_delta_s * sqrt(288 * h*)` with `h*` the holding period maximizing
+R-65's own measured signal-decay curve net of cost. Both causal by
+construction (expanding, one-bar-shifted estimators; proved with truncation
+and tail-perturbation probes on the delta series itself, not just the
+targets).
+
+Four **operator measurements**, prices-only, all **+0** holdout, run around
+the two branches:
+1. `experiments/r68_stopping_premium.py` (B-35, committed *before* either
+   branch existed): the Kaminski & Lo (2014, *JFM* 18, 234–254) stopping
+   premium of R-63's forced exit.
+2. `experiments/r68_inference.py`: three inference procedures this project
+   has never run, named by the commissioned survey — a difference test
+   between the banded and unbanded arms (Ledoit & Wolf 2008 construction),
+   a Patton & Timmermann (2010) monotonicity test over the whole sweep with
+   a time index common across cells, and BETC-5% (Fieberg et al. 2025,
+   *JFQA* 60(7)) alongside the existing break-even.
+3. `experiments/r68_signal_slope.py`: a check on this round's own premise —
+   does R-63's score satisfy the band literature's precondition, `E[r|s] =
+   A*s, A>0`?
+4. `experiments/r68_block_sensitivity.py`: whether this axis's single
+   30-day bootstrap block length understates a slow arm's standard error,
+   as the survey warned it could.
+
+**Configs evaluated: 586** (445 conservative + 141 novel). **Holdout
+consultations: +0** — verified by grep in every file this round wrote;
+`W_HOLD` is imported or sliced nowhere, and every D-cell is a W_FULL6/U6 or
+W_VAL/U8 cell in the convention R-63/R-65/R-67 already use.
+
+**Result.**
+
+*Conservative.* Both identity checks exact (max|diff| 0.0 against R-65's
+frozen winner at d=0, and against R-67's published cell at COUPLED
+d=0.080 — the entire COUPLED column reproduces R-67's arm exactly, 12
+rows). **Winner: ENTRY_ONLY, delta=0.080** (W_VAL net +0.8480
+[-0.132, +1.843], the criterion frozen in advance), a genuine plateau — its
+neighbours (0.040, 0.120) score +0.456 and +0.804, and the new grid corner
+(0.350) is not selected in any sub-arm, so F1 does not fire and the grid is
+not extended a second time. Gates on the frozen configuration (W_FULL6/U6):
+**M1' PASS** (membership -80.2%, turnover -69.6%, both clear 25%), **D1
+FAIL** (+1.066 [-2.134, +4.303]), **D2 FAIL** (-9.54pp [-26.16, +18.05]),
+D3 PASS, D4 PASS, D5 PASS (3.8x the corrected bar), scramble SURVIVED (0/10
+better). `further_work = False`.
+
+*Novel.* Both identity checks exact against the same two references. D-B
+(primary) lands at **~1.0 sigma_score independently on all three windows**
+(0.192 / 0.123 / 0.208 sigma-normalized to 1.015 / 0.953 / 1.010) — a
+striking cross-window agreement for a derivation that shares no fitted
+constant. D-A and D-B differ from each other by **14-17x** and bracket
+R-67's fitted 0.080 without reproducing it (D-A below by 6-11x, D-B above
+by 1.5-2.6x); only a declared-in-advance variant (D-B', reading the
+recursion as a full-width rather than half-width traverse) lands near it.
+D-B's D-cell (W_FULL6/U6): **M1' PASS** (-84.9%/-74.7%), **D1 FAIL** (+1.710
+[-1.352, +4.776]), **D2 FAIL** (-18.03 [-26.37, +14.80] against
+VOLMATCH_HOLD — but **+15.50 [+0.35, +43.57], interval excluding zero and
+the wrong sign,** against MATCHED_HOLD, the standing R-33 exposure-mismatch
+rule biting directly), D3 PASS, D4 PASS, D5 PASS (5.4x the bar), scramble
+SURVIVED (10/10). `further_work = False`.
+
+*Operator measurements, all prices-only.* **(1) B-35's stopping premium**:
+the incumbent's forward return after a downward crossing is **+0.00504 at
+H=1d** against the mean grace span the band actually buys (0.17 days at
+delta=0.080) — a negative stopping premium, Kaminski-Lo's random-walk case
+reproduced; score autocorrelation at 1/5/14 days is -0.078/+0.059/-0.061.
+Fee saving asymptotes (+1.044 -> +1.062 -> +1.074 for delta 0.080/0.120/
+0.160) while grace span keeps growing — the prediction that becomes finding
+**(2)**. **(2) The inference attack**: the difference test between R-67's
+frozen delta=0.080 and R-65's frozen delta=0.000 gives **+0.4525
+[-0.069, +1.105]** (W_TRAIN) and **+0.4276 [-0.111, +0.933]** (W_VAL) — two
+independent windows agreeing to 0.025 log units, an interval ~5x narrower
+than any level cell on this axis, lower bound missing zero by 0.07-0.11.
+The monotonicity test does not reject (p=0.561/0.929) and its Up/Down
+decomposition shows why: the frontier is **hump-shaped**, peaking at
+**delta=0.160 on both windows** and degrading past 0.220 — confirmed
+independently by the conservative branch's own frontier sweep. There is
+**no fee at which the delta=0.080 edge is significant at 5%** (BETC-5%):
+the lower bound is <=0 at zero fee on both windows. **(3) The precondition
+check**: the time-series slope `A_ts` is negative in 14 of 14 horizon
+cells (significant in 2, both thin); the cross-sectional slope `A_xs` — the
+version a top-k selector actually uses — is not distinguishable from zero
+in any of 14 cells. **A>0 is not established anywhere**, which every closed
+form this round leans on requires. **(4) Block sensitivity**: the D1
+difference series has an integrated autocorrelation time of ~1.0 day on
+both arms; across a 24x range of block lengths the interval moves 12-18%
+and *narrows* at longer blocks, so the survey's directional worry does not
+reach a matched-difference statistic and every published interval on this
+axis stands.
+
+**The two branches' central findings agree and jointly overturn the
+round's original framing.** B-31/R-67 framed the mechanism as "hold through
+the zero crossing" — softening the *exit*. The conservative branch's own
+decomposition shows the **entry** half carries essentially all of the edge
+(ENTRY_ONLY dominates COUPLED at every matched delta >= 0.080 on W_VAL and
+holds the top three W_TRAIN ranks; EXIT_ONLY is worse than the coupled
+diagonal at every matched delta on both windows and its cross-window rank
+correlation is *negative*, -0.227, while ENTRY_ONLY's is +0.500 and
+COUPLED's +0.573) — EXIT_ONLY does kill forced exits 190-fold but its
+turnover saturates by converting them into voluntary swaps and drifting
+toward a permanently-invested, concentrated book, the exact F2 signature.
+The novel branch's D-B, derived from cost and score dynamics with no
+reference to entries or exits at all, independently lands at ~1 sigma on
+three windows — a number about the SCALE of the band, silent on which side
+of it matters, and consistent with either finding.
+
+**Disclosed flaws in this round's own instrument**, found by the branches
+and reported rather than fixed:
+1. **The grid cap is miscalibrated, in the permissive direction.**
+   `r68_shared.DLC_SATURATION = 1.6*sigma` applies dLC (2020) Eq. (11)'s
+   **full-width** saturation as a **half-width** cap — the novel branch
+   read the source directly and confirmed `u(0)-l(0)` (the equation's LHS)
+   is the band's total width. The defensible half-width cap is `0.798*sigma
+   = 0.183`, about half what was frozen. The grid ran to ~1.9x the correct
+   cap; this cannot have hidden a better cell (it is wider, not narrower)
+   and neither winner is near either cap, but the number in the
+   pre-registration is wrong and is recorded as such rather than silently
+   corrected. D-B sits *above* the literal 0.183 cap on two of three
+   windows, which the novel branch reported against itself rather than
+   switching primary arms after seeing it.
+2. Worth recording beside it, and voided by finding (3) above: the
+   conservative frontier's measured hump peak, delta=0.160 = 0.697 sigma,
+   sits at 87% of the *corrected* 0.183 cap and inside the cube-root
+   formula's 0.5-1.1 sigma range at plausible cost ratios — two theory
+   anchors bracketing a peak that was not fitted to them. Both anchors
+   require A>0, which measurement (3) found is not established, so the
+   agreement is recorded as suggestive only.
+3. The literature landed mid-round (after the conservative branch was
+   dispatched, before the novel branch and before any verdict), disclosed
+   rather than smoothed over.
+4. The novel branch's own honest trials accounting: it claims 2 search
+   trials (two formulae, neither fitted) but states plainly that this
+   undercounts — the *form* of a symmetric band on this substrate was
+   chosen after three prior rounds' results on the same axis, so the
+   program-level count is materially higher, and its own DSR table (2 vs
+   17 vs 6 vs 11 trials) is reported so a reader can see how much that
+   choice matters (0.977 -> 0.871 -> 0.931 -> 0.898 at sd_trials=0.25).
+
+**Verdict.** **NEGATIVE, both branches** — `further_work=False` on both,
+exactly the round's own pre-registered base case (F5): every gate but
+`(D1 or D2)` passes on both arms, and both die on the same interval a
+fourth time. Nothing is registered; nothing here *can* be registered
+regardless of verdict — both are bar-by-bar cross-asset allocators and
+**B-32** (multi-asset registration) remains OPEN.
+
+But B-34's two questions are answered, independently of the interval, which
+is why the round was run: (i) the frontier is not monotone and does not
+keep improving past R-67's edge — it humps at delta~0.160 and degrades
+beyond ~0.22, confirmed by two independent instruments (the sweep and the
+monotonicity test) on two independent windows; (ii) the band's two halves
+are separable and unequal — the entry threshold, not the exit threshold R-67
+was named for, carries the edge. And the round's own inference attack
+produced the best-resolved number this axis has ever had — the
+delta=0.080-vs-0.000 difference test at ~5x the precision of any level
+cell, still missing significance by 0.07-0.11 log units on two windows
+that agree almost exactly.
+
+One-line lesson: **the axis has now been attacked on mechanism four times
+(R-63, R-65, R-67, R-68) and on inference once, and the inference attack
+came closer to a result than any of the four mechanism rounds — the
+interval genuinely is the binding constraint, not a fact this project has
+merely repeated to itself.** Holdout counter: **+0 this round; running
+total ~627** (unchanged since R-63). The decision rule did not move —
+M1'/D1/D2/D3/D4/D5/scramble and the selection criteria were frozen before
+either branch's sweep and honoured as written on both sides. Next steps:
+**B-36** (a Ledoit-Wolf-style paired difference test, formalized as a
+reusable comparison in `tradebot.inference` rather than a one-off script,
+applied to every surviving arm on this axis before another mechanism round
+is run — the round's own +0.43-log-unit, 5x-tighter result came from
+exactly this construction and no round has used it deliberately); **B-37**
+(the entry/exit separation this round found — does a rule that ONLY
+tightens entry, dropping the exit threshold back to R-63's original `s>0`,
+reproduce ENTRY_ONLY's edge with an even simpler, one-parameter mechanism,
+now that the exit half is known not to matter); **B-33** (still unresolved
+and now load-bearing on three rounds' headline W_FULL6 cells, including
+this one's).
+
+ — a new round is
 appended at the top of this section, so reading down is reading the
 project's history backwards. Every entry carries the same fields, in the
 same order; the heading carries the round ID, its date and its verdict so
@@ -8747,10 +9003,30 @@ recommendation**, and R-67 strengthens the case for it more than any round
 since R-29: when three successive mechanism wins cannot move an interval, the
 binding constraint is evidence, not design.
 
+**Re-ranked 08-20 after R-68.** B-34 and B-35 are both done, and the round's
+inference attack — not its mechanism half — produced the best-resolved
+number this axis has ever had (a difference test at ~5x any level cell's
+precision, still missing significance by 0.07–0.11). **B-36 goes to the top**:
+formalize that construction in `tradebot.inference` and apply it to every
+surviving arm on this axis before a fifth mechanism round is run, since the
+inference route has now outperformed four consecutive mechanism rounds.
+**B-37 follows it**, the specific finding the decomposition made available —
+does entry-only tightening, alone, reproduce ENTRY_ONLY's edge with one
+parameter instead of two, now the exit half is known not to carry it.
+**B-33 is unchanged and is now load-bearing on three rounds'** headline
+W_FULL6 cells rather than two. **B-32 is reconfirmed as a hard blocker** for
+the third round running. **B-06 remains the standing zero-cost
+recommendation**, strengthened again: the inference attack is exactly the
+kind of evidence-quality work B-06 is the forward-looking analogue of, and it
+is the first round on this axis where an inference change moved a result
+materially rather than a mechanism change failing to.
+
 | ID | item | attacks | status | note |
 |---|---|---|---|---|
-| **B-34** | Extend both R-67 grids past the edges their winners leaned against, and — the more important half — run a **SYMMETRIC** deadband (require `\|score\| > δ` to change state at all, holding through a crossing) as a **matched arm** beside the asymmetric one. R-67's conservative winner is the top corner δ=0.080 with only a lower neighbour tested; its novel winner is second-slowest on a grid stopping at `a=0.01`, still improving on W_TRAIN, and 1.37× faster than the theory-derived `a_GP = 0.0073` | COST | **NEXT** | Filed by R-67. Two reasons it leads. (i) **F3 is live and unresolved**: neither branch extended its grid after seeing a number (correctly — that would have moved the goalposts), so whether the curve turns over past the edge is simply untested, and the far end converges on a concentrated buy-and-hold that D5 exists to catch. (ii) **The literature backs the symmetric shape and only conditionally backs the asymmetric one.** de Lataillade–Deremble–Potters–Bouchaud (2012, *JIS* 1(3), 91–115) prove a signal-space switching threshold `q*` is the optimal structure for a position-capped rule under linear costs, and Baltas & Kosowski's deadband is the empirical version; the asymmetric ordering is licensed only by Dai–Zhang–Zhu (2010) / Guan–Peng–Xu (2020) under four conditions this setting does not clearly meet (sufficient-statistic signal, persistent hidden state, single asset, unconstrained long/flat). Running both separates the band from the asymmetry. Note the ceiling that comes with it: dLC (2020) Eq. (11) says the optimal tolerance around zero **saturates at ≈1.6 σ_signal**, so δ ≫ σ_score is not defensible and the grid should not be extended indefinitely. |
-| **B-35** | Measure the **stopping premium of the forced exit** (Kaminski & Lo 2014, *Journal of Financial Markets* 18, 234–254): `E[forward return of the incumbent over the next H bars \| its score just crossed zero downward]` against the flat alternative, plus the incumbent's return autocorrelation at horizon H. Prices-only, no backtest, no holdout | COST | **NEXT (cheapest live item)** | Filed by R-67 on the commissioned literature's own recommendation. Kaminski–Lo prove the stopping premium is **negative under a random walk** — a stop rule then just forces you out of higher-yielding assets for nothing — and positive only in proportion to return persistence. R-67's forced exit *is* a stop rule triggered by a zero crossing. This converts the round's named failure mode from a literature question into one script: if the crossing predicts continued decline, softening it is expensive and the whole axis fails for a nameable reason; if it is noise, the exit has a negative stopping premium and δ is close to free. Kaminski–Lo also find stop-losses "of no value at short sampling frequencies", which cuts *for* softening at 5m bars. One measurement, decides the axis, and no round here has taken it. |
+| **B-36** | Formalize a Ledoit & Wolf (2008)-style **paired difference test** between a candidate arm and the frozen arm it's meant to improve on, as a reusable function in `tradebot.inference` rather than a one-off script, and apply it retroactively to every surviving (`further_work`-clearing or near-clearing) arm on the COST axis before a fifth mechanism round is run | ERR (methodology gap) | **NEXT** | Filed by R-68. R-68's own difference test (R-67's δ=0.080 vs R-65's δ=0.000, both pre-specified by earlier rounds so nothing was selected on to produce it) resolved to +0.4525 [-0.069,+1.105] (W_TRAIN) and +0.4276 [-0.111,+0.933] (W_VAL) — about 5x tighter than any level D1 cell this axis has produced, on two independent windows agreeing to 0.025 log units, and still just short of significance. No round on this axis had run this comparison; R-67's own lesson ("no mechanism can narrow an interval") implicitly calls for exactly this, and this round is the first to test whether the *right inference* can, where the answer was "almost." Making it a shared, tested function rather than a bespoke script is what lets every future round apply it without re-deriving it, and running it retroactively costs nothing new (no new backtest, no new holdout read) since every candidate P&L series is already committed. |
+| **B-37** | Does a rule that tightens ONLY the entry threshold (`enter_eligible = s > +delta`, exit left at R-63's original `s > 0`) reproduce R-68 conservative's ENTRY_ONLY edge with a single free parameter, now that the round found the exit half (B-31's original target) carries none of it? | COST | **NEXT** | Filed by R-68. R-68's own decomposition found EXIT_ONLY (soften only the exit, R-67's original framing) worse than the coupled rule at every matched delta on both windows with a *negative* cross-window rank correlation (-0.227), while ENTRY_ONLY dominates COUPLED at delta>=0.080 on W_VAL and holds the top three W_TRAIN ranks with a *positive* one (+0.500). This item asks the cheap follow-up directly: is a one-parameter entry-only gate (no `buffer`, no `hold_days` retuning, no exit threshold at all) sufficient, or does the coupling still matter for reasons ENTRY_ONLY's isolated read cannot see. Cheapest possible test of the round's central finding — one predicate change, R-68's own harness and gates apply unmodified. |
+| ~~B-34~~ | ~~Extend both R-67 grids past the edges their winners leaned against, and — the more important half — run a SYMMETRIC deadband as a matched arm beside the asymmetric one~~ | COST | **DONE → R-68, ANSWERED** | Filed by R-67. Ran as a two-threshold decomposition (contains R-67's symmetric-in-magnitude arm as its diagonal) rather than the literal symmetric arm, since a symmetric band on a long/flat gate coincides with R-67's rule (amendment recorded and justified in R-68's write-up, backed after the fact by Guan–Peng–Xu's no-symmetry result). **Both questions answered.** The curve turns over: hump-shaped, peaking at δ≈0.16 on both selection windows (confirmed independently by the sweep and by a Patton–Timmermann monotonicity test), degrading past ≈0.22 — F3's worry (an unbounded far-end improvement) does not materialize. And the confound separates: ENTRY_ONLY (tighten only the entrant threshold) carries the edge R-67 attributed to the coupled rule; EXIT_ONLY (soften only the exit, R-67's original framing) is worse than the coupled diagonal at every matched δ with a *negative* cross-window rank correlation. `further_work=False` on the selected configuration regardless. The grid cap this item's own note cited (dLC's 1.6σ) was found miscalibrated — it is a full-width saturation applied as a half-width cap — and is corrected to 0.80σ in R-68's write-up. Reopens as **B-37** (does entry-only alone reproduce the edge with one parameter). |
+| ~~B-35~~ | ~~Measure the stopping premium of the forced exit (Kaminski & Lo 2014)~~ | COST | **DONE → R-68, ANSWERED** | Filed by R-67. Measured before either R-68 branch ran (`experiments/r68_stopping_premium.py`). At the horizon the mechanism acts on (mean grace span 0.17 days at δ=0.080) the incumbent's forward return after a downward crossing is **positive** (+0.00504 at H=1d vs +0.00048 unconditional) — a **negative** stopping premium, Kaminski–Lo's random-walk case reproduced, consistent with score autocorrelation of −0.078/+0.059/−0.061 at 1/5/14 days. Priced: grace periods cost +0.311 log units at δ=0.080 against +1.044 saved in avoided round trips, net +1.355 — and the saving **asymptotes** while grace span keeps growing, which correctly predicted the sweep's hump shape found later the same round. Every interval contains zero. Closes with a nameable reason: the exit was never informative on this signal, which is also why R-68's ENTRY_ONLY beat EXIT_ONLY. |
 | **B-29** | Separate the two things R-64's conservative arm confounded: a trade-to-the-boundary destination **that still snaps to exactly flat when `desired == 0`**. R-64 measured the destination change as worth a real 43% of turnover with a D2 slope in its favour, and killed it on the residual long the band leaves behind in bear regimes — but those are two independent consequences of one line, and only one of them is fatal | COST | **DONE -> R-66, REJECTED** | Filed by R-64. Cheapest live item on the list: one conditional in a loop this project already has two implementations of, zero new data, zero new fitted parameters, and it inherits R-64's whole pre-registered battery (D0–D5) unchanged so the comparison is already specified. Its own named failure mode: the snap-to-flat may just re-introduce the turnover the boundary saved, at exactly the moments (regime exits) when the step is largest — in which case the 43% figure was never bankable and the answer is a number rather than another attempt. | **ANSWERED, and the answer is a refutation rather than a rescue.** R-66 ran both readings of this item — the literal conditional (conservative) and a derived vanishing-width band that reaches flat without a special case (novel). Both NEGATIVE, and between them they refute the premise the item was filed on: separating the destination from the never-goes-flat consequence closes only **14.5%** of R-64's ETH-A gap against a pre-registered 50% bar, the dose-response inverts, and the novel arm's isolation probe puts **70% of the loss** at a setting where the width change is switched off and fees are *lower* than v4's. The item's own named failure mode (the snap gives back the turnover the boundary saved) was only partly realised — ~75% of R-64's saving is retained and turnover still falls 41% — so the mechanism worked and the story motivating it was wrong. The residual long **does** explain R-64's BTC drawdown escalation, which disappears once flat is reachable; it does not explain the ETH-A growth loss. Live diagnosis is tracking lag.
 | **B-30** | Settle what `broker.REBALANCE_DEADBAND = 0.05` is doing to every futures figure in this project before another round reads one. Measured on `kelly_regime_v4` itself, intended rebalances → fills is 86.0% / 96.2% on spot but **48.1% / 53.8% on 5x futures**: the broker silently discards about half the incumbent's own rebalances, because 5% of *max* notional is 25% of equity at 5x | methodology (not one of the four constraints) | **OPEN, actionable today** | Filed by R-64, measured independently by both its branches and reproduced by the operator. Not a strategy question and not a bug to "fix" unasked — the band exists so strategies can re-emit a target every bar without churning fees, and changing it would move every number in the comparison table. What is needed is the measurement made explicit: how much of each registered strategy's futures column is the band, and whether the leverage-scaling of the threshold (5% of equity×leverage rather than 5% of equity) is intended. Until then the futures column carries a second caveat alongside funding, and README says so. |
 | ~~B-31~~ | ~~Attack the **long/flat gate**, which R-65 identified as where the remaining turnover lives once buffering has done its work. R-63's frozen rule holds only positive-scoring assets and stands flat otherwise, so every zero-crossing of the incumbent's score forces an exit — a channel R-65's conservative branch measured as **invariant at 0.386/day across all 20 cells of a holding-period grid** while voluntary swaps fell 16-fold. Candidate fixes: a hysteresis band around zero (enter above +δ, exit below −δ), a continuous rather than binary positivity weight, or letting the partial-adjustment recursion carry the position through a crossing instead of resetting it~~ | COST | **DONE → R-67, ANSWERED** | Filed by R-65. **The mechanism was real and R-67 broke it; the round failed anyway.** Two of the three fixes this row names were run — asymmetric hysteresis on the eligibility test (conservative) and the partial-adjustment recursion (novel). Forced exits fall **242 → 8 events** on W_TRAIN (0.3781 → 0.0125/day, a 30× cut) with the voluntary-swap channel **invariant at 0.117–0.122/day** at every δ, so the fix reaches exactly and only the channel this row named — **the floor was a threshold artifact, not score noise (F2 refuted)**. Turnover reaches 0.102/day (conservative) and 0.336/day (novel), both **below the 0.641/day break-even this row quotes**, and the conservative arm becomes the first on this axis to pass the 0.40% fee tier. The predicted price — holding a declining asset longer — **was not paid**: drawdown improved at every step on both arms. Both still fail `(D1 or D2)`: +1.093 [−2.019, +4.106] and +1.246 [−1.795, +4.325]. This row's own honest prior was half right: the gate mattered for the discrete-selection family (0.900 → 0.102/day) and the smoothed arm did reach a low rate without a gate fix — but the smoothed arm also **failed D4**, which the gate-fixed discrete arm passed. Reopens only as **B-34** (extend the grids; run the symmetric deadband as a matched arm) and **B-35** (measure whether the exit was informative at all). |
