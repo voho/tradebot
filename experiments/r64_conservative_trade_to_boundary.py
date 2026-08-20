@@ -68,6 +68,40 @@ not by peak-picking; the sweep is D5 plateau evidence and diagnostic, not
 selection.
 
 =====================================================================
+k = 1 IS A SINGULAR POINT, AND THAT IS STRUCTURAL, NOT EMPIRICAL
+=====================================================================
+
+Worth deriving before reading any number, because it changes what the
+``k`` sweep means. After a step the arm sits at ``pos = desired -/+ k*band``.
+The next bar's ``desired`` moves by some small ``eps`` in the same
+direction, and the rule re-fires only when ``k*band + eps > band``, i.e.
+when ``eps > (1 - k) * band``. So **the effective re-trigger band is
+``(1 - k) * band``**, not zero:
+
+    k = 0.00  ->  re-trigger band 0.100   (v4: a step, then silence)
+    k = 0.50  ->  re-trigger band 0.050
+    k = 0.75  ->  re-trigger band 0.025
+    k = 1.00  ->  re-trigger band 0.000   <-- degenerate
+
+At exactly ``k = 1`` the re-trigger band collapses and the position becomes
+a **reflecting barrier**: once pinned to the boundary it re-fires on *any*
+same-direction drift, however small, and emits an order essentially every
+bar. That is the faithful discrete image of the continuous-time policy
+(reflection at the boundary is continuous local-time trading), and it is
+exactly why the continuous-time result cannot be transplanted to a
+bar-discrete simulator without a minimum-step rule. Measured on
+inner-train: v4 emits **543** orders, ``k=0.75`` emits **578**, and
+``k=1.00`` emits **117,243** with a mean step of 0.001 -- and 116,993 of
+those fall below the broker's own 5%-of-equity ``REBALANCE_DEADBAND`` and
+are silently dropped, so only ~253 become fills. The pre-registration
+named that turnover explosion as failure mode 1 and assigned it to the
+*novel* arm; it belongs to this arm too, at ``k=1`` only, and it is masked
+rather than avoided. **Read every ``k=1`` number as the reflecting-barrier
+policy filtered through the broker's execution band, not as the
+pre-registered rule** -- ``cmd_futures``'s fill-through table is what makes
+that visible, and ``cmd_steps`` prices it.
+
+=====================================================================
 THE THREE THINGS THAT CAN MAKE THIS A NULL, MEASURED NOT ASSUMED
 =====================================================================
 
@@ -495,8 +529,12 @@ def cmd_diagnostic(df: pd.DataFrame) -> pd.DataFrame:
         rec: list = []
         v4like = TradeToBoundary(k=0.0)  # == kelly_regime_v4's rule exactly
         v4like._targets(frame, record=rec)
-        n_period = len(frame) - prefix
-        o = np.array([e[1] for e in rec if e[0] >= prefix])
+        # Same lower bound the engine trades from (on_bar starts at `warmup`,
+        # orders survive from `prefix`), so the distribution is not diluted by
+        # exits taken on cold indicators that could never have been traded.
+        lo = max(prefix, KellyRegimeV4.warmup)
+        n_period = len(frame) - lo
+        o = np.array([e[1] for e in rec if e[0] >= lo])
         band = v4like.deadband
         if len(o) == 0:
             print(f"{split}: no band exits at all")
@@ -541,6 +579,48 @@ def cmd_diagnostic(df: pd.DataFrame) -> pd.DataFrame:
     out = pd.DataFrame(recs)
     out.to_csv(OUT_DIR / "r64_conservative_bandexits.csv", index=False)
     return out
+
+
+def cmd_steps(df: pd.DataFrame) -> pd.DataFrame:
+    """Free (no backtest, 0 configs) accounting of what each k actually does.
+
+    ``compute_metrics.num_trades`` counts **round trips** -- flat-to-flat
+    episodes -- and at ``k>0`` the arm never returns to exactly flat, so it
+    reports ``1`` open trade for the whole split regardless of how much it
+    traded. That is an artifact of the metric, not a turnover claim, so the
+    honest turnover numbers are these: the number of band exits (= orders
+    the strategy intends to place) and the total intended turnover
+    ``sum |delta pos|`` in equity-units, per k, straight off the target path.
+    """
+    _print_header("k-SWEEP STEP ACCOUNTING (free; num_trades is round trips and "
+                  "is degenerate at k>0)")
+    print(f"  {'split':<12} {'k':>5} {'band exits':>11} {'turnover':>10} "
+          f"{'mean step':>10} {'steps<5% eq':>12} {'steps<25% eq':>13}")
+    out = []
+    for split, window in SPLITS:
+        for k in K_GRID:
+            frame, prefix = window_frame(df, window, TradeToBoundary.warmup)
+            s = TradeToBoundary(k=k)
+            tgt = s._targets(frame)
+            # Same lower bound `fill_through` uses: on_bar only runs from
+            # `warmup`, and orders only survive from `prefix`, so counting
+            # from bar 0 would include steps the engine never sees.
+            lo = max(prefix, TradeToBoundary.warmup)
+            d = np.abs(np.diff(tgt))[max(lo - 1, 0):]
+            steps = d[d > 1e-9]
+            row = dict(split=split, k=k, exits=int(len(steps)),
+                       turnover=float(steps.sum()),
+                       mean_step=float(steps.mean()) if len(steps) else 0.0,
+                       below_spot_band=int((steps < 0.05).sum()),
+                       below_fut5x_band=int((steps < 0.25).sum()))
+            out.append(row)
+            print(f"  {split:<12} {k:>5.2f} {row['exits']:>11} "
+                  f"{row['turnover']:>10.2f} {row['mean_step']:>10.3f} "
+                  f"{row['below_spot_band']:>12} {row['below_fut5x_band']:>13}")
+        print()
+    frame = pd.DataFrame(out)
+    frame.to_csv(OUT_DIR / "r64_conservative_steps.csv", index=False)
+    return frame
 
 
 def cmd_causality(df: pd.DataFrame) -> bool:
@@ -722,6 +802,8 @@ def main(argv: list[str] | None = None) -> None:
         causal = cmd_causality(df)
     if cmd in ("all", "diagnostic"):
         cmd_diagnostic(df)
+    if cmd in ("all", "diagnostic", "steps"):
+        cmd_steps(df)
     if cmd in ("all", "sweep"):
         cmd_sweep(df, rows)
     if cmd in ("all", "stress"):
