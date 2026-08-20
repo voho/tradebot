@@ -1,0 +1,11 @@
+{
+  "cash": 996.016,
+  "dead": false,
+  "entry": 73087.1,
+  "fees_paid": 3.984,
+  "inception_price": 73087.1,
+  "inception_ts": "2026-08-20T23:45:00+00:00",
+  "last_candle_ts": "2026-08-20T23:45:00+00:00",
+  "n_runs": 1,
+  "pos": 0.013627575864961121
+}

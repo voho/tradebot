@@ -1,0 +1,2 @@
+timestamp,candle_close_price,prior_target,new_target,trade_qty,fee_paid,position_after,cash_after,equity_after,reason
+2026-08-20T23:45:00+00:00,73087.10,0.000000,1.576670,0.01362758,3.9840,0.01362758,996.0160,996.0160,INCEPTION CATCH-UP target=1.5767 (on_bar's own change-gate emitted nothing; see inception_catchup_target)
