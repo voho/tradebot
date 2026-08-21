@@ -1,11 +1,11 @@
 #!/usr/bin/env python
-"""R-88 CONSERVATIVE branch: split `kelly_regime_v4`'s single no-trade band
+"""R-89 CONSERVATIVE branch: split `kelly_regime_v4`'s single no-trade band
 into an ASYMMETRIC entry/exit pair (`d_in` / `d_out`) on the strategy's own
 latched anchor vote, and ask whether the transaction-cost literature's
 predicted asymmetry is measurable on the single-asset long/flat case the
 theorems were actually proved for. The full citation trail, the round's
 direction, the not-a-duplicate-of reasoning and the operator's measured
-power calculation live in `experiments/r88_shared.py`'s module docstring;
+power calculation live in `experiments/r89_shared.py`'s module docstring;
 this file does not repeat them. It implements the frozen mechanism and
 reports the frozen gates, every cell, pass or fail.
 
@@ -69,14 +69,14 @@ no threshold moved after seeing any result):
   B5  cost robustness -- re-run finalist and control on inner-validation
       at a 0.40% taker fee; the improvement must not reverse sign.
 Selection statistic (frozen): the inner-validation PAIRED log-growth
-difference vs v4 on `futures_5x`. Measured power, from `r88_shared`: a 95%
+difference vs v4 on `futures_5x`. Measured power, from `r89_shared`: a 95%
 paired interval at the 30-day block convention excludes zero once the
 candidate beats v4 by about +0.35 log units over inner-train or +0.13 to
 +0.26 over inner-validation; every difference below is reported against
 those numbers.
 
 This file never reads a bar at or after OOS_START (2023-01-01): every load
-goes through `r88_shared`'s truncating, asserting loaders, and the max
+goes through `r89_shared`'s truncating, asserting loaders, and the max
 timestamp actually read is tracked and printed at the end of `main()`.
 """
 
@@ -94,7 +94,7 @@ import pandas as pd  # noqa: E402
 
 from tradebot.broker import MarketSpec  # noqa: E402
 
-from experiments.r88_shared import (  # noqa: E402
+from experiments.r89_shared import (  # noqa: E402
     FUTURES,
     INNER_TRAIN_END,
     OOS_START,
@@ -286,7 +286,7 @@ def cell(rows: list[dict], slice_name: str, market: str) -> dict | None:
 def main() -> None:
     max_ts_seen: list[pd.Timestamp] = []
 
-    hr("R-88 CONSERVATIVE -- asymmetric entry/exit band (d_in / d_out) on "
+    hr("R-89 CONSERVATIVE -- asymmetric entry/exit band (d_in / d_out) on "
        "kelly_regime_v4's\nown latched anchor vote. 25 frozen configurations. "
        "Default verdict: REJECT.")
     df_full = load_btc()

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""R-88 NOVEL branch: the RESPONSE FUNCTION -- the map from standardised
+"""R-89 NOVEL branch: the RESPONSE FUNCTION -- the map from standardised
 trend strength to exposure -- holding every other part of
 `kelly_regime_v4` fixed.
 
@@ -66,7 +66,7 @@ its Sharpe.
 --------------------------------------------------------------------------
 PHI, the standardised trend strength (ONE specification, frozen, not swept)
 --------------------------------------------------------------------------
-``r88_shared.signal_deviation(df)`` gives ``close/anchor_h - 1`` for
+``r89_shared.signal_deviation(df)`` gives ``close/anchor_h - 1`` for
 h in (20, 40, 80) days -- v4's own vote statistic made continuous. Each
 column is standardised by its OWN trailing root-mean-square over a
 365-day rolling window (``min_periods`` = 1 day, ``shift(1)``), clipped at
@@ -78,7 +78,7 @@ meaning "price sits on its anchors", which is the point v4's own latch
 thresholds.
 
 THE THREE ARMS:
-  g_sign(phi)   -- `r88_shared.v4_vote_frac(df)` used DIRECTLY, so the arm
+  g_sign(phi)   -- `r89_shared.v4_vote_frac(df)` used DIRECTLY, so the arm
                    reproduces v4 bit-for-bit (Step A1 asserts it).
   g_linear(phi) -- clip(phi / phi_max, 0, 1), long-only (phi<=0 => 0).
   g_cubic(phi)  -- normalised (b*phi + c*phi^3), clipped to [0, 1], with
@@ -131,7 +131,7 @@ is the control itself and cannot be selected against itself).
   B2 -- either dSharpe > +0.2 (R-20 noise floor) on inner-validation on
         BOTH markets, or a clear max-drawdown improvement on both.
   B3 -- plateau not peak: the finalist's immediate neighbours move with it.
-  B4 -- falsification: ETH (`r88_shared.load_eth()`) must show the SAME
+  B4 -- falsification: ETH (`r89_shared.load_eth()`) must show the SAME
         SIGN of improvement over v4, both markets. Failing it is NEGATIVE.
   B5 -- cost robustness: the improvement must not reverse sign at a 0.40%
         taker fee on inner-validation.
@@ -143,7 +143,7 @@ the candidate beats v4 by about **+0.35 log units over inner-train** or
 **+0.13 to +0.26 over inner-validation**.
 
 This file never reads a bar at or after OOS_START (2023-01-01): every load
-goes through `r88_shared`'s truncating loaders, and the max timestamp
+goes through `r89_shared`'s truncating loaders, and the max timestamp
 actually touched is tracked and printed at the end of `main()`.
 """
 
@@ -163,7 +163,7 @@ from tradebot.broker import MarketSpec  # noqa: E402
 from tradebot.metrics import compute_metrics  # noqa: E402
 from tradebot.window import run_period  # noqa: E402
 
-from experiments.r88_shared import (  # noqa: E402
+from experiments.r89_shared import (  # noqa: E402
     BARS_PER_DAY,
     FUTURES,
     INNER_TRAIN_END,
@@ -526,7 +526,7 @@ def main() -> None:
     max_ts = []
     n_strategy_configs = 0
 
-    hdr("R-88 NOVEL BRANCH -- THE RESPONSE FUNCTION (sign vs linear vs cubic)")
+    hdr("R-89 NOVEL BRANCH -- THE RESPONSE FUNCTION (sign vs linear vs cubic)")
     print("mechanism: replace kelly_regime_v4's LATCHED BINARY vote (frac in "
           "{0,1/3,2/3,1}) with a")
     print("continuous map g(phi) from standardised trend strength to exposure; "

@@ -1,4 +1,4 @@
-"""Shared, read-only utilities for the R-88 round (08-21).
+"""Shared, read-only utilities for the R-89 round (08-21).
 
 DIRECTION, in one sentence: attack the **no-trade band inside
 `kelly_regime_v4`'s own anchor vote** -- the constructor default
@@ -393,10 +393,10 @@ class TargetStrategy(Strategy):
     the branches differ only in how the number is computed.
     """
 
-    name = "r88_target"
+    name = "r89_target"
     warmup = 80 * BARS_PER_DAY + 10
 
-    def __init__(self, build_target, name: str = "r88_target",
+    def __init__(self, build_target, name: str = "r89_target",
                  warmup: int | None = None) -> None:
         self._build = build_target
         self.name = name

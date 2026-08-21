@@ -304,7 +304,7 @@ validation here leans on Monte Carlo windows rather than one path.
    benchmark trades from day one. Warm the state, withhold the trading:
    `run_backtest(trade_start=...)` and `tradebot.window.run_period`.
 11. **On one instrument, changing the *filter* is not an axis — only
-    changing the *response* is** (added by R-88's literature pass, and it
+    changing the *response* is** (added by R-89's literature pass, and it
     reorganises this whole file). Levine & Pedersen (2016), "Which Trend
     Is Your Friend?", *Financial Analysts Journal* 72(3), 51–66, show
     that time-series momentum, moving-average crossovers, HP filters and
@@ -317,8 +317,8 @@ validation here leans on Monte Carlo windows rather than one path.
     are three: the **nonlinearity of the response** (the map from trend
     strength to exposure), the **path-dependence of the exposure** (state
     carried between bars — a latch, a ratchet, a stop), and the
-    **state-dependence of the horizon**. Before R-88 this project had
-    varied none of them; R-88 took the first two.
+    **state-dependence of the horizon**. Before R-89 this project had
+    varied none of them; R-89 took the first two.
     Two calibrations to carry alongside it. **Valeyre (2025),
     arXiv:2504.10914** (70 futures, 1990–2023) measures an optimal
     single-EMA trend system at portfolio Sharpe **1.24** but **≈0.20 per
@@ -331,7 +331,7 @@ validation here leans on Monte Carlo windows rather than one path.
     **small-tick** instruments and show that zero-lag execution does not
     recover it — *signal* death, not cost erosion, which if it applied to
     BTC would mean none of R-56/R-64→R-68's execution work could ever
-    have fixed what it aimed at. **R-88 tested that prediction directly
+    have fixed what it aimed at. **R-89 tested that prediction directly
     on this data and it does not hold in-sample**: decomposing v4's own
     vote one anchor at a time, the 20-day anchor alone beats the
     three-anchor ensemble on Sharpe, final balance *and* drawdown on
