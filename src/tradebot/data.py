@@ -629,6 +629,22 @@ def load_binance_metrics(data_dir: str | Path, asset: str = "BTC") -> pd.DataFra
     row is duplicated (verified: every 5-minute timestamp appears twice,
     byte-identical) and deduplicated by the fetch script already, not
     here.
+
+    A second, more serious limitation, found by R-81's novel branch and
+    verified directly against Binance's own published source (not a
+    parsing bug): ``sum_toptrader_long_short_ratio`` /
+    ``count_toptrader_long_short_ratio`` are genuinely missing (empty
+    fields in the raw CSV) for four long stretches covering **37.6%** of
+    the committed BTC window, almost entirely in 2022 --
+    2021-12-30->2022-01-29, 2022-01-31->2022-05-01, 2022-05-01->2022-05-27
+    and 2022-09-03->2022-12-14 (this last one entirely covers the FTX
+    collapse). The ETH file has the same pattern over 81% of its coverage.
+    ``sum_open_interest``/``sum_open_interest_value``/
+    ``count_long_short_ratio``/``sum_taker_long_short_vol_ratio`` are not
+    affected. Any statistic computed from the long/short ratio columns
+    over this period must account for these gaps explicitly (e.g. via
+    ``.dropna()`` or an NaN-aware estimator) rather than assume the
+    committed file is complete.
     """
     if asset not in METRICS_FILES:
         raise ValueError(f"asset must be one of {sorted(METRICS_FILES)}")
