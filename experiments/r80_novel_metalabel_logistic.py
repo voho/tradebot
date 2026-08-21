@@ -742,8 +742,6 @@ def main() -> None:
     if len(first_live):
         print(f"  inner-train-only call: first live bar at "
               f"{df_train.index[first_live[0]]} (bar {first_live[0]:,}/{len(df_train):,})")
-    feats_val_only = None  # computed inside the isolated ev() call below via prepare()
-
     n_step_b = 0
 
     # ---- sweep: weight, plus a small refit-cadence check ----
@@ -786,6 +784,20 @@ def main() -> None:
     print(f"\nTotal Step-B configurations evaluated: {n_step_b} "
           f"(x4 cells each: spot/futures x inner-train/inner-validation)")
     print(f"Total Step-A configurations evaluated: {n_configs}")
+
+    # ---- exposure-profile diagnostic: does the candidate ever go flat? ----
+    print("\n--- exposure-profile diagnostic (inner-train, post-warmup bars) ---")
+    print("  Does the confirming-vote formula preserve v4's own most robust, "
+          "ledger-documented property -- full de-risk to cash on unanimous "
+          "bearish consensus (anchor_sum=0)? ")
+    for w in (0.5, 1.0, 2.0):
+        c = KellyRegimeMetaLabel(weight=w)
+        t = c.prepare(df_train.copy())["target"].to_numpy()[c.warmup:]
+        print(f"  weight={w}: mean|target|={np.mean(np.abs(t)):.4f}  "
+              f"frac_time_at_flat(<1e-6)={np.mean(t < 1e-6):.4f}")
+    t_v4m = v4_matched.prepare(df_train.copy())["target"].to_numpy()[v4_matched.warmup:]
+    print(f"  v4 (matched warmup): mean|target|={np.mean(np.abs(t_v4m)):.4f}  "
+          f"frac_time_at_flat(<1e-6)={np.mean(t_v4m < 1e-6):.4f}")
 
 
 if __name__ == "__main__":
