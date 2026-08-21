@@ -32,6 +32,20 @@ causality-tested files. Build that only once a specific strategy needs
 it and has already earned the risk by clearing inner-validation as a
 fixed-split prototype first.
 
+**A concrete consequence of that limit, found by R-76 (docs/LEDGER.md):**
+because each leg's ``PaperBroker`` is margined in complete isolation, a
+leveraged long/short pair (e.g. a market-neutral spread trade, one leg
+long and one short on ``MarketSpec.futures()``) can have ONE leg
+liquidated by its own outright price move even while the pair's spread
+itself is calm or moving favourably — there is no shared margin call
+across legs to draw on. R-76's literal pairs trade lost 97-99% of its
+capital to exactly this on 2 of 3 position-size fractions tested, before
+any mean-reversion thesis was ever tested. This is not a bug: it is the
+same "no shared risk budget" limit above, restated as a warning for
+anyone sizing a *leveraged, direction-hedged* multi-leg strategy through
+this module rather than a simple weighted portfolio of independent
+directional bets.
+
 Registering a multi-asset strategy for real (into ``tradebot run`` /
 the README table / CI) additionally needs: an asset-aware
 ``tradebot.data`` load path (today's loaders are implicitly one asset
