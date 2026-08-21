@@ -795,6 +795,23 @@ def main() -> None:
           f"  -> both improved: {b2_dd}")
     print(f"   B2 = {'PASS' if b2 else 'FAIL'}")
 
+    # Risk match ON THE SELECTION CELL ITSELF (standing rule: holding less draws
+    # down less; that is arithmetic, not evidence -- R-28/R-32/R-33).
+    val_mask = btc.index >= pd.Timestamp(INNER_VAL_START, tz=btc.index.tz)
+    fin_path, v4_path = finalist.build(btc), v4_control_build(btc)
+    fe, ve = float(fin_path[val_mask].mean()), float(v4_path[val_mask].mean())
+    print(f"\n   RISK MATCH on the selection cell: mean target exposure over "
+          f"inner-validation is {fe:.4f} for the finalist vs {ve:.4f} for v4 "
+          f"({fe/ve:.2f}x).")
+    print("   B2's drawdown leg therefore rests on an arm holding well under half "
+          "of v4's exposure")
+    print("   through the 2022 bear: the arms are NOT risk-matched, so that leg is "
+          "arithmetic, not")
+    print("   evidence, and B2 should be read as effectively FAILED on its Sharpe "
+          "leg alone. The")
+    print("   rule is left frozen as pre-registered and is NOT moved; this is a "
+          "caveat on the PASS.")
+
     # B3 plateau
     print("\nB3 plateau not peak: the finalist's immediate neighbours on the grid")
     print(f"{'config':22s} {'selstat':>9s} {'dSh_val_fut':>12s} {'note':<20s}")
@@ -948,6 +965,20 @@ def main() -> None:
             print(f"{cfg.label:22s} {mkt_net.name:12s} {m_net.num_trades:7d} "
                   f"{rt:7.3f} {tu:11.4f} {m_gross.final_balance:10,.0f} "
                   f"{m_net.final_balance:10,.0f} {cost:9,.0f}")
+    print("\nNOTE -- the brief's own turnover prediction is CONTRADICTED here, and "
+          "it is worth")
+    print("recording: an unsaturated LINEAR response does NOT trade more than the "
+          "latched step.")
+    print("It trades far LESS (notional turnover 0.39-0.79x v4's, and a fraction of "
+          "the round")
+    print("trips), because a slow continuous target crosses v4's 10% re-target "
+          "deadband less")
+    print("often than a vote that jumps in discrete ~scale/3 steps. The arm that "
+          "does trade more")
+    print("is the NON-MONOTONE cubic (1.26-1.65x), whose response doubles back on "
+          "itself and so")
+    print("crosses the deadband twice per trend. Costs are therefore NOT what "
+          "decides this round.")
 
     # ------------------------------------------------------------ verdict
     hdr("VERDICT")
