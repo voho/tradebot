@@ -54,6 +54,14 @@ uv.lock
 # uses a genuine asset-specific implied-vol index rather than proxying
 # ETH's VRP through BTC's own DVOL. Same 2021-03-24 start.
 !/data/eth_dvol_daily.csv.gz
+# daily MVRV ratio (market cap / realized cap), BTC and ETH (R-74): a
+# valuation-based on-chain signal from CoinMetrics' free community API,
+# structurally different from every prior INFO channel (not a flow like
+# stablecoin supply, not a priced vol expectation like DVOL, not a
+# spillover from equities/FX like VIX/DXY, not raw network activity like
+# active-address growth)
+!/data/btc_mvrv_daily.csv.gz
+!/data/eth_mvrv_daily.csv.gz
 # the six-instrument Coinbase panel (R-57), plus the XRP series its own
 # continuity rule excludes - committed rather than regenerated because the
 # panel IS the evidence for the scope of this project's drawdown finding,

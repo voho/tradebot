@@ -545,3 +545,52 @@ def align_dvol_causal(dvol: pd.DataFrame, bars: pd.DataFrame) -> pd.DataFrame:
     shifted = dvol.copy()
     shifted.index = shifted.index + pd.Timedelta(days=1)
     return shifted.reindex(shifted.index.union(bars.index)).sort_index().ffill().reindex(bars.index)
+
+
+MVRV_FILES = {
+    "BTC": "btc_mvrv_daily.csv.gz",
+    "ETH": "eth_mvrv_daily.csv.gz",
+}
+
+
+def load_mvrv_ratio(data_dir: str | Path, asset: str = "BTC") -> pd.DataFrame | None:
+    """Daily MVRV ratio (market cap / realized cap), or None if absent.
+
+    Fetched by ``scripts/fetch_coinmetrics_mvrv.py`` from CoinMetrics'
+    free community API (R-74), the same endpoint family
+    ``load_stablecoin_supply`` already uses. Realized cap marks every coin
+    at the price it last moved on-chain rather than at today's price
+    (Mahmudov & Puell 2018, building on Carter & Le Calvez's realized-cap
+    concept), so MVRV is a valuation signal -- aggregate holder
+    profit/loss -- genuinely distinct from every other INFO-axis signal
+    tried so far: not a flow (stablecoin supply, R-54), not a priced
+    volatility expectation (DVOL/VRP, R-73), not a spillover from the rest
+    of the financial system (VIX/DXY, R-53), and not the traded asset's
+    own activity (active-address growth, B-07/R-44). Single column
+    ``mvrv``. Indexed by UTC day (midnight). ``BTC`` covers 2016-01-01 ->
+    present, ``ETH`` 2018-01-01 -> present (both requested from before
+    this project's own OHLCV start so no warmup bar is starved).
+    """
+    if asset not in MVRV_FILES:
+        raise ValueError(f"asset must be one of {sorted(MVRV_FILES)}")
+    path = Path(data_dir) / MVRV_FILES[asset]
+    if not path.exists():
+        return None
+    df = pd.read_csv(path, parse_dates=["timestamp"], index_col="timestamp")
+    df.index = df.index.tz_localize("UTC")
+    return df[["mvrv"]].astype(float).sort_index()
+
+
+def align_mvrv_causal(mvrv: pd.DataFrame, bars: pd.DataFrame) -> pd.DataFrame:
+    """Reindex daily MVRV onto ``bars``' index, causally.
+
+    CoinMetrics reports day D's MVRV only after day D has closed, so --
+    exactly like ``align_onchain_causal``/``align_macro_causal``/
+    ``align_stablecoin_causal``/``align_dvol_causal`` -- a bar at time T
+    may only see the row for the most recent day that closed strictly
+    before T's own day. Bars before the first visible row get NaN, never
+    filled or back-cast.
+    """
+    shifted = mvrv.copy()
+    shifted.index = shifted.index + pd.Timedelta(days=1)
+    return shifted.reindex(shifted.index.union(bars.index)).sort_index().ffill().reindex(bars.index)
