@@ -498,3 +498,50 @@ def align_stablecoin_causal(supply: pd.DataFrame, bars: pd.DataFrame) -> pd.Data
     shifted = supply.copy()
     shifted.index = shifted.index + pd.Timedelta(days=1)
     return shifted.reindex(shifted.index.union(bars.index)).sort_index().ffill().reindex(bars.index)
+
+
+DVOL_FILE = "btc_dvol_daily.csv.gz"
+
+
+def load_dvol_index(data_dir: str | Path) -> pd.DataFrame | None:
+    """Daily BTC DVOL (Deribit's official 30-day implied-volatility index), or None if absent.
+
+    Fetched by ``scripts/fetch_deribit_dvol_novel.py`` from Deribit's public
+    ``get_volatility_index_data`` endpoint (R-73). Unlike every other
+    INFO-axis signal tried in this project so far -- on-chain activity
+    (B-07/R-44, describes BTC's own network), VIX/DXY macro stress (R-53,
+    describes the rest of the financial system), stablecoin supply
+    (R-54/R-55/R-58, a spot/balance-sheet flow proxy) -- DVOL is a
+    forward-looking, PRICED market expectation: option writers' 30-day-ahead
+    volatility view, set today. Columns ``open, high, low, close`` (index
+    close is the value used everywhere in this round, matching the
+    convention "today's DVOL close" the way VIX close is used in
+    ``load_macro_metrics``). Indexed by UTC day (midnight).
+
+    Hard data limitation, stated plainly rather than proxied around: history
+    starts ~2021-03-24 (options markets did not exist at scale before then).
+    There is no way to backfill this -- any strategy or study built on DVOL
+    is confined to that window, materially shorter than this project's usual
+    2017-> history.
+    """
+    path = Path(data_dir) / DVOL_FILE
+    if not path.exists():
+        return None
+    df = pd.read_csv(path, parse_dates=["timestamp"], index_col="timestamp")
+    df.index = df.index.tz_localize("UTC")
+    return df.astype(float).sort_index()
+
+
+def align_dvol_causal(dvol: pd.DataFrame, bars: pd.DataFrame) -> pd.DataFrame:
+    """Reindex daily DVOL onto ``bars``' index, causally.
+
+    Deribit's index_data endpoint's daily bar for day D only finishes
+    forming once day D has closed, so -- exactly like
+    ``align_onchain_causal``/``align_macro_causal``/``align_stablecoin_causal``
+    -- a bar at time T may only see the row for the most recent day that
+    closed strictly before T's own day. Bars before the first visible row
+    get NaN, never filled or back-cast.
+    """
+    shifted = dvol.copy()
+    shifted.index = shifted.index + pd.Timedelta(days=1)
+    return shifted.reindex(shifted.index.union(bars.index)).sort_index().ffill().reindex(bars.index)

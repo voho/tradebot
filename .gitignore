@@ -44,6 +44,11 @@ uv.lock
 # daily aggregate USDT circulating supply (R-54): a crypto-native
 # liquidity-flow signal, from CoinMetrics' free community API
 !/data/stablecoin_supply_daily.csv.gz
+# daily BTC DVOL, Deribit's official 30-day implied-volatility index
+# (R-73): the first forward-looking, market-PRICED information channel
+# this project has had, as opposed to a spot/balance-sheet flow proxy.
+# History starts ~2021-03-24 -- a hard data limitation, not a bug.
+!/data/btc_dvol_daily.csv.gz
 # the six-instrument Coinbase panel (R-57), plus the XRP series its own
 # continuity rule excludes - committed rather than regenerated because the
 # panel IS the evidence for the scope of this project's drawdown finding,
