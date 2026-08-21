@@ -62,6 +62,14 @@ uv.lock
 # active-address growth)
 !/data/btc_mvrv_daily.csv.gz
 !/data/eth_mvrv_daily.csv.gz
+# daily exchange net-flow (FlowInExNtv/FlowOutExNtv), BTC and ETH (R-81): a
+# capital-custody / selling-pressure flow signal from CoinMetrics' free
+# community API, structurally different from every prior INFO channel (not
+# a network-activity count like active addresses, not a valuation ratio
+# like MVRV, not a priced expectation like DVOL, not a liquidity-flow proxy
+# like stablecoin supply)
+!/data/btc_exchange_flow_daily.csv.gz
+!/data/eth_exchange_flow_daily.csv.gz
 # the six-instrument Coinbase panel (R-57), plus the XRP series its own
 # continuity rule excludes - committed rather than regenerated because the
 # panel IS the evidence for the scope of this project's drawdown finding,

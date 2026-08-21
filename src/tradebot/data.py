@@ -290,6 +290,34 @@ def align_onchain_causal(onchain: pd.DataFrame, bars: pd.DataFrame) -> pd.DataFr
     return shifted.reindex(shifted.index.union(bars.index)).sort_index().ffill().reindex(bars.index)
 
 
+EXCHANGE_FLOW_FILES = {"BTC": "btc_exchange_flow_daily.csv.gz", "ETH": "eth_exchange_flow_daily.csv.gz"}
+EXCHANGE_FLOW_METRICS = ["FlowInExNtv", "FlowOutExNtv"]
+
+
+def load_exchange_flow(data_dir: str | Path, asset: str = "BTC") -> pd.DataFrame | None:
+    """Daily exchange net-flow (native units in/out of known exchange addresses), or None if absent.
+
+    Fetched by ``scripts/fetch_exchange_flows.py`` from CoinMetrics' free
+    community API (R-81) -- an eighth structurally distinct INFO signal, a
+    capital-custody / selling-pressure flow rather than a network-activity
+    count (``load_onchain_metrics``), a valuation ratio (``load_mvrv_ratio``),
+    a spillover level (``load_macro_metrics``) or a priced expectation
+    (``load_dvol_index``). Indexed by UTC day (midnight). ``asset="BTC"``
+    covers 2016-01-01 -> present; ``asset="ETH"`` covers 2019-01-01 ->
+    present. Use ``align_onchain_causal`` for the same one-day-late causal
+    reindex onto bars -- CoinMetrics reports day D's flow only after D
+    closes, identically to the on-chain activity metrics.
+    """
+    if asset not in EXCHANGE_FLOW_FILES:
+        raise ValueError(f"asset must be one of {sorted(EXCHANGE_FLOW_FILES)}")
+    path = Path(data_dir) / EXCHANGE_FLOW_FILES[asset]
+    if not path.exists():
+        return None
+    df = pd.read_csv(path, parse_dates=["timestamp"], index_col="timestamp")
+    df.index = df.index.tz_localize("UTC")
+    return df[EXCHANGE_FLOW_METRICS].astype(float).sort_index()
+
+
 MACRO_FILES = {
     "spx": "spx_daily.csv.gz",
     "vix": "vix_daily.csv.gz",
