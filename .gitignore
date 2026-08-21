@@ -49,6 +49,11 @@ uv.lock
 # this project has had, as opposed to a spot/balance-sheet flow proxy.
 # History starts ~2021-03-24 -- a hard data limitation, not a bug.
 !/data/btc_dvol_daily.csv.gz
+# daily ETH DVOL (R-73 conservative): fetched alongside BTC DVOL so the
+# variance-risk-premium brake's pre-registered ETH falsification test
+# uses a genuine asset-specific implied-vol index rather than proxying
+# ETH's VRP through BTC's own DVOL. Same 2021-03-24 start.
+!/data/eth_dvol_daily.csv.gz
 # the six-instrument Coinbase panel (R-57), plus the XRP series its own
 # continuity rule excludes - committed rather than regenerated because the
 # panel IS the evidence for the scope of this project's drawdown finding,
