@@ -303,6 +303,44 @@ validation here leans on Monte Carlo windows rather than one path.
    100-day-warmup strategy flat for 7.6% of it while a zero-warmup
    benchmark trades from day one. Warm the state, withhold the trading:
    `run_backtest(trade_start=...)` and `tradebot.window.run_period`.
+11. **On one instrument, changing the *filter* is not an axis — only
+    changing the *response* is** (added by R-88's literature pass, and it
+    reorganises this whole file). Levine & Pedersen (2016), "Which Trend
+    Is Your Friend?", *Financial Analysts Journal* 72(3), 51–66, show
+    that time-series momentum, moving-average crossovers, HP filters and
+    Kalman filters are **equivalent representations of one linear
+    filter**, differing only in how they weight past returns. If that is
+    right, a large share of this project's "new mechanism" rounds were
+    re-parameterisations: R-83's Kalman local-linear-trend, R-06/R-07's
+    anchor ladders and R-40's bagged ladders all live inside that family.
+    The axes that are *not* re-parameterisations, on a single instrument,
+    are three: the **nonlinearity of the response** (the map from trend
+    strength to exposure), the **path-dependence of the exposure** (state
+    carried between bars — a latch, a ratchet, a stop), and the
+    **state-dependence of the horizon**. Before R-88 this project had
+    varied none of them; R-88 took the first two.
+    Two calibrations to carry alongside it. **Valeyre (2025),
+    arXiv:2504.10914** (70 futures, 1990–2023) measures an optimal
+    single-EMA trend system at portfolio Sharpe **1.24** but **≈0.20 per
+    single asset**, with different EMA spans carrying **0.96**
+    cross-correlation — the published, quantified version of R-05's
+    lesson, and the discount to apply to any panel-derived trend edge
+    before testing it here. **Kurth, Eisler, Rej & Bouchaud (2026),
+    arXiv:2607.01550** give a microstructural account of fast trend's
+    decay (EWM(5,20) Sharpe 0.84 → 0.12 post-2008) that is specific to
+    **small-tick** instruments and show that zero-lag execution does not
+    recover it — *signal* death, not cost erosion, which if it applied to
+    BTC would mean none of R-56/R-64→R-68's execution work could ever
+    have fixed what it aimed at. **R-88 tested that prediction directly
+    on this data and it does not hold in-sample**: decomposing v4's own
+    vote one anchor at a time, the 20-day anchor alone beats the
+    three-anchor ensemble on Sharpe, final balance *and* drawdown on
+    inner-train (+2.14/+2.32 vs +2.03/+2.28), while on inner-validation
+    the ranking inverts completely and 20d becomes the worst of the
+    three. The ensemble is never better than its best member in either
+    window — it is better than the average member, and immune to which
+    member happens to be right, which is the honest reason v4 votes
+    rather than picks, and is N≈3 visible in a single table.
 
 ## What shipped
 
