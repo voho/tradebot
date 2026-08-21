@@ -430,7 +430,19 @@ def step_a_gate() -> dict:
                   f"(BTC tv data missing 2022-01-31 -> 2022-05-09, ending exactly on "
                   f"this episode's onset) makes the pre-episode baseline window "
                   f"unusable BY CONSTRUCTION. Reported here as a FORCED FAIL, not "
-                  f"silently dropped, per r88_shared.py's own disclosure.")
+                  f"silently dropped, per r88_shared.py's own disclosure. MECHANISM "
+                  f"NOTE (found while computing this file's own numbers, not assumed "
+                  f"from the docstring): align_metrics_causal's ffill does not turn "
+                  f"this gap into NaN tv_z -- it forward-fills the raw ratio to an "
+                  f"exact CONSTANT for 98 days, so the 14-day rolling std computed "
+                  f"over that constant is not exactly 0.0 (float64 summation noise, "
+                  f"~2.2e-16) rather than the exact 0.0 the code guards against, so "
+                  f"tv_z evaluates to a finite ~0.0 throughout the gap instead of NaN. "
+                  f"The practical effect is the same as the disclosed caveat (no real "
+                  f"pre-onset extremity signal exists in this window -- ~0.0 can never "
+                  f"cross an extremity threshold), so the forced-FAIL below still "
+                  f"applies, but via a floating-point-artifact mechanism, not literal "
+                  f"missing data -- disclosed here rather than silently assumed.")
 
         if len(window) == 0:
             print(f"[{label}] onset={onset_str}: window has ZERO bars in range -- "
@@ -651,9 +663,6 @@ def step_b_sweep() -> dict:
     print(f"\nWINNER (by inner-validation Sharpe): {winner_tag}  "
           f"sharpe={val_rows[winner_tag]['sharpe']:.3f}  "
           f"(v4 sharpe={v4_val.sharpe:.3f})")
-
-    for tag, row in val_rows[winner_tag]["diag"].items():
-        pass  # diag already printed via strategy attribute below
 
     d = val_rows[winner_tag]["diag"]
     print(f"  winner diagnostics (inner-val window): delayed={d['n_delayed']} "
