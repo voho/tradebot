@@ -522,6 +522,28 @@ step of its own — commit `reports/paper_trading/` yourself (or add one to
 the unit) if you want the same record checked in as the GitHub Actions
 path produces.
 
+> 🚨 **R-78 measured that cadence against the live record, and against the
+> backtest — the paragraph above understated it in two ways.** First, the
+> realized schedule is far slower than `*/15`: over the record's first 32
+> hours the median gap between rows was **50–85 minutes** and the largest
+> was **8 hours**, so only **12–25%** of the runs the cron implies actually
+> fired and only **4.0–8.4%** of the 5-minute tape got a decision at all.
+> Second, and worse, *"a missed run costs nothing but the missed
+> rebalance"* is **wrong** for the 18 strategies whose gate is
+> edge-triggered. Their `on_bar` fires on `abs(target[i] - target[i-1]) >
+> 1e-9` — a comparison against the *immediately preceding* 5-minute bar —
+> so a target change that lands on a skipped candle is not delayed, it is
+> **permanently invisible**: by the next invocation the target has stopped
+> changing and the gate is silent again. Measured on 2017–2022 data,
+> exactly `1/k` of `kelly_regime_v4`'s 811 target changes survive a
+> 1-in-`k` decision grid — **10.0%** at the realized cadence, about 13 of
+> its ~135 rebalances a year. Priced through the real engine at the same
+> cadence: **−0.31 to −0.41 Sharpe** and **26–36% of final balance** against
+> a full-cadence run, on both inner splits. **This is fixed** — see
+> "The level resync" below — and the fix is immune to the schedule rather
+> than dependent on it. Detail in [docs/LEDGER.md](LEDGER.md) (R-78),
+> reproduce with `python experiments/r78_novel_record_fidelity.py`.
+
 ### The inception catch-up, and why it exists
 
 A cold-started account needs to be sized to what the strategy currently
@@ -546,6 +568,42 @@ genuine decision, only a cold start's blind spot. The identical gap
 exists in `bot.py`/`live_bot.py` today (a freshly funded live account
 would have the same problem) but is not fixed there, since neither file
 is this recorder's to change.
+
+### The level resync, and why the inception-only fix was not enough (R-78)
+
+R-71 restricted the catch-up to inception on the reasonable assumption
+that every later run would see every candle. The workflow it shipped in
+the same round does not — and neither does any schedule slower than the
+bar interval. The consequence is measured above: on the realized cadence
+the recorder saw **10%** of `kelly_regime_v4`'s target changes and missed
+the rest permanently, because an edge-triggered gate offers each change
+exactly one chance to be noticed.
+
+`level_resync_order()` in `scripts/paper_trade.py` closes that by asking a
+**level** question instead of an edge one: *what stance does the strategy
+want now, and is that what the account actually holds now?* Whether a
+candle was seen or skipped stops mattering. It is deliberately narrow:
+
+- consulted **only when `compute_signal` emitted nothing**, so a genuine
+  bar-over-bar signal is always used exactly as written and the resync can
+  never contradict one;
+- it compares the strategy's desired stance **clamped to what the market
+  can actually hold** (a spot account asking for 1.55x is already
+  satisfied at 1.0, and must not re-emit every run);
+- it emits only where the broker would actually act — outside
+  `broker.REBALANCE_DEADBAND` for a same-sign adjustment, plus any move to
+  flat or sign flip, which the broker always executes — so every emitted
+  order is one that can fill, rather than a misleading row;
+- strategies with no `target` column (the ~5 that decide from
+  `ctx.position` directly) are untouched and keep the pre-R-78 behaviour.
+
+Rows written this way are labelled `LEVEL RESYNC target=… from …` in the
+CSV's `reason` column, so the record says plainly which decisions came
+from the strategy's own edge and which from the account's drift.
+
+The same edge-triggered blind spot exists in `bot.py`/`live_bot.py` for
+any operator running them on a schedule slower than the bar — still not
+fixed there, for the same reason the inception gap was not.
 
 ### Honest limitations
 
@@ -575,10 +633,26 @@ is this recorder's to change.
   for a given run reflects the exact same point-in-time snapshot, at the
   cost of a slightly larger fetch than a strategy with a short warmup
   strictly needs on its own.
-- **The GitHub Actions schedule (every 15 minutes) does not walk forward
-  through missed candles** — see "Scheduling" above. A single invocation
-  of this script only ever advances by the single newest closed candle,
-  so a 15-minute cadence leaves gaps in the record's candle-by-candle
-  resolution, not just a delay; run the cron/systemd alternative above
-  instead if a true 5-minute cadence matters more than zero
-  infrastructure to maintain.
+- **The GitHub Actions schedule (every 15 minutes, in practice 50–85)
+  does not walk forward through missed candles** — see "Scheduling"
+  above. A single invocation of this script only ever advances by the
+  single newest closed candle, so the record's candle-by-candle
+  resolution has real gaps in it, not just a delay. Since R-78 those gaps
+  no longer cost *decisions* (`level_resync_order()` is level-triggered,
+  so a change on a skipped candle is acted on at the next run instead of
+  being lost), but they still cost *resolution*: the record marks to
+  market and can rebalance only on the candles a run lands on, and a fill
+  is priced at that candle rather than at the one the strategy decided
+  on. Run the cron/systemd alternative above if a true 5-minute cadence
+  matters more than zero infrastructure to maintain.
+- **How long it must run before it can settle anything — measured, and
+  the answer is bad (R-78).** Against `buy_and_hold` on the paired
+  daily-return difference, at the 0.40% tier this recorder actually
+  charges, the anytime-valid confidence sequence R-71 built needs a
+  median of **~19 years** on 2017–2020 effect sizes and **never fires at
+  all** on 2021–2022 ones (0 of 400 bootstrap paths within 25 years). The
+  look-once fixed-`n` bound — optimistic, invalid for a growing record,
+  and therefore a floor no valid sequential test can beat — is **7.1
+  years** and **809 years** on those two windows. Of every bootstrap path
+  that ever resolved, **100% resolved against the strategy, 0% for it**.
+  Reproduce with `python experiments/r78_conservative_b06_horizon.py`.

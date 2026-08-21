@@ -35,6 +35,13 @@ that is not blocked, work that. Invent a new direction only when the
 backlog is empty, fully blocked, or stale. Daily novelty-seeking is a
 treadmill; the backlog is the actual research plan.
 
+Read the **table** for that, not only the re-ranking prose above it. The
+prose is one round's summary and can be wrong: R-77's re-ranking said
+B-06 was "the only item remaining on the backlog" while B-32 had been
+sitting `OPEN` since R-65. Infrastructure and methodology items count —
+they are usually the cheapest things on the list and the only ones that
+can actually be finished in a session.
+
 **Multi-day threads are expected.** If today's work does not finish,
 write the state into the ledger with verdict `PARKED` and stop. Do not
 force a shippable strategy into a single session.
@@ -87,6 +94,20 @@ dynamics). For each variant write down, **before running anything**:
   (`scripts/funding_study.py`), does it survive a 0.40% taker
   (`scripts/fee_study.py`), does it survive the Monte Carlo windows
   (`scripts/stress_test.py`).
+
+**Set every threshold against the comparison's own noise, not against a
+number that merely sounds big.** A bar written in annualized percent, or
+in "bigger than anything we've measured", is not yet a bar — it becomes
+one only when you divide by the standard deviation of the thing being
+compared. R-78 pre-registered a power check at +0.001/day on the grounds
+that ≈+36.5%/yr is far larger than any effect in this file, and it was;
+but the paired difference it had to show up in carries **3.0%/day**, so
+that "large" effect reaches t ≈ 1.4 after five years and **no correct
+test, sequential or fixed-`n`, could have passed it**. The test failed,
+and it was the test's fault. Before freezing any threshold, compute the
+`n` it implies at the measured noise and check that `n` is one the
+experiment can actually reach. This costs two lines and is the difference
+between a falsification test and a formality.
 
 ---
 
@@ -164,7 +185,13 @@ to it. That number is the trials count for deflated Sharpe at the program
 level, and it only goes up. When it gets large enough that nothing can clear the
 deflated bar, the honest conclusion is that this dataset is exhausted
 and only forward paper trading (B-06) can settle anything — which is the
-argument for starting that recorder now rather than later.
+argument for starting that recorder now rather than later. **R-78
+qualified the second half of that sentence and it should be read with the
+qualification attached:** the recorder is running, and on the comparison
+it was set up to record it needs 18.9 years to never before its own
+anytime-valid tool can fire. Forward evidence is still the only
+uncontaminated kind; it is not a queued answer. Which comparison you
+record decides whether it ever arrives — see B-38.
 
 Report all of:
 
@@ -397,6 +424,20 @@ multiplier**, not a free speedup, and it has to be paid for:
   an exposure on one period: R-33 froze one on 2021–22 and five of six
   holdout cells failed the match, while its per-window matching landed
   within 0.5%.
+- **Cost the plan, not just the mechanism.** Every rule above falsifies an
+  *idea*. Nothing here falsifies the **backlog's own top item**, and that
+  is how B-06 spent eleven rounds as "the highest-value item on merit"
+  without anyone computing how long it needed: the answer turned out to be
+  18.9 years to never, and the recorder accumulating it was seeing 10% of
+  the strategy's decisions (R-78). So: **when the top of the backlog has
+  been named "the answer" for three consecutive rounds without being
+  carried to a verdict, the next session's job is to cost it** — how much
+  evidence does it need, how fast does that evidence arrive, and is the
+  instrument producing it actually measuring what it claims? A plan is a
+  claim. Before believing it, check what it would take for it to be wrong.
+  This is the same move R-33 made on risk-matching and R-57 made on
+  cross-asset scope, applied to the research plan instead of a result, and
+  it is cheap: R-78 cost one session and read zero holdout.
 - **Nothing is deleted.** Registered negative results stay registered.
 - **The table's futures column is an upper bound** until funding is
   charged. Never quote it without that caveat.

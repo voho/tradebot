@@ -82,7 +82,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from tradebot.broker import MarketSpec, PaperBroker  # noqa: E402
+from tradebot.broker import REBALANCE_DEADBAND, MarketSpec, PaperBroker  # noqa: E402
 from tradebot.exchanges.bitstamp import BitstampSpot  # noqa: E402
 from tradebot.live import LiveAccount, compute_signal  # noqa: E402
 from tradebot.orders import Order  # noqa: E402
@@ -167,10 +167,12 @@ def inception_catchup_target(strategy: Strategy, candles: pd.DataFrame) -> float
     B-06, and the identical gap sits in ``bot.py``/``live_bot.py`` too -
     it just cannot be reached from here without touching those files.
 
-    Used ONLY at inception, ONLY when ``compute_signal`` itself emitted
-    nothing. Every later run relies on ``compute_signal`` exactly as
-    written; this never overrides a genuine signal. On spot
-    (``market.leverage == 1``) ``order_notional(t)`` and
+    Used at inception, and — since R-78 — on any later run where the
+    strategy's desired stance has drifted away from the paper account's
+    actual one by more than the broker would ignore (see
+    :func:`level_resync_order`). It never overrides a genuine signal:
+    both call sites only reach it when ``compute_signal`` emitted nothing
+    at all. On spot (``market.leverage == 1``) ``order_notional(t)`` and
     ``order_target(t)`` are the same order, so this is correct
     regardless of which one the strategy calls.
 
@@ -184,6 +186,74 @@ def inception_catchup_target(strategy: Strategy, candles: pd.DataFrame) -> float
     if "target" not in prepared.columns:
         return None
     return float(prepared["target"].to_numpy()[-1])
+
+
+def level_resync_order(strategy: Strategy, candles: pd.DataFrame,
+                       prior_target: float, market: MarketSpec) -> Order | None:
+    """An order that re-syncs the paper account to the strategy's CURRENT
+    desired stance, or ``None`` when it is already there.
+
+    **Why this exists (R-78).** The change gate
+    :func:`inception_catchup_target` documents is *edge-triggered*: it
+    compares bar ``i``'s precomputed target to bar ``i-1``'s. That is
+    correct only when something asks the strategy on **every** closed bar,
+    which is what the backtest engine and a 5-minute ``bot.py`` loop do.
+    This recorder does not: one invocation advances by exactly the newest
+    closed candle, so on any schedule slower than the bar interval the
+    intermediate candles are never presented to ``on_bar`` at all. A
+    target change that lands on one of them is then **permanently
+    invisible** — by the next invocation the target has stopped changing,
+    the edge gate is silent again, and the account holds a stance the
+    strategy abandoned hours ago.
+
+    R-78 measured both halves of that on the record this script had
+    already produced: a realized median gap of 50-85 minutes against the
+    5-minute bar (so ~1 candle in 10-17 gets a decision), and, on
+    2017-2022 data, exactly ``1/k`` of ``kelly_regime_v4``'s 811 target
+    changes surviving a 1-in-``k`` decision grid — 10.0% at the realized
+    cadence, i.e. ~13 of its ~135 rebalances a year. Priced through the
+    real engine, the same cadence cost 0.31-0.41 Sharpe and 26-36% of
+    final balance against a full-cadence run. The record was not a
+    slightly-delayed ``kelly_regime_v4``; it was a different, much lazier
+    strategy wearing its name.
+
+    **The fix is level-triggered, not edge-triggered**, so it is immune to
+    the schedule: ask what stance the strategy wants *now* and compare it
+    to what the account actually holds *now*. Whether a candle was seen or
+    missed stops mattering — only the current desired level does.
+
+    Deliberately conservative in two ways:
+
+    - It is consulted **only when ``compute_signal`` emitted nothing**, so
+      a genuine bar-over-bar signal is always used as-is and this can
+      never contradict one.
+    - It emits only when the broker would actually act on the difference —
+      ``broker.REBALANCE_DEADBAND`` of max notional for a same-sign
+      adjustment, any move to flat, and any sign flip (the broker always
+      executes those two). Below that the broker would ignore the order
+      anyway, so emitting one would add a misleading row rather than a
+      trade.
+
+    Returns ``None`` for strategies with no ``target`` column (the ~5 that
+    decide from ``ctx.position`` directly), which keep the pre-R-78
+    behaviour exactly.
+    """
+    desired = inception_catchup_target(strategy, candles)
+    if desired is None:
+        return None
+    # Fraction of MAX notional, matching Order(target=...)'s own units and
+    # the clamp PaperBroker applies. On spot (leverage 1, no short) this is
+    # [0, 1]; the recorder only runs spot today, but keep it general.
+    lo = -1.0 if market.allow_short else 0.0
+    effective = min(max(desired / max(market.leverage, 1e-9), lo), 1.0)
+    delta = effective - prior_target
+    if abs(delta) <= 1e-9:
+        return None
+    goes_flat = effective == 0.0 and prior_target != 0.0
+    flips = effective * prior_target < 0.0
+    if not (goes_flat or flips or abs(delta) > REBALANCE_DEADBAND):
+        return None
+    return Order(target=desired)
 
 
 def load_state(path: Path, start_equity: float) -> tuple[PaperState, bool]:
@@ -266,15 +336,27 @@ def run_recorder(strategy_name: str, candles: pd.DataFrame, market: MarketSpec,
     orders = compute_signal(strategy, candles, account)
 
     catchup_used = False
-    if fresh and not orders:
-        # See inception_catchup_target(): most strategies only emit an
-        # order when their target CHANGES bar over bar, so a cold-started
-        # account that happens to catch a strategy mid-latch would
-        # otherwise sit flat forever and never actually track it.
-        catchup = inception_catchup_target(strategy, candles)
-        if catchup is not None and abs(catchup) > 1e-9:
-            orders = [Order(target=catchup)]
-            catchup_used = True
+    resync_used = False
+    if not orders:
+        if fresh:
+            # See inception_catchup_target(): most strategies only emit an
+            # order when their target CHANGES bar over bar, so a cold-started
+            # account that happens to catch a strategy mid-latch would
+            # otherwise sit flat forever and never actually track it.
+            catchup = inception_catchup_target(strategy, candles)
+            if catchup is not None and abs(catchup) > 1e-9:
+                orders = [Order(target=catchup)]
+                catchup_used = True
+        else:
+            # See level_resync_order(): the same edge-triggered gate also
+            # drops every target change that lands on a candle this
+            # recorder's schedule skipped. R-78 measured that at ~90% of
+            # them on the realized cadence, so a level comparison against
+            # the account's actual stance runs on every later invocation.
+            resync = level_resync_order(strategy, candles, prior_target, market)
+            if resync is not None:
+                orders = [resync]
+                resync_used = True
 
     trade_qty = 0.0
     fee_paid = 0.0
@@ -289,9 +371,16 @@ def run_recorder(strategy_name: str, candles: pd.DataFrame, market: MarketSpec,
             fee_paid += fill.fee
         if order.target is not None:
             new_target = float(order.target)
-            reason = (f"INCEPTION CATCH-UP target={order.target:.4f} (on_bar's own "
-                      "change-gate emitted nothing; see inception_catchup_target)"
-                      if catchup_used else f"target={order.target:.4f}")
+            if catchup_used:
+                reason = (f"INCEPTION CATCH-UP target={order.target:.4f} "
+                          "(on_bar's own change-gate emitted nothing; see "
+                          "inception_catchup_target)")
+            elif resync_used:
+                reason = (f"LEVEL RESYNC target={order.target:.4f} from "
+                          f"{prior_target:.4f} (on_bar's edge-triggered gate "
+                          "emitted nothing; see level_resync_order, R-78)")
+            else:
+                reason = f"target={order.target:.4f}"
         else:
             reason = f"qty order ({order.side.value} {order.qty})"
         if fills:

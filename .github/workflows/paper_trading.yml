@@ -22,10 +22,29 @@ name: paper-trading-recorder
 # service that can be delayed under load, especially at high frequency,
 # and that a schedule this repo cannot realistically hold to would just
 # trade "missing some candles on a slow cron" for "missing some candles on
-# an unreliable 5-minute cron" while adding load for no benefit. A missed
-# or skipped candle costs nothing but that one rebalance decision — the
-# same property docs/LIVE.md and bot.py already document for the live
-# path — so this is a bounded, honestly-stated gap, not silent data loss.
+# an unreliable 5-minute cron" while adding load for no benefit.
+#
+# CORRECTED BY R-78 (docs/LEDGER.md). This comment used to end "a missed
+# or skipped candle costs nothing but that one rebalance decision", and
+# that was wrong for the 18 strategies whose on_bar gate is EDGE-triggered
+# (`abs(target[i] - target[i-1]) > 1e-9`, against the immediately-preceding
+# 5-minute bar). A target change landing on a skipped candle was not
+# delayed, it was permanently invisible — by the next invocation the target
+# had stopped changing and the gate was silent again, so each change got
+# exactly one chance in k to be seen. Measured on the record this workflow
+# had already produced: the realized median gap is 50-85 minutes, not 15
+# (GitHub's best-effort scheduling in practice), so only 10.0% of
+# kelly_regime_v4's target changes survived, worth -0.31 to -0.41 Sharpe
+# and 26-36% of final balance against a full-cadence run.
+#
+# scripts/paper_trade.py's level_resync_order() now closes that: it asks a
+# LEVEL question (what stance does the strategy want now vs. what does the
+# account hold now) rather than an edge one, so it is immune to how slow or
+# irregular this schedule turns out to be. What a missed candle still costs
+# is RESOLUTION, not decisions — the record marks to market and fills on
+# the candles a run lands on, so a fill is priced at that candle rather
+# than at the one the strategy decided on. That is a bounded, honestly-
+# stated gap; the decision loss it used to also carry is fixed.
 on:
   schedule:
     - cron: "*/15 * * * *"
