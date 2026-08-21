@@ -646,19 +646,27 @@ def main() -> None:
     print("\nA2 (non-inertness, R^2 vs v4 path on inner-train; INERT if >= 0.98)")
     print("A4 (flat fraction / mean exposure / notional turnover, 2017-2022 post-warmup)")
     print()
-    print(f"{'config':22s} {'arm':7s} {'R2_train':>9s} {'INERT':>6s} {'flat':>7s} "
-          f"{'v4flat':>7s} {'meanExp':>8s} {'v4Exp':>7s} {'turn/d':>8s} {'v4turn':>7s}")
-    print("-" * 96)
+    print("   'gflat' = fraction of bars where the RESPONSE g(phi) is exactly 0 "
+          "(the clip-to-flat itself);")
+    print("   'flat'  = fraction where the FINAL TARGET is exactly 0 (after v4's "
+          "10% deadband).")
+    print()
+    print(f"{'config':22s} {'arm':7s} {'R2_train':>9s} {'INERT':>6s} {'gflat':>7s} "
+          f"{'flat':>7s} {'v4flat':>7s} {'meanExp':>8s} {'exp/v4':>7s} "
+          f"{'turn/d':>8s} {'t/v4':>6s}")
+    print("-" * 104)
     gate = {}
     for cfg in cfgs:
         p_tr = cfg.build(train)
         r2 = r_squared(p_tr[V4_WARMUP_BARS:], v4_path_train[V4_WARMUP_BARS:])
         p_full = cfg.build(btc)
+        gf = float(np.mean(cfg.g(btc)[V4_WARMUP_BARS:] == 0.0))
         ff, me, tu = flat_fraction(p_full), mean_exposure(p_full), daily_turnover(p_full)
         inert = bool(np.isfinite(r2) and r2 >= 0.98)
-        gate[cfg.label] = dict(r2=r2, inert=inert, flat=ff, mexp=me, turn=tu)
+        gate[cfg.label] = dict(r2=r2, inert=inert, flat=ff, gflat=gf, mexp=me, turn=tu)
         print(f"{cfg.label:22s} {cfg.arm:7s} {r2:9.4f} {'YES' if inert else 'no':>6s} "
-              f"{ff:7.3f} {v4_flat:7.3f} {me:8.3f} {v4_mexp:7.3f} {tu:8.4f} {v4_turn:7.4f}")
+              f"{gf:7.3f} {ff:7.3f} {v4_flat:7.3f} {me:8.3f} {me/v4_mexp:7.2f} "
+              f"{tu:8.4f} {tu/v4_turn:6.2f}")
 
     n_inert = sum(1 for c in cfgs if gate[c.label]["inert"])
     print(f"\n{n_inert} of 19 configurations are INERT (R^2 >= 0.98) and are excluded "
@@ -674,6 +682,30 @@ def main() -> None:
               "0.0 (and the cubic")
         print("  arm maps phi >= phi_c to exactly 0.0 as well), so v4's de-risk-to-"
               "cash property survives.")
+    print("\nBUT NOTE, and this is a mechanism-level finding in its own right: the")
+    print("clip-to-flat restores exact-zero DESIRED exposure at a HIGHER rate than "
+          "v4's own vote,")
+    print("yet v4's 10% re-target deadband then strands a small non-zero position "
+          "in many of those")
+    print("bars -- once the held position falls to <= 0.10 it can never be moved to "
+          "0 by a desired")
+    print("of 0, because |0 - pos| <= deadband.  A step response never lands there "
+          "(its desired")
+    print("exposure jumps by ~scale/3 >= 0.10); a continuous one does.  Compare the "
+          "'gflat' and")
+    print("'flat' columns above: that gap is R-80's structural problem surviving "
+          "the fix for it.")
+
+    # Risk matching (standing repo rule: match risk before comparing anything)
+    print("\nRISK MATCHING (standing rule): mean exposure relative to v4 is shown "
+          "above as 'exp/v4'.")
+    print("No configuration in the frozen grid carries v4's exposure; every "
+          "continuous arm holds")
+    print("LESS.  Any drawdown improvement below is therefore partly arithmetic "
+          "(R-33: 88-92% of")
+    print("'regime-gated sizing cuts drawdown' was the exposure level), and B2's "
+          "drawdown leg is")
+    print("read with that caveat attached.")
 
     # ================================================================ STEP B
     hdr("STEP B -- FULL GRID, all 19 configurations x 4 (slice x market) cells")
