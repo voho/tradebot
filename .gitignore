@@ -74,6 +74,13 @@ uv.lock
 !/data/linkusd_coinbase_spot_5m.csv.gz
 !/data/xtzusd_coinbase_spot_5m.csv.gz
 !/data/xrpusd_coinbase_spot_5m.csv.gz
+# Binance USDS-M futures positioning metrics (open interest + long/short
+# ratios, R-81): a derivatives-positioning "crowding" signal at the SAME
+# 5-minute cadence as this project's own bars, unlike every prior INFO
+# feed (all daily-or-coarser). BTC from 2020-09-01, ETH from 2021-12-01
+# (a DVOL-like short-history caveat, stated in load_binance_metrics).
+!/data/btcusdt_perp_metrics_5m.csv.gz
+!/data/ethusdt_perp_metrics_5m.csv.gz
 /reports/*
 !/reports/comparison.md
 !/reports/comparison.csv

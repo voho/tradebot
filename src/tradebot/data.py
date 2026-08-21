@@ -594,3 +594,67 @@ def align_mvrv_causal(mvrv: pd.DataFrame, bars: pd.DataFrame) -> pd.DataFrame:
     shifted = mvrv.copy()
     shifted.index = shifted.index + pd.Timedelta(days=1)
     return shifted.reindex(shifted.index.union(bars.index)).sort_index().ffill().reindex(bars.index)
+
+
+METRICS_FILES = {
+    "BTC": "btcusdt_perp_metrics_5m.csv.gz",
+    "ETH": "ethusdt_perp_metrics_5m.csv.gz",
+}
+
+
+def load_binance_metrics(data_dir: str | Path, asset: str = "BTC") -> pd.DataFrame | None:
+    """Binance USDⓈ-M futures positioning metrics at native 5-minute
+    cadence, or ``None`` if absent.
+
+    Fetched by ``scripts/fetch_binance_metrics.py`` from the static
+    ``data.binance.vision`` history host (R-81) -- reachable even when the
+    live ``fapi.binance.com`` API 451s under this project's network
+    policy. Columns: ``sum_open_interest`` (base units),
+    ``sum_open_interest_value`` (quote), ``count_toptrader_long_short_ratio``
+    / ``sum_toptrader_long_short_ratio`` (Binance's largest-account
+    positioning ratio, by count and by size), ``count_long_short_ratio``
+    (all-account count ratio), ``sum_taker_long_short_vol_ratio`` (taker
+    buy/sell volume ratio). Unlike every INFO signal this project has tried
+    before -- on-chain activity (B-07/R-44), macro VIX/DXY (R-53),
+    stablecoin supply (R-54), DVOL/VRP (R-73), MVRV (R-74), calendar
+    structure (R-75/R-79) -- this is a derivatives-positioning ("crowding")
+    measure at the SAME 5-minute cadence as this project's own bars, not a
+    daily-or-coarser feed. It measures how levered/one-sided the market
+    currently is, not a claim about future price.
+
+    Hard data limitation, stated plainly: ``BTC`` history starts
+    2020-09-01 (the earliest daily file Binance publishes for this
+    endpoint); ``ETH`` only from 2021-12-01, materially shorter, a
+    DVOL-like coverage caveat. Indexed by UTC timestamp; each on-the-wire
+    row is duplicated (verified: every 5-minute timestamp appears twice,
+    byte-identical) and deduplicated by the fetch script already, not
+    here.
+    """
+    if asset not in METRICS_FILES:
+        raise ValueError(f"asset must be one of {sorted(METRICS_FILES)}")
+    path = Path(data_dir) / METRICS_FILES[asset]
+    if not path.exists():
+        return None
+    df = pd.read_csv(path, parse_dates=["create_time"], index_col="create_time")
+    df.index = df.index.tz_localize("UTC")
+    df.index.name = "timestamp"
+    cols = ["sum_open_interest", "sum_open_interest_value",
+            "count_toptrader_long_short_ratio", "sum_toptrader_long_short_ratio",
+            "count_long_short_ratio", "sum_taker_long_short_vol_ratio"]
+    return df[cols].astype(float).sort_index()
+
+
+def align_metrics_causal(metrics: pd.DataFrame, bars: pd.DataFrame) -> pd.DataFrame:
+    """Reindex 5-minute metrics onto ``bars``' index, causally.
+
+    Unlike the daily signals above (which shift by a full day because the
+    source only finalizes once the calendar day closes), this feed shares
+    ``bars``' own 5-minute cadence -- so the causal contract is the same
+    one every OHLCV bar itself uses: a decision at bar i's close may see
+    metrics timestamped at or before bar i's own timestamp, never after.
+    Forward-fills across any gap (a day the venue never published, or a
+    momentary feed outage) rather than leaving it NaN mid-series, then
+    reindexes onto ``bars`` exactly; bars strictly before the first
+    metrics row get NaN, never back-cast.
+    """
+    return metrics.reindex(metrics.index.union(bars.index)).sort_index().ffill().reindex(bars.index)
