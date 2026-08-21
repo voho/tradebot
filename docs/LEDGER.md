@@ -315,6 +315,296 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-88 · 08-21 · NEGATIVE (both branches) — the two things 87 rounds never varied in `kelly_regime_v4`'s vote both tested and both fail: asymmetric entry/exit confirms the literature's own symmetric-band counter-prediction, and the cubic response's motivating mechanism does not exist on BTC at significance even though its sign matches
+
+**Direction.** Off-backlog, literature-prompted (the ranked list holds only **B-32**, pure
+infrastructure, per R-87's own re-ranking). Idea in one sentence: attack the **no-trade band
+inside `kelly_regime_v4`'s anchor vote** — the constructor default `band=0.01` — as the
+transaction-cost object the literature says it is, rather than as the ad hoc 1% it currently is.
+
+*Why this slot.* R-62 established that of v4's two factors (`frac × scale`) the **vote carries the
+entire signature** and the volatility-target scale carries none of it — a finding since confirmed
+four independent ways (R-87). Every round since has nonetheless worked the scale slot (21 retunes,
+R-34→R-60), added an external confirming vote to the `frac` slot (ten INFO signals, R-73→R-84), or
+replaced the regime estimator wholesale (five mechanisms, R-82/83/85/86). The vote's own **latch
+geometry** — how far price must travel past an anchor before that anchor flips, and whether the
+distance is the same going in as coming out — is untouched. A dispatched duplication pass over all
+87 rounds and all 19 v4-derivative files in `experiments/` confirmed it: `band=0.01` has never been
+swept, decomposed or replaced by any round; every derivative copies the `(1 ± self.band)` line
+verbatim. It is the one part of the factor that matters that has never been looked at.
+
+*Which constraint.* **COST.** The band is not a smoothing parameter; it is the object proportional
+transaction costs create. With a fee, the optimal policy for a signal-driven long/flat position is a
+no-trade region whose edges are set by the fee and by the signal's own dispersion. A fixed 1% of
+price is neither.
+
+*The literature is this repo's own, already commissioned and verified during R-67 and recorded in
+`docs/RESEARCH.md` (finding 8)* — which is also where the record shows it was applied to the wrong
+arm:
+
+- **Dai, Zhang & Zhu (2010)**, *SIAM J. Financial Mathematics* 1(1), 780–810, and **Guan, Peng &
+  Xu (2020)**, arXiv:2008.07082 Thm 3.1: with proportional costs and a persistent hidden state,
+  entry sits strictly *above* and exit strictly *below* the frictionless indifference point, the gap
+  opened by the fee. `docs/RESEARCH.md` records that the theorem "requires the signal to be a
+  sufficient statistic and is single-asset — neither holds cleanly for a cross-sectional top-k
+  rule", which is the arm R-67/R-68/R-69 could test it on. **v4's long/flat BTC vote is the case
+  the theorem actually covers, and it has never been tested there.**
+- **de Lataillade & Chaouki (2020)**, "Equations and Shape of the Optimal Band Strategy",
+  arXiv:2003.04646, Eq. (11): the optimal tolerance **saturates at ≈1.6 σ_signal** — the band's
+  natural unit is the signal's own dispersion, not a fixed fraction of price — and a larger fee does
+  *not* justify a wider band.
+- **de Lataillade, Deremble, Potters & Bouchaud (2012)**, *J. Investment Strategies* 1(3), 91–115,
+  §6.3: the leading-order band is **symmetric**, and any asymmetry is higher order in Γ^(1/3). This
+  is the round's own named counter-prediction, not a supporting citation.
+
+*Why the novel slot went to the response function rather than to a fourth band variant, and the
+single most reusable line the literature pass produced.* **Levine & Pedersen (2016), "Which Trend Is
+Your Friend?", *Financial Analysts Journal* 72(3):51–66**, prove that time-series momentum,
+moving-average crossovers, HP filters and Kalman filters are **equivalent representations of one
+linear filter**, differing only in how they weight past returns. If that is right, then on a single
+instrument every "new signal" this project has tried inside the linear-filter family — including
+R-83's Kalman local-linear-trend and R-06/R-07's anchor ladders — was a re-parameterisation rather
+than a new mechanism, and the only axes that are not are the **nonlinearity of the response**, the
+**path-dependence of the exposure**, and the **state-dependence of the horizon**. This project has
+varied none of the three. The conservative branch takes path-dependence (latch geometry); the novel
+branch takes response nonlinearity. Two further findings from the same pass are recorded because
+they price future work rather than this round: **Valeyre (2025), arXiv:2504.10914** measures an
+optimal single-EMA trend system at portfolio Sharpe 1.24 but **≈0.20 per single asset** across 70
+futures 1990–2023, with different EMA spans carrying **0.96 cross-correlation** — a direct,
+published measurement of the discount this project's one-instrument setting should apply to any
+published trend edge; and **Kurth, Eisler, Rej & Bouchaud (2026), arXiv:2607.01550** give a
+microstructural account of fast trend's death (EWM(5,20) Sharpe 0.84 → 0.12 post-2008) that is
+specific to **small-tick** instruments and that explicitly shows zero-lag execution does not recover
+it — i.e. signal death, not cost erosion, which if it applies to BTC would mean none of R-56/R-64→R-68's
+execution work could ever have fixed what it was aimed at. The operator tested that prediction
+directly; see the measurements below.
+
+*Not a duplicate of.* **R-67/R-68/R-69** (the entry/exit decomposition — run on R-63's
+cross-sectional top-k panel arm, whose own not-a-duplicate clauses explicitly disclaim the v4
+codepath, and which `docs/RESEARCH.md` records as the arm the theorem does not cover). **R-64/R-66**
+(bands on the *deadband* — the destination of an already-computed exposure — not on the vote that
+computes it). **R-84 novel** (the only round to touch `V4_BAND` at all: a *symmetric* ±60% width
+perturbation driven by volume, tested against the six-episode detection-lag gate, 2/6). **R-34 novel**
+(asymmetric `b_in`/`b_out` latch, but on `harsanyi_crowd`'s Bayesian posterior margin, not the
+price-vs-anchor deviation). **R-59/R-60** (vol-adaptive, but on the scale factor and on anchor
+*timing*). **R-61** (a vol-normalized z-score latch, but reversion-signed, 1/3/7-day, on the panel).
+**R-40** (ensembling *across* ladders with an unweighted average, not the latch geometry within one).
+
+**What was done.** Two branches on disjoint files, both measured by an operator-written, read-only
+harness (`experiments/r88_shared.py`, the R-73→R-87 convention) whose identity points are asserted
+by a self-test that runs on import: `latched_vote(d_in=d_out=0.01)` reproduces `v4_vote_frac`
+bit-for-bit, and `apply_deadband(v4_vote_frac × v4_scale)` reproduces `kelly_regime_v4`'s own target
+path exactly (verified on the real BTC series, max abs difference 0.0).
+
+- **`experiments/r88_conservative_asymmetric_band.py`** — asymmetric entry/exit thresholds
+  (`d_in` ≠ `d_out`) on v4's own latched anchor vote: the Dai–Zhang–Zhu / Guan–Peng–Xu construction,
+  applied for the first time to the single-asset long/flat case it was proved for.
+- **`experiments/r88_novel_response_function.py`** — the **response function's shape**: replace the
+  binary latched vote with a calibrated continuous map from standardised trend strength `φ` to
+  exposure, and run the incumbent's step response against two theoretically-motivated alternatives
+  that **disagree with each other at large |φ|**, which is the experiment. *Linear/de-saturated*
+  (Dao, Nguyen, Deremble, Lempérière, Bouchaud & Potters 2016, arXiv:1607.02410, *J. Investment
+  Strategies* 7(1) 2017): trend PnL is a variance swap between filter and rebalancing timescales, a
+  linear position gives a **parabolic** payoff and a sign position only a **V-shaped** one, so a
+  binary vote discards the convex term by construction — predicts *more* exposure at large |φ|.
+  *Cubic/non-monotone* (Schmidhuber 2021, *Physica A* 566:125642 / arXiv:2006.07847; Safari &
+  Schmidhuber 2025, arXiv:2501.16772): `E[R] = a + b·φ + c·φ³` fitted on 24 futures 1990–2019 at
+  **b = 1.29% (t=3.0), c = −0.62% (t=2.7)**, so expected return crosses zero at `φ_c = √(−b/c) ≈
+  1.8–1.9` and trends revert *before* they become statistically significant — predicts *less*
+  exposure at large |φ|.
+
+**Measured power, computed and frozen BEFORE either branch was dispatched** (R-78's lesson: check
+that the evidence you require can actually arrive; the first attempt at this calculation in-session
+was arithmetically wrong and gave an unreachable +1.96/+1.41, corrected here). The paired daily
+difference against v4 is close to serially uncorrelated — long-run variance / one-day variance is
+0.98–1.02 at every block length on inner-train, 0.27–1.00 on inner-validation — so at the project's
+30-day block convention a 95% paired interval excludes zero once the candidate beats v4 by about
+**+0.35 log units over inner-train** (4 years) or **+0.13 to +0.26 over inner-validation** (2 years).
+Those are large but reachable effect sizes — R-68's own point estimate on a different axis was
++0.45 — so the interval bar below is answerable rather than decorative.
+
+**The pre-registered decision rule, frozen before any sweep.**
+
+*Step A — mechanism gate, per configuration, before any performance number is read:*
+- **A1 identity.** Each branch must exhibit an identity point that reproduces `kelly_regime_v4`'s
+  target path bit-for-bit (`d_in = d_out = 0.01`; `c` such that `c·σ_signal ≡ 0.01`).
+- **A2 non-inertness.** R² of the candidate's exposure path against v4's own must be **< 0.98** on
+  inner-train. A configuration above that is inert by construction and is reported, not scored.
+- **A3 causality.** `causal_truncation_probe` passes at two cut depths. Any dispersion estimate must
+  be causal (expanding or rolling); a full-series σ applied to early rows is the exact lookahead the
+  routine names and the probe is there to catch.
+
+*Step B — selection, on inner-train and inner-validation only; the holdout is not read by either
+branch.* The finalist is the best inner-validation paired log-growth difference vs v4 on
+`futures_5x`, with the whole swept neighbourhood reported.
+
+*Promotion bar — default REJECT. All must hold:*
+- **B1.** The paired block-bootstrap difference vs v4 excludes zero in **at least one** of the four
+  (slice × market) cells, and its point estimate is **positive in all four**.
+- **B2.** Either Δ Sharpe > **+0.2** (the R-20 noise floor) on inner-validation on both markets, or a
+  clear max-drawdown improvement on both.
+- **B3.** The neighbourhood is a **plateau, not a peak**: the nearest neighbours on each swept axis
+  move in the same direction, and they are reported whether or not they do.
+- **B4 falsification test, chosen now.** **ETH replication** — the frozen finalist must show the same
+  *sign* of improvement over v4 on Bitfinex ETH pre-2023, on both markets. Failing it is NEGATIVE.
+- **B5 cost robustness.** The improvement must not reverse sign at a **0.40%** taker fee (Bitstamp's
+  real entry tier, the one `docs/LIVE.md` says the published edge does not survive).
+
+*Named counter-prediction (what would make this fail, written before any code):* de Lataillade et al.
+(2012) §6.3 says the leading-order band is **symmetric** and asymmetry is higher order. If the
+conservative branch's swept optimum sits at `d_in ≈ d_out`, the higher-order term is not measurable
+on this data and the branch is NEGATIVE — not "inconclusive". For the novel branch: if the swept
+favourable region excludes the derived `c = 1.6`, the theory's scope does not transfer to a latched
+three-anchor majority and the branch is NEGATIVE regardless of what its best cell scores.
+
+**Operator measurements taken alongside the branches (5 configurations, holdout +0).**
+
+*1. The paired-difference block-length question, and a correction made in-session.* The first
+attempt at the power calculation treated a 30-day block bootstrap as reducing the effective sample
+to `n/30`, which gave an unreachable bar (+1.96 inner-train / +1.41 inner-validation) and would have
+made the whole round a formality. That is wrong: a block bootstrap's interval scales with the
+series' **long-run** variance, not with `n/L`. Measured directly, the paired daily difference
+against v4 has long-run/one-day variance ratio **0.98–1.02 at L ∈ {1,3,5,10,30} on inner-train** and
+0.27–1.00 on inner-validation — i.e. it is close to serially uncorrelated, because BTC's own
+momentum is common-mode and cancels in the pairing. The correct bar is therefore **+0.354 log units
+on inner-train** and **+0.134–0.257 on inner-validation**. This is R-78's rule applied to this
+round's own instrument before freezing it, and it is the reason the bar is a test rather than a
+formality.
+
+*2. Single-anchor decomposition of v4's own vote* (4 configurations: the vote built from one anchor
+at a time, everything else — scale, deadband, target_vol, max_leverage — held identical). Prompted
+by Kurth, Eisler, Rej & Bouchaud (2026), "Is Trend Still Your Friend? A Microstructural Account of
+the Demise of Short-Term Trend-Following", arXiv:2607.01550, which finds fast trend degraded ~100%
+post-2008 on **small-tick** instruments (tick-to-volatility ratio ρ = Ψ/σ) while slow trend survived,
+and which predicts BTC — a $0.01 tick against a five-figure price, the extreme small-tick case —
+should show a dead fast leg:
+
+| anchor | inner-train spot / futures Sharpe | inner-validation spot / futures Sharpe |
+|---|---|---|
+| 20d alone | **+2.14 / +2.32** | −0.14 / −0.00 |
+| 40d alone | +1.87 / +2.12 | **+0.39 / +0.35** |
+| 80d alone | +1.83 / +2.10 | +0.22 / +0.08 |
+| 160d alone | +1.65 / +1.73 | −1.06 / −1.02 |
+| v4 (20/40/80) | +2.03 / +2.28 | +0.14 / +0.25 |
+
+**The prediction is not confirmed in-sample and is weakly consistent out of it, and the more useful
+finding is the instability itself.** On inner-train the 20-day anchor alone *beats the three-anchor
+ensemble on every metric* — Sharpe, final balance and max drawdown (28.8%/31.3% against v4's
+43.3%/35.3%). On inner-validation the ranking inverts completely: 20d is the worst of the three and
+40d the best. **The ensemble is not better than its best member in either window; it is better than
+the average member, and it is immune to which member happens to be right** — which is the standard
+bagging argument, and is the honest reason v4 votes rather than picks. It is also N≈3 in one table:
+with two windows the anchor ranking flips entirely, so any round that selects an anchor on one
+window is selecting noise. This is recorded because it constrains future work on this factor, not
+because either branch depends on it.
+
+**Result.**
+
+*Conservative — asymmetric entry/exit band.* Step A: A1 identity exact (max |diff| = 0.000e+00 on
+the real 420,768-bar inner-train frame, independently re-verified by the operator). A2: 1 of 25
+configs INERT (the identity/control cell itself, R²=1.0000); the R² surface falls smoothly away from
+it (0.72–0.98 at the grid's edges), so 24 proceed. A3 causality PASS on the identity config and the
+finalist. The 5×5 selection surface (inner-validation paired Δlog-growth vs v4, futures) has **no
+asymmetry structure — it is a width surface**: every cell with `d_out ≥ 0.02` loses on every row
+(−0.07 to −0.31), the four positive cells all sit in the two narrowest `d_out` columns, and the
+diagonal itself (symmetric controls) reads −0.001 / (v4=0) / −0.097 / −0.195 / −0.313 for widths
+0.005/0.01/0.02/0.03/0.05 — **v4's own never-swept 1% already sits at or beside the symmetric
+optimum of the sweep.** Finalist `d_in=0.01, d_out=0.005`: selection statistic **+0.040**
+(independently reproduced), against a measured bar of +0.13 to +0.26 — about a quarter of the
+smallest number the test could resolve. Mean exposure within 5% of v4's (ratio 0.984), so the result
+is risk-matched. **B1 FAIL** (0 of 4 paired intervals exclude zero; widest [−0.032, +0.133]). **B2
+PASS on drawdown only** (maxDD −3.7pp futures / −2.2pp spot at matched exposure; Sharpe leg fails,
++0.02 to +0.07 against the +0.2 floor). **B3 FAIL** (the finalist sits at the edge of the swept
+region with only one usable neighbour — a peak by default: `d_in−` flips sign to −0.001, `d_in+`
+moves with it to +0.038, `d_out−` is off-grid). **B4 FAIL** — ETH: Bitfinex ETH ends 2019-12-31 so
+inner-validation is empty and the leg runs on inner-train only (reported as a limitation); spot
+Δlog-growth **−0.043** (sign opposite BTC), futures +0.004 (indistinguishable from zero,
+[−0.179,+0.216]) — not a replication. **B5 FAIL** — at 0.40% taker, spot **reverses sign** (+0.015 →
+−0.020); futures holds sign but shrinks (+0.040 → +0.031). Three of five clauses fail, plus the named
+counter-prediction: the finalist sits one grid step off the diagonal with an effect a quarter of the
+resolvable size, which is de Lataillade, Deremble, Potters & Bouchaud (2012) §6.3 **confirmed**, not
+contradicted. **NEGATIVE.** Configurations evaluated: exactly 25 (the frozen grid; 1 INERT, 24
+scored). Max timestamp read: 2022-12-31 23:55:00 (BTC), 2019-12-31 23:55:00 (ETH, its own coverage
+end) — both strictly before OOS_START.
+
+*Novel — response function shape.* **Step 0, the pre-registered kill switch, fires.** OLS of h-ahead
+BTC return on φ and φ³ (inner-train, HAC/Newey–West), independently re-verified by the operator at
+h=20d: b̂=+7.609 (t=+2.31), **ĉ=−1.222 (t=−1.62)**. The sign matches Schmidhuber (2021)'s prediction
+at all three tested horizons (1d/5d/20d), but **|t| < 2 at every one** (Schmidhuber's own published
+figure: t=2.7); the frozen rule required significance, not merely sign, so **the cubic mechanism does
+not exist on BTC** and the cubic arm is disqualified by pre-registration, not by its Step-B score.
+φ_c ≈ 2.50 also sits at the edge of the ±2.5 clip, versus the literature's 1.8–1.9 — the reversion
+region is barely inside the observable range even taking the point estimate at face value. Step A:
+A1 exact (sign arm reproduces v4 bit-for-bit). A2: 1 of 19 INERT (the sign identity). A3 causality
+PASS (the standardisation is a trailing rolling RMS with a one-bar shift, never a full-series scaler
+— the clause this branch was most likely to fail, and didn't). A4, the R-80 constraint: v4 spends
+33.8% of bars exactly flat; one linear config (`φ_max=1.5, flat_thr=0.00`) spends only 2.0% flat and
+is disqualified by the pre-registered clause on that ground alone, independent of performance — and a
+genuine mechanism finding surfaced here: **v4's own 10% deadband un-does an exact-zero clip**, because
+a continuous target can decay through the deadband without ever crossing it, while a step response
+jumps by ≥10% and therefore does land at zero. **On the slice with the power to see a difference
+(inner-train, bar +0.35), all 18 continuous configurations lose, by 0.36 to 2.63 log units, 27 of 36
+cells excluding zero on the losing side; on inner-validation (bar +0.13 to +0.26) zero of 36 cells
+excludes zero in either direction.** Finalist `linear, φ_max=2.0, flat_thr=0.05`: selection statistic
+**+0.104** (independently reproduced), inner-train **−1.066 [−1.995,−0.144] spot and −1.513
+[−2.586,−0.500] futures — both excluding zero against it.** **B1 FAIL.** **B2 PASS with a fatal
+caveat**: ΔmaxDD −16.7pp/−19.8pp looks like a clean pass, but the finalist holds **0.42× v4's mean
+exposure over inner-validation (0.124 vs 0.292, independently reproduced)** — per the project's own
+standing risk-match rule (R-28/R-32/R-33), a drawdown cut at less than half the exposure is
+arithmetic, not evidence; ΔSharpe itself fails on spot (−0.11). **B3 FAIL** — a ridge, not a plateau:
+sign flips across the `φ_max` 1.5→2.0 boundary (−0.18/−0.10/−0.05 → +0.06/+0.10/+0.04). **B4 FAIL** —
+ETH sign **reverses** (spot −0.958, futures −1.026, independently reproduced at −1.026; ΔSharpe
+−0.33/−0.51). **B5 PASS** (0.40% taker does not reverse sign: +0.132 spot / +0.263 futures). Three of
+five clauses fail (B1, B3, B4). **NEGATIVE.** The mechanism measurements the literature asked for are
+recorded as a durable finding independent of the verdict: curvature is directionally consistent with
+Dao et al. (sign +0.03, linear +0.03, cubic +0.02 on inner-train) but not distinguishable from zero
+at this sample size and **flips sign for the linear arm on inner-validation** (−0.02); skew is
+higher for the linear arm at every horizon on inner-train, the one prediction that held, peaking near
+the paper's predicted 10–40d window for both arms; and **turnover moves the opposite way the brief
+predicted** — the de-saturated linear response trades *less* than v4 (0.45× notional turnover/day),
+because a slow continuous target crosses the 10% deadband less often than a vote jumping in discrete
+thirds, while the cubic arm (which doubles back near φ_c) trades *more* (1.65×). Configurations
+evaluated: 19 frozen strategy configs (12 linear + 6 cubic + 1 sign identity) plus 3 exploratory
+Step-0 regression fits (h=1/5/20d, run once, not swept). Max timestamp read: 2022-12-31 23:55:00
+(BTC and ETH, both strictly before OOS_START).
+
+**Operator-independent verification.** Both branches' key numbers were reproduced from scratch by the
+operator, outside either branch's code, using only the shared harness: the A1 identity (exact, both
+branches), the conservative finalist's inner-validation futures paired diff (+0.040), the novel
+finalist's inner-validation futures paired diff (+0.104) and inner-validation mean-exposure ratio
+(0.423), and the novel finalist's ETH inner-train futures sign reversal (−1.026). All five numbers
+matched the branch reports exactly.
+
+**Verdict.** **NEGATIVE, both branches.** One-line lesson: the two axes Levine & Pedersen (2016)
+leave open on a single instrument were both real, testable questions with real, literature-motivated
+predictions, and both predictions failed to survive contact with BTC specifically rather than failing
+generically — the conservative branch's own named counter-prediction (symmetric leading-order band)
+was *confirmed*, and the novel branch's motivating mechanism (Schmidhuber's cubic reversion) does not
+exist on this instrument at conventional significance even though its *sign* matched. The more
+durable finding than either verdict is the single-anchor decomposition run alongside them: v4's
+three-anchor vote is never worse than its best member and never better than it either — it is better
+than the *average* member and immune to which member is right, which is a clean statement of why
+this project's own votes rather than picks, and a fresh N≈3 warning (the anchor ranking inverts
+completely between inner-train and inner-validation) for any future round tempted to select a single
+horizon on one window. **Holdout counter: +0.** Neither branch read, printed, or held in memory any
+bar at or after 2023-01-01 in any code path; both `assert_no_holdout()` guards ran clean on every
+load site (BTC and ETH), and the operator's independent re-derivations above never touched a frame
+beyond the same truncation. Running program-level total stays **~637** (R-82→R-87's figure,
+unchanged) — see the bullet added below in Holdout consultations to date. Neither pre-registered
+decision rule moved after seeing any number; the one correction made in-session (the block-bootstrap
+power calculation) was made and disclosed *before* either branch was dispatched, per ROUTINE.md's
+bug-fix allowance, and is recorded in the Direction section above rather than hidden. **Configurations
+evaluated: 25 (conservative) + 19 strategy configs + 3 exploratory regression fits (novel) + 5
+operator measurements (the power check and the single-anchor decomposition) = 52 total across the
+round.** **Next step, not filed as a new backlog item as such but as three concrete follow-ons filed
+below (B-40/B-41/B-42):** Levine & Pedersen's third axis, state-dependence of the horizon, was never
+taken by either branch and remains open; a path-dependent exit (a trailing ratchet, structurally
+distinct from every no-trade-band construction this project has tried) was named by the literature
+pass but not tested; and deriving the anchor span from a fitted generative model of BTC's own
+autocorrelation, rather than searching it, was named but not tested. **B-32 (multi-asset strategy
+registration) remains the only ranked, unblocked backlog item with a real strategy-improvement angle**
+now joined by these three OPEN items from this round's own literature pass.
+
 ### R-87 · 08-21 · NEGATIVE (both branches) — Adaptive Conformal Inference wrapping v4's vote confidence (conservative, inert at Step-A) and its Kelly-scale dispersion estimator (novel, clears Step-A but fails the inner-validation noise floor and ETH sign-replication); a fourth independent confirmation of R-62's SIZE-axis factorization
 
 **Direction.** Off-backlog, literature-prompted (the ranked list holds only **B-32**, pure infrastructure, per R-86's own re-ranking) — a dispatched research pass first built a precise "already tried" map from sections C/D and the standing diagnosis (ten failed INFO signals, five failed regime-timing/detection-lag mechanisms, the R-64→R68 execution/COST-axis near-miss, the R-63/R-76 cross-sectional breadth ceiling, R-04/R-80's failed meta-labeling, R-26/R-28/R-31's retired e-process, and R-62's SIZE-axis factorization), then searched the literature for a genuinely fresh mechanism. Idea in one sentence: wrap `kelly_regime_v4`'s existing anchor vote in Adaptive Conformal Inference (Gibbs & Candès 2021, "Adaptive Conformal Inference Under Distribution Shift", *NeurIPS* 34:1660-1672) — an online, distribution-shift-robust error-tracking recursion requiring no i.i.d./exchangeability assumption — and use it two structurally different ways: modulating the VOTE's own tracked directional reliability (conservative), and replacing the SCALE's point-estimate dispersion measure with a conformally-calibrated one (novel), the latter directly inspired by, and pre-registered to be read skeptically against, Ryan (2026), "Conformal Kelly: Conformal Prediction Intervals as the Scale in Fractional Kelly Position Sizing", arXiv:2608.01494 — whose strong-looking in-sample equities result (28.5%/yr, Sharpe 1.34, 2016-2021) collapsed 3-4x on its own sealed 2022+ holdout (7.0-8.5%/yr). Both citations were fetched and their claims verified to exist before either was relied on, not taken on faith — the arXiv ID's own August-2026 timestamp warranted that check. Attacks **ERR** primarily (this project's only prior ERR-axis attempt, the e-process of R-26/R-28, was retired by R-31 as an exposure-level artifact tracking aggregate P&L rather than per-decision reliability — this round never reached that far, but is the first attempt on this axis since) and deepens **SIZE** per R-62's own finding (the VOTE, not the SCALE, carries v4's whole matched-exposure signature; 21 prior R-34→R-60 rounds retuned the scale's multiplier while holding its estimator — trailing EWM realized vol — fixed; the novel branch here changes the estimator itself, not a multiplier on it). Not a duplicate of: R-26/R-28 (an aggregate e-process over realized P&L, not a per-decision online reliability tracker — a different quantity and a different formal framework); R-01/R-82/R-83/R-85/R-86 (five regime/changepoint/trend *estimators* run against the six-episode detection-lag gate — ACI detects no changepoint, has no hazard function, no filtered state, and is not run against that gate here at all); the ten INFO-axis rounds (reads zero data beyond the OHLCV close series `kelly_regime_v4` already consumes); R-80 (a deterministic, fixed-learning-rate recursion with one scalar state, not a trained/fitted classifier); the 21 SIZE-axis scale retunes (changes the dispersion *estimator*, not a point-estimate multiplier on the existing one).
@@ -8968,6 +9258,8 @@ trip.
 
 | what | why | ref |
 |---|---|---|
+| Asymmetric entry/exit thresholds (`d_in≠d_out`, 5x5 grid over {0.005,0.01,0.02,0.03,0.05}²) on `kelly_regime_v4`'s own latched anchor vote — the Dai-Zhang-Zhu (2010) / Guan-Peng-Xu (2020) single-asset construction | 25 configurations. Identity exact (max abs diff 0.0), 1/25 inert (the control itself), 24 scored. The swept surface has no asymmetry structure — it is a width surface, monotonically losing as either threshold widens — and the finalist (d_in=0.01, d_out=0.005) sits one grid step from the diagonal at +0.040 log units, about a quarter of the +0.13-0.26 bar needed to resolve against v4 on inner-validation. Fails 3 of 5 pre-registered clauses (interval, plateau, ETH replication) and confirms rather than refutes its own named counter-prediction: de Lataillade, Deremble, Potters & Bouchaud (2012) §6.3's leading-order symmetric band. `kelly_regime_v4`'s never-swept `band=0.01` sits at or beside this sweep's own symmetric optimum. Operator-reproduced bit-for-bit and re-derived independently (finalist statistic, exact match). Do not re-try this exact grid on BTC's long/flat vote expecting asymmetry to bind. | R-88 (conservative) |
+| Response-function shape on `kelly_regime_v4`'s vote — sign (incumbent) vs. de-saturated linear (Dao et al. 2016) vs. non-monotone cubic (Schmidhuber 2021 / Safari & Schmidhuber 2025), on a causally-standardised trend statistic φ (trailing 365d rolling RMS, never full-series) | 19 strategy configurations plus 3 exploratory Step-0 regression fits. Pre-registered kill switch fired on the cubic arm before scoring: ĉ<0 at every horizon (matching the literature's sign) but \|t\|≤1.62 against a required \|t\|≥2 (literature's own t=2.7); φ_c≈2.50 sits at the edge of the ±2.5 clip. Surviving linear arm loses 0.36-2.63 log units on inner-train (the slice with power to see it), 27/36 cells excluding zero on the losing side, and zero of 36 inner-validation cells exclude zero either direction. Finalist's inner-validation drawdown improvement is an exposure-level artifact (0.42x v4's mean exposure, R-28/R-32/R-33's standing diagnosis); ETH sign reverses. Fails 3 of 5 pre-registered clauses (interval, plateau, ETH). Turnover moved the opposite direction the mechanism predicted (linear response trades LESS than v4, 0.45x, because a slow continuous target crosses the 10% deadband less often than a vote jumping in discrete thirds). Operator-reproduced bit-for-bit and re-derived independently (Step-0 fit, finalist statistic, exposure ratio, ETH sign). Do not re-try a continuous response on v4's vote of this construction expecting either direction to clear the bar on BTC. A reusable defect surfaced and not yet fixed: v4's 10% deadband can prevent a continuous target from ever reaching an explicit flat clip, because a value can decay through the deadband without crossing it. | R-88 (novel) |
 | ACI-derived confidence scalar `c_t` (Gibbs & Candès 2021 online adaptive-alpha recursion tracking the vote's own daily directional hit-rate against a 50% coin-flip target) multiplying `kelly_regime_v4`'s vote fraction before scale, `conf_floor∈{0.8,0.9}`, `gamma∈{0.01,0.02,0.05}` | Pre-registered Step-A collinearity gate (0 configurations reaching Step B): 0/6 configs pass — R²=0.9979-0.9996 against v4's own unmodified target path (threshold 0.98), i.e. inert by construction. Diagnosed mechanistically: BTC's vote-lean hit-rate over inner-train is ~55.1%, persistently above the 50% target this ACI instance was tracking, so its alpha state saturates near ALPHA_MAX almost every day and `c_t` stays within a few percent of 1.0 under the frozen `conf_floor∈{0.8,0.9}` band — the wrapper never got the chance to bind. Structural cross-check (`force_ct=1.0` reproduces `KellyRegimeV4` exactly, max abs diff 0.0), no-lookahead spot checks and causal-truncation probe all passed; operator-reproduced bit-for-bit. Do not re-try this exact grid expecting it to bind — a materially wider `conf_floor` band or a `target_alpha` calibrated to the vote's own measured hit-rate (rather than a generic 50% coin-flip) is a different, untested question. | R-87 (conservative) |
 | ACI-calibrated conformal quantile of `\|daily log return\|` (`target_alpha=0.3173` fixed, `gamma∈{0.01,0.02,0.05}×window_days∈{60,120}`) replacing `kelly_regime`'s trailing-EWM-vol denominator in the Kelly scale, vote unchanged from `kelly_regime_v4` | Pre-registered inner-validation noise-floor + ETH-replication falsification test: 6/6 configs pass Step-A (finite/positive, exact-flat, causal-truncation probe) with R²=0.71-0.80 against v4's own path (a genuinely different, only moderately correlated construction) but the best config's inner-validation Sharpe (0.016) misses `kelly_regime_v4`'s own (0.25) by 0.236, worse than the +0.2 noise floor, with drawdown also worse (49.8% vs 32.3%) — BTC bar FAILS. On ETH alone the same finalist looks favorable (Sharpe 0.85 vs 0.63) but the frozen rule requires ETH to replicate whichever direction cleared BTC's own bar, and none did, so ETH sign-replication FAILS by construction; reported in full rather than the favorable number alone. Reproduces R-62's SCALE-is-inert finding a further, structurally distinct way — even a formally-motivated conformal dispersion estimator, not just a 22nd point-estimate retune, fails to carry v4's edge. Operator-reproduced bit-for-bit. Do not re-try replacing v4's scale estimator alone, of any construction, expecting it to move the inner-validation Sharpe — R-62's finding now has four independent forms of support (the original factorization test, and three structurally distinct re-tries: this round's conformal quantile, and 21 prior point-estimate retunes). | R-87 (novel) |
 | Transfer entropy `TE_{volume_change -> return}` (Schreiber 2000, dependency-free 3-bin discretized lag-1 estimator, 30-day sub-window, causal Kendall-tau trend z-score against a 730-day baseline, identical scaffold to R-85's CSD z-score) as a single-indicator regime-timing signal on `kelly_regime_v4`, alarm at z≥2.0 | Pre-registered Step-A detection-lag gate (0 configurations against real market data), identical six-episode table and ≥4/6 bar as R-82 (BOCPD)/R-83 (Kalman LLT)/R-85 (CSD): **0/6** pass — the indicator never crossed its own alarm threshold inside ANY of the six ±60-day episode windows across the whole 2017–2022 pre-holdout series, the weakest possible Step-A outcome. Diagnostically (outside the pre-registered gate): `te_z` crosses ≥2.0 only three times in six years (2019-04-22, 2019-08-20, 2021-08-24→09-08), and the nearest of those to any episode misses the 2021-11-10 top by 63 days — 3 days outside the ±60d search window. Causal-truncation probe passed (independently re-run); operator-reproduced bit-for-bit. Do not re-try TE(volume→return) as a single-indicator regime-timing signal on this price series at this window/threshold/bin-count expecting it to detect any of these six episodes — its alarm capacity essentially never fires near any of them. | R-86 (conservative) |
@@ -9046,6 +9338,43 @@ trip.
 ---
 
 ## D. Backlog (ranked)
+
+**Re-ranked 08-21 after R-88.** An off-backlog, literature-prompted two-branch round tried the two
+axes of `kelly_regime_v4`'s own vote that 87 prior rounds — including all 21 SIZE-axis scale
+retunes, all ten INFO-axis confirming votes, and all five regime-timing estimators — had never
+varied: the vote's **latch geometry** (conservative: asymmetric entry/exit thresholds, the
+Dai-Zhang-Zhu 2010 / Guan-Peng-Xu 2020 single-asset construction this repo's own R-67 literature
+commission could previously only apply to the wrong, cross-sectional arm) and its **response
+function's shape** (novel: a de-saturated linear response and a non-monotone cubic response, both
+motivated by named, verified citations, racing the incumbent's binary step). Both **NEGATIVE**, and
+both failed for reasons the round's own pre-registered counter-predictions named in advance rather
+than for a generic noise-floor miss: the conservative branch's swept optimum landed one grid step
+from the diagonal at an effect a quarter of the resolvable size, confirming — not merely failing to
+refute — de Lataillade, Deremble, Potters & Bouchaud (2012)'s prediction that the leading-order band
+is symmetric; the novel branch's own pre-registered Step-0 kill switch fired on the cubic arm
+(estimated ĉ<0 at every horizon, matching the literature's sign, but |t|≤1.62 against a required
+|t|≥2) before that arm could reach scoring, and the surviving linear arm lost by 0.4-2.6 log units on
+the one slice with the statistical power to see it, on both BTC and ETH. **This is the first round
+since R-62 to test the vote factor's own internal construction rather than an external addition,
+retune, or wholesale replacement of it**, and the operator independently re-derived five of both
+branches' headline numbers from scratch, outside either branch's code, all matching exactly — the
+highest-effort skeptic pass this ledger has recorded to date. The most durable finding is a side
+measurement, not either verdict: decomposing v4's vote one anchor at a time shows the ensemble is
+**never better than its best member and never worse than it either** in either window, and the
+anchor ranking **inverts completely** between inner-train and inner-validation — a clean N≈3 warning
+against ever selecting a single horizon on one window, and the honest reason this project's own
+mechanism votes rather than picks. **B-32 remains the only ranked, unblocked backlog item with a
+real strategy-improvement angle**, now joined by three OPEN items this round's literature pass
+named but did not test: **B-40** (Goulding, Harvey & Mazzoleni's momentum-turning-point states — the
+third of Levine & Pedersen's three non-redundant axes, horizon state-dependence, which neither R-88
+branch took), **B-41** (a path-dependent trailing-stop ratchet with a principled restart, structurally
+distinct from every no-trade-band construction this project has tried), and **B-42** (deriving the
+anchor span from a fitted generative model of BTC's own autocorrelation via Sepp & Lucic's closed-form
+Sharpe, rather than searching one empirically as R-06/R-07/R-40/R-45 all did). A future session
+preferring a fresh mechanism search now needs a construction that is not a retune of either of v4's
+two factors, not a wrap of one in an external estimator, not a sixth regime-timing mechanism against
+the exhausted six-episode gate, not a re-derivation of the vote's own latch or response geometry now
+that both have been measured — or should work B-32, B-40, B-41 or B-42 directly.
 
 **Re-ranked 08-21 after R-87.** An off-backlog, literature-prompted two-branch round (same posture as R-73–R-86 — the ranked list holds only B-32, pure infrastructure) tried a sixth structurally distinct mechanism, but on a different axis than the five regime-timing/detection-lag attempts it follows: Adaptive Conformal Inference (Gibbs & Candès 2021), an online error-control recursion, wrapped around `kelly_regime_v4`'s own vote confidence (conservative) and, separately, around its Kelly-scale dispersion estimator (novel, pre-registered against Ryan (2026) arXiv:2608.01494's own in-sample-collapse precedent). Both **NEGATIVE**. The conservative branch failed at Step-A: 0/6 configs escaped inertness (R²>0.998 against v4's own path), because BTC's vote-lean hit-rate (~55.1%) sits persistently above the 50% coin-flip target this instance of ACI was tracking, saturating its confidence state near maximum under the frozen `conf_floor` grid. The novel branch reached Step B (6/6 pass Step-A, R²=0.71-0.80 against v4 — a genuinely different construction) and failed the inner-validation noise floor (best Sharpe 0.016 vs v4's 0.25, worse drawdown); ETH sign-replication failed by construction of the frozen rule despite a favorable raw ETH number, reported rather than selectively read. **This is the fourth independent way R-62's SIZE-axis factor finding (VOTE carries v4's signature, SCALE does not) has now been confirmed** — the original factorization test, 21 prior point-estimate scale retunes, and now a structurally distinct, formally-motivated conformal dispersion estimator. **B-32 remains the only ranked, unblocked backlog item.** A future session preferring a fresh mechanism search now needs either a genuinely new kind of information, a regime-timing construction distinct from the five already closed, or an ERR-axis construction that does not retune or wrap either of v4's two existing factors (vote or scale) — both factors' viable-construction space is now looking considerably more explored than it was this morning — or should work B-32 directly.
 
@@ -10210,6 +10539,9 @@ which only forward paper trading can supply.
 | ~~B-30~~ | ~~Settle what `broker.REBALANCE_DEADBAND = 0.05` is doing to every futures figure in this project before another round reads one~~ | methodology (not one of the four constraints) | **DONE → R-72, ANSWERED** | Filed by R-64. Generalized to all 25 registered strategies × 2 markets × 2 splits (154 configs): the gap is **not** a general futures property (unweighted mean 62.7%/52.3% train, 65.6%/65.0% val) but is concentrated in the 8 strategies sized via `ctx.order_notional()` — 7 of 8 (the whole kelly_regime family plus `champions_council`) show 21–67pp gaps; the 17 `order_target`-based strategies are mixed-to-reversed. An isolated equity-scaled-deadband fix (broker subclass, `broker.py` untouched) restores fill-through to ~100% but does not help `kelly_regime_v4` — fees rise, growth/Sharpe/drawdown all move the wrong way on the point estimate (both bootstrap intervals contain zero). **No broker change made.** README's warning box updated from "not yet settled" to measured and scoped. |
 | **B-33** | Settle the **holdout convention for panel reads**. `W_FULL6` runs to the last bar and therefore includes post-2023 U6 data; R-47/B-08, R-57, R-63 and now R-65 have all recorded such reads as **+0** on the grounds that the reserved BTC/ETH holdout is untouched. That is a convention, not a derivation, and it has now been applied often enough that it is load-bearing | ERR | **DONE → R-72, ANSWERED** | Flagged by R-65's novel branch. The literal leakage channel (a fitted parameter crossing from panel-2023+ into a BTC/ETH decision) is clean — verified across R-63/65/67/68's eight branch files. A different, unflagged channel was not: all eight branches build a `BTC_HOLD` reporting-only context cell that reads real BTC 2023+ price data (never feeding any promotion gate) — **+9** uncounted consultations (R-63 +2, R-65 +2, R-67 +2, R-68 +3), now applied. Researcher-degrees-of-freedom risk named as honestly unclosed, not dismissed. Panel-vs-BTC correlation is ~0.56 both sides of 2023-01-01 — a panel-2023+ read is not price-independent of a BTC/ETH-2023+ read even with zero shared code. Running total moves ~627 → ~637 (the +9 correction plus R-72's own +1 for the correlation check itself) — see [Holdout consultations to date](#holdout-consultations-to-date). Standing instruction: any future round descended from `r63_shared.py`'s pattern must retire or explicitly count its `BTC_HOLD` cell. |
 | ~~B-31~~ | ~~Attack the **long/flat gate**, which R-65 identified as where the remaining turnover lives once buffering has done its work. R-63's frozen rule holds only positive-scoring assets and stands flat otherwise, so every zero-crossing of the incumbent's score forces an exit — a channel R-65's conservative branch measured as **invariant at 0.386/day across all 20 cells of a holding-period grid** while voluntary swaps fell 16-fold. Candidate fixes: a hysteresis band around zero (enter above +δ, exit below −δ), a continuous rather than binary positivity weight, or letting the partial-adjustment recursion carry the position through a crossing instead of resetting it~~ | COST | **DONE → R-67, ANSWERED** | Filed by R-65. **The mechanism was real and R-67 broke it; the round failed anyway.** Two of the three fixes this row names were run — asymmetric hysteresis on the eligibility test (conservative) and the partial-adjustment recursion (novel). Forced exits fall **242 → 8 events** on W_TRAIN (0.3781 → 0.0125/day, a 30× cut) with the voluntary-swap channel **invariant at 0.117–0.122/day** at every δ, so the fix reaches exactly and only the channel this row named — **the floor was a threshold artifact, not score noise (F2 refuted)**. Turnover reaches 0.102/day (conservative) and 0.336/day (novel), both **below the 0.641/day break-even this row quotes**, and the conservative arm becomes the first on this axis to pass the 0.40% fee tier. The predicted price — holding a declining asset longer — **was not paid**: drawdown improved at every step on both arms. Both still fail `(D1 or D2)`: +1.093 [−2.019, +4.106] and +1.246 [−1.795, +4.325]. This row's own honest prior was half right: the gate mattered for the discrete-selection family (0.900 → 0.102/day) and the smoothed arm did reach a low rate without a gate fix — but the smoothed arm also **failed D4**, which the gate-fixed discrete arm passed. Reopens only as **B-34** (extend the grids; run the symmetric deadband as a matched arm) and **B-35** (measure whether the exit was informative at all). |
+| **B-40** | **State-dependence of the horizon** — the third of the three axes Levine & Pedersen (2016) leave open on a single instrument, and the one R-88 did not take. Goulding, Harvey & Mazzoleni (2023), "Momentum turning points", *Journal of Financial Economics* 149, 378–406, define four states from the intersection of a slow and a fast signal (Bull = both trailing returns ≥0; Correction = slow ≥0, fast <0; Bear = both <0; Rebound = slow <0, fast ≥0) and re-set the slow/fast blend weight after observing a break. Rare among this project's candidate sources in that the headline result is a **single time series** (the US market index), not a panel. Test the sharpest sub-claim first, before building anything: is BTC's conditional mean return in the Bear state (80d<0 AND 7d<0) significantly negative on 2017–2022, and does the sign hold after? | SIZE, N≈3 | **OPEN** | Filed by R-88. **Read the honest magnitude with it**: the published dynamic blend is ~0.52 vs 0.51 gross Sharpe (1969–2018), and an independent practitioner replication net of costs found both variants *lost* ~1%/yr and ranked poorly. Treat the mechanism as real and the effect as approximately zero — which makes this a cheap null to document, not a promotion candidate. Structurally immune to the six-episode detection-lag gate that killed R-82/83/85/86: the state is a deterministic function of two observable signal signs, known at bar close with zero lag, with no hidden state to infer. Main risk named in advance: v4's vote is already *latched*, which is a crude turning-point handler, so the Correction/Rebound states may be entirely absorbed by the existing latch. |
+| **B-41** | **Path-dependent exit** — a trailing ATR ratchet with a principled re-arm, replacing "hold until the anchors flip". Sepp & Lucic (2026), "The Science and Practice of Trend-Following Systems", arXiv:2607.19497 (84 futures), formalise the "American" trend system: binary entry/exit with ATR entry buffers and trailing stops, in one analytic framework with the continuous ("European") and TSMOM classes. Han, Zhou & Zhu (SSRN 2407199; US stocks 1926–2013) find a 10% stop cuts equal-weighted momentum's worst month from −49.8% to −11.4%. Hsieh (2023), arXiv:2303.02613, *IFAC-PapersOnLine*, supplies the **restart mechanism** — the part everyone omits, without which a stop is a permanent exit after one bad episode | COST, SIZE | **OPEN** | Filed by R-88. **Not a no-trade band**: Constantinides/Davis–Norman/Liu/Janeček–Shreve bands (R-64/R-66) are symmetric, cost-derived and centred on the *target position*; a ratchet is asymmetric, path-dependent and centred on the *running favourable extreme of the realised trade* — a state variable no cost-band framework contains. Not CPPI (R-46): that conditions on distance from an account-level floor, unconditional on trade state. **The single easiest candidate in R-88's literature pass to overfit** — pre-register the `k` grid and the re-arm rule before looking at any P&L. Main risk named in advance: on BTC, trailing stops fire on the routine 10–20% intra-trend drawdowns that punctuate every bull run, and re-entry happens higher — the classic whipsaw, expensive at 10–20bps. |
+| **B-42** | **Derive the anchor span instead of searching it.** Sepp & Lucic (2026), arXiv:2607.19497, give a closed-form Sharpe for a trend system under any causal linear process plus a net-Sharpe-under-proportional-cost correction; Grebenkov & Serror (2014), *Physica A* 394, 288–303, give the closed-form P&L distribution for an EMA trend system; Valeyre (2025), arXiv:2504.10914, fits that Sharpe formula to 70 futures at **R² = 0.98**, recovering λ = 1/180 ± 17 days and an optimal η ≈ 1/112 business days. Fit BTC's own return autocorrelation on 2017–2022, plug into the closed form, and compare the derived span against v4's shipped 20/40/80 | N≈3, COST | **OPEN** | Filed by R-88. Not a duplicate of R-06/R-07 (empirical ladder sweeps), R-40 (bagging the ladder) or R-45 (walk-forward re-estimation / minimax reselection): all four *search* for a span in backtest space; this derives one from a fitted generative model of the instrument and produces a falsifiable point prediction rather than a distribution over spans. Two named ways it ends cheaply, both of which are still results: BTC's daily ACF is small and noisy, so the implied span may be unstable across subsamples; and Sepp & Lucic's own theory says an **interior** cost-optimal span exists only under ARFIMA long-memory dynamics — if BTC fits short-memory AR(1), the answer is "as slow as you can stand", which is a one-line conclusion rather than an edge. Also worth pricing against their reported **≈37–41bps span-invariant break-even**, against this project's 20bps spot round trip. |
 | **B-32** | Multi-asset strategy **registration**, so that a bar-by-bar cross-asset allocator can enter the comparison table at all. R-49/B-17 built the "can it be done" infrastructure and its own docstring says it cannot express this shape; R-65 is the first round to produce a candidate whose numbers would have been worth a row (net +0.589 vs a volatility-matched hold at 0.19 turnover/day, $1,000 → $5,043) and which the table therefore cannot hold | ERR (methodology gap) | **OPEN** | Filed by R-65, promoted from B-17's deferred half. Until this exists, every result on the cross-sectional axis is confined to `experiments/` and the ledger, and cannot carry a measured interval in `reports/inference/bootstrap.csv` beside the single-asset rows — the exact asymmetry R-30 built the interval requirement to prevent. Not urgent while every candidate fails its interval anyway; it becomes blocking the moment one does not. |
 | **B-28** | Reopen "more instruments" only against a universe whose **breadth** — not whose asset count — clears the bar R-63 measured: mean pairwise daily-return correlation materially below 0.634, or a Grinold equal-correlation breadth materially above 1.47, or a holding period long enough that the 2.86 leader-changes-per-day that cost the novel arm 8.02 log units stops being the binding cost. R-63 established that the cross-sectional signal here is real and merely unaffordable, so the axis is closed for this data rather than on principle | INFO, N≈3 | **HALF-CLOSED → R-65**; breadth clause still blocked on data this repo does not have | Filed by R-63. **Its holding-period clause is answered: R-65 ran it and the value/cost curves cross** — the affordable window is turnover 0.06–0.33/day, holding 1.4–5 days, and at a derived trading rate the same signal costs 0.43 log units instead of 8.02 while its frictionless edge rises. Still NEGATIVE on the interval. The **breadth** clause is untouched and remains blocked. Not actionable from inside a session today: the eight committed instruments are the universe, and R-63 measured them at 1.47 effective bets. Reopening needs either genuinely less-correlated instruments (a different asset class, which this project cannot fetch or simulate) or a lower-frequency bar series that would cut the leader-change rate — note that this project's entire dataset is 5-minute bars, so the second is a data-acquisition task, not a strategy task. Recorded so the idea is not re-tried blind on the same eight assets, which is exactly what section C exists to prevent. |
 | ~~B-01~~ | ~~E-process regime detection with unified Kelly sizing~~ | ERR, N≈3 | **DONE → R-28**, qualified by R-31 | NEGATIVE on the promotion bar. It read as the strongest risk result in the project — 0 of 40 windows deeper than the incumbent — until B-11 compared the two at equal risk and found that number was about exposure, not about the gate. (R-26's null round listed this as untried; R-28 is the round that actually ran it.) |
@@ -10305,6 +10637,22 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-21 · ~637** — R-88: **+0** on top of R-87's ~637 (unchanged), both
+  branches. Conservative (`experiments/r88_conservative_asymmetric_band.py`):
+  25/25 configs run through Step A (1 INERT, the identity/control cell
+  itself), 24 through Step B; `assert_no_holdout()` clean on BTC and ETH.
+  Novel (`experiments/r88_novel_response_function.py`): the pre-registered
+  Step-0 kill switch fired on the cubic arm (ĉ<0 but |t|<2 at every
+  horizon) before any strategy code for that arm was scored; 19 strategy
+  configs plus 3 exploratory regression fits run in total;
+  `assert_no_holdout()` clean on BTC and ETH. Operator independently
+  re-derived five headline numbers from both branches (both A1 identities,
+  both finalists' selection statistics, the novel finalist's exposure
+  ratio and ETH sign reversal) using only the shared harness, outside
+  either branch's code; all five matched exactly. Operator-reproduced max
+  timestamp on every run, both branches: `2022-12-31 23:55:00+00:00` (BTC),
+  `2019-12-31 23:55:00+00:00` (ETH, its own coverage end). See R-88 in
+  section B.
 - **08-21 · ~637** — R-87: **+0** on top of R-86's ~637 (unchanged), both
   branches. Conservative (`experiments/r87_conservative_aci_confidence.py`):
   0/6 configs passed Step-A, no Step-B/holdout-adjacent code path was ever
