@@ -74,6 +74,11 @@ uv.lock
 !/data/linkusd_coinbase_spot_5m.csv.gz
 !/data/xtzusd_coinbase_spot_5m.csv.gz
 !/data/xrpusd_coinbase_spot_5m.csv.gz
+# real Coinbase BTC-USD spot 5m, 2017-2026 (R-77): the tradable BTC series
+# has only ever been Bitstamp-sourced; this gives it a second, independent
+# venue quote for the first cross-VENUE (not cross-instrument, not
+# external-feed) INFO signal this project has tried.
+!/data/btcusd_coinbase_spot_5m.csv.gz
 /reports/*
 !/reports/comparison.md
 !/reports/comparison.csv
