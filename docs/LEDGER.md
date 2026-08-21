@@ -195,6 +195,193 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-72 · 08-21 · METHOD — B-30 and B-33 both answered: the futures deadband caveat is real but narrower than stated, and the panel "+0" convention undercounted by 9
+
+**Direction.** Not a SIZE/COST mechanism round on `kelly_regime_v4`. Six
+consecutive prior rounds (R-63, R-65, R-67, R-68, R-69, R-70) converged on
+"no mechanism can narrow an interval — only more data, more breadth, or
+forward evidence can," and section C now lists 21 independent, non-
+duplicate SIZE-axis attempts and a comparable count on COST/INFO, all
+ruled out on the identical ETH/BTC-control falsification signature. A
+22nd variant was considered and rejected before any code was written: the
+one candidate design worth trying — grafting an EV-optimal no-trade band
+onto v4's vote — turns out to already exist and already be registered
+(`kelly_regime_ev`, L-05, `KellyRegimeEV(KellyRegimeV4)`). With no
+non-duplicate SIZE/COST/INFO idea identifiable, this round instead
+executed the two backlog items explicitly marked **OPEN, actionable
+today** that neither require new data nor reopen a closed axis: **B-30**
+(does `broker.REBALANCE_DEADBAND` silently distort what strategies'
+futures figures actually measure — attacks ERR, filed by R-64, previously
+measured on `kelly_regime_v4` alone) and **B-33** (is the panel-read
+"+0 holdout consultations" convention actually sound — attacks ERR,
+filed by R-65). Not a duplicate of any SIZE/COST/INFO row in section A or
+C; not a re-read of R-64's own single-strategy deadband measurement,
+which this round generalizes rather than repeats.
+
+Two parallel branches, per `docs/ROUTINE.md`'s parallelism section (each
+owned disjoint files — `experiments/r72_conservative_deadband.py` and
+`experiments/r72_novel_holdout_convention.{py,md}` — neither committed,
+both report in full below).
+
+**Conservative branch (B-30).** Generalized the fill-through measurement
+from `kelly_regime_v4` alone (R-64) to all 25 registered strategies, on
+both markets, on inner-train (2017–2020) and inner-validation (2021–2022)
+— zero holdout bars read, `assert_no_holdout()` enforced and verified on
+every invocation (max timestamp read: `2022-12-31 23:55:00+00:00`).
+Pre-registered falsification/sanity check: does an isolated,
+equity-scaled deadband (threshold = 5% of equity regardless of leverage,
+instead of 5% of max notional) restore futures fill-through toward
+spot's rate for `kelly_regime_v4`, and at what cost — built as a
+broker *subclass* local to the experiment file, `src/tradebot/broker.py`
+never touched, regression-checked to be bit-identical to the shipped
+broker at leverage=1.
+
+**Novel branch (B-33).** Read the actual code (not just the ledger's
+description) of R-57, R-63, R-65, R-67 and R-68's panel experiments,
+checking two channels: (1) does any fitted parameter, scaler or
+threshold cross from a panel-2023+ computation into a BTC/ETH decision;
+(2) a softer, only partially answerable "researcher degrees of freedom"
+channel — could seeing a panel's 2023+ performance have shifted a
+round's own appetite for spending a real holdout consultation.
+Pre-registered as a methodological audit, not a strategy backtest: no
+parameter would be fit or swept, and any new data read would be prices
+only, for a correlation check, never for a decision.
+
+**What was done — configs evaluated: 154 total** (conservative branch:
+100 for the fill-through sweep [25 strategies × 2 markets × 2 splits] + 4
+for the default-vs-equity-scaled-deadband comparison [2 arms × 2 splits]
++ 50 for a liquidation-confound recheck = 154; novel branch: 0, an audit
+and a single correlation read, not a parameter sweep).
+
+**Result.**
+
+*B-30 (conservative).* The fill-through gap is real but **not a general
+futures property** — unweighted across all 25 strategies it is modest
+and inconsistent (inner-train: spot mean 62.7% vs futures 52.3%;
+inner-val: 65.6% vs 65.0%, essentially gone). It is concentrated in the 8
+strategies that size via `ctx.order_notional()` (equity-fraction sizing,
+which divides by leverage before the broker sees it): 7 of those 8 —
+`kelly_regime`, `_v2`, `_v3`, `_v4`, `kelly_regime_ev`, `_ev_fast`,
+`champions_council` — show large, consistent gaps (21–67 percentage
+points on inner-train), which is most of this project's own leaderboard.
+The 8th, `universal_kelly`, is floor-bound at ~1–2% fill on *both*
+markets — a different, more severe problem, noted but out of scope here.
+The other 17 `order_target`-based strategies show a mixed-to-reversed
+picture (10 of them fill *more* on futures than spot, e.g.
+`camouflage_flow` −54.2pp, `game_council` −43.9pp), because `can_short`
+changes their signal dynamics in ways unrelated to the leverage-scaled
+threshold. Liquidation confound checked and ruled out (3/50 futures
+cells liquidated, none among the strategies driving the finding). Full
+table: `experiments/reports/r72_fillrate_all_strategies.csv` (gitignored,
+regenerate with `python experiments/r72_conservative_deadband.py
+fillrate`).
+
+The pre-registered falsification/sanity check came back negative for
+the candidate fix: the equity-scaled deadband does exactly what it is
+mechanically supposed to (fill rate 50–54% → ~100%, tracking error
+[mean |realized − intended| exposure] cut 57–71%) but **does not help
+`kelly_regime_v4` — the point estimate moves the wrong way on both
+splits**: fees rise 20%/38%, final growth falls 13.0%/6.1%, Sharpe and
+max drawdown both worsen, though neither difference clears its
+bootstrap interval (paired stationary block bootstrap, mean_block=30,
+n=2000: inner-train Δlog-growth −0.139 [−0.429, +0.136], inner-val
+−0.062 [−0.187, +0.062], both containing zero). Consistent with, and a
+second confirmation of, R-64's own finding that chasing every same-sign
+nudge under proportional costs is not free — the existing coarse
+deadband may be doing some of that defensive work by accident.
+`pytest tests/test_causality_strict.py`: 51 passed.
+
+*B-33 (novel).* Channel 1 (literal parameter leakage) is **clean**:
+static analysis of every sweep/selection function across R-63/65/67/68's
+eight branch files found zero references to `W_FULL6` inside any
+parameter-fitting function — every swept threshold is chosen strictly
+on `W_TRAIN`/`W_VAL` (pre-2023), then applied frozen. B-33's original,
+literal worry does not materialize as a code-level leak.
+
+**A different, unflagged channel was found instead.** All 8 branches of
+R-63/65/67/68 build a `BTC_HOLD` "context" cell inside their `cmd_run`
+(e.g. `experiments/r63_novel_xsmom_rank.py:444`,
+`r65_conservative_rank_buffer.py:923`, `r67_conservative_hysteresis.py:996`,
+`r68_conservative_band_decomposition.py:1218`) that loads BTC via the
+*unrestricted* `load_dataset()`, reindexes onto `W_FULL6` (confirmed
+56.8% post-2023-01-01, matching the ledger's own "~57%" figure), and
+runs a real paired bootstrap against actual 2023–2026 BTC price data —
+already committed in `reports/r63_panel_portfolio/`,
+`reports/r65_holding_period/`, `reports/r67_gate/`,
+`reports/r68_band/`. None of these `BTC_HOLD` cells feed `d1_pass`,
+`d2_pass` or any `further_work()` gate — every promotion/rejection
+decision in those four rounds runs through `MATCHED_HOLD`/`EW_HOLD`/
+`VOLMATCH_HOLD` instead, so **no verdict was mechanically corrupted** —
+but by this project's own established practice (any read of a 2023+
+BTC/ETH bar counts regardless of downstream use — R-57's own
+`cmd_control` truncates at 2022-12-31 for exactly this reason), these
+are genuine, uncounted consultations: **R-63 +2, R-65 +2, R-67 +2, R-68
++3 = +9**. (R-57 is genuinely clean; R-69 silently dropped the
+`BTC_HOLD` cell and is clean too; R-70 never resolves past `W_VAL`.)
+
+Channel 2 (researcher degrees of freedom) is named honestly as
+**unclosed, not settled**: the nine numbers were printed/written where a
+round's own author could see them before writing a verdict, and whether
+seeing panel/BTC-context performance shifted anyone's appetite for a
+real `W_HOLD` read is not observable from the repo alone.
+
+The one new data read this round authorized (part 3, price-only,
+pre-registered, no strategy or parameter involved): BTC-vs-panel daily
+return correlation split at `OOS_START`. Mean pairwise correlation
+0.560 overall, 0.566 pre-2023, 0.556 post-2023 — essentially unchanged
+across the holdout boundary, i.e. **a panel-wide 2023+ read is not
+independent of a BTC/ETH 2023+ regime read at the price level, even
+with zero shared code.** By this project's own counting convention
+(established by this very finding), that correlation check is itself
+one further BTC-2023+ read — see the holdout-counter update below.
+
+**Verdict.** Both **ANSWERED**. B-30: the futures-column caveat README
+already carries (filed "not yet settled") is confirmed and its scope
+sharpened — real and large specifically for the `order_notional`-sized
+strategies (the kelly_regime family plus `champions_council` — most of
+the table's top), negligible-to-reversed for the 17 `order_target`-based
+ones. README's warning box is updated below from "not yet settled" to
+measured, with the mechanism named. The equity-scaled-deadband fix is **not**
+recommended — no
+upside found and a (non-significant) point-estimate downside — so
+**no broker change is made**; `src/tradebot/broker.py` is untouched.
+B-33: the panel "+0" convention is **not fully sound as stated** — not
+for the leakage channel it was filed to check (that one is clean), but
+for an unflagged, higher-volume one found while checking it. Correction
+applied below. Lesson, stated once for both halves: this round's own
+literature/measurement work moved two numbers the project had been
+citing uncorrected for several rounds each — exactly the "the right
+inference can narrow things; mechanism retuning can't" pattern R-67
+named, now demonstrated on methodology rather than on a strategy's
+Sharpe.
+
+**Holdout counter.** This round's own strategy-relevant work (the
+fill-through sweep and the equity-scaled-deadband test) read zero bars
+dated 2023-01-01 or later — verified, not assumed (`assert_no_holdout()`
+on every conservative-branch invocation). The novel branch's part-3
+correlation check is the one exception, and it is counted honestly: **+1**
+for this round's own BTC-2023+ read. Net of the retroactive correction
+found *within* this round (R-63 +2, R-65 +2, R-67 +2, R-68 +3 = **+9**,
+applied to those rounds' own totals, not to R-72's), the running total
+moves **~627 → ~637** — see the bullet at the top of [Holdout
+consultations to date](#holdout-consultations-to-date). The decision
+rule did not move after any of this was read: no promotion or rejection
+in R-63/65/67/68 depended on the `BTC_HOLD` cells being uncounted, and
+this round pre-registered "read prices only, decide nothing" before its
+one new read.
+
+**Next step.** B-30 closes; do not re-try a leverage-scaled or
+equity-scaled `REBALANCE_DEADBAND` on `kelly_regime_v4` without a
+different mechanism than "make it track more closely" — closer tracking
+was tested directly and cost, not saved. B-33 closes with a correction
+applied and a standing instruction for any future round descended from
+`r63_shared.py`'s pattern: retire or explicitly count the `BTC_HOLD`
+context cell, don't leave it silently free. Per six rounds of standing
+guidance, unchanged by anything found here: **B-06 remains the
+highest-value item on merit** — this round did not touch it, and its
+record is now roughly two days old, still too short for
+`anytime_valid_first_exclusion` to say anything.
+
 ### R-71 · 08-20 · METHOD — B-06 advanced: the recorder is now scheduled and multi-strategy, and its growing record gets an anytime-valid reading tool
 
 **Direction.** Not a new mechanism on the incumbent's SIZE/COST axis. Six
@@ -8363,6 +8550,7 @@ trip.
 
 | what | why | ref |
 |---|---|---|
+| Equity-scaled `REBALANCE_DEADBAND` (5% of equity regardless of leverage, instead of 5% of max notional) on `kelly_regime_v4`'s futures market | 4 configurations (2 arms × 2 splits), isolated broker subclass, `broker.py` untouched. Restores fill-through to ~100% (from 50–54%) and cuts tracking error 57–71% exactly as designed — then makes the strategy point-estimate *worse*, not better: fees +20%/+38%, growth −13.0%/−6.1%, Sharpe and max drawdown both down, though both bootstrap intervals contain zero. Consistent with R-64's finding that closer tracking under proportional costs is not free. Do not re-try a closer-tracking deadband fix on this family motivated by "the broker is silently costing it return" — that story was tested directly and the direction is wrong. | R-72 (conservative), closes B-30 |
 | More indicators / more ML on 5m bars | 25 strategies and two research rounds; every pure predictor lost to fees. Attacks none of the four constraints. | A, R-05 |
 | Recovering order flow from OHLCV | BVC/VPIN proxies are price transforms. Four strategies, four losses. | L-14, L-15, L-16, L-12 |
 | Tuning turnover to fit a fee tier | 28 of 32 in-sample, 0 of 28 out-of-sample. | R-12 |
@@ -9486,6 +9674,23 @@ different mechanisms — a sixth mechanism variant on this axis is a
 materially worse use of a session than writing the paper-trading recorder's
 first uncontaminated read.
 
+**Re-ranked 08-21 after R-72.** B-30 and B-33 are both done, and neither
+was a SIZE/COST mechanism round — no seventh SIZE-axis or eighth COST-axis
+variant was opened on `kelly_regime_v4`, consistent with six straight
+rounds of standing guidance. B-30 sharpens rather than removes the
+futures-column caveat (real for the `order_notional`-sized family, absent
+elsewhere) and closes with the candidate fix rejected on its own
+pre-registered test. B-33 corrects the holdout counter by +9 (retroactive,
+for R-63/65/67/68's uncounted `BTC_HOLD` reporting cells) plus this
+round's own +1, taking the running total to ~637 — a bookkeeping
+correction, not a reopened verdict; nothing in section A changes. The
+order below is otherwise unaffected: **B-06 remains the highest-value
+item on merit**, untouched by this round, its record still too young
+(roughly two days) for `anytime_valid_first_exclusion` to say anything.
+A future session should check that function on the growing
+`reports/paper_trading/*.csv` record before opening any new mechanism
+work.
+
 **Re-ranked 08-20 after R-71.** B-06 moves from "built but dormant" to
 "scheduled and multi-strategy," with an anytime-valid tool now waiting on
 its record (see R-71). Nothing else on the ranked list changed: no
@@ -9522,14 +9727,14 @@ which only forward paper trading can supply.
 |---|---|---|---|---|
 | ~~B-36~~ | ~~Formalize a Ledoit & Wolf (2008)-style **paired difference test** between a candidate arm and the frozen arm it's meant to improve on, as a reusable function in `tradebot.inference` rather than a one-off script, and apply it retroactively to every surviving (`further_work`-clearing or near-clearing) arm on the COST axis before a fifth mechanism round is run~~ | ERR (methodology gap) | **DONE → R-70** | Filed by R-68. Built as TWO independent standard-error estimators (Parzen-kernel HAC per the literal paper, and a stationary-bootstrap studentization matching this project's own convention) rather than one, since a single estimator cannot say whether disagreement on a near-zero cell is real. Applied to R-68's own published pair plus two never-before-tested ones (ENTRY_ONLY, novel derived threshold): `r68_entry_only_0.080`/W_VAL is significant by all three methods (growth-percentile, HAC-Sharpe, bootstrap-Sharpe) — the sharpest number this axis has produced — while D1 against the matched hold still fails for that arm, unchanged. Two cells split 2-1 across the two new methods, reported rather than adjudicated. Not reopened; the two functions and 15 tests are the permanent product. |
 | ~~B-37~~ | ~~Does a rule that tightens ONLY the entry threshold (`enter_eligible = s > +delta`, exit left at R-63's original `s > 0`) reproduce R-68 conservative's ENTRY_ONLY edge with a single free parameter, now that the round found the exit half (B-31's original target) carries none of it?~~ | COST | **DONE → R-69, ANSWERED (NO)** | Filed by R-68. Answered cleanly: with R-65's `buffer`/`hold_days` genuinely removed (not merely isolated inside R-68's own ENTRY_ONLY sub-arm, which still inherited both), turnover inflates 4-29x and membership-change rate 4-23x relative to R-68's own published ENTRY_ONLY cell at a comparable or larger delta, and the D1 point estimate flips sign on both a fitted sweep (+1.07 -> -2.98) and an independently-derived, zero-fitted-parameter threshold (+1.07 -> -0.36). Both branches' `further_work` was `False`; neither read the holdout. The coupling ENTRY_ONLY's isolated read could not see turns out to be load-bearing: the buffer and timer were suppressing one-bar rank-flicker swaps the entry threshold alone cannot substitute for. Not reopened — this closes the entry/exit decomposition line R-67 opened. |
-| **B-37** | Does a rule that tightens ONLY the entry threshold (`enter_eligible = s > +delta`, exit left at R-63's original `s > 0`) reproduce R-68 conservative's ENTRY_ONLY edge with a single free parameter, now that the round found the exit half (B-31's original target) carries none of it? | COST | **NEXT** | Filed by R-68. R-68's own decomposition found EXIT_ONLY (soften only the exit, R-67's original framing) worse than the coupled rule at every matched delta on both windows with a *negative* cross-window rank correlation (-0.227), while ENTRY_ONLY dominates COUPLED at delta>=0.080 on W_VAL and holds the top three W_TRAIN ranks with a *positive* one (+0.500). This item asks the cheap follow-up directly: is a one-parameter entry-only gate (no `buffer`, no `hold_days` retuning, no exit threshold at all) sufficient, or does the coupling still matter for reasons ENTRY_ONLY's isolated read cannot see. Cheapest possible test of the round's central finding — one predicate change, R-68's own harness and gates apply unmodified. |
+| ~~B-37~~ | ~~Does a rule that tightens ONLY the entry threshold...~~ | COST | **STALE DUPLICATE, struck by R-72** | This row is a leftover live copy of the row directly above it, filed when R-68 first opened B-37 and never struck when R-69 answered it the same day. Found during R-72's ledger housekeeping while re-ranking the backlog; not re-tested, just corrected — see the row above for the actual DONE→R-69, ANSWERED (NO) verdict. Nothing here was treated as open or actionable by R-72 or any round between R-69 and R-72; this correction only fixes the written record. |
 | ~~B-34~~ | ~~Extend both R-67 grids past the edges their winners leaned against, and — the more important half — run a SYMMETRIC deadband as a matched arm beside the asymmetric one~~ | COST | **DONE → R-68, ANSWERED** | Filed by R-67. Ran as a two-threshold decomposition (contains R-67's symmetric-in-magnitude arm as its diagonal) rather than the literal symmetric arm, since a symmetric band on a long/flat gate coincides with R-67's rule (amendment recorded and justified in R-68's write-up, backed after the fact by Guan–Peng–Xu's no-symmetry result). **Both questions answered.** The curve turns over: hump-shaped, peaking at δ≈0.16 on both selection windows (confirmed independently by the sweep and by a Patton–Timmermann monotonicity test), degrading past ≈0.22 — F3's worry (an unbounded far-end improvement) does not materialize. And the confound separates: ENTRY_ONLY (tighten only the entrant threshold) carries the edge R-67 attributed to the coupled rule; EXIT_ONLY (soften only the exit, R-67's original framing) is worse than the coupled diagonal at every matched δ with a *negative* cross-window rank correlation. `further_work=False` on the selected configuration regardless. The grid cap this item's own note cited (dLC's 1.6σ) was found miscalibrated — it is a full-width saturation applied as a half-width cap — and is corrected to 0.80σ in R-68's write-up. Reopens as **B-37** (does entry-only alone reproduce the edge with one parameter). |
 | ~~B-35~~ | ~~Measure the stopping premium of the forced exit (Kaminski & Lo 2014)~~ | COST | **DONE → R-68, ANSWERED** | Filed by R-67. Measured before either R-68 branch ran (`experiments/r68_stopping_premium.py`). At the horizon the mechanism acts on (mean grace span 0.17 days at δ=0.080) the incumbent's forward return after a downward crossing is **positive** (+0.00504 at H=1d vs +0.00048 unconditional) — a **negative** stopping premium, Kaminski–Lo's random-walk case reproduced, consistent with score autocorrelation of −0.078/+0.059/−0.061 at 1/5/14 days. Priced: grace periods cost +0.311 log units at δ=0.080 against +1.044 saved in avoided round trips, net +1.355 — and the saving **asymptotes** while grace span keeps growing, which correctly predicted the sweep's hump shape found later the same round. Every interval contains zero. Closes with a nameable reason: the exit was never informative on this signal, which is also why R-68's ENTRY_ONLY beat EXIT_ONLY. |
 | **B-29** | Separate the two things R-64's conservative arm confounded: a trade-to-the-boundary destination **that still snaps to exactly flat when `desired == 0`**. R-64 measured the destination change as worth a real 43% of turnover with a D2 slope in its favour, and killed it on the residual long the band leaves behind in bear regimes — but those are two independent consequences of one line, and only one of them is fatal | COST | **DONE -> R-66, REJECTED** | Filed by R-64. Cheapest live item on the list: one conditional in a loop this project already has two implementations of, zero new data, zero new fitted parameters, and it inherits R-64's whole pre-registered battery (D0–D5) unchanged so the comparison is already specified. Its own named failure mode: the snap-to-flat may just re-introduce the turnover the boundary saved, at exactly the moments (regime exits) when the step is largest — in which case the 43% figure was never bankable and the answer is a number rather than another attempt. | **ANSWERED, and the answer is a refutation rather than a rescue.** R-66 ran both readings of this item — the literal conditional (conservative) and a derived vanishing-width band that reaches flat without a special case (novel). Both NEGATIVE, and between them they refute the premise the item was filed on: separating the destination from the never-goes-flat consequence closes only **14.5%** of R-64's ETH-A gap against a pre-registered 50% bar, the dose-response inverts, and the novel arm's isolation probe puts **70% of the loss** at a setting where the width change is switched off and fees are *lower* than v4's. The item's own named failure mode (the snap gives back the turnover the boundary saved) was only partly realised — ~75% of R-64's saving is retained and turnover still falls 41% — so the mechanism worked and the story motivating it was wrong. The residual long **does** explain R-64's BTC drawdown escalation, which disappears once flat is reachable; it does not explain the ETH-A growth loss. Live diagnosis is tracking lag.
-| **B-30** | Settle what `broker.REBALANCE_DEADBAND = 0.05` is doing to every futures figure in this project before another round reads one. Measured on `kelly_regime_v4` itself, intended rebalances → fills is 86.0% / 96.2% on spot but **48.1% / 53.8% on 5x futures**: the broker silently discards about half the incumbent's own rebalances, because 5% of *max* notional is 25% of equity at 5x | methodology (not one of the four constraints) | **OPEN, actionable today** | Filed by R-64, measured independently by both its branches and reproduced by the operator. Not a strategy question and not a bug to "fix" unasked — the band exists so strategies can re-emit a target every bar without churning fees, and changing it would move every number in the comparison table. What is needed is the measurement made explicit: how much of each registered strategy's futures column is the band, and whether the leverage-scaling of the threshold (5% of equity×leverage rather than 5% of equity) is intended. Until then the futures column carries a second caveat alongside funding, and README says so. |
+| ~~B-30~~ | ~~Settle what `broker.REBALANCE_DEADBAND = 0.05` is doing to every futures figure in this project before another round reads one~~ | methodology (not one of the four constraints) | **DONE → R-72, ANSWERED** | Filed by R-64. Generalized to all 25 registered strategies × 2 markets × 2 splits (154 configs): the gap is **not** a general futures property (unweighted mean 62.7%/52.3% train, 65.6%/65.0% val) but is concentrated in the 8 strategies sized via `ctx.order_notional()` — 7 of 8 (the whole kelly_regime family plus `champions_council`) show 21–67pp gaps; the 17 `order_target`-based strategies are mixed-to-reversed. An isolated equity-scaled-deadband fix (broker subclass, `broker.py` untouched) restores fill-through to ~100% but does not help `kelly_regime_v4` — fees rise, growth/Sharpe/drawdown all move the wrong way on the point estimate (both bootstrap intervals contain zero). **No broker change made.** README's warning box updated from "not yet settled" to measured and scoped. |
+| **B-33** | Settle the **holdout convention for panel reads**. `W_FULL6` runs to the last bar and therefore includes post-2023 U6 data; R-47/B-08, R-57, R-63 and now R-65 have all recorded such reads as **+0** on the grounds that the reserved BTC/ETH holdout is untouched. That is a convention, not a derivation, and it has now been applied often enough that it is load-bearing | ERR | **DONE → R-72, ANSWERED** | Flagged by R-65's novel branch. The literal leakage channel (a fitted parameter crossing from panel-2023+ into a BTC/ETH decision) is clean — verified across R-63/65/67/68's eight branch files. A different, unflagged channel was not: all eight branches build a `BTC_HOLD` reporting-only context cell that reads real BTC 2023+ price data (never feeding any promotion gate) — **+9** uncounted consultations (R-63 +2, R-65 +2, R-67 +2, R-68 +3), now applied. Researcher-degrees-of-freedom risk named as honestly unclosed, not dismissed. Panel-vs-BTC correlation is ~0.56 both sides of 2023-01-01 — a panel-2023+ read is not price-independent of a BTC/ETH-2023+ read even with zero shared code. Running total moves ~627 → ~637 (the +9 correction plus R-72's own +1 for the correlation check itself) — see [Holdout consultations to date](#holdout-consultations-to-date). Standing instruction: any future round descended from `r63_shared.py`'s pattern must retire or explicitly count its `BTC_HOLD` cell. |
 | ~~B-31~~ | ~~Attack the **long/flat gate**, which R-65 identified as where the remaining turnover lives once buffering has done its work. R-63's frozen rule holds only positive-scoring assets and stands flat otherwise, so every zero-crossing of the incumbent's score forces an exit — a channel R-65's conservative branch measured as **invariant at 0.386/day across all 20 cells of a holding-period grid** while voluntary swaps fell 16-fold. Candidate fixes: a hysteresis band around zero (enter above +δ, exit below −δ), a continuous rather than binary positivity weight, or letting the partial-adjustment recursion carry the position through a crossing instead of resetting it~~ | COST | **DONE → R-67, ANSWERED** | Filed by R-65. **The mechanism was real and R-67 broke it; the round failed anyway.** Two of the three fixes this row names were run — asymmetric hysteresis on the eligibility test (conservative) and the partial-adjustment recursion (novel). Forced exits fall **242 → 8 events** on W_TRAIN (0.3781 → 0.0125/day, a 30× cut) with the voluntary-swap channel **invariant at 0.117–0.122/day** at every δ, so the fix reaches exactly and only the channel this row named — **the floor was a threshold artifact, not score noise (F2 refuted)**. Turnover reaches 0.102/day (conservative) and 0.336/day (novel), both **below the 0.641/day break-even this row quotes**, and the conservative arm becomes the first on this axis to pass the 0.40% fee tier. The predicted price — holding a declining asset longer — **was not paid**: drawdown improved at every step on both arms. Both still fail `(D1 or D2)`: +1.093 [−2.019, +4.106] and +1.246 [−1.795, +4.325]. This row's own honest prior was half right: the gate mattered for the discrete-selection family (0.900 → 0.102/day) and the smoothed arm did reach a low rate without a gate fix — but the smoothed arm also **failed D4**, which the gate-fixed discrete arm passed. Reopens only as **B-34** (extend the grids; run the symmetric deadband as a matched arm) and **B-35** (measure whether the exit was informative at all). |
 | **B-32** | Multi-asset strategy **registration**, so that a bar-by-bar cross-asset allocator can enter the comparison table at all. R-49/B-17 built the "can it be done" infrastructure and its own docstring says it cannot express this shape; R-65 is the first round to produce a candidate whose numbers would have been worth a row (net +0.589 vs a volatility-matched hold at 0.19 turnover/day, $1,000 → $5,043) and which the table therefore cannot hold | ERR (methodology gap) | **OPEN** | Filed by R-65, promoted from B-17's deferred half. Until this exists, every result on the cross-sectional axis is confined to `experiments/` and the ledger, and cannot carry a measured interval in `reports/inference/bootstrap.csv` beside the single-asset rows — the exact asymmetry R-30 built the interval requirement to prevent. Not urgent while every candidate fails its interval anyway; it becomes blocking the moment one does not. |
-| **B-33** | Settle the **holdout convention for panel reads**. `W_FULL6` runs to the last bar and therefore includes post-2023 U6 data; R-47/B-08, R-57, R-63 and now R-65 have all recorded such reads as **+0** on the grounds that the reserved BTC/ETH holdout is untouched. That is a convention, not a derivation, and it has now been applied often enough that it is load-bearing | ERR | **OPEN** | Flagged by R-65's novel branch rather than inherited silently. The question is whether a U6 read past 2023-01-01 is genuinely free for deflated-Sharpe purposes or whether the running ~627 understates the program's true consultation count. If the convention is rejected, R-65 contributed ~+2 and every prior panel round needs the same correction. Cheap to settle and it changes the denominator of every significance claim on the panel; the count is deliberately left at ~627 pending it rather than moved on one session's unilateral reading. |
 | **B-28** | Reopen "more instruments" only against a universe whose **breadth** — not whose asset count — clears the bar R-63 measured: mean pairwise daily-return correlation materially below 0.634, or a Grinold equal-correlation breadth materially above 1.47, or a holding period long enough that the 2.86 leader-changes-per-day that cost the novel arm 8.02 log units stops being the binding cost. R-63 established that the cross-sectional signal here is real and merely unaffordable, so the axis is closed for this data rather than on principle | INFO, N≈3 | **HALF-CLOSED → R-65**; breadth clause still blocked on data this repo does not have | Filed by R-63. **Its holding-period clause is answered: R-65 ran it and the value/cost curves cross** — the affordable window is turnover 0.06–0.33/day, holding 1.4–5 days, and at a derived trading rate the same signal costs 0.43 log units instead of 8.02 while its frictionless edge rises. Still NEGATIVE on the interval. The **breadth** clause is untouched and remains blocked. Not actionable from inside a session today: the eight committed instruments are the universe, and R-63 measured them at 1.47 effective bets. Reopening needs either genuinely less-correlated instruments (a different asset class, which this project cannot fetch or simulate) or a lower-frequency bar series that would cut the leader-change rate — note that this project's entire dataset is 5-minute bars, so the second is a data-acquisition task, not a strategy task. Recorded so the idea is not re-tried blind on the same eight assets, which is exactly what section C exists to prevent. |
 | ~~B-01~~ | ~~E-process regime detection with unified Kelly sizing~~ | ERR, N≈3 | **DONE → R-28**, qualified by R-31 | NEGATIVE on the promotion bar. It read as the strongest risk result in the project — 0 of 40 windows deeper than the incumbent — until B-11 compared the two at equal risk and found that number was about exposure, not about the gate. (R-26's null round listed this as untried; R-28 is the round that actually ran it.) |
 | ~~B-04~~ | ~~Purged CV, deflated Sharpe, block-bootstrap CIs on every headline~~ | ERR | **DONE → R-29** | The guess was right: 10 of 96 adjacent pairs distinguishable, none of them in the top eight. Also closes R-25. `tradebot.inference` is now a permanent module with 27 tests; step 4 of the routine can be mechanical from here. |
@@ -9624,6 +9829,27 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-21 · ~637** — R-72: **+10** on top of R-71's ~627, in two parts.
+  (1) **+9 retroactive**, discovered by this round's own audit rather
+  than contributed by it: R-63, R-65, R-67 and R-68's branch files each
+  build a `BTC_HOLD` reporting-only context cell that loads BTC via
+  unrestricted `load_dataset()` and reindexes onto `W_FULL6`, which is
+  56.8% post-2023-01-01 (verified) — real 2023+ BTC price reads that
+  never fed a `d1_pass`/`d2_pass`/`further_work()` gate in any of the
+  four rounds (all decisions there run through `MATCHED_HOLD`/`EW_HOLD`/
+  `VOLMATCH_HOLD` instead) but were never counted either. Attributed
+  R-63 +2, R-65 +2, R-67 +2, R-68 +3 = +9, applied here rather than by
+  editing those rounds' own already-published bullets (nothing is
+  deleted). (2) **+1 this round's own**: the audit's part-3 correlation
+  check (BTC-vs-panel daily returns split at `OOS_START`) is itself a
+  BTC-2023+ price read, by the identical convention this finding just
+  established — counted honestly rather than exempted because it was
+  "only" a correlation check. This round's other work (the B-30
+  fill-through sweep and equity-scaled-deadband test, 154 configs) read
+  zero bars dated 2023-01-01 or later: `assert_no_holdout()` ran and
+  passed on every conservative-branch invocation, max timestamp read
+  `2022-12-31 23:55:00+00:00`. See B-30/B-33 in section D and R-72's own
+  entry in section B for the full write-up.
 - **08-20 · ~627** — R-71: **+0** on top of R-70's ~627. Pure methodology/
   infrastructure round — neither branch imports `load_dataset` or any
   other committed 2017-2026 price file. The novel branch's one "real

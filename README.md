@@ -86,11 +86,23 @@ that carry one.
 > so on futures it silently discards about **half** of a strategy's
 > intended rebalances. Measured on `kelly_regime_v4` itself, intended
 > rebalances become fills 86.0% / 96.2% of the time on spot but only
-> **48.1% / 53.8%** on `futures_5x`. A futures figure for any strategy
-> routing through `order_notional` is therefore partly a measurement of
-> that band rather than of the strategy. Found and reproduced three
-> times independently in R-64; filed as **B-30** in
-> [docs/LEDGER.md](docs/LEDGER.md) and not yet settled.
+> **48.1% / 53.8%** on `futures_5x`. **R-72 settled how general this
+> is**: measured on all 25 registered strategies, the gap is *not* a
+> general futures property (mean fill-through 62.7%/52.3% train,
+> 65.6%/65.0% inner-validation — close to even) but is concentrated in
+> the 8 strategies that route through `order_notional` — 7 of 8, the
+> entire `kelly_regime` family plus `champions_council`, show 21–67
+> percentage-point gaps; the 17 `order_target`-based strategies are
+> mixed-to-reversed. A candidate fix (scale the deadband by equity
+> instead of max notional) was tested in isolation and rejected: it
+> restores fill-through to ~100% but makes `kelly_regime_v4`'s own
+> futures growth, Sharpe and drawdown worse on the point estimate (both
+> bootstrap intervals contain zero) — so no broker change was made.
+> Found and reproduced three times independently in R-64; filed as
+> **B-30** in [docs/LEDGER.md](docs/LEDGER.md) and closed by R-72. A
+> futures figure for a `kelly_regime`-family strategy or
+> `champions_council` should still be read with this caveat attached;
+> for the other 17 registered strategies it does not materially apply.
 
 > 🚨 **This is a ranking of point estimates, and the ordering is mostly
 > not real.** Testing every adjacent pair with a paired block bootstrap,
