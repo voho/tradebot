@@ -369,7 +369,24 @@ def spot_check_no_lookahead(btc_full: pd.DataFrame, gamma: float = 0.02,
     ok = bool(np.allclose(c_t_full[:n], c_t_trunc, equal_nan=True))
     print(f"  no-lookahead spot check (drop last calendar day, gamma={gamma}, "
           f"conf_floor={conf_floor}): c_t on all {n:,} earlier bars unchanged = {ok}")
-    return ok
+
+    # Stronger, direct version of the same claim: perturb ONLY the last
+    # day's own closes (so its own realized r_d flips sign) and confirm
+    # the LAST day's own broadcast c_t is UNCHANGED -- i.e. day D's value
+    # really was computed from information through day D-1 only, not
+    # merely "unaffected by deleting day D" (which the check above
+    # already showed for every earlier day, but says nothing about D
+    # itself).
+    perturbed = train_df.copy()
+    last_day_mask = perturbed.index.normalize() == last_day
+    perturbed.loc[last_day_mask, "close"] = perturbed.loc[last_day_mask, "close"] * 0.5
+    c_t_perturbed, _ = compute_daily_confidence(perturbed, gamma=gamma, conf_floor=conf_floor)
+    last_day_mask_arr = np.asarray(last_day_mask)
+    last_day_ok = bool(np.allclose(c_t_full[last_day_mask_arr],
+                                    c_t_perturbed[last_day_mask_arr], equal_nan=True))
+    print(f"  no-lookahead direct check (halve last day's own closes): "
+          f"last day's own broadcast c_t unchanged = {last_day_ok}")
+    return ok and last_day_ok
 
 
 def causal_probe(btc_full: pd.DataFrame, gamma: float = 0.02,
