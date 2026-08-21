@@ -315,6 +315,166 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-91 · 08-21 · NEGATIVE (both branches) — the third Levine-Pedersen axis, state-dependence of the horizon (B-40, Goulding-Harvey-Mazzoleni momentum turning points): the literature's own motivating claim does not replicate on BTC, and the causal branch never leaves its burn-in
+
+**Direction.** Backlog item **B-40** (filed by R-89's literature pass, left OPEN by
+R-90 which worked sibling item B-41 instead): **Goulding, Harvey & Mazzoleni (2023)**,
+"Momentum Turning Points," *Journal of Financial Economics* (SSRN 3489539; Duke working
+paper P158) — partition price history into four states by agreement/disagreement of a
+FAST vs SLOW trend signal: **Bull** (both bullish), **Bear** (both bearish),
+**Correction** (fast turned bearish, slow still bullish — a pullback in an uptrend), and
+**Rebound** (fast turned bullish, slow still bearish — a bounce in a downtrend). Their
+empirical claim: the two disagreement ("turning-point") states carry materially different
+(the paper says worse) risk-adjusted returns than the two agreement states, and blending
+fast/slow weight conditional on state improves risk-adjusted performance. This round's
+fast/slow proxy is `kelly_regime_v4`'s own anchor-ladder extremes — 20-day (fastest) and
+80-day (slowest); the 40-day middle anchor and the unmodified 3-anchor vote are left as
+shipped in Bull/Bear bars, and only Correction/Rebound bars get a scaler, a scope
+restriction pre-registered in `experiments/r91_shared.py` to keep the identity point
+trivial. **Which constraint: SIZE** — exposure conditioned on the vote's own internal
+anchor-agreement structure, no new external data (explicitly not a twelfth INFO-axis
+signal, and not a sixth regime-timing mechanism against the six-episode detection-lag
+gate R-82–87 already exhausted, because this classifies a recurring STATE from v4's own
+anchors rather than trying to detect the date of a historical transition faster).
+**Not a duplicate of:** R-59/R-60 (continuous vol-adaptive anchor/scale rescaling, not a
+discrete inter-anchor-agreement state); R-40 (unweighted ensembling across ladders, no
+state conditioning); R-34 (`harsanyi_crowd`'s Bayesian posterior as a SIZE input — a
+different signal entirely); R-82/83/85/86/87 (HMM/BOCPD/Kalman LLT/CSD/transfer entropy —
+external regime-DETECTION mechanisms scored against the six-episode gate; this round
+never touches that gate, it classifies every bar into a recurring state from v4's own two
+anchors); R-89 (latch geometry / response-function shape — both operate on the
+3-anchor vote's own construction, left unchanged here); B-42 (deriving the anchor SPAN
+from a fitted generative model — a different R-89 follow-on; this round changes what the
+existing anchors' agreement is used for, not their span).
+
+**Falsification test, named before any code.** GHM's claim requires Correction AND
+Rebound to both rank below Bull AND Bear in state-conditional risk-adjusted return. A
+causal, inner-train-only measurement (`causal_state_stats`) was pre-registered as an A0
+kill switch: if the ranking does not hold, the paper's mechanism does not replicate on BTC
+and both branches are NEGATIVE regardless of downstream numbers, per the R-89 novel
+branch's own Step-0 precedent (still run to completion for the record, not skipped).
+
+**What was done.** `experiments/r91_shared.py` — written and frozen by the operator before
+either branch was dispatched — supplies `state_labels()` (the four-state classifier, built
+from v4's own latched per-anchor votes), `CausalStateScaler` (an expanding-window,
+one-bar-lagged per-state performance tracker), `causal_state_stats` (the one-shot A0
+descriptive measurement), and the same `compare()`/`causal_truncation_probe()`/`fee_at()`
+machinery R-89/R-90 used, plus the full A0–A3 gate and B1–B5 promotion-bar
+pre-registration in its module docstring. Two branches, disjoint files:
+
+- **`experiments/r91_conservative_state_discount.py`** — a FIXED discount `δ` applied to
+  v4's raw exposure at Correction/Rebound bars only (1.0 in Bull/Bear). Frozen grid:
+  identity `δ=1.0` (not counted) + swept `δ∈{0.0,0.25,0.5,0.75}` (4 configs).
+- **`experiments/r91_novel_causal_state_scaler.py`** — `CausalStateScaler`, driven bar-by-
+  bar with `scaler_for(state)` read before `update(state, bar_return)` on every bar (never
+  reset mid-frame; A3-verified causal), clipped to `[0,1]`, applied at Correction/Rebound
+  bars only. Frozen grid: identity (`min_obs=1e9`, never fires; not counted) + swept
+  `k∈{1.0,2.0,4.0} × min_obs_days∈{180,365}` (6 configs).
+
+**Configurations evaluated: 12 distinct configurations, 48 scored cells** — conservative:
+5 configs (1 identity + 4 swept) × 4 BTC cells = 16, plus 2 ETH cells (finalist) plus 2
+fee-robustness cells (finalist) = 20; novel: 7 configs (1 identity + 6 swept) × 4 BTC
+cells = 28, no ETH/fee cells (no finalist reached Step B). Plus the shared A0 descriptive
+measurement, independently computed three times (operator pre-dispatch, and separately by
+each branch) — not counted as a swept configuration, the same convention R-89 applied to
+its own Step-0 regression fits.
+
+**Result.**
+
+*Shared A0 measurement, three independent computations, all matching.* Bar-level BTC
+log returns on inner-train (420,768 bars, 2017-01-01→2020-12-31), grouped by
+contemporaneous `state_labels`:
+
+| state | n | mean | vol | Sharpe-like |
+|---|---|---|---|---|
+| Bull | 174,621 | +2.750e-05 | 0.002768 | **+0.190** |
+| Bear | 125,249 | −1.708e-05 | 0.003171 | **−0.103** |
+| Correction | 55,268 | −1.111e-05 | 0.003235 | **−0.066** |
+| Rebound | 65,630 | +2.062e-05 | 0.002136 | **+0.185** |
+
+Rule: Correction and Rebound must both rank below min(Bull, Bear) = −0.103. Correction
+(−0.066) already fails this; **Rebound (+0.185) fails far more severely — it ranks above
+Bear and close to Bull.** **A0 kill switch FIRES.** GHM's own motivating claim — that
+turning-point (disagreement) states carry worse risk-adjusted returns than trend
+(agreement) states — does not replicate on BTC 5-minute bars: specifically, Rebound
+bars (a fast anchor turning bullish while the slow anchor is still bearish) carry
+*favourable* contemporaneous risk-adjusted returns, plausibly because BTC's characteristic
+sharp V-shaped recoveries are exactly this pattern — the state that most looks like "early
+in a new rally," not "noise to de-risk." This is an asset-specific transferability
+failure of the published mechanism, not a generic negative.
+
+*Conservative — fixed discount.* Step A: A1 exact (max|diff|=0.0). A2 R² vs v4 on
+inner-train: δ=0.0→0.798, δ=0.25→0.877, δ=0.5→0.942, δ=0.75→0.985 (INERT at the ≥0.98
+ceiling, reported and scored anyway per the "not a reason to drop a config" convention).
+A3 PASS on identity + all 4. **Every one of the 16 BTC (config×slice×market) cells is
+negative** — the discount loses to v4 in every cell, at every δ, on both markets and both
+slices; every 95% paired interval includes zero (no directional signal, just a weaker,
+noisier candidate). Finalist by the frozen selection rule (best inner-val futures
+`d_loggrowth` among Step-A survivors): **δ=0.75**, selstat **−0.139** [operator-
+independently reproduced exactly, −0.1389 with 95% CI [−0.368, +0.068]]. **B1 FAIL**
+(positive in 0/4 cells, excludes zero in 0/4). **B2 PASS on the drawdown leg only**
+(ΔmaxDD −1.32pp futures / −1.23pp spot, both risk-matched — expR/volR ∈[0.9,1.1] — a
+genuine but noise-floor-sized effect from modestly less exposure at turning points, not
+risk-adjusted outperformance; the Sharpe leg fails, ΔSharpe −0.265 futures / −0.065 spot).
+**B3 PASS informationally** (monotone plateau: losses shrink monotonically as δ→1, i.e.
+as the discount weakens toward the no-op identity — every neighbour moves the same
+direction). **B4 PASS** (ETH inner-train: spot −0.026 vs −0.248, futures −0.047 vs −0.538
+— same sign as BTC on both markets, but the sign both replicate is the *losing* one).
+**B5 PASS** (0.40% taker: spot −0.032→−0.034, futures −0.139→−0.108 — sign preserved,
+i.e. the loss is cost-robust rather than fee-driven). Three of five clauses read PASS,
+but B2–B5 are all "consistent in the losing direction," not evidence of an edge; **B1**,
+the one clause that actually asks "is there a positive difference," **fails decisively
+and is not close.**
+
+*Novel — causal expanding-window scaler.* Step A: A1 exact (max|diff|=0.0, inner-train and
+full pre-holdout frame). A2 R² vs v4 on inner-train: k=1.0/180d→0.997, k=1.0/365d→1.000,
+k=2.0/180d→0.992, k=2.0/365d→1.000, k=4.0/180d→0.989, k=4.0/365d→1.000 — **6 of 6 swept
+configs INERT.** Diagnosed, not merely observed: `min_obs` is an absolute per-state bar
+count (51,840 / 105,120 bars for 180d/365d), but Correction has only 55,268 bars and
+Rebound only 65,630 in the whole 4-year inner-train — the 365-day configs never cross
+threshold anywhere in inner-train (hence exact R²=1.00000, byte-identical to v4) and the
+180-day configs cross it only in the final months, sampled directly: at bar 378,691
+(2020-08-07, 92% of the way through inner-train) Correction's causal Sharpe-like estimate
+is still `nan` and Rebound's has only just become defined. A3 PASS on identity + all 6.
+**Zero configurations reach Step B eligibility**, so the pre-registered "report if none
+survive Step A" clause applies: the full 28-cell BTC grid was still run for the record
+(every `inner_val` cell reads *exactly* 0.000 for every config, including the 180-day
+ones — `compare()`'s own ~80-day warmup prefix means each slice's tracker restarts fresh
+and never accumulates 51,840+ same-state bars inside the 2-year inner-validation window
+alone), but no finalist exists and B1–B5 were not evaluated against one. **Reusable
+methodological finding, independent of GHM specifically:** an absolute per-state
+bar-count burn-in, combined with this framework's own per-slice-local-warmup convention
+(the same convention v4's own EWM vol factor uses), can make a causal/dynamic estimator
+silently degenerate to inertness on any evaluation slice shorter than state-frequency ×
+required-observation-count — a check worth running (state frequency × slice length vs.
+`min_obs`) *before* dispatching a future per-state estimator, not after.
+
+**Operator-independent verification.** The A0 table was computed three times (operator
+pre-dispatch, conservative branch, novel branch) and matches to rounding in all three.
+The operator separately re-derived, outside both branches' own runs: the conservative
+branch's A1 identity (0.0) and finalist selection statistic (−0.1389, matching exactly);
+the novel branch's A1 identity (0.0) and two A2 R² values (k=2.0/180d→0.9919,
+k=4.0/365d→1.0000, both matching exactly).
+
+**Verdict.** **NEGATIVE, both branches**, each for two independently sufficient reasons.
+One-line lesson: the third of Levine & Pedersen (2016)'s three non-redundant linear-filter
+axes — state-dependence of the horizon — was a real, literature-motivated, testable
+question, and it failed not generically but for a named, asset-specific reason (BTC's
+Rebound states are favourable, not risky) plus a named methodological one (an absolute
+per-state burn-in threshold can outlast the very validation window meant to test it).
+**Holdout counter: +0.** Neither branch read, printed, or held in memory any bar dated
+2023-01-01 or later — `load_btc()`/`load_eth()`'s `assert_no_holdout` guards ran clean on
+every load site, both branches print their own max-timestamp line (2022-12-31 23:55:00),
+and the operator's independent re-derivations above never touched a frame beyond the same
+truncation. Running program-level total stays **~637** (R-89/R-90's figure, unchanged) —
+see the bullet added below in
+[Holdout consultations to date](#holdout-consultations-to-date). Neither pre-registered
+decision rule moved after seeing any number. **Next step:** **B-40 is now CLOSED,
+NEGATIVE** (see section C and the backlog table). **B-42** (deriving the anchor span from
+a fitted generative model, R-89's other untested follow-on) remains OPEN. **B-32**
+(multi-asset strategy registration) remains the only ranked, unblocked backlog item with a
+real strategy-improvement angle.
+
 ### R-90 · 08-21 · NEGATIVE (both branches) — `kelly_regime_v4`'s first path-dependent exit, a trailing-stop ratchet tried fixed-percentage and ATR-adaptive, both replicate the whipsaw risk B-41 named in advance
 
 **Direction.** Backlog item **B-41** (filed by R-89's literature pass): a path-dependent
@@ -9426,6 +9586,8 @@ trip.
 
 | what | why | ref |
 |---|---|---|
+| Fixed discount `δ∈{0.0,0.25,0.5,0.75}` applied to `kelly_regime_v4`'s exposure at Goulding-Harvey-Mazzoleni (2023) Correction/Rebound "turning-point" states (built from v4's own 20d/80d anchor votes), 1.0 (unchanged) in Bull/Bear | 20 configuration-cells (5 configs incl. identity × 4 BTC cells, 2 ETH, 2 fee). Pre-registered A0 kill switch fires: BTC's causal inner-train state-conditional Sharpe-like ranks Rebound (+0.185) above Bear (−0.103), contradicting GHM's own claim that turning-point states carry worse risk-adjusted returns — plausibly because Rebound (fast anchor turns bullish, slow still bearish) captures BTC's characteristic sharp V-shaped recoveries. Independently of A0, **every one of the 16 BTC cells is negative** at every δ (B1 FAIL, 0/4 positive, 0/4 excludes zero); the finalist δ=0.75 (selstat −0.139, operator-reproduced exactly) passes B2 (drawdown only, risk-matched), B3 (monotone plateau) and B4/B5 (ETH and 0.40%-fee sign-consistency) only in the sense that the *loss* replicates consistently — not evidence of an edge. Do not re-try a fixed discount on GHM turning-point states built from v4's own fast/slow anchors expecting a return improvement — the states these anchors define do not carry the risk asymmetry the discount assumes. | R-91 (conservative), closes B-40 |
+| Causal expanding-window, one-bar-lagged per-state performance scaler (`CausalStateScaler`, `k∈{1.0,2.0,4.0}×min_obs_days∈{180,365}`) applied to `kelly_regime_v4`'s exposure at the same GHM Correction/Rebound states | 28 BTC cells (7 configs incl. identity × 4 cells); no ETH/fee cells (no finalist reached Step B). A0 kill switch fires (same measurement as the conservative sibling). Independently, **all 6 swept configs fail A2 non-inertness** (R² vs v4 on inner-train: 0.989–1.000, ceiling 0.98) — the `min_obs` grid (51,840/105,120 bars per state) is large relative to how rare Correction (55,268 bars) and Rebound (65,630 bars) actually are across the whole 4-year inner-train window: the 365-day configs never cross threshold at all (exact R²=1.00000) and the 180-day configs only in the final months (sampled: at 92% of the way through inner-train, Correction's causal estimate is still undefined). Every `inner_val` cell reads exactly 0.000 for every config, because `compare()`'s own ~80-day warmup prefix never lets the tracker accumulate enough same-state history inside the 2-year inner-validation window alone. **Reusable finding independent of GHM:** an absolute per-state bar-count burn-in combined with this framework's per-slice-local-warmup convention can make a causal estimator silently degenerate to inertness on any slice shorter than state-frequency × required-observation-count — check that arithmetic before dispatching a future per-state estimator. Do not re-try this construction with a `min_obs` this large relative to Correction/Rebound's own base rate; a materially smaller `min_obs` (or one scaled to each state's own frequency rather than a fixed bar count) is a different, untested question. | R-91 (novel), closes B-40 |
 | Fixed-percentage trailing stop on `kelly_regime_v4`'s price (Han, Zhou & Zhu 2016's literal construction), instant unconditional restart, `stop_frac∈{0.08,0.12,0.16,0.20,0.25}` | 6 configurations (1 identity + 5 swept). Identity exact (max abs diff 0.0), 0/5 inert. Selection surface non-monotone and mostly negative (0.08→−0.190 … 0.20→+0.042 finalist … 0.25→−0.030). Finalist positive in only 2/4 cells (B1 FAIL), both swept neighbours reverse sign (B3 FAIL — a peak, not a plateau), and on the finalist's own inner-train/futures run 16 of 20 stop-outs (80%) are whipsaws with a negative point estimate on that same cell — B-41's own named risk, confirmed exactly as pre-registered (B4(b) FAIL). ETH replicates sign (B4(a) PASS) and the 0.40% fee tier preserves sign (B5 PASS), but 3 of 5 clauses fail. Exposure/vol ratios ≈1.00 throughout — genuinely risk-matched, not an exposure-level artifact. Operator-reproduced bit-for-bit (identity, finalist cell). Do not re-try a fixed-percentage instant-restart trailing stop on this vote/scale/deadband combination at this grid expecting it to clear the promotion bar — the routine intra-trend pullback this stop distance brackets is exactly what it whipsaws on. | R-90 (conservative) |
 | ATR-scaled (`k×ATR₁₄d/close`) trailing stop on `kelly_regime_v4`, restart gated on price reclaiming the exact stop-out level plus a minimum cooldown (Sepp & Lucic 2026 stop-scaling + Hsieh 2023's restart CONCEPT, not an exact replicated formula), `k∈{2.0,3.0,4.0,5.0}×cooldown_days∈{0,3}` | 9 configurations (1 identity + 8 swept). Identity exact (max abs diff 0.0 on inner-train and the full pre-OOS frame), 0/8 inert. Every one of the 8 swept configs loses significantly on both inner-train cells (16/16 intervals exclude zero, all negative); the "finalist" (k=2.0, cd=3d) is the least-bad loser (selstat −0.0148, positive in only 1/4 cells — B1 FAIL). Passes the Sharpe leg of B2 (+0.542/+0.683) but `exposure_ratio` collapses to 0.00–0.30 on inner-validation — the accompanying drawdown "improvement" is explicitly not counted (risk_matched=False), and the Sharpe pass itself is flagged as a likely variant of the same held-less artifact in a different metric. Whipsaw rate on the finalist's own inner-train run is **100%** (71/71 re-entries), mechanically near-guaranteed by the reclaim condition sharing its own inequality with the whipsaw definition — B4(b) FAIL. Reverses sign at the 0.40% fee tier on futures — B5 FAIL. A strict data-driven restart (full price reclaim + 3-day cooldown) reproduces, rather than cures, Hsieh's own named failure mode of a naive stop ("permanent de-risking after one bad episode"). Operator-reproduced bit-for-bit (identity, finalist cell, exposure ratio, whipsaw diagnostic). Do not re-try a reclaim-gated restart on this construction expecting it to reduce the whipsaw-rate statistic as defined here — the two are mechanically linked; a materially looser reclaim condition (e.g. a fractional retracement rather than the exact exit price) is a different, untested question. | R-90 (novel) |
 | Asymmetric entry/exit thresholds (`d_in≠d_out`, 5x5 grid over {0.005,0.01,0.02,0.03,0.05}²) on `kelly_regime_v4`'s own latched anchor vote — the Dai-Zhang-Zhu (2010) / Guan-Peng-Xu (2020) single-asset construction | 25 configurations. Identity exact (max abs diff 0.0), 1/25 inert (the control itself), 24 scored. The swept surface has no asymmetry structure — it is a width surface, monotonically losing as either threshold widens — and the finalist (d_in=0.01, d_out=0.005) sits one grid step from the diagonal at +0.040 log units, about a quarter of the +0.13-0.26 bar needed to resolve against v4 on inner-validation. Fails 3 of 5 pre-registered clauses (interval, plateau, ETH replication) and confirms rather than refutes its own named counter-prediction: de Lataillade, Deremble, Potters & Bouchaud (2012) §6.3's leading-order symmetric band. `kelly_regime_v4`'s never-swept `band=0.01` sits at or beside this sweep's own symmetric optimum. Operator-reproduced bit-for-bit and re-derived independently (finalist statistic, exact match). Do not re-try this exact grid on BTC's long/flat vote expecting asymmetry to bind. | R-89 (conservative) |
@@ -9510,6 +9672,31 @@ trip.
 ---
 
 ## D. Backlog (ranked)
+
+**Re-ranked 08-21 after R-91, and B-40 is closed the same session.** A two-branch round
+worked the other of the two literature-pass items R-89 left OPEN — **B-40**, Goulding,
+Harvey & Mazzoleni's momentum-turning-point states — directly, per the backlog-first rule
+(B-41, the third sibling, was already closed by R-90). Both branches **NEGATIVE**, and
+both fail via the round's own pre-registered A0 kill switch: causal, inner-train-only
+measurement shows BTC's Rebound state (a bounce inside a downtrend) carries *favourable*
+risk-adjusted returns, not the elevated-risk signature GHM's own paper predicts for
+turning-point states — an asset-specific failure of the literature's motivating claim,
+not a generic noise-floor miss. Independently of A0, the conservative (fixed-discount)
+branch fails on B1 outright (16/16 BTC cells negative) and the novel (causal
+expanding-window scaler) branch never reaches Step B at all (0/6 configs pass A2
+non-inertness — its `min_obs` burn-in is too large relative to how rare Correction/Rebound
+bars actually are, and, separately, larger than this framework's own per-slice
+warmup convention ever lets a 2-year inner-validation window supply). **B-40 is now
+CLOSED, NEGATIVE**, the second of R-89's three literature-pass follow-ons to close (after
+B-41/R-90). **B-42** (deriving the anchor span from a fitted generative model, R-89's
+remaining untested follow-on) stays OPEN, untouched by this round. **B-32** (multi-asset
+strategy registration) remains the only ranked, unblocked backlog item with a real
+strategy-improvement angle. A future session preferring a fresh mechanism search now needs
+a construction that is not a retune of either of v4's two factors, not a wrap of one in an
+external estimator, not a sixth regime-timing mechanism against the exhausted six-episode
+gate, not a re-derivation of the vote's own latch/response geometry or (now) its
+state-dependence, and not a further trailing-stop/ratchet variant on R-90's construction —
+or should work B-32 or B-42 directly.
 
 **Re-ranked 08-21 after R-90, and B-41 is closed the same session.** A two-branch round
 worked one of the three literature-pass items R-89 left OPEN — **B-41**, a path-dependent
@@ -10840,6 +11027,20 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-21 · ~637** — R-91: **+0** on top of R-90's ~637 (unchanged), both branches.
+  Conservative (`experiments/r91_conservative_state_discount.py`): 5/5 configs run through
+  Step A (0 inert by the "score anyway" convention; 1 of 4 swept configs read R²≥0.98 but
+  was not dropped), all 4 swept configs through Step B (16 BTC cells) plus the finalist's
+  2 ETH cells and 2 fee-robustness cells; `assert_no_holdout()` clean on BTC and ETH, max
+  timestamp read 2022-12-31 23:55:00+00:00 (BTC) / ETH's own coverage end. Novel
+  (`experiments/r91_novel_causal_state_scaler.py`): 7/7 configs passed A1/A3 but 0/6 swept
+  configs passed A2 non-inertness, so zero configurations were ever eligible for Step-B
+  selection — the 28-cell BTC grid was still run and reported in full for the record, per
+  the pre-registered "report if none survive Step A" clause, but no finalist exists and no
+  ETH/fee cells were read. Both branches' A0 kill-switch measurement (shared) and the
+  conservative branch's B1/B2/B3/B4/B5 clauses were computed independently by the operator
+  and matched exactly (identity diffs, finalist selection statistic, two A2 R² values).
+  Neither branch's own code, nor the operator, ever approached the 2023-01-01 holdout.
 - **08-21 · ~637** — R-90: **+0** on top of R-89's ~637 (unchanged), both branches.
   Conservative (`experiments/r90_conservative_fixed_stop.py`): 6/6 configs run through
   Step A (0 inert), all 5 swept configs through Step B; `assert_no_holdout()` clean on BTC
