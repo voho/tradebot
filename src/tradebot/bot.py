@@ -52,6 +52,37 @@ class StepResult:
     reason: str = ""
 
 
+def raw_desired_target(strategy: Strategy, candles) -> float | None:
+    """The strategy's raw desired stance as of the latest closed candle,
+    read directly from ``prepare()`` — bypassing ``on_bar``'s change gate.
+
+    18 of this project's registered strategies (the whole ``kelly_regime``
+    family among them) only call ``ctx.order_target`` when the current
+    bar's precomputed target differs from the *immediately preceding* bar's
+    (``abs(t - prev) > 1e-9``). That comparison is correct only when
+    something asks the strategy on every closed bar. This loop does not
+    make that guarantee — a scheduler invoked slower than the bar interval
+    (or one that simply misses a run) skips the intermediate candles
+    entirely, so a target change landing on one of them is silently lost:
+    by the next invocation the edge gate is comparing two bars that both
+    already reflect the new target, so it never fires, and the account is
+    left holding a stance the strategy abandoned candles ago.
+
+    R-78 diagnosed and fixed the identical defect in
+    ``scripts/paper_trade.py`` (see ``level_resync_order`` there): the fix
+    is level-triggered rather than edge-triggered — ask what the strategy
+    wants *now*, independent of whether any particular candle was actually
+    presented to ``on_bar``. Returns ``None`` for the ~5 strategies with no
+    ``target`` column (they decide from ``ctx.position`` directly and have
+    nothing to read ahead of time); those keep the pre-existing
+    edge-triggered behaviour via ``compute_signal``'s orders.
+    """
+    prepared = strategy.prepare(candles.copy())
+    if "target" not in prepared.columns:
+        return None
+    return float(prepared["target"].to_numpy()[-1])
+
+
 def step(exchange: Exchange, config: BotConfig, strategy: Strategy) -> StepResult:
     """Run one decision cycle. Returns what was decided and why."""
     bars = strategy.warmup + config.warmup_slack
@@ -75,12 +106,20 @@ def step(exchange: Exchange, config: BotConfig, strategy: Strategy) -> StepResul
                           market=MarketSpec.spot(fee_rate=exchange.taker_fee))
     orders = compute_signal(strategy, candles, account)
 
-    target = current
-    for order in orders:
-        if order.target is None:
-            continue  # qty orders are venue-specific; targets are the live API
-        # order_notional() already divides by leverage, which is 1.0 on spot
-        target = min(1.0, max(0.0, float(order.target)))
+    # Level-triggered whenever possible (see raw_desired_target, R-78/B-39):
+    # this is immune to a scheduler slower than the bar interval. Only the
+    # ~5 strategies with no target column fall back to the edge-triggered
+    # orders compute_signal() already returned.
+    desired = raw_desired_target(strategy, candles)
+    if desired is not None:
+        target = min(1.0, max(0.0, desired))
+    else:
+        target = current
+        for order in orders:
+            if order.target is None:
+                continue  # qty orders are venue-specific; targets are the live API
+            # order_notional() already divides by leverage, which is 1.0 on spot
+            target = min(1.0, max(0.0, float(order.target)))
 
     delta_frac = target - current
     delta_notional = delta_frac * equity
