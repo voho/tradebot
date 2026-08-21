@@ -389,8 +389,10 @@ def run_sweep() -> dict:
 def run_falsification(n_draws: int = 20, block_days: int = 90, seed: int = 8053) -> dict:
     """Placebo-offset falsification gate on the pre-registered primary candidate."""
     warmup = HitRateConfirmKelly.warmup
-    val_len = len(DF.loc[INNER_VAL_START:INNER_VAL_END])
-    n_frame = warmup + val_len
+    lo = int(DF.index.searchsorted(INNER_VAL_START))
+    hi = int(DF.index.searchsorted(INNER_VAL_END, side="right"))
+    prefix = min(lo, warmup)
+    n_frame = hi - (lo - prefix)  # exact length of the frame run_period builds
 
     v4_val_spot = ev(get_strategy("kelly_regime_v4"), market=SPOT,
                       start=INNER_VAL_START, end=INNER_VAL_END,
