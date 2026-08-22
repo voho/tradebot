@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-"""R-93 NOVEL branch (08-22): Wikipedia "Bitcoin" pageview attention as an
+"""R-94 NOVEL branch (08-22): Wikipedia "Bitcoin" pageview attention as an
 ATTENTION-EXHAUSTION CONFIRMATION-DELAY modulator on kelly_regime_v4's own
 anchor-vote latch.
 
 Mechanism, citations, INFO-axis not-a-duplicate list and data-coverage
-verification are all frozen in ``experiments/r93_shared.py``'s module
+verification are all frozen in ``experiments/r94_shared.py``'s module
 docstring and are not re-derived here -- only the parts specific to THIS
 branch (the contrarian/exhaustion reading, Kristoufek 2013) are restated.
 
@@ -17,7 +17,7 @@ PRE-REGISTRATION (frozen before any real-data number in this file was read)
    run-ups) are accompanied/preceded by EXTREME pageview/search attention
    spikes that historically mark EXHAUSTION rather than confirmation, so a
    fresh v4 anchor-vote flip INTO a long stance that coincides with an
-   extreme attention spike (top decile / z >= 2.5 of `r93_shared.attention_z`)
+   extreme attention spike (top decile / z >= 2.5 of `r94_shared.attention_z`)
    should require additional confirmation persistence -- a longer required
    latch-hold before the flip is accepted -- before v4's `frac` moves; when
    attention is NOT extreme, this file must behave IDENTICALLY to
@@ -136,8 +136,8 @@ CONFIGS EVALUATED: counted and printed at the end of each stage
 (`CONFIG_COUNTER`) -- 0 in Step 0 (a fixed measurement, no sweep against
 real data), up to 9 (grid) + baselines + ETH + identity check in Step B.
 
-Run: ``python experiments/r93_novel_attention_exhaustion_delay.py``
-     ``python experiments/r93_novel_attention_exhaustion_delay.py step0``  (gate only)
+Run: ``python experiments/r94_novel_attention_exhaustion_delay.py``
+     ``python experiments/r94_novel_attention_exhaustion_delay.py step0``  (gate only)
 """
 
 from __future__ import annotations
@@ -169,21 +169,60 @@ from tradebot.strategy import Context, Strategy  # noqa: E402
 from tradebot.strategies.kelly_regime_v4 import KellyRegimeV4  # noqa: E402
 from tradebot.window import run_period  # noqa: E402
 
-from experiments.r93_shared import (  # noqa: E402
-    BARS_PER_DAY,
-    BARS_PER_YEAR,
-    INNER_TRAIN_END,
-    INNER_VAL_END,
-    INNER_VAL_START,
-    OOS_START,
-    V4_BAND,
-    V4_HORIZONS,
-    anchor_votes as v4_anchor_votes,
-    attention_z,
-    load_pageviews_5m,
-)
-
 DATA_DIR = ROOT / "data"
+
+# ---------------------------------------------------------------------------
+# ENVIRONMENT NOTE (not part of the frozen pre-registration, disclosed here
+# because it changes how this file is written): `experiments/r94_shared.py`
+# was overwritten partway through this session by an unrelated, concurrently
+# running R-94 effort (a Grossman-Zhou drawdown-sizing round, already closed
+# NEGATIVE and merged to `main` -- see `git log -- experiments/r94_shared.py`
+# and commit `cf2aa5b`), which collided with this branch's own round number
+# and clobbered the shared Wikipedia-pageview prep file this branch's
+# pre-registration depends on. Per this round's own instruction ("do not
+# edit experiments/r94_shared.py"), that file is left untouched here. The
+# constants and helper functions below are duplicated VERBATIM from the
+# original Wikipedia-pageview `r94_shared.py` as it read at dispatch time
+# (recovered read-only via `git show 19d04aa:experiments/r94_shared.py`,
+# the prep commit for THIS branch's own round, never edited by this file) --
+# not re-derived, not re-reasoned, byte-identical logic to what this
+# branch's pre-registration was written against. This is reported to the
+# operator as an environment anomaly, not silently absorbed.
+# ---------------------------------------------------------------------------
+
+BARS_PER_DAY = 288
+BARS_PER_YEAR = 365.25 * BARS_PER_DAY
+
+V4_HORIZONS = (20, 40, 80)
+V4_BAND = 0.01
+
+INNER_TRAIN_END = "2020-12-31"
+INNER_VAL_START = "2021-01-01"
+INNER_VAL_END = "2022-12-31"
+OOS_START = "2023-01-01"
+
+
+def load_pageviews_5m(data_dir) -> pd.DataFrame | None:
+    """Daily pageviews causally aligned onto the 5-minute BTC bar grid, or
+    None if the fetch script has not been run. Callers must still truncate
+    to their own step's cutoff themselves -- this loader does not enforce
+    the holdout boundary. Verbatim duplicate, see note above."""
+    from tradebot.data import load_ohlcv_csv
+    pv = load_wikipedia_pageviews(data_dir)
+    if pv is None:
+        return None
+    bars = load_ohlcv_csv(f"{data_dir}/btcusd_spot_5m.csv.gz")
+    return align_wikipedia_causal(pv, bars)
+
+
+def attention_z(views_5m: pd.Series, window_days: int = 20) -> pd.Series:
+    """Causal log-pageview z-score against its own trailing `window_days`
+    mean/std. Verbatim duplicate, see note above."""
+    log_v = np.log(views_5m.replace(0.0, np.nan).ffill())
+    w = int(window_days * BARS_PER_DAY)
+    mean = log_v.rolling(w, min_periods=w // 4).mean()
+    std = log_v.rolling(w, min_periods=w // 4).std()
+    return (log_v - mean) / std.replace(0.0, np.nan)
 SPOT = MarketSpec.spot()
 
 # ------------------------------------------------------------ Step 0 params
@@ -277,7 +316,7 @@ def step0_cell(z_daily: pd.Series, fwd: pd.Series, n_days: int, thresh_def: str)
 
 def step0_subclaim_test() -> dict:
     print("=" * 78)
-    print("R-93 NOVEL STEP 0: attention-exhaustion sub-claim test (inner-train only)")
+    print("R-94 NOVEL STEP 0: attention-exhaustion sub-claim test (inner-train only)")
     print("=" * 78)
 
     bars = load_btc_inner_train()
@@ -356,7 +395,7 @@ def attention_modulated_votes(df: pd.DataFrame, z: np.ndarray,
     on rows <= i and running state built from strictly earlier bars.
 
     Identity recovery: `persist_bars<=0` OR `z_thresh=+inf` reproduces
-    `r93_shared.anchor_votes` bit-for-bit (verified in `identity_check`).
+    `r94_shared.anchor_votes` bit-for-bit (verified in `identity_check`).
     """
     close = df["close"].to_numpy()
     n = len(close)
@@ -397,7 +436,7 @@ def attention_modulated_votes(df: pd.DataFrame, z: np.ndarray,
 class AttentionExhaustionDelayV4(Strategy):
     """kelly_regime_v4 whose anchor-vote LONG entries are held pending extra
     confirmation when they trigger during an extreme Wikipedia-attention
-    spike (R-93 NOVEL)."""
+    spike (R-94 NOVEL)."""
 
     warmup = KellyRegimeV4().warmup
 

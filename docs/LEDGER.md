@@ -315,6 +315,157 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-94 · 08-22 · NEGATIVE (both branches) — Wikipedia "Bitcoin" pageviews as a twelfth INFO-axis signal: retail attention neither leads v4's own reactive vote nor shows the exhaustion signature its own citation predicts
+
+**Numbering note.** Pre-registered and run as "R-93"; a concurrently-running
+session claimed R-93 first for an unrelated round (Grossman-Zhou
+drawdown-constrained sizing, entry directly below). Merged and renumbered to
+**R-94** across every file (`experiments/r93_shared.py` → `r94_shared.py`,
+`r93_conservative_attention_confirm.py` → `r94_conservative_attention_confirm.py`,
+`r93_novel_attention_exhaustion_delay.py` → `r94_novel_attention_exhaustion_delay.py`,
+all internal `R-93`/`r93_shared` references) before this entry was written,
+same precedent as R-56→R-57/R-58→R-59/R-88→R-89 above/below it. No content
+changed, only labels and paths; the other session's legitimate
+`experiments/r93_*` files (which this round's local merge briefly, harmlessly
+overwrote in one branch's working copy before the collision was noticed) were
+restored byte-for-byte from `origin/main` and are untouched.
+
+**Direction.** Daily English Wikipedia pageviews for the "Bitcoin" article — a
+retail ATTENTION/demand proxy, fetched via `scripts/fetch_wikipedia_pageviews.py`
+from the Wikimedia Foundation's free, unauthenticated Pageviews REST API — as
+this project's twelfth structurally distinct INFO-axis signal. Citations: Da,
+Engelberg & Gao (2011), *Journal of Finance* 66(5), 1461-1499, "In Search of
+Attention" (abnormal search/attention volume predicts short-horizon return
+CONTINUATION for retail-attention assets, but also a partial REVERSAL over
+following weeks — both readings tested, one per branch); Kristoufek (2013),
+*Scientific Reports* 3:3415, "BitCoin meets Google Trends and Wikipedia" (the
+first paper applying search/pageview attention to BTC specifically, finding
+extreme attention spikes historically mark price-run-up EXHAUSTION — the
+novel branch's citation). **Attacks INFO**: pageviews are not reconstructed
+from price or volume (the L-14/15/16 order-flow-proxy ruling does not apply)
+and describe neither the traded asset's own on-chain/exchange/derivatives
+state nor the macro financial system, unlike all eleven prior INFO signals
+this project has tried and closed NEGATIVE — on-chain activity/hash rate
+(B-07/R-44), VIX/DXY macro spillover (R-53), MVRV valuation (R-74), USDT
+stablecoin supply (R-54/R-55/R-58, five variants), Deribit DVOL (R-73),
+halving-cycle phase (R-79), day-of-week/session timing (R-75), Binance
+futures positioning (R-81), raw volume (R-84, two architectures), Binance
+taker order-flow imbalance (R-88, two architectures). Off-backlog, literature-
+prompted (same posture as R-73–R-93 — the ranked list holds only **B-32**,
+pure infrastructure with no waiting candidate). Falsification named in
+advance, per branch: conservative fails if it does not clear the standing
+≥4/6-episode lead-time gate (the same gate all eleven predecessors failed);
+novel fails if the pre-registered forward-return sub-claim (Step 0) is the
+wrong sign or not significant.
+
+**What was done.** Shared harness (`experiments/r94_shared.py`, written by
+the operator before dispatch): the fetch script, `tradebot.data.load_wikipedia_pageviews`/
+`align_wikipedia_causal` (new, additive), the six-episode table (R-82/R-83/R-84's
+set, usable here in full for only the second time on the INFO axis — coverage
+verified zero missing days 2015-07-01→2026-08-20 and **zero NaN** across the
+entire 2017-01→2026-08 5m bar grid, the cleanest coverage any INFO signal in
+this project has had, better than R-84's own volume). Two parallel branches,
+each owning disjoint files, neither committing mid-round:
+
+- **Conservative** (`experiments/r94_conservative_attention_confirm.py`,
+  Da-Engelberg-Gao's continuation reading): meta-vote = 1 when the causal
+  `attention_z` (log-pageview z-score, `window_days` swept) crosses above τ,
+  combined via R-53/R-55's validated confirming-vote architecture
+  (`frac = (anchor_sum + weight·meta_vote)/(3+weight)`, weight=0 recovers v4
+  exactly). Step-A lead-time gate only — a grid of τ∈{1.0,1.5,2.0} ×
+  window_days∈{10,20,30}, 9 cells × 6 episodes, against a 500-draw/5-day-block
+  bootstrap null per episode, pre-registered kill switch ≥4/6 episodes on a
+  plateau of ≥3 cells (not one lucky cell out of nine).
+- **Novel** (`experiments/r94_novel_attention_exhaustion_delay.py`,
+  Kristoufek's exhaustion reading): a confirmation-DELAY modulator (not a
+  never-increase-only brake — this project's ledger records that pattern as
+  4-for-4 failed independent of signal, R-34/R-41/R-53/R-73) that would
+  require extra latch persistence before a fresh long entry when it coincides
+  with an extreme attention spike. Step-0 pre-registered sub-claim test only
+  (same convention as R-91/B-40): is BTC's forward N-day return conditional
+  on top-decile/z≥2.5 attention **significantly negative/muted** vs.
+  unconditional, on inner-train (2017–2020), via `tradebot.inference.paired_bootstrap`
+  (30-day blocks, 2000 resamples)? Kill switch: STOP before any latch/strategy
+  code if the primary cell (N=10d, z≥2.5) is the wrong sign or the majority of
+  6 secondary cells disagree.
+
+**Configurations evaluated: 0** toward the backtest-trials ledger on both
+branches — both stopped at their pre-registered measurement gate before any
+`ev()` backtest call, per this project's standing Step-A/Step-0 accounting
+convention (54 Step-A gate diagnostics + 6 Step-0 diagnostic cells + 1
+non-counted Step-B code-correctness smoke test, none counted). The operator
+independently re-ran both branches' gate scripts end-to-end from a clean
+shell (`python experiments/r94_conservative_attention_confirm.py gate`,
+`python experiments/r94_novel_attention_exhaustion_delay.py`) and reproduced
+every reported number exactly (all 54 LEAD/null-p90 cells; all 6 Step-0
+cond/uncond-mean and CI cells).
+
+**Result.**
+
+*Conservative — Step A.* **0 of 9 cells clear the ≥4/6 bar**; the best cell
+(τ=1.5–2.0, window_days=10) reaches only 1/6, a single episode (2018-12-15
+capitulation) whose LEAD (+9.24d) barely exceeds its own null p90
+(+9.08d/+8.38d) — not a plateau. Two episodes (2018 bear onset, Terra/Luna)
+never produce an anchor-gate transition inside the pre-registered
+(onset−60d, onset+30d) window in any cell, capping the reachable rate at 4/6
+regardless of parameterization. Where LEAD is large it is usually the wrong
+sign (attention *lagging* v4's own reaction by 7–11 days) or, when positive,
+still fails the null comparison because the z-score series is itself
+autocorrelated enough that an arbitrary time-shift looks equally "early"
+(e.g. COVID crash: LEAD +23–25d vs. null p90 ≈+25d). **12 of 12 INFO-axis
+attention/activity signals now fail this project's lead-time gate.**
+
+*Novel — Step 0.* **Wrong sign on every one of 6 cells**, including the
+mandatory primary (N=10d, z≥2.5: cond_mean +0.098 vs. uncond +0.033, diff
++0.065 [+0.002, +0.133], significant and **positive** — the opposite of the
+predicted exhaustion signature). 4 of 6 cells are individually significant,
+but all in the continuation direction: on 2017–2020 BTC, extreme
+Wikipedia-attention days are followed by *higher*, not muted or negative,
+subsequent 5/10/20-day returns. A nameable reason: the inner-train window
+contains the Dec-2017 bubble run-up, where attention spikes plausibly led
+further short-term upside before the eventual (longer-horizon, outside this
+window's N≤20d reach) crash — Da-Engelberg-Gao's *other* finding, not
+Kristoufek's, is what this specific sample and horizon actually show. Per
+the pre-registered stop rule, no latch/strategy code was run against real
+data; a non-counted smoke test on a 150k-bar slice confirmed the unexecuted
+Step-B code (`AttentionExhaustionDelayV4`) is mechanically sound — identity
+recovery (`persist_days=0`, `z_thresh=+inf`) reproduces v4's target array
+bit-for-bit — should a future round want the mechanism itself with a
+different, better-supported threshold or citation.
+
+Read together, the two branches are a coherent finding, not two unrelated
+misses: retail attention's correlation sign on this data is *continuation*,
+matching one half of Da-Engelberg-Gao's own paper (confirmed by the novel
+branch's Step-0 numbers) — but that same attention moves contemporaneously
+with or after price, not ahead of it, so it carries none of the *lead time*
+v4's own vote would need to use it (the conservative branch's Step-A gate).
+Twelve for twelve INFO-axis signals now share this exact diagnosis:
+economically plausible correlation, no exploitable lead.
+
+**Verdict.** **NEGATIVE, both branches, both stopped at their pre-registered
+measurement gate.** One-line lesson: even the cleanest-covered INFO channel
+this project has ever fetched (zero gaps predating the dataset itself) adds
+nothing once tested against the same lead-time/sub-claim bar the other eleven
+failed — the binding problem across all twelve has been economic (does this
+information arrive before price already reflects it), never mechanical (data
+quality, cadence, or construction). **Holdout counter: +0** — neither branch,
+nor the operator's independent re-runs, ever read a bar dated 2023-01-01 or
+later; both scripts print their own max-timestamp-read line and the
+conservative branch's frame is truncated by construction to ≤2022-12-31 before
+pageviews are ever aligned onto it — see the bullet added below in
+[Holdout consultations to date](#holdout-consultations-to-date). Neither
+pre-registered decision rule moved after seeing any number. **Next step:**
+this closes the twelfth INFO-axis attempt without reopening any prior one; a
+future session preferring a fresh mechanism search needs a data channel this
+project cannot construct from its already-committed files or fetchable free
+sources at all (an increasingly narrow set after twelve attempts spanning
+on-chain, macro, valuation, liquidity, priced volatility, calendar,
+positioning, volume, order flow and now attention), a SIZE-axis construction
+that does not collapse to a low, roughly-constant exposure fraction relative
+to v4 (R-38/R-46/R-59/R-60/R-93's shared failure mode), or a regime-timing
+construction distinct from the six already closed — or should work **B-32**
+directly.
+
 ### R-93 · 08-22 · NEGATIVE (both branches) — replacing kelly_regime_v4's vol-target scale with Grossman-Zhou (1993) drawdown-constrained sizing: both instantiations reproduce the R-33 "holding less" artifact rather than a sizing edge
 
 **Direction.** With the backlog empty of anything but **B-32** (pure multi-asset registration infrastructure, no strategy-improvement angle — the posture every round since R-73 has recorded), this round went off-backlog with a literature-motivated idea on the one axis this project's own diagnosis says works: SIZE. **Grossman, S. J., & Zhou, Z. (1993)**, "Optimal Investment Strategies for Controlling Drawdowns," *Mathematical Finance*, 3(3), 241–276 — an investor constrained to never let wealth fall below a fraction `(1−α)` of its running peak should hold a risky-asset fraction linear in the cushion `(α − D_t)`, where `D_t` is the current drawdown from the running peak `M_t = cummax(equity)`. Replace `kelly_regime_v4`'s conditional-vol-target `scale` with `scale_GZ(t) = max_leverage · clip(1 − D_t/α, 0, 1)`, computed off the strategy's own realized equity curve, while leaving v4's validated 3-anchor `frac` vote (R-62/R-87: carries v4's entire matched-exposure signature, four independent ways) untouched. **Attacks SIZE** — the 22nd attempt on this axis (21 prior point-estimate scale retunes: R-38/R-45/R-46/R-59/R-60/R-62/R-87), and the first to make `scale` a function of the strategy's own realized drawdown (endogenous, path-dependent risk) rather than of market volatility (v3/v4's own construction) or a frozen constant (R-62's isolation arms). **Not a duplicate of:** R-46 (CPPI — floor anchored *once* to starting balance, deliberately not peak-following, per its own filing); R-38 conservative (a probabilistic VaR/CVaR chance constraint requiring a return-distribution forecast, mechanically unrelated to a deterministic forecast-free cushion rule) and novel (CRRA/Merton, driven by point estimates of drift/variance, no floor concept); R-59/R-60 (retune the *same* vol-target architecture's magnitude/timing); R-62 (ran the existing scale unmodified, isolating factors rather than replacing one); R-87 novel (replaces the vol *estimator* feeding the same target-vol architecture, still exogenous-vol-driven); R-45 (walk-forward re-fit of the same constants, not a new functional form). The novel branch's own further citation, **Klass, M. J., & Nowicki, K. (2005)**, "The Grossman and Zhou Investment Strategy Is Not Always Optimal," *Statistics and Probability Letters*, 74(3) — shows the GZ rule is not provably growth-optimal once continuous time is left for discrete rebalancing, exactly this project's regime, and was named as the round's own theoretical counter-prediction before any code was run.
@@ -9708,6 +9859,33 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-22 after R-94.** An off-backlog, literature-prompted two-branch round
+(same posture as R-73–R-93 — the ranked list holds only B-32, pure infrastructure)
+tried the twelfth structurally distinct INFO-axis signal: Wikipedia "Bitcoin"
+pageviews, a retail attention/demand proxy with the cleanest data coverage any
+INFO signal here has had (zero gaps predating this project's own dataset start).
+Both **NEGATIVE**, both stopped at their own pre-registered measurement gate before
+any backtest code ran. Conservative (Da-Engelberg-Gao's continuation reading, R-53/
+R-55's confirming-vote architecture): Step-A lead-time gate scores **0/9 cells**
+clearing the standing ≥4/6-episode bar, best cell 1/6 — the twelfth INFO signal in a
+row to fail this exact gate. Novel (Kristoufek's exhaustion reading, a confirmation-
+delay modulator): Step-0 sub-claim test fails on the wrong sign at every one of 6
+cells — extreme attention days are followed by *higher*, not muted, forward returns
+on 2017–2020 BTC, matching Da-Engelberg-Gao's continuation half rather than
+Kristoufek's exhaustion half. Read together the two branches agree: attention's
+correlation with price on this data is real and positive-sign, but contemporaneous
+or lagging rather than leading, which is the same diagnosis every one of the eleven
+prior INFO signals reached by a different route. **This closes the twelfth INFO-axis
+attempt. B-32 remains the only ranked, unblocked backlog item.** A future session
+preferring a fresh mechanism search now needs a data channel this project cannot
+construct from its already-committed files or fetchable free sources at all — an
+increasingly narrow set after twelve attempts spanning on-chain, macro, valuation,
+liquidity, priced volatility, calendar, positioning, volume, order flow and now
+attention — a SIZE-axis construction that does not collapse to a low, roughly-
+constant exposure fraction relative to v4 (R-38/R-46/R-59/R-60/R-93's shared failure
+mode), or a regime-timing construction distinct from the six already closed — or
+should work B-32 directly.
+
 **Re-ranked 08-22 after R-93.** An off-backlog, literature-prompted two-branch round
 (same posture as R-73–R-92 — the ranked list holds only B-32, pure infrastructure)
 tried the 22nd SIZE-axis construction: Grossman & Zhou (1993)'s drawdown-constrained
@@ -11117,6 +11295,17 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-22 · ~637** — R-94: **+0** on top of R-93's ~637 (unchanged), both
+  branches. Conservative (`experiments/r94_conservative_attention_confirm.py`):
+  0 backtest configs (Step-A gate stop); 54 gate diagnostics (9 τ/window_days
+  cells × 6 episodes), `assert_no_holdout()` clean, max timestamp read
+  2022-12-31 23:55:00 UTC. Novel (`experiments/r94_novel_attention_exhaustion_delay.py`):
+  0 backtest configs (Step-0 gate stop); 6 diagnostic cells (N∈{5,10,20} ×
+  2 threshold definitions) plus 1 non-counted Step-B code-correctness smoke
+  test on a 150k-bar slice; max timestamp read 2020-12-31 (inner-train only,
+  never approached 2021+). Both scripts independently re-run end-to-end by
+  the operator from a clean shell, reproducing every reported LEAD/null-p90
+  and cond/uncond-mean/CI cell exactly.
 - **08-22 · ~637** — R-93: **+0** on top of R-92's ~637 (unchanged), both
   branches. Conservative (`experiments/r93_conservative_gz_drawdown.py`):
   5/5 α configs run through Step A (0 inert by the "score anyway"
