@@ -241,6 +241,7 @@ section was read)
 
 from __future__ import annotations
 
+import hashlib
 import sys
 import time
 from pathlib import Path
@@ -301,8 +302,17 @@ _TARGET_CACHE: dict = {}
 
 
 def _key(df: pd.DataFrame) -> tuple:
-    return (len(df), int(df.index[0].value), int(df.index[-1].value),
-            float(df["close"].iloc[0]), float(df["close"].iloc[-1]))
+    """Cache key for a frame's identity. Endpoints alone are NOT enough --
+    the causal truncation probe deliberately builds several perturbed frames
+    that share length/first-close/last-close (the tail multiplier lands on
+    the same final value regardless of where the perturbation starts) but
+    differ in the interior, so a content hash of the actual close array is
+    required or the cache silently returns a stale result for a different
+    frame (caught by the probe itself during development; fixed here, not
+    worked around)."""
+    close_bytes = np.ascontiguousarray(df["close"].to_numpy(dtype=float)).tobytes()
+    digest = hashlib.blake2b(close_bytes, digest_size=16).hexdigest()
+    return (len(df), int(df.index[0].value), int(df.index[-1].value), digest)
 
 
 def population_scale_matrix(df: pd.DataFrame, alphas: tuple[float, ...] = POPULATION_ALPHAS,
