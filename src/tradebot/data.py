@@ -500,6 +500,50 @@ def align_stablecoin_causal(supply: pd.DataFrame, bars: pd.DataFrame) -> pd.Data
     return shifted.reindex(shifted.index.union(bars.index)).sort_index().ffill().reindex(bars.index)
 
 
+WIKIPEDIA_PAGEVIEWS_FILE = "btc_wikipedia_pageviews_daily.csv.gz"
+
+
+def load_wikipedia_pageviews(data_dir: str | Path) -> pd.DataFrame | None:
+    """Daily English Wikipedia pageviews for the "Bitcoin" article, or None if absent.
+
+    Fetched by ``scripts/fetch_wikipedia_pageviews.py`` from the Wikimedia
+    Foundation's free public Pageviews REST API (R-93). Unlike every INFO
+    signal tried before it -- on-chain activity/valuation (network/ledger
+    state), macro (the rest of the financial system), stablecoin supply
+    (capital on-ramp/off-ramp), DVOL (a priced options-market expectation),
+    futures positioning/taker flow (venue-reported trading activity) -- this
+    is a retail ATTENTION/demand proxy: how many people are reading about
+    Bitcoin today, independent of any exchange, chain or derivatives venue
+    (Da, Engelberg & Gao 2011, *J. Finance* 66(5), "In Search of Attention";
+    Kristoufek 2013, *Scientific Reports* 3:3415, applying search/pageview
+    attention specifically to Bitcoin). Single column ``views``. No external
+    coverage-start caveat: the API's data begins 2015-07-01, before this
+    project's own 2017-01-01 dataset start, so this signal (like R-84's raw
+    volume) can be measured against the full six-episode table. Indexed by
+    UTC day (midnight).
+    """
+    path = Path(data_dir) / WIKIPEDIA_PAGEVIEWS_FILE
+    if not path.exists():
+        return None
+    df = pd.read_csv(path, parse_dates=["timestamp"], index_col="timestamp")
+    df.index = df.index.tz_localize("UTC")
+    return df[["views"]].astype(float).sort_index()
+
+
+def align_wikipedia_causal(pageviews: pd.DataFrame, bars: pd.DataFrame) -> pd.DataFrame:
+    """Reindex daily Wikipedia pageviews onto ``bars``' index, causally.
+
+    The Pageviews API reports day D's total only after day D has ended, so
+    -- exactly like ``align_stablecoin_causal``/``align_macro_causal`` -- a
+    bar at time T may only see the row for the most recent day that closed
+    strictly before T's own day. Bars before the first visible row get NaN,
+    never filled or back-cast.
+    """
+    shifted = pageviews.copy()
+    shifted.index = shifted.index + pd.Timedelta(days=1)
+    return shifted.reindex(shifted.index.union(bars.index)).sort_index().ffill().reindex(bars.index)
+
+
 DVOL_FILE = "btc_dvol_daily.csv.gz"
 
 

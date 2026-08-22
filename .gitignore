@@ -81,6 +81,14 @@ uv.lock
 # (a DVOL-like short-history caveat, stated in load_binance_metrics).
 !/data/btcusdt_perp_metrics_5m.csv.gz
 !/data/ethusdt_perp_metrics_5m.csv.gz
+# daily English Wikipedia "Bitcoin" article pageviews (R-93): a retail
+# ATTENTION/demand proxy, independent of any exchange/chain/derivatives
+# venue -- structurally different from every prior INFO channel. From the
+# Wikimedia Foundation's free, unauthenticated Pageviews REST API. Data
+# starts 2015-07-01, before this project's own 2017-01-01 dataset start,
+# so -- like R-84's raw volume -- it has no external coverage-start
+# caveat and can be measured against the full six-episode table.
+!/data/btc_wikipedia_pageviews_daily.csv.gz
 /reports/*
 !/reports/comparison.md
 !/reports/comparison.csv
