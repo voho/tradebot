@@ -89,6 +89,14 @@ uv.lock
 # so -- like R-84's raw volume -- it has no external coverage-start
 # caveat and can be measured against the full six-episode table.
 !/data/btc_wikipedia_pageviews_daily.csv.gz
+# daily Crypto Fear & Greed Index (R-95): alternative.me's free public API,
+# a proprietary multi-source COMPOSITE crowd-sentiment score (volatility,
+# momentum/volume, social media, surveys, dominance, trends blended into
+# one 0-100 number) -- structurally different from every prior INFO channel,
+# each a single raw metric from one data domain. Data starts 2018-02-01,
+# after this project's 2017-01-01 start and after the 2018-01-17 stress
+# episode, so that one episode is a disclosed coverage-gap fail.
+!/data/btc_fear_greed_index_daily.csv.gz
 /reports/*
 !/reports/comparison.md
 !/reports/comparison.csv

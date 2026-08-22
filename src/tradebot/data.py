@@ -718,3 +718,60 @@ def align_metrics_causal(metrics: pd.DataFrame, bars: pd.DataFrame) -> pd.DataFr
     metrics row get NaN, never back-cast.
     """
     return metrics.reindex(metrics.index.union(bars.index)).sort_index().ffill().reindex(bars.index)
+
+
+FEAR_GREED_FILE = "btc_fear_greed_index_daily.csv.gz"
+
+
+def load_fear_greed_index(data_dir: str | Path) -> pd.DataFrame | None:
+    """Daily Crypto Fear & Greed Index (alternative.me), or None if absent.
+
+    Fetched by ``scripts/fetch_fear_greed_index.py`` from alternative.me's
+    free, unauthenticated public API (R-95). A proprietary daily 0-100
+    composite crowd-sentiment score (publicly documented weights:
+    Volatility 25%, Market Momentum/Volume 25%, Social Media 15%, Surveys
+    15%, Bitcoin Dominance 10%, Google Trends 10%) -- structurally distinct
+    from every INFO-axis signal tried before it in this project, all of
+    which are single raw metrics from one data domain (on-chain state,
+    macro spillover, capital flow, priced options volatility, valuation,
+    calendar structure, derivatives positioning, traded volume, order
+    flow, retail pageview attention): this is a third-party MULTI-SOURCE
+    COMPOSITE index blending several of those domains plus survey and
+    social data this project cannot fetch individually. Single column
+    ``value`` (0-100); ``classification`` (the provider's own text label)
+    is also kept for reference but not used as a numeric feature.
+
+    Hard data limitation, stated plainly: history starts 2018-02-01, after
+    this project's 2017-01-01 dataset start and after the 2018-01-17 bear
+    onset episode in the project's standing six-episode stress table --
+    that one episode is therefore an automatic Step-A coverage fail for
+    any round using this signal, same treatment as DVOL's 2021-03-24 start
+    or Binance futures positioning's 2020-09-01 start. Every other episode
+    (2018-12-15 onward) is covered. Two short gaps in the raw feed
+    (2018-04-13->17, 2024-10-25->27) are left as gaps here, not filled --
+    ``align_fear_greed_causal`` forward-fills them onto the bar grid
+    exactly like every other daily external signal in this module.
+    Indexed by UTC day (midnight).
+    """
+    path = Path(data_dir) / FEAR_GREED_FILE
+    if not path.exists():
+        return None
+    df = pd.read_csv(path, parse_dates=["timestamp"], index_col="timestamp")
+    df.index = df.index.tz_localize("UTC")
+    df["value"] = df["value"].astype(float)
+    return df[["value", "classification"]].sort_index()
+
+
+def align_fear_greed_causal(fgi: pd.DataFrame, bars: pd.DataFrame) -> pd.DataFrame:
+    """Reindex the daily Fear & Greed Index onto ``bars``' index, causally.
+
+    alternative.me publishes day D's index value only once day D has
+    (effectively) closed, so -- exactly like ``align_wikipedia_causal``/
+    ``align_dvol_causal``/``align_mvrv_causal`` -- a bar at time T may only
+    see the row for the most recent day that closed strictly before T's
+    own day. Bars before the first visible row get NaN, never filled or
+    back-cast.
+    """
+    shifted = fgi.copy()
+    shifted.index = shifted.index + pd.Timedelta(days=1)
+    return shifted.reindex(shifted.index.union(bars.index)).sort_index().ffill().reindex(bars.index)
