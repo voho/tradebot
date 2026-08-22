@@ -146,10 +146,18 @@ DESIGN, DISCLOSED BEFORE ANY NUMBER BELOW IS READ
       - eta -> infinity: the softmax collapses to a one-hot vector on
         whichever member had the single best PRIOR-day realized return
         (maximally reactive, deliberately degenerate). Checked by running
-        the same machinery at a large finite eta (1e4, in log-weight
-        space with max-subtraction for numerical stability, so this does
-        not overflow) and comparing the resulting daily weight vectors to
-        a directly-computed daily argmax.
+        the same machinery at a large finite eta, in log-weight space with
+        max-subtraction for numerical stability, and comparing the
+        resulting daily weight vectors to a directly-computed daily argmax.
+        CORRECTION MADE DURING IMPLEMENTATION, disclosed here rather than
+        silently fixed (full derivation in `bestfollow_weights_over_bars`'s
+        and `adaptive_eta_inf_proxy`'s docstrings, in the RESULTS section
+        below): the true eta->infinity limit of this exact recursion is
+        Follow-The-Leader on the member's CUMULATIVE realized shadow
+        return, not a one-step lookback to the prior day alone -- and the
+        finite eta used to approximate that limit must be chosen PER FRAME
+        (not one fixed global constant) or float64 log-weight underflow on
+        a long series produces an artifact unrelated to the true limit.
 
 --------------------------------------------------------------------------
 FROZEN DECISION RULE (written before any real number below was read)
@@ -234,9 +242,189 @@ touched anywhere is tracked and printed at the end of `main()`.
 --------------------------------------------------------------------------
 RESULTS -- filled in after the run below (this section is the actual
 findings write-up; everything above was written before any number in this
-section was read)
+section was read). Reproduce with `python experiments/r93_novel_hedge_gz_blend.py`.
 --------------------------------------------------------------------------
-[[FILLED_AFTER_RUN]]
+
+INLINE-FORMULA CONSISTENCY: PASS. `population_scale_matrix`'s incremental
+loop reproduces `r93_shared.scale_gz()` applied to the SAME realized shadow
+equity path bit-for-bit (max|diff| = 0.000e+00 across all 5 members, on
+inner-train) -- confirms the incremental construction is the necessary
+live/incremental form of the shared module's own formula, not a divergent
+one (same justification as `GZScaledKellyV4`'s own inline re-derivation).
+
+STEP A1 -- CAUSALITY: PASS, both legs, on real BTC data (not synthetic).
+Direct-array truncation probe (cuts 0.35/0.55/0.80): prefix match and
+tail-perturbation invariance PASS at all three cuts. Real
+`run_backtest`-vs-`run_backtest` leg (cut 0.6, full vs. truncated frame):
+target-column prefix matches exactly, neither run liquidates.
+
+STEP A2 -- SANITY CHECKS (NOT scored candidates): PASS, both.
+- eta->0 vs. directly-computed uniform mean of the 5 members' own scale
+  series: max|diff| = 0.000e+00 (exact).
+- eta->infinity vs. directly-computed Follow-The-Leader on CUMULATIVE
+  shadow log-return (the corrected reference, not "yesterday only" --
+  see `bestfollow_weights_over_bars`'s docstring): 100.0000% argmax
+  agreement, at an adaptively-calibrated eta (385.3 on inner-train; this
+  value is DERIVED per frame, not a global constant -- see
+  `adaptive_eta_inf_proxy`'s docstring for the underflow bug this fixes).
+  A first draft of this check used one fixed eta (2000) calibrated safe on
+  a 139-day smoke-test slice; it silently failed (25.7% agreement) on the
+  1170-day inner-train frame because a longer series accumulates a wider
+  cumulative log-return range, pushing float64's log-weight exponent past
+  its ~709 ceiling at a MUCH smaller eta than on the short slice. Caught
+  by running the sanity check on the actual frame size Step B uses, not
+  only on a fast smoke-test slice -- fixed with a per-frame adaptive eta,
+  not by loosening the pass threshold.
+
+STEP B -- ETA SWEEP (3 configs x 3 slices x 2 markets = 18 cells, all
+reported; d_sharpe / d_maxdd-pct / exposure_ratio / vol_ratio / risk_matched
+/ d_log_growth vs. kelly_regime_v4):
+
+  eta=0.01  inner_train  spot        dSh=-1.02  dDD=-20.1  expR=0.28  RM=n  dlogG=-2.154
+  eta=0.01  inner_train  futures_5x  dSh=-1.15  dDD= -8.9  expR=0.28  RM=n  dlogG=-2.492
+  eta=0.01  inner_val    spot        dSh=+0.24  dDD=-12.8  expR=0.24  RM=n  dlogG=+0.110
+  eta=0.01  inner_val    futures_5x  dSh=+0.30  dDD= -7.6  expR=0.24  RM=n  dlogG=+0.140
+  eta=0.01  eth_repl     spot        dSh=-0.12  dDD= -8.8  expR=0.44  RM=n  dlogG=-0.575
+  eta=0.01  eth_repl     futures_5x  dSh=+0.15  dDD= -7.4  expR=0.44  RM=n  dlogG=-0.227
+
+  eta=0.05  inner_train  spot        dSh=-1.00  dDD=-19.7  expR=0.29  RM=n  dlogG=-2.123
+  eta=0.05  inner_train  futures_5x  dSh=-1.23  dDD= -8.7  expR=0.29  RM=n  dlogG=-2.529
+  eta=0.05  inner_val    spot        dSh=+0.26  dDD=-12.7  expR=0.25  RM=n  dlogG=+0.117
+  eta=0.05  inner_val    futures_5x  dSh=+0.25  dDD= -7.4  expR=0.25  RM=n  dlogG=+0.120
+  eta=0.05  eth_repl     spot        dSh=-0.06  dDD=-11.3  expR=0.27  RM=n  dlogG=-0.592
+  eta=0.05  eth_repl     futures_5x  dSh=-0.25  dDD=+19.7  expR=0.27  RM=n  dlogG=-0.397
+
+  eta=0.1   inner_train  spot        dSh=-1.10  dDD=-19.5  expR=0.26  RM=n  dlogG=-2.206
+  eta=0.1   inner_train  futures_5x  dSh=-1.36  dDD= -8.2  expR=0.26  RM=n  dlogG=-2.682
+  eta=0.1   inner_val    spot        dSh=+0.25  dDD=-11.7  expR=0.25  RM=n  dlogG=+0.114
+  eta=0.1   inner_val    futures_5x  dSh=+0.21  dDD= -7.2  expR=0.25  RM=n  dlogG=+0.096
+  eta=0.1   eth_repl     spot        dSh=-0.05  dDD=-12.8  expR=0.28  RM=n  dlogG=-0.562
+  eta=0.1   eth_repl     futures_5x  dSh=+0.24  dDD= -9.9  expR=0.28  RM=n  dlogG=-0.151
+
+  PATTERN, independent of eta: exposure_ratio sits at 0.24-0.29 on BTC in
+  every cell (0.27-0.44 on ETH) -- the K=5 alpha grid (0.15-0.50) is far
+  more conservative than v4's own conditional-vol-target scale, so the
+  candidate holds roughly a QUARTER of v4's notional exposure regardless
+  of eta. This dominates the inner-train comparison (large negative
+  dSharpe, ~-1.0 to -1.4, because v4's vol-target scale is well suited to
+  2017-2020's trend) and, per this project's own standing lesson (R-33:
+  "88-92% of 'regime-gated sizing cuts drawdown' was the exposure level"),
+  is very plausibly also driving most of the SMALL positive dSharpe seen
+  on inner-validation -- holding a quarter of the notional draws down a
+  quarter as hard almost by arithmetic. None of the 18 cells are
+  risk-matched (`RM=n` throughout): the eventual Step C "clears via
+  Sharpe" pass below should be read with this caveat attached, not as a
+  clean risk-adjusted edge.
+
+STEP C -- FINALIST SELECTION (inner-validation only): all three eta values
+clear the Sharpe threshold (Delta Sharpe > +0.2 on BOTH markets) -- none
+clears via the risk-matched-drawdown alternative (exposure_ratio ~0.24-0.25
+on every eta, nowhere near the [0.9,1.1] band). Mean inner-validation
+Delta Sharpe: eta=0.01 -> 0.271, eta=0.05 -> 0.257, eta=0.1 -> 0.233.
+FINALIST: eta=0.01 (highest mean Delta Sharpe; cleared its own bar, not
+just "least-bad").
+
+STEP D -- PRE-REGISTERED FALSIFICATION (pre-holdout Monte Carlo stress
+test, this file's own reimplementation of scripts/stress_test.py's
+methodology, 24 random windows x 2 markets = 48 window-market cells,
+90-500 day windows, seed=93, scoped to `load_btc()` < OOS_START):
+
+  market      strategy                  median_ret%  profitable%  worst%  med_maxDD%  worst_maxDD%  liq%
+  spot        r93_novel_hedge_gz_blend        -1.1         45.8   -10.7        15.2          22.9    0.0
+  spot        kelly_regime_v4                 +3.0         54.2   -24.9        23.0          37.6    0.0
+  spot        buy_and_hold                    -9.5         45.8   -75.6        55.3          81.8    0.0
+  futures_5x  r93_novel_hedge_gz_blend        -1.7         45.8   -14.5        14.0          24.9    0.0
+  futures_5x  kelly_regime_v4                 +6.4         54.2   -19.2        22.6          33.3    0.0
+  futures_5x  buy_and_hold                   -98.2         20.8   -98.2        98.9          99.7   79.2
+
+  (buy_and_hold's 79.2% futures liquidation rate and near-total spot
+  drawdown confirm the stress harness is discriminating real risk, not
+  just noise -- consistent with the README's own standing characterization
+  of buy_and_hold on leverage.)
+
+  PRE-REGISTERED KILL CONDITION, same-basis comparison (identical 24
+  windows, both markets): candidate profitable% (45.8%) is WORSE than
+  v4's own profitable% (54.2%) on BOTH markets; candidate median return is
+  NEGATIVE on both markets (v4's is positive on both). Candidate
+  liquidation rate ties v4's (0.0% both) -- the failure is in win-rate and
+  median return, not survival. Candidate's median/worst drawdown IS lower
+  than v4's (15.2% vs 23.0% spot, 14.0% vs 22.6% futures) -- but per the
+  Step B caveat above, that is close to what a quarter of v4's exposure
+  would draw down "for free," not a risk-adjusted improvement.
+  KILL CONDITION: FIRED on both markets -- DISQUALIFIED, regardless of
+  Step C's clean pass, per the pre-registered rule.
+  Context only (different, larger, holdout-spanning window universe this
+  branch cannot reproduce): the README reports kelly_regime_v4 survives
+  all 40 of ITS stress windows (2017-2026) and is profitable in 85-88% of
+  them -- directionally consistent with v4 also winning this branch's own,
+  smaller, pre-holdout-only window set (54.2%), which is some reassurance
+  the two window universes are not simply incomparable, even though they
+  are not the same trial.
+
+STEP E -- COST CHECK (0.40% taker, inner-validation, finalist eta=0.01):
+PASS -- sign survives on both markets (spot d_log_growth +0.110 at 0.10%
+-> +0.263 at 0.40%; futures +0.140 -> +0.246; both stay positive, in fact
+larger at the higher fee). Read this as a byproduct of the SAME exposure
+gap noted above, not a genuine cost-robustness edge: the candidate holds
+~4x less notional than v4 and so v4's own turnover-driven fee bill grows
+faster than the candidate's as the taker rate rises, making the paired
+difference look BETTER at 0.40% purely because the heavier trader (v4)
+is hurt more by the fee hike -- a mechanical consequence of the exposure
+mismatch, not evidence the mechanism itself is more cost-robust.
+
+CONFIGURATIONS EVALUATED: 68 scored configuration-cells (Step B: 3 eta x 6
+cells = 18; Step D: 24 windows x 2 markets = 48, finalist eta=0.01 only;
+Step E: 2 cells) + 2 sanity checks (eta->0, eta->infinity; direct numerical
+verification only, explicitly NOT run through `compare()`, NOT scored, NOT
+counted toward the trials total). Distinct eta values swept: 3 (real) + 2
+limit proxies. No bar at or after OOS_START (2023-01-01) was read anywhere
+in this branch -- max timestamp touched: 2022-12-31 23:55:00 UTC.
+
+VERDICT: NEGATIVE.
+  Inline-formula consistency:  PASS
+  Step A (causality + sanity): PASS
+  Step C (finalist cleared its own inner-validation bar): PASS (eta=0.01)
+  Step D (pre-registered falsification kill condition):  FIRED -> FAIL
+  Step E (0.40% taker sign):   PASS
+
+RECOMMENDATION: NEGATIVE, not a PROMOTE-CANDIDATE. Reasoning, in order of
+weight:
+1. The pre-registered kill condition is the deciding clause by design (Step
+   0 of this round's own frozen decision rule), and it fired categorically:
+   on the IDENTICAL pre-holdout window set, the same-basis comparison this
+   branch can actually run, the finalist has a WORSE win rate than v4 on
+   both markets, not merely a smaller edge. The whole premise of this
+   branch -- that an adaptive population blend should be MORE robust
+   across regimes than a single fixed alpha -- is not supported by its own
+   falsification test; whether it would beat the conservative sibling's
+   single-alpha candidate on the same test is left as an explicitly PENDING
+   comparison (that branch's own numbers were not available here), but the
+   finalist fails the absolute bar (v4's own baseline) on its own, which is
+   sufficient by the pre-registered rule regardless of that comparison's
+   outcome.
+2. Independent of Step D, Step C's own "clear" is structurally weak: none
+   of the 18 Step-B cells are risk-matched, and the exposure_ratio sitting
+   at a near-constant ~0.24-0.29 across every eta and every slice is this
+   project's own recurring artifact (R-33) -- a strategy holding roughly a
+   quarter of the control's notional will show a smaller drawdown and,
+   over a sub-period the control did poorly in, a better Sharpe, without
+   that reflecting a risk-adjusted edge in the sizing RULE itself. The
+   Step E fee-robustness "pass" has the same root cause (the heavier
+   trader is hurt more by a fee hike), so it should not be read as an
+   independent point in the mechanism's favor either.
+3. What DID work, and is worth keeping regardless of the outcome above: the
+   causality machinery (A1, both legs, on real data) and the eta->0/
+   eta->infinity sanity checks (once the adaptive-eta fix was in) all pass
+   cleanly, and the inline-formula consistency check demonstrates the
+   incremental population bookkeeping is a faithful, non-divergent
+   application of `r93_shared`'s own Grossman-Zhou formula. The mechanism
+   is honestly built and honestly falsified; it just does not survive its
+   own pre-registered test.
+The direction (SIZE axis, endogenous drawdown state) remains open at the
+single-alpha level per the conservative sibling's own, separately-reported
+result; this round's specific claim -- that adaptively BLENDING several
+alphas via Hedge is more robust than committing to one -- is REJECTED by
+the evidence gathered here.
 """
 
 from __future__ import annotations
@@ -284,7 +472,13 @@ BARS_PER_DAY = 288
 POPULATION_ALPHAS: tuple[float, ...] = (0.15, 0.20, 0.30, 0.40, 0.50)
 K = len(POPULATION_ALPHAS)
 ETA_GRID: tuple[float, ...] = (0.01, 0.05, 0.1)
-ETA_INF_PROXY = 1.0e4  # large-but-finite stand-in for eta -> infinity
+# NOTE: the eta -> infinity sanity check does NOT use one fixed global constant here -- a
+# single "large but finite" eta calibrated safe on a short slice (e.g. 2000) silently
+# underflows float64's ~709 log-exponent ceiling on a longer one (inner-train's 1000+ days
+# accumulates a wider cumulative-return range than a 139-day smoke-test slice), which was
+# caught empirically (100% argmax agreement on the short slice, 25.7% on inner-train at the
+# SAME eta) rather than assumed away. See `adaptive_eta_inf_proxy` below: eta is derived per
+# frame so it stays safely under that ceiling regardless of series length.
 SHADOW_FEE_RATE = SPOT.fee_rate  # 0.10%, fixed for all shadow bookkeeping (disclosed above)
 SHADOW_BALANCE = 1_000.0
 HEDGE_WARMUP_DAYS = 80 + 30  # v4's own 80-day longest anchor, + 30 days for weights to warm
@@ -431,14 +625,35 @@ def uniform_weights_over_bars(n: int) -> np.ndarray:
 
 
 def bestfollow_weights_over_bars(df: pd.DataFrame, equity_mat: np.ndarray) -> np.ndarray:
-    """eta -> infinity limit, computed directly (argmax of the prior day's
-    realized return) for the sanity check."""
+    """eta -> infinity limit, computed directly for the sanity check.
+
+    CORRECTED DURING DEVELOPMENT, disclosed here rather than silently fixed:
+    the initial draft of this reference used the argmax of the SINGLE PRIOR
+    DAY's return only, on the assumption that "most-recent realized return"
+    meant a one-step lookback. Empirically that reference matched the actual
+    recursion's argmax only ~72-74% of the time even at very large eta,
+    while the argmax of the running CUMULATIVE shadow log-return (Follow-
+    The-Leader) matched it EXACTLY (100%, at eta up to ~3000 on this data,
+    before float64 log-weight underflow starts to bite). This is the
+    correct, standard result: `logw_k(d) = eta * sum_{t<d} r_k(t)` up to a
+    per-day additive constant shared by all k (the softmax renormalization
+    every day subtracts a scalar, which does not change the argmax), so
+    `argmax_k logw_k(d) == argmax_k cumsum(r_k)[d-1]` identically -- the
+    exponential-weights algorithm's eta -> infinity limit is Follow-The-
+    Leader on cumulative performance, not a one-step lookback. "Whichever
+    population member had the single best MOST-RECENT realized return" in
+    the task's own phrasing is read here as "most-recently updated leader,"
+    i.e. the running leader as of the latest update -- not literally
+    yesterday alone. Verified below with the correct reference; the
+    incorrect one is not shown but was caught this way, not asserted away.
+    """
     dates, logret = _daily_last_and_logret(df, equity_mat)
     d_n = len(dates)
+    cum = np.cumsum(logret, axis=0)
     daily_w = np.zeros((d_n, K), dtype=float)
     daily_w[0] = 1.0 / K
     for i in range(1, d_n):
-        best = int(np.argmax(logret[i - 1]))
+        best = int(np.argmax(cum[i - 1]))
         daily_w[i, best] = 1.0
     day_idx = pd.Series(np.arange(d_n), index=dates)
     bar_day_idx = day_idx.reindex(df.index.normalize()).to_numpy()
@@ -560,17 +775,42 @@ def sanity_eta_zero(df: pd.DataFrame) -> tuple[bool, str]:
     return ok, f"eta=0 blend vs directly-computed uniform mean: max|diff|={max_abs_diff:.3e}"
 
 
+def adaptive_eta_inf_proxy(df: pd.DataFrame, equity_mat: np.ndarray,
+                          target_logw_range: float = 650.0) -> float:
+    """A fixed large eta (e.g. 2000) is only "safely large but not yet
+    underflowing" for the SPECIFIC series length it was calibrated on: the
+    spread of logw at day i is eta * range(cumsum(r)[0..i-1]) (see
+    `bestfollow_weights_over_bars`'s docstring for the derivation), so a
+    longer series accumulates a wider cumulative range and the SAME eta that
+    was safe on a 139-day slice hits float64's ~709 exponent ceiling on a
+    1000+ day slice -- caught empirically (25.7% argmax agreement on
+    inner-train vs. 100% on a shorter slice) rather than assumed away.
+    Fixed here by choosing eta PER FRAME so that
+    eta * range(cumsum(shadow log-returns)) <= target_logw_range (650,
+    comfortably under 709) for THAT frame -- guaranteeing no underflow
+    anywhere in the series while staying deep in the maximally-reactive
+    (near one-hot) regime, regardless of how long the frame is.
+    """
+    _, logret = _daily_last_and_logret(df, equity_mat)
+    cum = np.cumsum(logret, axis=0)
+    spread = float(cum.max() - cum.min()) if len(cum) else 0.0
+    spread = max(spread, 1e-6)
+    return min(target_logw_range / spread, 1.0e6)
+
+
 def sanity_eta_inf(df: pd.DataFrame) -> tuple[bool, str]:
     _, scale_mat, equity_mat = population_scale_matrix(df)
-    w_large = hedge_weights_over_bars(df, equity_mat, eta=ETA_INF_PROXY)
+    eta_proxy = adaptive_eta_inf_proxy(df, equity_mat)
+    w_large = hedge_weights_over_bars(df, equity_mat, eta=eta_proxy)
     w_direct = bestfollow_weights_over_bars(df, equity_mat)
-    # compare only the argmax member each day (softmax at eta=1e4 is one-hot
+    # compare only the argmax member each day (softmax at this eta is one-hot
     # to far better than float precision whenever the daily returns differ
     # at all, but ties/exact-zero days are legitimately ambiguous)
     match = np.argmax(w_large, axis=1) == np.argmax(w_direct, axis=1)
     frac_match = float(match.mean())
     ok = frac_match > 0.999
-    return ok, f"eta={ETA_INF_PROXY:g} argmax-member agreement with direct best-follow: {frac_match:.4%}"
+    return ok, (f"eta={eta_proxy:.1f} (adaptive, frame-calibrated) argmax-member agreement "
+               f"with direct best-follow: {frac_match:.4%}")
 
 
 # =============================================================== (6)
