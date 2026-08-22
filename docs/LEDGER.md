@@ -315,6 +315,167 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-95 · 08-22 · NEGATIVE (both branches) — the Crypto Fear & Greed Index as a thirteenth INFO-axis signal: the composite is coincident with, not leading, v4's own reactive vote, and its contrarian reading is falsified with the sharpest, most significant sign reversal this project's INFO axis has produced
+
+**Direction.** alternative.me's daily Crypto Fear & Greed Index (FGI) — a
+proprietary 0-100 composite crowd-sentiment score (publicly documented
+weights: Volatility 25%, Market Momentum/Volume 25%, Social Media 15%,
+Surveys 15%, Bitcoin Dominance 10%, Google Trends 10%), fetched via the new
+`scripts/fetch_fear_greed_index.py` from alternative.me's free,
+unauthenticated public API — as this project's thirteenth structurally
+distinct INFO-axis signal. Citations: Baker & Wurgler (2006), *Journal of
+Finance* 61(4), 1645-1680, "Investor Sentiment and the Cross-Section of Stock
+Returns" (sentiment is a CONTRARIAN predictor — the novel branch's citation);
+He, Shen, Zhang & Zhang (2023), *Finance Research Letters* 58(PA),
+"Predicting cryptocurrency returns for real-world investments" (the SAME
+alternative.me FGI series, found to have significant in-sample and
+out-of-sample return-CONTINUATION predictive power at 1-day-to-1-week
+horizons — the conservative branch's citation); an unattributed 2026
+ScienceDirect VAR-model paper, "Do bitcoin returns move sentiment? Evidence
+from the crypto fear & greed index" (2018-2025 daily data, the same series
+again, finding FGI does NOT Granger-cause returns and is reactive rather than
+predictive — disclosed in advance as this round's own named risk, per both
+branches' pre-registration). **Attacks INFO**: FGI is not reconstructed from
+this project's own price/volume (the L-14/15/16 order-flow-proxy ruling does
+not apply) and is a genuinely different *construction* of information from
+all twelve prior signals — a third-party MULTI-SOURCE COMPOSITE blending
+several data domains (plus survey/social data this project cannot fetch
+individually) into one proprietary number, where every one of the twelve
+prior INFO signals (on-chain activity/hash rate B-07/R-44, VIX/DXY macro
+spillover R-53, MVRV valuation R-74, USDT stablecoin supply R-54/R-55/R-58,
+Deribit DVOL R-73, halving-cycle phase R-79, day-of-week/session timing R-75,
+Binance futures positioning R-81, raw volume R-84, Binance taker order-flow
+imbalance R-88, Wikipedia pageview attention R-94) is a single raw metric
+from one data domain. Off-backlog, literature-prompted (same posture as
+R-73–R-94 — the ranked list holds only **B-32**, pure infrastructure with no
+waiting candidate). Falsification named in advance, per branch: conservative
+fails if it does not clear the standing ≥4/6-episode lead-time gate (the same
+gate all twelve predecessors failed); novel fails if the pre-registered
+forward-return sub-claim (Step 0) is the wrong sign or not significant at a
+majority of horizons.
+
+**What was done.** Shared harness (`experiments/r95_shared.py`, written by
+the operator before dispatch): the fetch script (3,121 daily rows verified,
+2018-02-01→2026-08-22, exactly two short gaps — one real 3-day gap in
+2018-04, one entirely post-holdout in 2024-10 — cross-checked directly
+against the raw file before dispatch), `tradebot.data.load_fear_greed_index`/
+`align_fear_greed_causal` (new, additive), and the standing six-episode
+table (R-82/R-83/R-84/R-94's set) with episode 1 (2018-01-17) marked as a
+disclosed, automatic coverage fail — FGI's own history starts 2018-02-01,
+after that episode's onset — the other five episodes fully covered. Two
+parallel branches, each owning disjoint files, neither committing mid-round:
+
+- **Conservative** (`experiments/r95_conservative_fgi_confirm.py`, He-Shen-
+  Zhang-Zhang's continuation reading): meta-vote = 1 when a symmetric
+  extremity series (`|FGI-50|/50`, optionally smoothed over `smooth_days`)
+  crosses above τ, combined via R-53/R-55's validated confirming-vote
+  architecture (`frac = (anchor_sum + weight·meta_vote)/(3+weight)`,
+  weight=0 recovers v4 exactly). Notably, unlike all twelve prior INFO
+  signals, FGI needed no rolling z-score against its own trailing history —
+  the provider already normalizes it to a fixed 0-100 scale. Step-A
+  lead-time gate only — a grid of τ∈{0.2,0.3,0.4} × smooth_days∈{1,3,7}, 9
+  cells × 6 episodes, against a 500-draw/5-day-block bootstrap null per
+  episode, pre-registered kill switch ≥4/6 episodes on a plateau of ≥3
+  cells.
+- **Novel** (`experiments/r95_novel_fgi_contrarian_discount.py`, Baker-
+  Wurgler's contrarian reading): a bounded, symmetric two-state DISCOUNT
+  (not a never-increase-only brake — 4-for-4 failed independent of signal,
+  R-34/R-41/R-53/R-73) multiplying v4's `frac` by `(1-δ)` only while FGI is
+  in alternative.me's own Extreme Greed bucket (≥80), unchanged otherwise —
+  explicitly does not boost exposure on Extreme Fear (disclosed asymmetry,
+  out of scope for this branch). Step-0 pre-registered sub-claim test only:
+  bin every inner-train bar (2018-02-01→2020-12-31, FGI-covered fraction of
+  inner-train) into alternative.me's own five buckets and compute causal
+  forward log-returns at H∈{1,3,7,14} days per bucket, with a 500-draw/
+  5-day-block bootstrap CI on the Extreme-Greed-minus-Neutral and
+  Extreme-Fear-minus-Neutral differences at each horizon. Kill switch: STOP
+  before any strategy code unless a MAJORITY (≥3 of 4) of horizons show
+  BOTH Extreme Greed significantly below Neutral AND Extreme Fear at or
+  above Neutral.
+
+**Configurations evaluated: 0** toward the backtest-trials ledger on both
+branches — both stopped at their pre-registered measurement gate before any
+`ev()` backtest call, per this project's standing Step-A/Step-0 accounting
+convention (54 Step-A gate diagnostics + 4 Step-0 horizon cells, none
+counted). The operator independently re-ran both branches' gate/Step-0
+scripts end-to-end from a clean shell (`python
+experiments/r95_conservative_fgi_confirm.py gate`, `python
+experiments/r95_novel_fgi_contrarian_discount.py step0`) and reproduced
+every reported number exactly (all 54 LEAD/null-p90 cells; all 4 Step-0
+per-horizon bucket means and CIs).
+
+**Result.**
+
+*Conservative — Step A.* **0 of 9 cells clear the ≥4/6 bar** — the flattest,
+most decisive Step-A failure of any INFO round to date (every prior round has
+had at least one cell reach 1-2/6; this one reaches 0/6 on all nine). Two
+episodes (2018 bear onset — the disclosed coverage fail — and Terra/Luna)
+never produce an anchor-gate transition inside the pre-registered window in
+any cell. Where a crossing does exist, FGI extremity was already at or past
+threshold at the very moment of `onset` itself in nearly every case — so
+`cross_time == onset` regardless of τ or smoothing, and the circular
+block-bootstrap null (built from the same already-extreme window) reproduces
+almost exactly the same "lead" under an arbitrary time-shift (e.g. COVID
+crash: LEAD +25.56d, null p90 +25.56d to five decimal places). This is
+precisely the round's own pre-registered named failure mode: a positive lead
+indistinguishable from an arbitrary time-shift of the same series. FGI is
+coincident with these crashes, not ahead of them. **13 of 13 INFO-axis
+signals now fail this project's lead-time gate.**
+
+*Novel — Step 0.* **0 of 4 horizons show the contrarian sign pattern**
+(need ≥3) — and the failure is decisive on the greed side specifically:
+Extreme Greed's mean forward return is positive at all 4 horizons and, at 3
+of 4 (3d/7d/14d), *significantly above* Neutral (e.g. H=14d: +0.100 vs.
++0.004, CI [+0.024, +0.169]) — the exact opposite sign from Baker-Wurgler's
+contrarian claim, and the sharpest, most statistically significant sign
+reversal any of this project's thirteen INFO-axis attempts has produced. The
+Extreme Fear side is directionally compatible with reversal (mean > Neutral
+at all 4 horizons) but never significant (every CI contains zero), so it
+passes only the loosest reading of its own clause while adding no
+confirmatory evidence. Read plainly: on 2018-2020 BTC, Extreme Greed predicts
+significantly *higher*, not lower, subsequent returns — matching He-Shen-
+Zhang-Zhang's continuation finding on the greed side, not Baker-Wurgler's
+reversal, and consistent with the round's own disclosed risk that two of its
+three cited papers disagreed with the contrarian sign before any number was
+run. Per the pre-registered stop rule, no strategy/latch code was ever
+exercised against real data.
+
+Read together, the two branches reach the same diagnosis as R-94's attention
+pair by a different route: FGI's correlation with price on this data is real
+and *positive* (continuation, not reversal, not exhaustion), but that
+correlation is contemporaneous-to-lagging, not leading — the composite index
+already contains 25% realized-volatility and 25% momentum/volume weighting
+by the provider's own published methodology, both of which are themselves
+price-derived, which plausibly explains why it moves with price rather than
+ahead of it. Thirteen for thirteen INFO-axis signals now share this exact
+shape: economically real correlation, zero exploitable lead.
+
+**Verdict.** **NEGATIVE, both branches, both stopped at their pre-registered
+measurement gate.** One-line lesson: a third-party multi-source composite
+sentiment index — genuinely different in construction from every single-metric
+signal this project had tried before it — adds nothing once tested against
+the same lead-time/sub-claim bar the other twelve failed, and produces this
+axis's most decisive negative result yet on both the lead-time question (0/9
+cells, not merely below-bar) and the sign question (a significant reversal
+of the hypothesized direction, not a null). **Holdout counter: +0** —
+neither branch, nor the operator's independent re-runs, ever read a bar
+dated 2023-01-01 or later; both scripts print their own max-timestamp-read
+line (2022-12-31 23:55:00 UTC conservative; 2020-12-31 00:00:00 UTC novel,
+inner-train only) and both pass their `assert_no_holdout` guards — see the
+bullet added below in
+[Holdout consultations to date](#holdout-consultations-to-date). Neither
+pre-registered decision rule moved after seeing any number. **Next step:**
+this closes the thirteenth INFO-axis attempt without reopening any prior
+one; a future session preferring a fresh mechanism search needs a data
+channel this project cannot construct from its already-committed files or
+fetchable free sources at all (an increasingly narrow set after thirteen
+attempts spanning on-chain, macro, valuation, liquidity, priced volatility,
+calendar, positioning, volume, order flow, attention and now composite
+sentiment), a SIZE-axis construction that does not collapse to a low,
+roughly-constant exposure fraction relative to v4 (R-38/R-46/R-59/R-60/R-93's
+shared failure mode), or a regime-timing construction distinct from the six
+already closed — or should work **B-32** directly.
+
 ### R-94 · 08-22 · NEGATIVE (both branches) — Wikipedia "Bitcoin" pageviews as a twelfth INFO-axis signal: retail attention neither leads v4's own reactive vote nor shows the exhaustion signature its own citation predicts
 
 **Numbering note.** Pre-registered and run as "R-93"; a concurrently-running
@@ -9859,6 +10020,38 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-22 after R-95.** An off-backlog, literature-prompted two-branch
+round (same posture as R-73–R-94 — the ranked list holds only B-32, pure
+infrastructure) tried the thirteenth structurally distinct INFO-axis signal:
+the Crypto Fear & Greed Index (alternative.me), a third-party multi-source
+COMPOSITE sentiment score — genuinely different in construction from every
+prior single-metric INFO signal. Both **NEGATIVE**, both stopped at their own
+pre-registered measurement gate before any backtest code ran, and both more
+decisively than most predecessors. Conservative (He-Shen-Zhang-Zhang's
+continuation reading, R-53/R-55's confirming-vote architecture): Step-A
+lead-time gate scores **0/9 cells** clearing the standing ≥4/6-episode bar —
+the flattest failure of any INFO round to date (every cell 0/6, not merely
+below-bar). Novel (Baker-Wurgler's contrarian reading, a bounded extreme-greed
+discount): Step-0 sub-claim test scores **0/4 horizons** on the pre-registered
+sign pattern, with Extreme Greed predicting *significantly higher* (not
+lower) forward returns at 3 of 4 horizons — the sharpest, most significant
+sign reversal this project's INFO axis has produced. Read together the two
+branches agree with R-94's own diagnosis by a different route: sentiment's
+correlation with price on this data is real and positive (continuation), but
+contemporaneous-to-lagging rather than leading — plausibly because the index
+is itself 50% built from realized-volatility and momentum/volume weights,
+which are price-derived. **This closes the thirteenth INFO-axis attempt. B-32
+remains the only ranked, unblocked backlog item.** A future session preferring
+a fresh mechanism search now needs a data channel this project cannot
+construct from its already-committed files or fetchable free sources at all —
+an increasingly narrow set after thirteen attempts spanning on-chain, macro,
+valuation, liquidity, priced volatility, calendar, positioning, volume, order
+flow, attention and now composite sentiment — a SIZE-axis construction that
+does not collapse to a low, roughly-constant exposure fraction relative to v4
+(R-38/R-46/R-59/R-60/R-93's shared failure mode), or a regime-timing
+construction distinct from the six already closed — or should work B-32
+directly.
+
 **Re-ranked 08-22 after R-94.** An off-backlog, literature-prompted two-branch round
 (same posture as R-73–R-93 — the ranked list holds only B-32, pure infrastructure)
 tried the twelfth structurally distinct INFO-axis signal: Wikipedia "Bitcoin"
@@ -11295,6 +11488,17 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-22 · ~637** — R-95: **+0** on top of R-94's ~637 (unchanged), both
+  branches. Conservative (`experiments/r95_conservative_fgi_confirm.py`):
+  0 backtest configs (Step-A gate stop, 0/9 cells clearing the bar); 54
+  gate diagnostics (9 τ/smooth_days cells × 6 episodes), `assert_no_holdout()`
+  clean, max timestamp read 2022-12-31 23:55:00 UTC. Novel
+  (`experiments/r95_novel_fgi_contrarian_discount.py`): 0 backtest configs
+  (Step-0 gate stop, 0/4 horizons passing); 4 diagnostic horizon cells
+  (H∈{1,3,7,14} days); max timestamp read 2020-12-31 00:00:00 UTC
+  (inner-train only, never approached 2021+). Both scripts independently
+  re-run end-to-end by the operator from a clean shell, reproducing every
+  reported LEAD/null-p90 cell and every Step-0 bucket-mean/CI cell exactly.
 - **08-22 · ~637** — R-94: **+0** on top of R-93's ~637 (unchanged), both
   branches. Conservative (`experiments/r94_conservative_attention_confirm.py`):
   0 backtest configs (Step-A gate stop); 54 gate diagnostics (9 τ/window_days
