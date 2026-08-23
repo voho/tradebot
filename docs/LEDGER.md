@@ -315,6 +315,16 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-100 · 08-23 · NEGATIVE (both branches) — cross-venue (Binance vs. Deribit) BTC perpetual funding-rate divergence, a fifteenth INFO-axis signal (conservative) and a divergence-stress execution-timing brake (novel): the lead-time gate clears 1 of 4 valid episodes (need ≥3/4) at the primary cell, and the delay mechanism's Sharpe deltas sit an order of magnitude inside the ±0.2 noise floor on all 4 promotion-bar cells
+
+**Direction.** With the backlog empty of anything but **B-32** (pure multi-asset registration infrastructure, no strategy-improvement angle — the posture every round since R-73 has recorded), this round went off-backlog with a literature-motivated idea: the SPREAD between Binance's and Deribit's simultaneously-reported BTC perpetual funding rates (both already committed, `data/btcusdt_perp_funding_8h.csv.gz` / `data/btcusdt_deribit_perp_funding_8h.csv.gz`) as a measure of *relative* crowding between a retail-heavy venue and an institutional/options-flow venue — a fifteenth structurally distinct INFO-axis candidate, tested two ways: a confirming-vote lead-time gate (conservative) and a divergence-stress execution-delay brake on `kelly_regime_v4`'s own rebalances (novel). Citations, fetched and verified before being relied on: **Zhivkov (2026)**, *Mathematics* (MDPI) 14(2):346 — a 35.7M-observation, 26-venue panel finding CEX-CEX/CEX-DEX funding divergences are real and economically large (17% of observations ≥20bps) but ~95% of large spreads force an early exit, i.e. divergence tracks genuine cross-venue stress rather than a clean arbitrage income stream (neither branch here trades the spread directly — both use it only as a vote/brake on v4's existing directional position); **Inan (2025/26)**, SSRN 5576424 — funding dynamics carry a directional, non-random component, motivating z-scoring each venue's funding against its own trailing history rather than assuming either series is already stationary or comparable in scale to the other; **He, Manela, Ross & von Wachter (2024)**, SSRN 4301150 (already used at R-39) — funding as compensation for basis risk, read here as a segmented, capital-constrained arbitrage-capacity story between the two venues. **Attacks INFO** (conservative) **and COST** (novel, contingent on the same signal's informativeness, same dependency structure as R-88's INFO→COST pair). **Not a duplicate of:** R-35/R-39 (B-05, single-venue Binance funding *level*, a different economic quantity than a *cross-venue difference*); R-39/B-02's `load_funding_extended` (Deribit funding used there only to splice onto Binance's post-2023 gap, never as a feature — this round is the first to treat the two venues' disclosed level/settlement-convention instability as the object of interest rather than a nuisance); R-41/B-15 (Deribit's own spot-vs-perp basis on *one* exchange — a term-structure signal, not a cross-venue funding comparison); R-73 (Deribit DVOL, an implied-vol index, unrelated to funding); R-81/R-88 (single-venue Binance metrics-feed positioning/flow signals, read no Deribit data); R-53/R-55 (confirming-vote architecture, reused verbatim on a new channel); B-24/R-77 (execution-model rounds conditioned on volatility, not cross-venue divergence stress).
+
+**What was done.** Operator-authored shared module `experiments/r100_shared.py` (not edited by either branch): `cross_venue_divergence_z` — each venue's UTC-daily-summed funding rate causally z-scored against its own trailing baseline, then differenced (a design chosen specifically to sidestep the two venues' disclosed non-comparable levels/settlement conventions — a raw rate difference would conflate genuine divergence with that known instability), the standard six-episode `STRESS_EPISODES` table with the two 2018 entries marked construction-forced FAILs (funding data starts 2020-01-01, predating both by 1–2 years) and COVID flagged as a disclosed thin-baseline case, and a corrected pass bar (`PASS_BAR_NUM=3, PASS_BAR_DEN=4`) fixed *before* either branch ran, replacing the original proposal's unreachable "≥4 of 6" (only 4 of the 6 standard episodes fall inside funding-data coverage at all). Kill Switch A (`experiments/r100_killswitch_a.py`, operator-run): all 3 `BASELINE_WINDOW_DAYS_GRID` cells (30/60/90d) fire cleanly (118–175 threshold crossings each across 2020–2022) — no degeneracy, no substitution needed, PRIMARY=60d (grid centre) unchanged. Two parallel dispatched-agent branches, disjoint files, neither committed by the branch — the operator merged and committed once both verdicts were in, then independently re-ran both files end-to-end from a clean shell and reproduced every reported number bit-for-bit. **Conservative** (`experiments/r100_conservative_funding_divergence_vote.py`): pre-registered a SIGNED Step-A lead-time gate (divergence z crossing UP through `Z_THRESH=1.5` vs. `anchor_majority`'s nearest downward transition, 500-draw block-bootstrap null, block=5d) across the full baseline grid, with the primary cell's pass/fail (≥3/4 valid episodes) as the sole STOP/proceed-to-Step-B decision. **Novel** (`experiments/r100_novel_funding_divergence_brake.py`): pre-registered a 3×3 grid (stress threshold ∈ {1.0, 1.5, 2.0} × delay cap K ∈ {6, 24, 96} bars) of an execution-delay wrapper around v4's own `prepare()` target (reused verbatim, not reimplemented) — exposure-*increasing* target changes are held during stress, exposure-*decreasing* changes always pass immediately — evaluated against v4 on 4 cells (inner-train/inner-validation × spot/futures5x) with the project's standard paired block-bootstrap (30-day mean block, 2,000 resamples), promotion requiring ≥2 of 4 cells to clear the **±0.2 Sharpe noise floor** with a CI excluding zero and no cell significantly worse. **Configurations evaluated: 44** total across both branches (conservative: 3, Step-A grid only, Step B never reached; novel: 41 — 36 grid backtests + 4 baseline reruns + 1 causal-truncation probe).
+
+**Result.** Conservative, primary cell (baseline=60d): **1/4 valid episodes pass.** COVID (lead −4.22d), 2021-top (−2.20d) and FTX (−3.62d) all show the divergence alarm crossing *after* v4's own anchor already reacted; Terra/Luna nominally passes (+3.00d, above its null median of −17.67d) but is not robust across the baseline grid — it inverts to −54.00d at 90-day and fails at 30-day — reading as parameter-sensitive noise rather than a real early-warning property. Neighbouring grid cells score 0/4 (30d) and 0/4 (90d); this does not override the primary cell's own pre-registered verdict, which is decisive on its own terms: **1 < 3 → FAIL.** No Step-B code was run (confirmed: 6s wall time, no `ev()` calls). Novel: v4 issues only ~67 exposure-increasing rebalances/year over the inner period; of those, only 1.2–9.0% overlap any of the three stress thresholds tested (5–36 of 400 bars), and when a delay does trigger it almost always runs to the full K-bar cap rather than resolving early (favorable-resolution counts ≈0–1 out of 8–30 events) — both diagnostics were pre-registered and computed *before* any Sharpe comparison, precisely to test whether there would be enough "delay opportunities" for the mechanism to matter at all. The winning configuration by inner-validation Sharpe (`z1.0_K6`) clears **0 of 4** promotion-bar cells: train/spot +0.001 [−0.002, +0.004], train/futures5x −0.001 [−0.006, +0.003], val/spot +0.018 [−0.011, +0.050], val/futures5x −0.013 [−0.187, +0.144] — every delta an order of magnitude inside the ±0.2 floor and every CI containing zero. Across the full 36-cell grid, deltas range −0.038 to +0.018; two cells reach nominal statistical significance (both ≈−0.004 to −0.008, on the sparsely-covered train/spot cell where near-identical position paths shrink the CI around a economically negligible number) but neither clears the pre-registered bar in either direction. Both branches' causal-truncation probes PASS. Neither branch's max timestamp read anywhere exceeded 2022-12-31 23:55:00 UTC; neither reached the holdout.
+
+**Verdict.** **NEGATIVE, both branches.** One-line lesson, conservative: this is the fifteenth INFO-axis signal in this project's history and it fails the identical lead-time property the other fourteen did — even a genuine, venue-reported cross-venue crowding measure mostly trails rather than leads `kelly_regime_v4`'s own slow reactive anchor, and its one nominal pass (Terra/Luna) does not survive a change of baseline window, the signature of noise rather than a real effect. One-line lesson, novel: the failure here is not (only) that the mechanism is wrong but that the opportunity is structurally too small to test — R-72/B-30's own finding that v4's deadband already discards roughly half its scheduled rebalances at 5x compounds with this round's own diagnostic (single-digit-to-thirty stress-overlapping delay events per multi-year cell) to leave any execution-timing brake on this specific strategy's rebalance schedule with too few decision points to move Sharpe past this project's own noise floor, independent of whether divergence-stress genuinely predicts poor execution conditions. **Holdout counter: +0 on top of R-99's ~637** (running total unchanged at **~637**) — neither branch, nor the operator's independent re-runs, ever read a bar dated 2023-01-01 or later; both scripts print their own max-timestamp-read line and both pass their `assert_no_holdout` guards at every load point, operator-verified by re-running both files from a clean shell and matching every reported number, including the full 36-cell grid, bit-for-bit. Neither pre-registered decision rule moved after seeing any number — the pass-bar correction (3/4 instead of the unreachable proposed 4/6) was made and disclosed in the shared module *before* either branch was dispatched, per ROUTINE.md's bug-fix allowance, not after any result was read. **Next step:** this closes the fifteenth INFO-axis attempt and confirms (independently, via a second execution-timing construction) R-72/B-30's own diagnosis that v4's rebalance schedule is too sparse for a timing overlay to have much room to work in, whatever gates it. **B-32 remains the only ranked, unblocked backlog item.** A future session preferring a fresh mechanism search now needs a data channel this project cannot construct from its already-committed files or fetchable free sources at all (fifteen INFO-axis attempts spanning on-chain, macro, valuation, liquidity, priced volatility, calendar, positioning, volume, order flow, attention, composite sentiment and now cross-venue funding divergence have all failed the same lead-time property), a SIZE-axis construction that does not collapse to a low, roughly-constant exposure fraction relative to v4 (23 attempts) or reproduce R-97's flat-concentration-rate failure, a regime-timing construction with no basis in common with the nine already closed, or an execution-timing construction that first checks — as this round now has, twice — whether v4's own rebalance frequency leaves enough decision points to move Sharpe at all before building the gate around it — or should work B-32 directly.
+
 ### R-99 · 08-23 · NEGATIVE (both branches) — Barndorff-Nielsen & Shephard bipower-variation jump/continuous quadratic-variation decomposition, a ninth regime-timing mechanism (conservative) and its own forward-loss premise (novel): the alarm clears 0 of 6 episodes at the primary cell (best anywhere on the 9-cell grid, 1/6), and 0 of 4 forward-loss horizons show elevated post-jump loss
 
 **Direction.** A causal rolling decomposition of BTC's own daily realized
@@ -10678,6 +10688,44 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-23 after R-100.** An off-backlog, literature-prompted
+two-branch round (same posture as R-73–R-99 — the ranked list holds only
+B-32, pure infrastructure) tried cross-venue (Binance vs. Deribit) BTC
+perpetual funding-rate divergence (Zhivkov 2026; Inan 2025/26; He, Manela,
+Ross & von Wachter 2024), a fifteenth structurally distinct INFO-axis
+signal (conservative) and a divergence-stress execution-timing brake on
+`kelly_regime_v4`'s own rebalances (novel). Both **NEGATIVE**. Conservative:
+the Step-A lead-time gate scores **1/4** valid episodes at the primary cell
+(need >=3/4) — the divergence alarm trails v4's own anchor reaction on
+COVID, the 2021 top and FTX, and its one nominal pass (Terra/Luna) inverts
+sign at a 90-day baseline and fails at 30-day, the signature of noise
+rather than a real lead. Novel: a pre-registered diagnostic run *before*
+any Sharpe number — v4 issues only ~67 exposure-increasing rebalances/year,
+of which 1.2-9.0% overlap any tested stress threshold — explains why the
+winning delay configuration clears **0 of 4** promotion-bar cells (deltas
++0.001 to +0.018 against a +/-0.2 floor, every CI containing zero): there
+are structurally too few delay opportunities on this strategy's own sparse
+rebalance schedule for a timing brake to move Sharpe, independent of
+whether the underlying stress signal is real. **This closes the fifteenth
+INFO-axis attempt (on-chain, macro, valuation, liquidity, priced
+volatility, calendar, positioning, volume, order flow, attention,
+composite sentiment and now cross-venue funding divergence, all fourteen
+predecessors failed the same lead-time gate) and is the second
+independent execution-timing construction (after B-24/R-77) to find v4's
+own rebalance sparsity, not signal quality, as the binding constraint on
+that specific axis.** **B-32 remains the only ranked, unblocked backlog
+item.** A future session preferring a fresh mechanism search now needs a
+data channel this project cannot construct from its already-committed
+files or fetchable free sources at all (fifteen INFO-axis attempts have
+failed), a SIZE-axis construction that does not collapse to a low,
+roughly-constant exposure fraction relative to v4 (23 attempts) or
+reproduce R-97's flat-concentration-rate failure, a regime-timing
+construction with no basis in common with the nine already closed, or an
+execution-timing construction that first checks — as both attempts on this
+sub-axis now have — whether v4's own rebalance frequency leaves enough
+decision points to move Sharpe at all before building the gate around it —
+or should work B-32 directly.
+
 **Re-ranked 08-23 after R-99.** An off-backlog, literature-prompted
 two-branch round (same posture as R-73–R-98 — the ranked list holds only
 B-32, pure infrastructure) tried Barndorff-Nielsen & Shephard bipower-
@@ -12292,6 +12340,21 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-23 · ~637** — R-100: **+0** on top of R-99's ~637 (unchanged), both
+  branches. Shared gate + Kill-Switch-A (`experiments/r100_shared.py` +
+  `experiments/r100_killswitch_a.py`, both operator-run): a 3-cell
+  degeneracy check on `BASELINE_WINDOW_DAYS_GRID`, all pre-2023. Conservative
+  (`experiments/r100_conservative_funding_divergence_vote.py`): 3 Step-A
+  gate configs (primary cell 1/4 valid episodes, need >=3/4; Step B never
+  reached); `assert_no_holdout()` clean at every load, max timestamp read
+  2022-12-31 23:55:00 UTC. Novel
+  (`experiments/r100_novel_funding_divergence_brake.py`): 41 configs (36
+  grid backtests + 4 baseline reruns + 1 truncation probe), all restricted
+  to inner-train/inner-validation; `assert_no_holdout()` clean, max
+  timestamp read 2022-12-31 23:55:00 UTC. The operator independently
+  re-ran both files end-to-end from a clean shell and reproduced every
+  number bit-for-bit, including the full 36-cell grid and the winning
+  configuration's 4-cell promotion table.
 - **08-23 · ~637** — R-99: **+0** on top of R-98's ~637 (unchanged), both
   branches. Shared gate (`experiments/r99_shared.py` + Kill-Switch-A,
   `experiments/r99_killswitch_a.py`, both run by the operator): 9-cell
