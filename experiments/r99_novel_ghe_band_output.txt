@@ -1,0 +1,34 @@
+1,010,889 bars  2017-01-01 -> 2026-08-12  (data: real)
+K grid: (0.15, 0.3, 0.5)  FLOOR=0.5  CEIL=2.0  BASE_DEADBAND=0.1
+
+=== Causal truncation probe (z-score and K=0.30 effective_deadband) ===
+    z_score check_at=100000: PASS
+    z_score check_at=300000: PASS
+    z_score check_at=550000: PASS
+    effective_deadband_K0.30 check_at=100000: PASS
+    effective_deadband_K0.30 check_at=300000: PASS
+    effective_deadband_K0.30 check_at=550000: PASS
+  TRUNCATION PROBE VERDICT: PASS
+
+=== STEP-0a: non-degeneracy of effective_deadband (inner-train) ===
+  K=0.15  mean=0.1011 std=0.0149 min=0.0749 max=0.1373  within+/-5%= 28.6%  differs>10%= 52.3%  (n=420481)
+  K=0.30  mean=0.1021 std=0.0299 min=0.0500 max=0.1746  within+/-5%= 20.8%  differs>10%= 71.4%  (n=420481)
+  K=0.50  mean=0.1037 std=0.0459 min=0.0500 max=0.2000  within+/-5%= 17.5%  differs>10%= 77.3%  (n=420481)
+  DEGENERACY VERDICT: non-degenerate, proceed
+
+=== STEP-0b: effect check vs kelly_regime_v4 (inner-train, futures 5x) ===
+baseline v4                  futures_5x  final=$       30,344 (  +2934.4%) trades=   72 DD= 35.3% sharpe= 2.28 [4s]
+ghe_band K=0.15              futures_5x  final=$       30,393 (  +2939.3%) trades=   72 DD= 35.3% sharpe= 2.29 [4s]
+    K=0.15: turnover_drop=  +0.0%  sharpe_diff=+0.001  DD=35.3%  final=$30,393
+ghe_band K=0.3               futures_5x  final=$       29,701 (  +2870.1%) trades=   70 DD= 36.7% sharpe= 2.27 [4s]
+    K=0.30: turnover_drop=  +2.8%  sharpe_diff=-0.011  DD=36.7%  final=$29,701
+ghe_band K=0.5               futures_5x  final=$       29,270 (  +2827.0%) trades=   70 DD= 35.7% sharpe= 2.27 [4s]
+    K=0.50: turnover_drop=  +2.8%  sharpe_diff=-0.010  DD=35.7%  final=$29,270
+  EFFECT-CHECK VERDICT: FAIL -> STOP (turnover-did-not-drop (no K reached -10% relative trades vs baseline))
+
+### VERDICT: NEGATIVE -- Step-0b (effect check) failed: turnover-did-not-drop (no K reached -10% relative trades vs baseline). ###
+
+Total configs evaluated: 4
+Truncation probe: PASS
+
+Wall-clock: 18s  |  configs evaluated so far: 4
