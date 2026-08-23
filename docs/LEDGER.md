@@ -315,6 +315,195 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-99 · 08-23 · NEGATIVE (both branches) — Barndorff-Nielsen & Shephard bipower-variation jump/continuous quadratic-variation decomposition, a ninth regime-timing mechanism (conservative) and its own forward-loss premise (novel): the alarm clears 0 of 6 episodes at the primary cell (best anywhere on the 9-cell grid, 1/6), and 0 of 4 forward-loss horizons show elevated post-jump loss
+
+**Direction.** A causal rolling decomposition of BTC's own daily realized
+quadratic variation into a continuous and a discontinuous (jump)
+component, computed from this project's own NATIVE 5-minute bars (never
+resampled to daily closes) — Barndorff-Nielsen, O. E., & Shephard, N.
+(2004), "Power and Bipower Variation with Stochastic Volatility and
+Jumps", *Journal of Financial Econometrics* 2(1), 1-37 (the foundational
+result: bipower variation `BV` is a jump-robust estimator of the
+continuous part of quadratic variation); Barndorff-Nielsen & Shephard
+(2006), "Econometrics of Testing for Jumps in Financial Economics Using
+Bipower Variation", *Journal of Financial Econometrics* 4(1), 1-30 (the
+formal jump-test framework, `RV_t - BV_t` significantly positive =
+evidence of a realized jump, confirmed live via WebSearch this round);
+Huang, X., & Tauchen, G. (2005), "The Relative Contribution of Jumps to
+Total Price Variance", *Journal of Financial Econometrics* 3(4), 456-499
+(the relative jump measure `RJ_t = (RV_t-BV_t)/RV_t` used as this round's
+base statistic, and the finite-sample bias correction used in its own
+`BV` estimator); Andersen, T. G., Bollerslev, T., & Diebold, F. X. (2007),
+"Roughing It Up: Including Jump Components in the Measurement, Modeling,
+and Forecasting of Return Volatility", *Review of Economics and
+Statistics* 89(4), 701-720 (confirmed live via WebSearch: finds the jump
+component of realized variance is close to i.i.d. and far less persistent
+than the continuous component — the literature-supplied, pre-registered
+reason to *expect* the novel branch's own Step-0 test to fail); Shen, D.,
+Urquhart, A., & Wang, P. (2020), "Forecasting the Volatility of Bitcoin:
+The Importance of Jumps and Structural Breaks", *European Financial
+Management* 26(5), 1294-1323 (confirmed live via WebSearch, including its
+own SSRN listing, abstract_id=3449756 — applies exactly this jump-
+detection machinery to BTC specifically, not a generic-equity import, the
+same BTC-specific-corroboration role Ke, Yang & Tan (2022) played for
+R-98's GPD/POT round). Two exploitations tested: the relative jump
+measure `RJ`, z-scored against its own trailing baseline, as a ninth
+structurally distinct regime-timing alarm (conservative — fed into
+R-53/R-55's validated confirming-vote architecture, had it passed Step
+A); and a causal trailing-quantile "big jump day" flag as a Step-0
+forward-loss premise test (novel — tested at Step 0 before any strategy
+code, per this project's standard economy). Attacks **N≈3** (a ninth
+theoretical basis for "has the regime already broken", not a retune of a
+basis already tried) and, for the novel branch, **ERR** (a formal
+semimartingale decomposition with a known asymptotic null, the same class
+of justification R-87's conformal wrapper, R-97's Wasserstein-DRO ball and
+R-98's GPD/VaR used). Off-backlog, literature-prompted (same posture as
+R-73–R-98 — the ranked list holds only **B-32**, pure infrastructure). Not
+a duplicate of: R-01 (HMM), R-82 (BOCPD), R-83 (Kalman LLT), R-84
+(vote-latch/volume modulation), R-85 (CSD), R-86 (transfer entropy), R-96
+(Hawkes), R-98 (POT/GPD) — eight regime-timing mechanisms from eight
+different fields; bipower-variation jump/continuous decomposition is a
+ninth, sharing no hidden state, segmentation, linearity, information-
+theoretic functional, self-exciting event-rate, or extreme-value tail
+machinery with any of them, and is the **first of the nine that
+structurally requires intraday (not daily-resampled) data to exist as a
+statistic at all**, rather than choosing 5-minute bars merely for
+convenience. Not R-93 (Grossman-Zhou) or R-97 (Wasserstein-DRO), both of
+which replace v4's `scale` factor directly — R-62 isolated `scale` as
+carrying none of v4's signature (four independent confirmations), and
+both R-93 and R-97 reproduced that exact failure mode; this round touches
+`scale` nowhere. Not one of the fourteen INFO-axis rounds — neither branch
+reads any data beyond the already-committed BTC OHLCV `close` series
+`kelly_regime_v4` itself consumes. Not R-84's conservative branch (raw
+log-volume magnitude) or R-88 (Binance taker buy/sell volume ratio) — this
+round reads no volume column at all. Full grounding, the Kill-Switch-A
+degeneracy check that set the primary grid cell, the synthetic-data
+validation of the RV/BV/jump estimator, and the pre-registered gates:
+`experiments/r99_shared.py`.
+
+**What was done.** One shared, read-only module built and run by the
+operator *before* either branch was dispatched (`experiments/r99_shared.py`
+— a dependency-free (numpy/pandas only) causal daily realized-variance
+(`RV`)/bipower-variation (`BV`)/jump-component/relative-jump-measure (`RJ`)
+computation from native 5-minute log returns grouped by UTC calendar day,
+the identical dated six-episode gate scaffolding R-82/83/84/85/86/96/98 all
+used, and a disclosed **Kill Switch A** degeneracy check across the full
+3×3 `DETECTION_WINDOW_DAYS_GRID × BASELINE_WINDOW_DAYS_GRID` grid,
+`experiments/r99_killswitch_a.py`): 8 of 9 cells fire at least once in
+2017–2022; the natural grid-centre cell (detection=90d, baseline=730d,
+matching every predecessor's own `BASELINE_WINDOW_DAYS=730` convention)
+fires cleanly (max z=3.45, 19 bars ≥2.0) so it is **PRIMARY unchanged, no
+substitution needed** (unlike R-98, where the natural centre cell was
+itself the degenerate one). The operator also validated the RV/BV/jump
+estimator against synthetic data before trusting it on real data: a
+pure-GBM no-jump series gives `RJ`≈2.3% background noise and `BV/RV`≈0.99
+(matching the theoretical no-jump limit); a series with one injected 5%
+single-bar jump gives `RJ`≈0.81 on the jump day and ≈0 on adjacent days.
+Two branches then worked independently, neither editing `r99_shared.py`
+or each other's file. Conservative
+(`experiments/r99_conservative_bv_jump_alarm.py`): the identical Step-A
+detection-lag gate R-82/83/84/85/86/96/98 used — nearest downward
+`anchor_majority` flip vs. nearest `RJ`-z-score upcross through 2.0,
+±60-day window per episode, block-bootstrap null (block_days=5, n_draws=
+500, seed=9901, a fresh seed not used by any prior round) — computed
+across the full 9-cell grid, pre-registered stop rule: proceed to Step B
+only if the primary cell scores ≥4/6 episodes. Novel
+(`experiments/r99_novel_bv_jump_forward_loss.py`): a Step-0 sub-claim test
+— does forward N-day realized loss after a causally-flagged "big jump
+day" (`RJ_t` exceeding its own trailing 730-day 95th percentile,
+`min_periods=180`) exceed a daily-cadence block-bootstrap null's own 95th
+percentile, at ≥3 of the pre-registered horizon grid `N∈{1,3,5,10}` days
+(identical grid to R-98's novel branch for direct comparability), null
+built via a genuine daily-cadence circular block-shift
+(`block_bootstrap_shifts_daily`, block_days=5, n_draws=500, seed=9902) —
+with the branch's own pre-registration honestly naming, before computing
+anything, the literature-supplied reason (Andersen-Bollerslev-Diebold
+2007) to expect this test to fail. Both branches restricted every read to
+inner-train/inner-validation (`df.index < 2023-01-01`), guarded by
+`assert_no_holdout()` on every signal built (the novel branch also
+disclosed, per horizon, exactly which jump days it dropped because their
+forward window would have required reading a 2023+ bar — 1 dropped day at
+N∈{1,3,5}, 4 at N=10, all named explicitly), and ran an independent
+causal-truncation probe on their own signal pipeline before trusting any
+gate number. The operator independently reproduced both branches' full
+numeric output end-to-end by re-running each file
+(`python experiments/r99_conservative_bv_jump_alarm.py`,
+`python experiments/r99_novel_bv_jump_forward_loss.py`) — every reported
+number matched exactly. **Configs evaluated: 0 backtest configs** on
+either branch — both stopped at their pre-registered gate before any
+strategy or `ev()` call. Diagnostic (non-strategy) cells: conservative —
+9 grid cells × 6 episodes = 54 episode-lead diagnostics; novel — 4
+horizon-grid cells at the fixed primary jump-flag config, 500-draw null
+each. Full `pytest` suite (508 tests) green after both branches, run
+independently by each branch and by the operator.
+
+**Result.** Conservative: full 9-cell grid (episodes passing/6) —
+detection=30d: 1/6 (baseline=365d), 0/6 (baseline=730d), 0/6
+(baseline=1095d); detection=90d: 0/6 (baseline=365d), **0/6 (baseline=730d,
+PRIMARY)**, 0/6 (baseline=1095d); detection=180d: 0/6 (baseline=365d), 0/6
+(baseline=730d), 0/6 (baseline=1095d). Best cell anywhere on the grid is
+1/6 — not a marginal miss on the chosen primary, the whole grid falls
+short of the 4/6 bar. Primary-cell detail: five of six episodes (2018
+onset, 2018 bottom, COVID crash, 2021-11 top, Terra/Luna) produced **no RJ
+alarm at all** inside their ±60-day windows — a sharper failure mode than
+a late alarm; only FTX alarmed at all (2022-12-13/14/15, depending on grid
+cell), and decisively late: at the primary cell, LEAD=−34.62 days against
+a null median of **+4.56 days** — the alarm did not merely lag v4's own
+gate, it lagged an arbitrary time-shift of its own local z-score series.
+**Step A: FAIL, 0/6 < 4/6 — STOP.** No confirming-vote strategy was built;
+no bar ≥2023-01-01 was read. Novel: 121 flagged "big jump days" out of
+2,011 eligible pre-holdout days (6.02%, close to the 5.0% the quantile
+construction targets by design). Step-0 result table — N=1d: true mean
+loss +0.000713 vs. null mean/std/p95 −0.001251/0.003605/+0.004888,
+z=+0.545, fails; N=3d: −0.003994 vs. −0.004058/0.006909/+0.007381,
+z=+0.009, fails; N=5d: +0.001610 vs. −0.006806/0.009864/+0.008206,
+z=+0.853, fails; N=10d: +0.004439 vs. −0.013690/0.017334/+0.013685,
+z=+1.046, the closest of the four and still short. **0/4 horizons clear,
+need ≥3/4 — Step 0: FAIL, STOP.** Not one horizon shows forward loss
+exceeding the null's own 95th percentile, exactly the outcome the
+branch's own pre-registration named as the literature-consistent
+expectation (Andersen-Bollerslev-Diebold 2007: jump variance is close to
+i.i.d.). No kill-switch strategy was built; no bar ≥2023-01-01 was read.
+
+**Verdict.** **NEGATIVE, both branches — the round's entire product is
+the two pre-registered gates themselves, zero strategy or backtest code
+written on either branch.** One-line lesson: the ninth structurally
+distinct regime-timing mechanism (bipower-variation jump/continuous
+decomposition) fails the identical detection-lag gate every predecessor
+has failed (HMM/R-01, BOCPD 2/6, Kalman LLT 1/6, vote-latch/volume 2/6,
+CSD 1/6, transfer entropy 0/6, Hawkes 0/9-cells, POT/GPD 1/6-best-2/6,
+this round 0/6-best-1/6) — and it does so more starkly than most: at the
+primary cell, five of six episodes never alarmed at all, and the one that
+did (FTX) lagged its own null median. The same estimator's designed
+purpose — a live jump-day flag — also does not predict elevated forward
+loss on this series, the third consecutive Step-0 sub-claim test on this
+axis to come back negative (Hawkes: NO; POT/GPD: 1/4; this round: 0/4),
+convergent evidence that "a rare-event flag computed from this project's
+own price history predicts forward damage" is not a reliable premise on
+this series regardless of which formal statistic supplies the flag.
+**Holdout counter: +0 on top of R-98's ~637 (running total unchanged at
+~637)** — neither branch read any bar on or after 2023-01-01
+(`assert_no_holdout()` clean on both, independently re-verified by the
+operator, max timestamp read 2022-12-31 23:55:00 UTC on both). Decision
+rule did not move: both gates were frozen in `r99_shared.py`/each branch's
+own pre-registration before any real-data number was computed, and
+neither branch loosened its bar after seeing a disappointing number.
+**Next step:** this closes the bipower-variation approach to
+regime-timing as tried here — a future session preferring a fresh
+mechanism search now needs a regime-timing construction sharing no basis
+with the nine now ruled out (discrete-state switching, Bayesian
+changepoint estimation, linear state-space filtering, vote-latch
+modulation, dynamical-systems fluctuation statistics, information-
+theoretic directed flow, self-exciting point processes, extreme-value
+tail theory, semimartingale jump/continuous quadratic-variation
+decomposition), a data channel this project cannot construct from its
+committed files or fetchable free sources at all (fourteen INFO-axis
+attempts have failed), a SIZE-axis construction outside both the
+"collapses to near-constant exposure" failure mode (23 attempts) and
+R-97's "concentration rate too flat at the N reached" failure mode, or
+should work **B-32** directly, still the only ranked, unblocked backlog
+item.
+
 ### R-98 · 08-23 · NEGATIVE (both branches) — causal rolling Peaks-Over-Threshold / GPD tail-shape estimation, an eighth regime-timing mechanism (conservative) and its own forward-loss premise (novel): the alarm clears at most 2 of 6 episodes on any of 9 grid cells, and only 1 of 4 forward-loss horizons shows elevated post-breach loss
 
 **Direction.** A causal rolling Peaks-Over-Threshold (POT) fit of the
@@ -10489,6 +10678,48 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-23 after R-99.** An off-backlog, literature-prompted
+two-branch round (same posture as R-73–R-98 — the ranked list holds only
+B-32, pure infrastructure) tried Barndorff-Nielsen & Shephard bipower-
+variation jump/continuous quadratic-variation decomposition (Barndorff-
+Nielsen & Shephard 2004, 2006; Huang & Tauchen 2005; Andersen, Bollerslev
+& Diebold 2007; Shen, Urquhart & Wang 2020 for the BTC-specific
+application), a ninth structurally distinct regime-timing mechanism
+(conservative) and its own forward-loss premise as a kill-switch trigger
+(novel) — and the first mechanism on this axis computed from native
+5-minute bars rather than daily-resampled closes, since bipower variation
+is undefined without intraday increments. Both **NEGATIVE**. Conservative:
+the Step-A detection-lag gate scores **0/6** episodes at the primary cell
+(five of six episodes produced no alarm at all inside their ±60-day
+windows; the sixth, FTX, alarmed 34.6 days *after* v4's own gate, worse
+than its own null median) and at most **1/6** anywhere on its full 9-cell
+grid. Novel: its own Step-0 premise (does a live big-jump-day flag predict
+elevated forward loss?) clears **0 of 4** pre-registered horizons against
+a ≥3/4 bar — the closest (N=10d) still falls short of the null's 95th
+percentile. **This closes the ninth structurally distinct theoretical
+basis this project has tried for regime-timing/detection-lag — discrete-
+state switching, Bayesian changepoint estimation, linear state-space
+filtering, vote-latch modulation, dynamical-systems fluctuation
+statistics, information-theoretic directed flow, self-exciting point-
+process clustering, extreme-value tail theory, and now semimartingale
+jump/continuous quadratic-variation decomposition — and none has cleared
+the six-episode gate; separately, this is the third consecutive Step-0
+forward-loss/forward-turbulence premise test on this axis to come back
+negative (Hawkes/R-96: NO; POT/GPD/R-98: 1/4; this round: 0/4), convergent
+evidence that a rare-event flag computed from this project's own price
+history does not predict forward damage, independent of which formal
+statistic supplies the flag.** **B-32 remains the only ranked, unblocked
+backlog item.** A future session preferring a fresh mechanism search now
+needs a data channel this project cannot construct from its already-
+committed files or fetchable free sources at all (fourteen INFO-axis
+attempts have failed), a SIZE-axis construction that does not collapse to
+a low, roughly-constant exposure fraction relative to v4 (23 attempts) or
+reproduce R-97's flat-concentration-rate failure, or a regime-timing
+construction with no discrete-state/changepoint/filtered-slope/
+fluctuation-trend/information-flow/self-exciting-point-process/extreme-
+value/jump-diffusion basis in common with the nine now ruled out — or
+should work B-32 directly.
+
 **Re-ranked 08-23 after R-98.** An off-backlog, literature-prompted
 two-branch round (same posture as R-73–R-97 — the ranked list holds only
 B-32, pure infrastructure) tried causal rolling Peaks-Over-Threshold/GPD
@@ -12061,6 +12292,21 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-23 · ~637** — R-99: **+0** on top of R-98's ~637 (unchanged), both
+  branches. Shared gate (`experiments/r99_shared.py` + Kill-Switch-A,
+  `experiments/r99_killswitch_a.py`, both run by the operator): 9-cell
+  degeneracy check (no episode-level number computed at this step) plus a
+  synthetic-data validation of the RV/BV/jump estimator itself. Conservative
+  (`experiments/r99_conservative_bv_jump_alarm.py`): 0 backtest configs
+  (Step-A gate stop, primary cell 0/6, best cell anywhere on the 9-cell
+  grid 1/6); 54 episode-lead diagnostics (9 grid cells × 6 episodes);
+  `assert_no_holdout()` clean, max timestamp read 2022-12-31 23:55:00 UTC;
+  independently reproduced end-to-end by the operator. Novel
+  (`experiments/r99_novel_bv_jump_forward_loss.py`): 0 backtest configs
+  (Step-0 gate stop, 0/4 horizons clearing the null's 95th percentile
+  against a ≥3/4 bar); 4 horizon-grid diagnostics (N∈{1,3,5,10}); same
+  clean holdout guard, same max timestamp, independently reproduced
+  end-to-end by the operator.
 - **08-23 · ~637** — R-98: **+0** on top of R-97's ~637 (unchanged), both
   branches. Shared gate (`experiments/r98_shared.py`, run by the operator):
   Kill-Switch-A degeneracy check across all 9 grid cells (no episode-level
