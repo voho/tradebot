@@ -1,0 +1,96 @@
+BTC (real): 631,008 bars  2017-01-01 00:00:00+00:00 -> 2022-12-31 23:55:00+00:00  (< 2023-01-01)
+causal truncation probe (ghe_z, fit_window=180d, check_at index 148608 ~ 2018-06-01 00:00:00+00:00): PASS
+causal truncation probe (ghe_z, fit_window=180d, check_at index 359136 ~ 2020-06-01 00:00:00+00:00): PASS
+causal truncation probe (ghe_z, fit_window=180d, check_at index 569376 ~ 2022-06-01 00:00:00+00:00): PASS
+BTC (real): 631,008 bars  2017-01-01 00:00:00+00:00 -> 2022-12-31 23:55:00+00:00  (< 2023-01-01)
+==============================================================================
+R-99 CONSERVATIVE: GHE(fit_window=90d) vs v4 anchor -- STEP A detection-lag gate
+==============================================================================
+
+z_thresh=2.0  search window=+/-60d  null: 500 draws, block=5d, seed=9902
+
+[2018 bear onset (post-Dec-2017 top)] onset=2018-01-17: alarm never crosses inside window found in +/-60d window. FAIL by construction.
+[2018 bear bottom / capitulation] onset=2018-12-15: alarm never crosses inside window found in +/-60d window. FAIL by construction.
+[2020-03 COVID crash] onset=2020-03-12: alarm never crosses inside window found in +/-60d window. FAIL by construction.
+[2021-11 top / 2022 bear transition] onset=2021-11-10: alarm never crosses inside window found in +/-60d window. FAIL by construction.
+[2022-05 Terra/Luna collapse] onset=2022-05-09: alarm never crosses inside window found in +/-60d window. FAIL by construction.
+[2022-11 FTX collapse] onset=2022-11-08: alarm never crosses inside window found in +/-60d window. FAIL by construction.
+
+------------------------------------------------------------------------------
+  2018 bear onset (post-Dec-2017 top)        lead=+nand  PASS=False  alarm never crosses inside window
+  2018 bear bottom / capitulation            lead=+nand  PASS=False  alarm never crosses inside window
+  2020-03 COVID crash                        lead=+nand  PASS=False  alarm never crosses inside window
+  2021-11 top / 2022 bear transition         lead=+nand  PASS=False  alarm never crosses inside window
+  2022-05 Terra/Luna collapse                lead=+nand  PASS=False  alarm never crosses inside window
+  2022-11 FTX collapse                       lead=+nand  PASS=False  alarm never crosses inside window
+
+Episodes passing: 0/6  (fit_window_days=90)
+max timestamp read anywhere for this cell: 2022-12-31 23:55:00+00:00  (< 2023-01-01)
+==============================================================================
+R-99 CONSERVATIVE: GHE(fit_window=180d) vs v4 anchor -- STEP A detection-lag gate [PRIMARY]
+==============================================================================
+
+z_thresh=2.0  search window=+/-60d  null: 500 draws, block=5d, seed=9902
+
+[2018 bear onset (post-Dec-2017 top)] onset=2018-01-17: alarm never crosses inside window found in +/-60d window. FAIL by construction.
+[2018 bear bottom / capitulation] onset=2018-12-15: alarm never crosses inside window found in +/-60d window. FAIL by construction.
+[2020-03 COVID crash] onset=2020-03-12: alarm never crosses inside window found in +/-60d window. FAIL by construction.
+[2021-11 top / 2022 bear transition] onset=2021-11-10: alarm never crosses inside window found in +/-60d window. FAIL by construction.
+[2022-05 Terra/Luna collapse] onset=2022-05-09: alarm never crosses inside window found in +/-60d window. FAIL by construction.
+[2022-11 FTX collapse] onset=2022-11-08: alarm never crosses inside window found in +/-60d window. FAIL by construction.
+
+------------------------------------------------------------------------------
+  2018 bear onset (post-Dec-2017 top)        lead=+nand  PASS=False  alarm never crosses inside window
+  2018 bear bottom / capitulation            lead=+nand  PASS=False  alarm never crosses inside window
+  2020-03 COVID crash                        lead=+nand  PASS=False  alarm never crosses inside window
+  2021-11 top / 2022 bear transition         lead=+nand  PASS=False  alarm never crosses inside window
+  2022-05 Terra/Luna collapse                lead=+nand  PASS=False  alarm never crosses inside window
+  2022-11 FTX collapse                       lead=+nand  PASS=False  alarm never crosses inside window
+
+Episodes passing: 0/6  (fit_window_days=180) [PRIMARY]
+max timestamp read anywhere for this cell: 2022-12-31 23:55:00+00:00  (< 2023-01-01)
+==============================================================================
+R-99 CONSERVATIVE: GHE(fit_window=365d) vs v4 anchor -- STEP A detection-lag gate
+==============================================================================
+
+z_thresh=2.0  search window=+/-60d  null: 500 draws, block=5d, seed=9902
+
+[2018 bear onset (post-Dec-2017 top)] onset=2018-01-17
+    v4 anchor nearest downward flip: 2018-01-16 22:20:00+00:00
+    GHE(fw=365d) nearest alarm (z>=2.0): 2017-12-23 00:00:00+00:00
+    LEAD = +24.93 days  null median=-2.25d (valid draws 500/500)
+    PASS (a) lead>=0: True   PASS (b) lead>=null median: True
+[2018 bear bottom / capitulation] onset=2018-12-15: alarm never crosses inside window found in +/-60d window. FAIL by construction.
+[2020-03 COVID crash] onset=2020-03-12: alarm never crosses inside window found in +/-60d window. FAIL by construction.
+[2021-11 top / 2022 bear transition] onset=2021-11-10: alarm never crosses inside window found in +/-60d window. FAIL by construction.
+[2022-05 Terra/Luna collapse] onset=2022-05-09: alarm never crosses inside window found in +/-60d window. FAIL by construction.
+[2022-11 FTX collapse] onset=2022-11-08: alarm never crosses inside window found in +/-60d window. FAIL by construction.
+
+------------------------------------------------------------------------------
+  2018 bear onset (post-Dec-2017 top)        lead=+24.93d  PASS=True  
+  2018 bear bottom / capitulation            lead=+nand  PASS=False  alarm never crosses inside window
+  2020-03 COVID crash                        lead=+nand  PASS=False  alarm never crosses inside window
+  2021-11 top / 2022 bear transition         lead=+nand  PASS=False  alarm never crosses inside window
+  2022-05 Terra/Luna collapse                lead=+nand  PASS=False  alarm never crosses inside window
+  2022-11 FTX collapse                       lead=+nand  PASS=False  alarm never crosses inside window
+
+Episodes passing: 1/6  (fit_window_days=365)
+max timestamp read anywhere for this cell: 2022-12-31 23:55:00+00:00  (< 2023-01-01)
+
+==============================================================================
+R-99 CONSERVATIVE: FULL 1x3 GRID SUMMARY (GHE(fit_window) vs v4 anchor)
+==============================================================================
+ fit_window_days   n_pass/6   primary?
+              90        0/6  
+             180        0/6  <-- PRIMARY
+             365        1/6  
+
+PRIMARY CONFIG (fit_window_days=180): 0/6 episodes pass
+GATE VERDICT (primary config only, per pre-registered stop rule): FAIL -> STOP, no strategy built
+
+configurations evaluated in this file's Step A toward the backtest trials ledger: 0 (fixed measurement gate; 3 grid cells x 6 episodes = 18 episode-lead measurements, no ev() calls -- see module docstring)
+max timestamp read anywhere in this session so far: 2022-12-31 23:55:00+00:00  (< 2023-01-01)
+
+STEP A FAILED the pre-registered stop rule (primary cell < 4/6). Per this file's own pre-registration, no strategy is built and no Step-B code runs. This gate result is this branch's whole product.
+
+Total wall time: 5s
