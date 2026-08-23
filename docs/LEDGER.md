@@ -315,6 +315,32 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-101 · 08-23 · NEGATIVE (both branches, Step-0/Step-1 gates) — a 24th SIZE-axis construction: a delete-one-episode jackknife of `kelly_regime_v4`'s own vote edge across the six standard stress episodes, read as a literal confidence multiplier on exposure, frozen once (conservative) or updated causally as episodes resolve (novel) — the static reading is a flat rescale (R²=0.974 against v4's own unmodified exposure path), and the causal reading passes its own kill switches but shows no inner-validation improvement and fails ETH falsification (BTC drawdown improves, ETH's worsens, on the identical construction)
+
+**Direction.** Off-backlog, same posture as R-73–R-100 (the ranked backlog holds only **B-32**, pure infrastructure, and the ledger's own note after every one of the last eight rounds names it as the alternative to a fresh mechanism search). Attacks **N≈3** directly rather than as a caveat: `kelly_regime_v4` sizes `desired = frac · scale` (`src/tradebot/strategies/kelly_regime_v4.py`/`kelly_regime_v3.py`/`kelly_regime.py`), and R-62 established that `frac` (the 3-anchor vote) carries the strategy's whole risk/drawdown signature while `scale` (the volatility target) carries none of it. This round introduces a third multiplicative factor, `conf`, derived from a Quenouille–Tukey delete-one-group jackknife (Quenouille 1949; Tukey 1958; Efron 1979, *Ann. Statist.* 7(1), "Bootstrap Methods: Another Look at the Jackknife") of the vote's realized log-growth edge across the project's own six standard stress episodes (2018-01-17, 2018-12-15, 2020-03-12, 2021-11-10, 2022-05-09, 2022-11-08 — the same calendar R-82 through R-100's regime-timing rounds use): `conf = clip(1 − k·CV, conf_floor, 1.0)` where `CV` is the coefficient of variation of the six leave-one-out edge estimates, a literal number for "how much does the edge depend on any single one of our ~3–6 effective regime events" in place of the standing diagnosis's qualitative caveat. **Not a duplicate of:** R-93 (Grossman–Zhou, keyed on realized drawdown, path-dependent), R-97 (Wasserstein-DRO, keyed on regime-cycle count, an optimization ambiguity radius), R-87 (Adaptive Conformal Inference on the vote's dispersion, an online coverage calibration), or R-62 (isolated `frac`/`scale` factors, no confidence multiplier) — this is resampling-based empirical parameter-uncertainty estimation, a statistical technique not previously applied in this repo, still filed under the SIZE axis (23 prior attempts, all failing via the R-33 exposure-collapse artifact in some form).
+
+**What was done.** Two parallel branches, each in an isolated git worktree, neither committing (per `docs/ROUTINE.md`'s parallelism rules), pre-registered by the operator before either agent started: kill switches KS-A (the six leave-one-out estimates/the causal `conf` series must show real dispersion, not a degenerate constant) and KS-B (R² of the resulting exposure path against v4's own unmodified `frac·scale` path must be **&lt;0.95**, the standard exposure-collapse check from R-33/R-34/R-41/R-53/R-73/R-93/R-97) were to be checked *before* any Sharpe sweep, mirroring R-97's Step-0 posture; either failing stops the round for that branch.
+
+**Conservative** (`experiments/r101_conservative_jackknife_static.py`): compute the jackknife once on inner-train (2017-01-01→2020-12-31) and freeze `conf` as one constant for the strategy's life. 6 backtests total: a `k=0` identity harness check (bit-for-bit match to v4, confirmed), the a-priori config `k=1.0, conf_floor=0.5`, and the two control runs (v4 unmodified, scale-only control) feeding the jackknife. No Sharpe-based selection occurred (the round stopped at KS-B), so no deflated-Sharpe trials count applies beyond these 6 backtests.
+
+**Novel** (`experiments/r101_novel_jackknife_causal.py`): recompute the jackknife causally, as an expanding-window statistic using only stress episodes whose ±60-day window has fully closed as of the current bar (defaulting to `conf_floor` before ≥2 episodes have resolved — the honest "we know nothing yet" prior, stated in advance). 40 configs evaluated (`k∈{0,0.5,1,2} × conf_floor∈{0.3,0.5,0.7}` × 2 markets × 2 splits, the file's own `N_EVALUATED`), plus diagnostics for the ETH falsification test and the kill-switch check (uncounted, per this project's search-step-only convention). A lookahead bug was caught before any number was reported: an early draft set `strategy.warmup` to a large sentinel to give the jackknife full history, but `tradebot/engine.py` also gates the `on_bar` call itself on `i ≥ warmup`, so all 40 planned evaluations silently produced zero trades — a result that reads as valid rather than broken, the R-21/R-24 failure class. Fixed by leaving `warmup` at v4's own value.
+
+**Process note, recorded rather than hidden.** Both branches' isolated worktrees were forked from a stale local `main` ref roughly 72 rounds behind this session's actual branch (pre-R-29: `docs/LEDGER.md` truncated, no `r99_shared.py`, no committed Coinbase ETH spot file), discovered only when the conservative branch's own report flagged the missing files. **This was audited, not merely disclosed:** `git diff` confirms `kelly_regime.py`, `kelly_regime_v3.py`, `kelly_regime_v4.py`, `scripts/experiment.py`, `engine.py`, `strategy.py` and `window.py` — every file either branch's numerics actually depend on — are byte-identical between the stale base and this session's real HEAD, so the reported KS-A/KS-B/inner-validation/ETH numbers are unaffected; the operator independently re-derived the conservative branch's jackknife CV and KS-B R² from the real working tree after copying its files in and got an exact match (CV=0.9067, R²=0.9736). The one real casualty: the novel branch's ETH falsification ran on the older Bitfinex 2016–2019 series (R-17/R-28 convention) rather than the intended 2019–2026 Coinbase series, because the latter file did not exist in its stale worktree — noted as a scope limitation on that specific check, though it is not the branch's deciding failure (inner-validation already shows no improvement on the split selection is made on). A future multi-branch round should confirm its worktree base is the session's actual HEAD, not an assumed `main`, before relying on file availability.
+
+**Result.**
+
+*Conservative — KS-B fails.* KS-A passes only in a qualified sense: 3 of the 6 episodes are usable on inner-train (2018-01-17, 2018-12-15, and 2020-03-12, whose ±60-day window sits entirely inside inner-train — the pre-registration's own estimate of "2 usable" was wrong and is corrected here), giving CV=0.9067 — nominally ≥0.10, but with a near-zero grand-mean edge (8.4e-7/bar against an edge std of 9.2e-4/bar) that inflates CV almost automatically, a caveat the branch report states plainly rather than claiming a clean pass. KS-B decisively fails: at the a-priori cell (k=1.0, conf_floor=0.5, so conf≡0.5), R²=0.9736 against v4's own unmodified exposure path over inner-train∪inner-validation (630,721 bars) — a frozen scalar inside the deadband latch is, to first order, exactly a rescale. Per pre-registration, the round stopped here for this branch: no Sharpe sweep, no ETH falsification, holdout untouched.
+
+*Novel — both kill switches pass, both later gates fail.* KS-A: CV(conf)=0.2664, 57,919 distinct values over inner-train∪inner-validation (range 0.500–0.963) — real, non-degenerate dispersion. KS-B: R²=0.8588 &lt;0.95 — not a flat rescale. On inner-train, several cells (`conf_floor=0.5` across `k∈{0.5,1,2}`) show a real-looking plateau: futures-5x drawdown falls from v4's 35.3% to 24.0–28.1% with a small Sharpe gain (2.28→2.32–2.37). **That improvement does not survive inner-validation, the split selection is made on**: all 40 cells are statistically indistinguishable from v4 unmodified (best futures cell Sharpe 0.12 vs. v4's 0.17) — the textbook in-sample-only pattern this project already has a numbered lesson for (R-12's 28-of-32-in-sample/0-of-28-out-of-sample). The pre-registered ETH falsification then fires directly: on the same construction, BTC drawdown improves (−11.1pp spot, −2.3pp futures) while ETH's worsens (+10.7pp spot, +13.0pp futures) — an asset-specific sign flip, the exact pattern that killed R-53's and R-73's conservative branches.
+
+Both branches: `pytest tests/test_causality_strict.py -q` → 51 passed (independently re-run by the operator against the real HEAD after copying both branches' files in — 51 passed, matching). Full `pytest -q` → 391 passed, 0 failed (each branch's own run; novel branch re-ran it twice identically as a self-check). Grep audits for `202[3-9]` literals: conservative found 1 hit (prose only); novel found 7 (prose plus `assert ... &lt; "2023-01-01"` refusal guards) — neither used to read or slice a dataset. One further disclosure from the novel branch, recorded rather than hidden: an early interactive banner briefly printed the committed dataset file's literal last-bar *timestamp* (2026-08-12, since the paper-trading cron keeps appending to it) before being rewritten to report only the pre-holdout range — no 2023+ price/volume content was ever read or used in any figure, every backtest in the file is bounded by an explicit `end≤2022-12-31`, but the bare timestamp was visible in tool output and that is recorded per this project's disclosure convention (R-73's process note) rather than omitted.
+
+**Verdict.** **NEGATIVE, both branches.** Neither reaches `further_work=True` by its own pre-registered criteria: conservative fails KS-B outright (a flat rescale, not a mechanism); novel passes both kill switches but shows no inner-validation improvement and fails its own ETH falsification. One-line lesson: **formalizing "how much do we know" as a delete-one-episode jackknife over six sparse historical events does not by itself escape either failure mode this project's SIZE axis keeps hitting — the static reading collapses to the R-33 exposure-rescale artifact, and the causal reading is real (non-degenerate, non-collinear) but carries no edge past the in-sample period it was read on, and inverts sign on the second asset**, converging with R-97's related but distinct finding (a regime-cycle-count DRO discount spreads only 12.9% across the same six episodes) that six sparse events do not carry enough independent information for a resampling- or robustness-based confidence construction to move exposure meaningfully, whichever specific statistic is used to measure "confidence." SIZE-axis record: 0-for-24.
+
+**Holdout counter.** **+0.** Neither branch read, printed, or held in memory any bar dated 2023-01-01 or later — both pre-registered stop rules were evaluated exactly as frozen (conservative failed KS-B; novel failed inner-validation and ETH falsification), and neither reached, nor needed, a holdout read. Running program-level total stays **~637** (R-100's figure, unchanged) — bullet added to [Holdout consultations to date](#holdout-consultations-to-date).
+
+**Next step.** Nothing reopens. `B-32` remains the only ranked, unblocked backlog item. A future session preferring a fresh mechanism search now needs a SIZE-axis construction whose state variable is neither an exogenous market statistic (volatility, drawdown — 22 attempts), a distributional-robustness ambiguity bound (R-97), nor a resampling-based empirical uncertainty estimate over the same six sparse episodes (this round) — or should work B-32 directly.
+
 ### R-100 · 08-23 · NEGATIVE (both branches) — cross-venue (Binance vs. Deribit) BTC perpetual funding-rate divergence, a fifteenth INFO-axis signal (conservative) and a divergence-stress execution-timing brake (novel): the lead-time gate clears 1 of 4 valid episodes (need ≥3/4) at the primary cell, and the delay mechanism's Sharpe deltas sit an order of magnitude inside the ±0.2 noise floor on all 4 promotion-bar cells
 
 **Direction.** With the backlog empty of anything but **B-32** (pure multi-asset registration infrastructure, no strategy-improvement angle — the posture every round since R-73 has recorded), this round went off-backlog with a literature-motivated idea: the SPREAD between Binance's and Deribit's simultaneously-reported BTC perpetual funding rates (both already committed, `data/btcusdt_perp_funding_8h.csv.gz` / `data/btcusdt_deribit_perp_funding_8h.csv.gz`) as a measure of *relative* crowding between a retail-heavy venue and an institutional/options-flow venue — a fifteenth structurally distinct INFO-axis candidate, tested two ways: a confirming-vote lead-time gate (conservative) and a divergence-stress execution-delay brake on `kelly_regime_v4`'s own rebalances (novel). Citations, fetched and verified before being relied on: **Zhivkov (2026)**, *Mathematics* (MDPI) 14(2):346 — a 35.7M-observation, 26-venue panel finding CEX-CEX/CEX-DEX funding divergences are real and economically large (17% of observations ≥20bps) but ~95% of large spreads force an early exit, i.e. divergence tracks genuine cross-venue stress rather than a clean arbitrage income stream (neither branch here trades the spread directly — both use it only as a vote/brake on v4's existing directional position); **Inan (2025/26)**, SSRN 5576424 — funding dynamics carry a directional, non-random component, motivating z-scoring each venue's funding against its own trailing history rather than assuming either series is already stationary or comparable in scale to the other; **He, Manela, Ross & von Wachter (2024)**, SSRN 4301150 (already used at R-39) — funding as compensation for basis risk, read here as a segmented, capital-constrained arbitrage-capacity story between the two venues. **Attacks INFO** (conservative) **and COST** (novel, contingent on the same signal's informativeness, same dependency structure as R-88's INFO→COST pair). **Not a duplicate of:** R-35/R-39 (B-05, single-venue Binance funding *level*, a different economic quantity than a *cross-venue difference*); R-39/B-02's `load_funding_extended` (Deribit funding used there only to splice onto Binance's post-2023 gap, never as a feature — this round is the first to treat the two venues' disclosed level/settlement-convention instability as the object of interest rather than a nuisance); R-41/B-15 (Deribit's own spot-vs-perp basis on *one* exchange — a term-structure signal, not a cross-venue funding comparison); R-73 (Deribit DVOL, an implied-vol index, unrelated to funding); R-81/R-88 (single-venue Binance metrics-feed positioning/flow signals, read no Deribit data); R-53/R-55 (confirming-vote architecture, reused verbatim on a new channel); B-24/R-77 (execution-model rounds conditioned on volatility, not cross-venue divergence stress).
@@ -10688,6 +10714,43 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-23 after R-101.** An off-backlog, literature-prompted
+two-branch round (same posture as R-73–R-100 — the ranked list holds only
+B-32, pure infrastructure) tried a 24th SIZE-axis construction: a
+delete-one-episode jackknife (Quenouille 1949; Tukey 1958; Efron 1979) of
+`kelly_regime_v4`'s own vote edge across the project's six standard stress
+episodes, read as an explicit confidence multiplier on exposure — the
+first attempt on this axis to derive "how much do we know" from resampling
+variance of the strategy's own realized edge, rather than an exogenous
+market state variable or a distributional-robustness bound. Both
+**NEGATIVE**. Conservative (frozen once on inner-train): fails its own
+Step-0 kill switch outright — R²=0.9736 against v4's own unmodified
+exposure path, a flat rescale rather than a mechanism, stopped before any
+Sharpe number was computed. Novel (causal, expanding as episodes resolve):
+passes both pre-registered kill switches (real, non-degenerate dispersion;
+R²=0.86, not a rescale) but shows no improvement over v4 on inner-validation
+— the split selection is made on — and fails its own pre-registered ETH
+falsification test with an asset-specific sign flip (BTC drawdown improves,
+ETH's worsens, on the identical construction). **Read together with R-97
+(Wasserstein-DRO keyed on regime-cycle count, the same six episodes,
+12.9% discount spread against a 1.3x bar): two structurally different
+ways of formalizing parameter uncertainty over this project's own
+historical stress calendar have now both found the same ceiling — six
+sparse events do not carry enough independent information for a
+resampling- or robustness-based confidence construction to move exposure
+by an amount this project's noise floor can see, independent of which
+specific statistic measures "confidence."** **B-32 remains the only
+ranked, unblocked backlog item.** A future session preferring a fresh
+mechanism search now needs a SIZE-axis construction whose state variable
+is neither an exogenous market statistic (volatility, drawdown — 22 prior
+attempts), a distributional-robustness ambiguity bound (R-97), nor a
+resampling-based empirical uncertainty estimate over the same six sparse
+episodes (this round), a data channel this project cannot construct from
+its already-committed files or fetchable free sources at all (fifteen
+INFO-axis attempts have failed), or a regime-timing/execution-timing
+construction with no basis in common with those already closed — or
+should work B-32 directly.
+
 **Re-ranked 08-23 after R-100.** An off-backlog, literature-prompted
 two-branch round (same posture as R-73–R-99 — the ranked list holds only
 B-32, pure infrastructure) tried cross-venue (Binance vs. Deribit) BTC
@@ -12340,6 +12403,22 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-23 · ~637** — R-101: **+0** on top of R-100's ~637 (unchanged), both
+  branches. Conservative (`experiments/r101_conservative_jackknife_static.py`)
+  stopped at its own pre-registered KS-B kill switch (exposure R²=0.9736
+  against v4's own unmodified path) before any Sharpe number was computed —
+  6 backtests total, all bounded by `end<=2020-12-31`/inner-validation,
+  independently re-verified by the operator against the real HEAD (CV and
+  R² reproduced exactly). Novel (`experiments/r101_novel_jackknife_causal.py`)
+  passed both kill switches and ran its full 40-config battery, but every
+  cell is confined to inner-train (<=2020-12-31) and inner-validation
+  (2021-01-01..2022-12-31); the ETH falsification reused the pre-2020
+  Bitfinex series (R-17/R-28 convention), not the holdout. `pytest
+  tests/test_causality_strict.py` (51 passed) and the full suite (391
+  passed) were run independently by each branch and re-confirmed by the
+  operator from the real working tree. Neither branch cleared its own
+  pre-registered further-work bar, so neither reached, nor needed, a
+  holdout read.
 - **08-23 · ~637** — R-100: **+0** on top of R-99's ~637 (unchanged), both
   branches. Shared gate + Kill-Switch-A (`experiments/r100_shared.py` +
   `experiments/r100_killswitch_a.py`, both operator-run): a 3-cell
