@@ -315,6 +315,145 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-97 · 08-23 · NEGATIVE (Step-0 gate, both branches) — Wasserstein-DRO Kelly sizing keyed on the causal regime-cycle count: the discount varies only 12.9% across the six historical stress episodes, below the pre-registered 1.3x bar, and the shortfall is robust to the whole defensible parameter neighbourhood
+
+**Direction.** Rather than sizing `kelly_regime_v4`'s bet from the empirical
+regime-conditional return distribution as given, solve for the exposure
+optimal against the worst-case distribution inside a Wasserstein ball
+around it — Mohajerin Esfahani & Kuhn (2018), "Data-driven distributionally
+robust optimization using the Wasserstein metric: performance guarantees
+and tractable reformulations", *Mathematical Programming* 171(1-2), 115-166
+(the finite-sample radius result, `eps(N) ~ N^{-1/2}` up to a
+`log(1/beta)` factor for a scalar quantity); Li, J. Y.-M. (2023),
+"Wasserstein-Kelly Portfolios: A Robust Data-Driven Solution to Optimize
+Portfolio Growth", arXiv:2302.13979 / SSRN 4372148 (applies the ball to
+Kelly betting specifically: the robust bet is monotone in ball radius and
+converges to plain empirical Kelly as the radius shrinks). Both citations
+verified live via WebSearch before being relied on. The ball's radius is
+set by the **causal count of completed regime cycles** — the first
+SIZE-axis construction in the project's history to make the project's own
+diagnosed sample-size problem (**N≈3**, R-57/R-62) a literal state
+variable driving exposure, rather than a background caveat. Secondarily
+attacks **ERR**: a minimax worst-case guarantee is a formal error-control
+device, not another point-estimate signal. Off-backlog, literature-prompted
+(same posture as R-73–R-96 — the ranked list holds only **B-32**, pure
+infrastructure). Not a duplicate of: the 22 prior SIZE-axis constructions
+R-34→R-60/R-62/R-93 (all either a market-volatility point-estimate retune
+or a function of the strategy's own drawdown; this round's state variable
+is a causal regime-cycle count feeding a **minimax reformulation**, not a
+threshold, ratio or blend of point estimates); R-87 (Adaptive Conformal
+Inference — an online calibration recursion, a different mathematical
+object from a one-shot Wasserstein-ball minimax); R-93 (Grossman-Zhou —
+keyed on the strategy's own drawdown, not regime-cycle count); the seven
+regime-timing/detection-lag mechanisms R-01/R-82→R-86/R-96 (none touch
+sizing; this round takes v4's vote exactly as given and only reweights
+trust in the return distribution conditional on it); the thirteen
+INFO-axis rounds (no new data channel — both branches read only the
+committed OHLCV close series v4 already consumes); R-62 (this round DOES
+retune `scale`, disclosed explicitly — R-62's finding is about which
+factor carries a specific cross-asset *drawdown* signature, not about
+whether a scale retune can ever clear the out-of-sample bar, which is the
+basis the 21 prior retunes and this round are actually judged on). Full
+grounding and the pre-registered gate: `experiments/r97_shared.py`.
+
+**What was done.** One shared, read-only module built and run by the
+operator *before* either branch was dispatched (`experiments/r97_shared.py`
+— causal regime-cycle counting from v4's own 3-anchor vote, a
+simplified/disclosed Esfahani-Kuhn finite-sample radius, a bounded DRO
+discount `1/(1+eps(N)/eps(N_ref))`, and the pre-registered **Step-0 gate**:
+kill switch A (spread) requires the regime-cycle count to take ≥4 distinct
+values at the six dated historical BTC stress episodes R-82→R-96 all use;
+kill switch B (magnitude) requires the max/min DRO discount ratio across
+those six episodes to be ≥1.3x, chosen because anything smaller cannot
+matter next to v4's own 10% deadband and 2x cap). Two branches then
+independently re-derived and stress-tested that gate, each in its own file,
+neither editing `r97_shared.py` or each other's file: conservative
+(`experiments/r97_conservative_wasserstein_scale.py` — the literal
+construction, `scale_robust = scale * discount(N)` replacing v4's `scale`
+outright) recomputed the vote, the regime-cycle count (two independent
+implementations — vectorized cumsum-of-flips and an O(n) running loop) and
+the discount (two independent forms — the radius-ratio definition and the
+algebraically-simplified closed form) from scratch against the real
+dataset, asserting all pairs agree; novel
+(`experiments/r97_novel_dro_discount.py` — the overlay construction,
+`position_final = position_v4 * discount(N)`, R-62's factor-isolation
+spirit) imported the gate directly and instead stress-tested its
+robustness with a pre-specified 3×3 sensitivity grid (`BETA_CONF ∈
+{0.05, 0.10, 0.20} × N_REF ∈ {2, 3, 5}`, disclosed as exploratory/in-sample
+diagnostic color per step 4's rule, not a re-opened decision — `KAPPA` was
+excluded a priori because it is a pure scale constant that cancels out of
+a max/min ratio by construction). All reads restricted to inner-train +
+inner-validation (`df.loc[:INNER_VAL_END]`, i.e. ≤ 2022-12-31), guarded by
+`assert_no_holdout()`. **Configs evaluated: 0 backtest configs** on either
+branch — both stopped at Step-0, before any strategy or backtest code was
+written, matching this project's convention for a pre-registered gate
+failure (R-79/R-91/R-94/R-95's precedent). Diagnostic (non-strategy) cells:
+6 episode probes in the shared gate, re-derived independently by the
+conservative branch two ways each, plus the novel branch's 9-cell
+sensitivity grid.
+
+**Result.** Regime-cycle count at the six episodes (2018 bear onset, 2018
+bottom, 2020 COVID crash, 2021 top, Terra/Luna, FTX, in that order):
+**N = [30, 48, 68, 97, 103, 109]** — 6 of 6 distinct, **kill switch A:
+PASS**. DRO discount at those same six points: **[0.7597, 0.8000, 0.8264,
+0.8504, 0.8542, 0.8577]** — max/min ratio **1.129**, against the
+pre-registered ≥1.3x bar — **kill switch B: FAIL**. Both branches
+independently reproduced every one of these numbers exactly (conservative:
+two structurally different derivations of both the cycle count and the
+discount, all four agreeing with the operator and with each other; novel:
+the frozen-parameter cell of its own sweep matches to 3 decimal places).
+The novel branch's sensitivity grid found **no cell of the 9 clears 1.3x**
+— the ratio stays in a narrow **1.108–1.160** band across the entire
+`BETA_CONF × N_REF` neighbourhood, and, as a reusable methodological
+by-product neither branch anticipated before running it: **`BETA_CONF`
+cancels out of the discount ratio algebraically** (`discount(N) =
+1/(1+sqrt(N_ref/N))` once `log(1/beta)` factors out of both the numerator
+and reference radius), so only `N_REF` moves the ratio at all, and even
+its full swept range tops out 0.14 short of the bar. The mechanism behind
+the shortfall is visible in the numbers themselves: all six historical
+stress episodes land at N≥30, deep in the flat part of the `sqrt(1/N)`
+radius curve — the project's own 20/40/80-day vote has already lived
+through enough directional flips by the time any of these six episodes
+arrives that a `1/sqrt(N)` concentration rate has nothing left to bite on,
+whatever the confidence level or reference point. The falsification test
+**is** the Step-0 gate; it failed on kill switch B specifically (not A),
+which is itself informative: the regime-cycle-count state variable is
+*not* another instance of the "collapses to a handful of near-constant
+values" artifact 22 prior SIZE-axis rounds hit (spread passed cleanly,
+6/6 distinct) — it fails instead because the concentration-rate shape
+itself is too flat at the N this dataset's vote reaches by the time any
+real stress episode occurs, a structurally different and more specific
+diagnosis than R-33/R-57/R-62's.
+
+**Verdict.** **NEGATIVE, Step-0 gate, both branches — the round's entire
+product is the gate itself, zero strategy or backtest code written on
+either branch.** One-line lesson: turning this project's own N≈3
+diagnosis into a literal Wasserstein-radius state variable is a
+theoretically distinct SIZE-axis construction from all 22 before it (it
+does not reproduce the exposure-collapse artifact — the spread check
+passes cleanly) but the vote's own directional-flip count is already large
+enough, by the time any of the six real historical stress episodes
+arrives, that a `1/sqrt(N)` concentration rate is too flat to move the bet
+by an economically meaningful amount — a new way for the SIZE axis to fail
+that is worth recording precisely because it is not the old one. **Holdout
+counter: +0 on top of R-96's ~637 (running total unchanged at ~637)** —
+neither branch read any bar on or after 2023-01-01
+(`assert_no_holdout()` clean on both, max timestamp read 2022-12-31
+23:55:00 UTC). Decision rule did not move: both kill switches were frozen
+in `r97_shared.py` before any real-data number was computed; the novel
+branch's post-FAIL sensitivity grid is disclosed explicitly as exploratory
+diagnostic color, per step 4's rule, and does not reopen or relax the
+frozen bar. **Next step:** this closes the DRO/robust-optimization
+approach to the SIZE axis as tried here; a future session preferring a
+fresh mechanism search now needs a robust-sizing construction whose
+ambiguity/confidence state variable does not saturate by the time BTC's
+own regime vote has lived through its first ~30 directional flips (the
+common floor across all six historical stress episodes), a SIZE-axis
+construction outside both the "collapses to near-constant" failure mode
+(22 prior attempts) and this round's "concentration rate too flat at the
+N reached" failure mode, or should work **B-32** directly, still the only
+ranked, unblocked backlog item.
+
 ### R-96 · 08-23 · NEGATIVE (both branches) — a self-exciting Hawkes point process, a seventh regime-timing mechanism (conservative) and its own execution-timing-brake premise (novel): the alarm never fires inside any of the six episode windows on any of 9 grid cells, and forward turbulence after a real intensity spike is not distinguishable from an arbitrary day's
 
 **Direction.** A self-exciting Hawkes point process (Hawkes 1971,
@@ -10193,6 +10332,42 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-23 after R-97.** An off-backlog, literature-prompted
+two-branch round (same posture as R-73–R-96 — the ranked list holds only
+B-32, pure infrastructure) tried Wasserstein-DRO robust Kelly sizing
+(Mohajerin Esfahani & Kuhn 2018; Li 2023, arXiv:2302.13979), keying the
+ambiguity-ball radius on the causal count of `kelly_regime_v4`'s own
+completed regime cycles — the first SIZE-axis construction to make the
+project's own N≈3 diagnosis a literal state variable rather than a
+caveat. **NEGATIVE, both branches, stopped at a shared pre-registered
+Step-0 gate before any strategy code was written.** The regime-cycle
+count spreads cleanly across the six historical stress episodes (6/6
+distinct values, N = 30–109 — kill switch A passes, so this is *not* a
+24th instance of the "collapses to a near-constant fraction" artifact 22
+prior SIZE-axis rounds hit), but the resulting DRO discount varies only
+**12.9%** across those episodes, short of the pre-registered 1.3x bar
+(kill switch B fails) — and the novel branch's 9-cell sensitivity sweep
+found the shortfall robust to the whole defensible `BETA_CONF × N_REF`
+neighbourhood (max ratio 1.160, still short), because all six episodes
+land at N≥30, deep in the flat part of a `1/sqrt(N)` concentration curve.
+Both branches independently re-derived the gate from scratch (two
+structurally different methods each) and matched the operator and each
+other exactly. **This is a new, more specific way for the SIZE axis to
+fail than R-33/R-57/R-62's exposure-collapse diagnosis: not that the
+construction degenerates to a handful of near-constant values, but that
+the vote's own directional-flip count is already too large, by the time
+any real stress episode arrives, for a root-N concentration rate to move
+the bet by an amount that clears this project's own noise floor.**
+**B-32 remains the only ranked, unblocked backlog item.** A future
+session preferring a fresh mechanism search now needs a robust-sizing or
+SIZE-axis construction whose state variable does not saturate by ~30
+regime-vote flips (this round's floor), is outside the exposure-collapse
+family (22 attempts) and this round's flat-concentration-rate family, a
+data channel this project cannot construct from its own committed files
+or fetchable free sources at all (thirteen INFO-axis attempts have
+failed), or a regime-timing construction with no basis in common with the
+seven now ruled out — or should work B-32 directly.
+
 **Re-ranked 08-23 after R-96.** An off-backlog, literature-prompted
 two-branch round (same posture as R-73–R-95 — the ranked list holds only
 B-32, pure infrastructure) tried a self-exciting Hawkes point process, a
@@ -11694,6 +11869,21 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-23 · ~637** — R-97: **+0** on top of R-96's ~637 (unchanged), both
+  branches. Shared gate (`experiments/r97_shared.py`, run by the operator):
+  6 episode diagnostics (regime-cycle count + DRO discount at each of the
+  six dated stress episodes), Step-0 gate FAIL (kill switch B, ratio 1.129
+  vs 1.3x bar), `assert_no_holdout()` clean, max timestamp read 2022-12-31
+  23:55:00 UTC. Conservative
+  (`experiments/r97_conservative_wasserstein_scale.py`): 0 backtest
+  configs (Step-0 gate stop); independent re-derivation of the same 6
+  episode diagnostics via two structurally different methods each for
+  cycle count and discount, all matching the operator and each other;
+  `assert_no_holdout()` clean, same max timestamp. Novel
+  (`experiments/r97_novel_dro_discount.py`): 0 backtest configs (Step-0
+  gate stop); 9 diagnostic cells (3×3 `BETA_CONF × N_REF` sensitivity
+  grid, exploratory/in-sample per step 4's rule, no cell clears the bar);
+  same clean holdout guard and max timestamp.
 - **08-23 · ~637** — R-96: **+0** on top of R-95's ~637 (unchanged), both
   branches. Conservative (`experiments/r96_conservative_hawkes_alarm.py`):
   0 backtest configs (Step-A gate stop, 0/9 cells clearing the bar, 0/6
