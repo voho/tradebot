@@ -315,6 +315,144 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-96 · 08-23 · NEGATIVE (both branches) — a self-exciting Hawkes point process as a seventh regime-timing mechanism and a second execution-timing-brake driver: the alarm never fires near any of the six episodes, and cluster-spike events are too rare in four years to power the novel branch's own Step-0 test at all
+
+**Direction.** A self-exciting Hawkes point process (Hawkes 1971,
+*Biometrika* 58(1):83-90) fit to BTC's own intraday jump events — the
+conditional intensity of further "jump" events rising immediately after a
+jump has just occurred — as a genuinely new mathematical object for two
+roles this project has tried before with six other estimators: (conservative)
+a regime-timing/detection-lag ALARM against the standing six-episode gate,
+and (novel) an execution-timing BRAKE that delays `kelly_regime_v4`'s own
+scheduled rebalances while a jump cluster is actively in progress, reusing
+R-77/R-88's bounded-delay-then-force architecture with Hawkes cluster
+intensity — not volatility, not order-flow direction — as the conditioning
+variable. Constraint attacked: **ERR / N≈3** for the conservative branch (a
+conditional EVENT RATE has no hidden state, no changepoint/segmentation
+step, no linearity assumption, and no information-theoretic functional of
+two series — sharing no mathematical machinery with HMM, BOCPD, Kalman LLT,
+vote-latch modulation, CSD, or transfer entropy, the six mechanisms already
+ruled out on the identical gate); **COST**, contingent on the novel branch's
+own volatility-elevation premise, for the execution brake. Backlog: off-
+backlog, literature-prompted, same posture as R-73–R-95 (B-32 remains the
+only ranked, unblocked backlog item and is not urgent). Event-time
+construction (which days count as a point-process event) uses
+Barndorff-Nielsen & Shephard's (2004, 2006) bipower-variation relative-jump
+statistic on this project's own 5-minute bars — a jump-robust volatility
+estimator used only to date events, not as a SIZE-axis scale (R-62's
+factor-isolation finding). Not a duplicate of: R-01 (HMM), R-82 (BOCPD),
+R-83 (Kalman LLT), R-84 (vote-latch modulation), R-85 (CSD), R-86 (transfer
+entropy) — six regime-timing mechanisms drawn from six different
+mathematical fields, all tested against the identical `STRESS_EPISODES`
+table; R-88 (taker-flow execution delay — the same bounded-delay-then-force
+shape, a structurally different driver: order-flow direction, a bivariate
+venue-reported buy/sell imbalance, vs. this round's univariate,
+price-derived cluster intensity); R-77/B-24 (volatility-driven execution
+timing, closed NEGATIVE — conditions on a volatility LEVEL, not on
+clustering intensity, which can differ at identical volatility); R-93
+(Grossman-Zhou drawdown-constrained SIZE — untouched here, this round is a
+regime-timing alarm and an execution brake, not a sizing rule). Full
+citation trail, formal construction (moment-matched sub-critical exponential
+Hawkes kernel, causal expanding-window baseline rate) and non-duplication
+argument were pre-registered by a prior session in
+`experiments/r96_shared.py`, adopted and executed unchanged by this round
+per `docs/ROUTINE.md`'s "multi-day threads are expected" continuity note —
+this session found the file already committed with a complete
+pre-registration and no ledger entry, and carried it to a verdict rather
+than inventing a new direction.
+
+**What was done.** `experiments/r96_shared.py` (prior session; read-only
+utilities — `intraday_relative_jump`, `hawkes_intensity_daily`,
+`hawkes_intensity_zscore`, `nearest_hawkes_alarm`, the verbatim-copied
+six-episode gate scaffolding and `STRESS_EPISODES` table, `assert_no_holdout`
+— unmodified this round). Two new files this round, one per branch, neither
+touching the other or `r96_shared.py`:
+`experiments/r96_conservative_hawkes_alarm.py` (Hawkes intensity z-score vs.
+the six-episode gate, a 9-cell grid — branching ratio n ∈ {0.3, 0.5, 0.7} ×
+half-life ∈ {3, 7, 14} days, all fixed a priori in `r96_shared.py` — primary
+cell n=0.5/halflife=7d, `Z_THRESH=2.0`, pre-registered stop rule ≥4/6
+episodes pass before any strategy code is built) and
+`experiments/r96_novel_hawkes_delay_brake.py` (a Step-0 gate, designed and
+coded by this round per `r96_shared.py`'s own named-but-uncoded requirement:
+is realized volatility elevated in the 288 bars, one calendar day,
+immediately after a Hawkes-intensity spike, vs. the unconditional inner-train
+baseline, tested via a 1,000-draw block-bootstrap null [block=5 days] —
+pre-registered *before* running: pass requires both ≥20 usable spike events,
+a named power floor, and observed mean forward RV exceeding the null's 95th
+percentile). Data: BTC spot; the conservative branch's episode gate reads
+2017-01-01→2022-12-31 (two of the six episodes fall in inner-validation);
+the novel branch's Step-0 gate reads inner-train only, 2017-01-01→2020-12-31.
+Neither branch built any strategy code or read a holdout bar —
+`assert_no_holdout` is called throughout both files; max timestamp read:
+2022-12-31 23:55 (conservative), 2020-12-31 23:55 (novel). Configs
+evaluated: 0 in both, this project's standing convention for a fixed
+measurement gate — conservative covers 54 gate cells (9 params × 6
+episodes) plus 3 causal-truncation checkpoints; novel covers one gate
+computation (2 usable spikes found, so the 1,000-draw bootstrap was skipped
+per its own pre-registered floor, not run and discarded). Total across both
+branches: 0 backtest configurations; both branches stopped before Step B.
+
+**Result.** Conservative: across the full 9-cell grid, the Hawkes intensity
+z-score never crosses its own `Z_THRESH=2.0` alarm level inside any of the
+six ±60-day episode windows — **0/6 on every cell**, under both the median-
+null convention (primary, matching R-82–R-86's own lineage) and the p90
+convention (sensitivity, matching R-88's). Closest approach: the 2018
+capitulation episode at n=0.3/halflife=3d, z=+1.75, still short of
+threshold. This is a cleaner failure than any of the six predecessor
+mechanisms, which mostly fired but too late (lagged) or failed a null test
+— here the signal essentially never fires near a historical stress episode
+at all; its few genuine elevations cluster in one sustained 2018-04→2019-04
+stretch that straddles but never overlaps any of the six windows. Causal-
+truncation probe: PASS at all 3 checkpoints. **Operator independently
+re-ran the file end-to-end from a clean shell**: identical 0/6 on all 9
+cells, identical truncation-probe result. Novel: only **2** upward
+crossings of the identical `Z_THRESH=2.0` occurred across the entire
+4-year inner-train window (2018-04-28, 2019-03-02) — far below the
+pre-registered floor of 20, so the block-bootstrap significance test was
+never run (skipped per its own pre-registered rule, not silently waved
+through as a pass or a fail on a technicality). The 2 events' own
+forward-288-bar realized volatility (0.45× the unconditional baseline) runs
+directionally opposite the branch's motivating premise, though n=2 is
+uninterpretable on its own and the pre-registration correctly treats this
+as an untested power failure, not a directional result. Diagnosis: the
+smoothed, causally-baselined z-score construction produces long persistent
+high-intensity regimes (157 and 41 days respectively) rather than frequent
+discrete spikes, so "crossing" events are rare by construction — a property
+of this estimator's smoothing, separable in principle from whether jump
+clustering itself is real. **Operator independently re-ran the file
+end-to-end**: identical n=2 usable spikes, identical gate FAIL. Neither
+branch's pre-registered decision rule was altered after seeing any number;
+the conservative branch disclosed and resolved one construction ambiguity
+(median- vs. p90-null convention) *before* running, reporting both — the
+verdict is identical either way (0/6). **Holdout counter: +0** — neither
+branch, nor the operator's independent re-runs, ever read a bar dated
+2023-01-01 or later; both scripts print their own max-timestamp-read line
+and both pass their `assert_no_holdout` guards — see the bullet added below
+in [Holdout consultations to date](#holdout-consultations-to-date).
+
+**Verdict.** **NEGATIVE, both branches.** One-line lesson: this project has
+now tried **seven** structurally distinct theoretical bases for "detect
+that the regime just broke" — discrete-state switching (HMM), Bayesian
+changepoint estimation (BOCPD), linear state-space filtering (Kalman LLT),
+vote-latch confirmation-dynamics modulation, dynamical-systems fluctuation
+statistics (CSD), information-theoretic directed flow (TE), and now a
+self-exciting conditional event-rate process (Hawkes) — and none has
+cleared the six-episode gate; this is also the **second** execution-timing-
+brake construction (after R-88's order-flow-conditioned delay, which
+reached Step B before losing) to fail, for a structurally different reason
+than R-88's: not "the delay doesn't pay off" but "the conditioning event is
+too rare to test at all" — a power problem, diagnosed and stopped before it
+could be mistaken for either a pass or a fail. Neither pre-registered
+decision rule moved after seeing any number. **Next step:** a future
+session preferring a fresh mechanism search now needs an eighth
+regime-timing basis sharing no discrete-state/changepoint/filtered-slope/
+fluctuation-trend/information-flow/self-exciting-point-process machinery
+with the seven now ruled out, a genuinely new *kind* of information
+(fourteen INFO-axis signals have failed as of R-95), or a SIZE-axis
+construction that does not collapse to a low, roughly-constant exposure
+fraction relative to v4 (22 attempts have) — or should work **B-32**
+directly, still the only ranked, unblocked backlog item.
+
 ### R-95 · 08-22 · NEGATIVE (both branches) — the Crypto Fear & Greed Index as a thirteenth INFO-axis signal: the composite is coincident with, not leading, v4's own reactive vote, and its contrarian reading is falsified with the sharpest, most significant sign reversal this project's INFO axis has produced
 
 **Direction.** alternative.me's daily Crypto Fear & Greed Index (FGI) — a
@@ -10020,6 +10158,32 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-23 after R-96.** An off-backlog, literature-prompted two-branch
+round (same posture as R-73–R-95 — the ranked list holds only B-32, pure
+infrastructure) executed a pre-registration a prior session had already
+written and committed (`experiments/r96_shared.py`) but never carried to a
+verdict: a self-exciting Hawkes point process (Hawkes 1971), the seventh
+structurally distinct regime-timing mechanism tried against the standing
+six-episode gate, and a second execution-timing-brake construction (after
+R-88's). Both **NEGATIVE**. Conservative: 0/6 episodes pass on every one of
+9 grid cells — the alarm never crosses its threshold near any of the six
+historical stress episodes at all, the cleanest failure this axis has
+produced (six predecessors mostly lagged; this one essentially never fires
+nearby). Novel: its own pre-registered Step-0 gate (is realized volatility
+elevated after a Hawkes-intensity spike?) never got a fair test — only 2
+cluster-spike events occurred across four years of inner-train data against
+a pre-registered floor of 20, so the significance test was correctly skipped
+rather than run underpowered. **This closes the seventh structurally
+distinct regime-timing mechanism and the second execution-timing-brake
+driver, both negative, in the same session.** B-32 remains the only ranked,
+unblocked backlog item. A future session preferring a fresh mechanism
+search now needs an eighth regime-timing basis sharing no discrete-state/
+changepoint/filtered-slope/fluctuation-trend/information-flow/self-exciting-
+point-process machinery with the seven now ruled out, a genuinely new *kind*
+of information (fourteen INFO-axis signals have failed), or a SIZE-axis
+construction that does not collapse to a low, roughly-constant exposure
+fraction relative to v4 (22 attempts have) — or should work B-32 directly.
+
 **Re-ranked 08-22 after R-95.** An off-backlog, literature-prompted two-branch
 round (same posture as R-73–R-94 — the ranked list holds only B-32, pure
 infrastructure) tried the thirteenth structurally distinct INFO-axis signal:
@@ -11488,6 +11652,20 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-23 · ~637** — R-96: **+0** on top of R-95's ~637 (unchanged), both
+  branches. Conservative (`experiments/r96_conservative_hawkes_alarm.py`):
+  0 backtest configs (Step-A gate stop, 0/6 episodes on all 9 grid cells —
+  the alarm never crosses threshold near any episode); 54 gate diagnostics
+  (9 n/halflife cells × 6 episodes) plus 3 causal-truncation checkpoints,
+  `assert_no_holdout()` clean, max timestamp read 2022-12-31 23:55:00 UTC.
+  Novel (`experiments/r96_novel_hawkes_delay_brake.py`): 0 backtest configs
+  (Step-0 gate stop — only 2 usable cluster-spike events against a
+  pre-registered floor of 20, so the block-bootstrap significance test
+  itself was never run); max timestamp read 2020-12-31 23:55:00 UTC
+  (inner-train only, never approached 2021+). Both scripts independently
+  re-run end-to-end by the operator from a clean shell, reproducing every
+  reported cell exactly (identical 0/6 grid; identical n=2 usable-spike
+  count and gate verdict).
 - **08-22 · ~637** — R-95: **+0** on top of R-94's ~637 (unchanged), both
   branches. Conservative (`experiments/r95_conservative_fgi_confirm.py`):
   0 backtest configs (Step-A gate stop, 0/9 cells clearing the bar); 54
