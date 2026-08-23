@@ -315,6 +315,183 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-99 · 08-23 · NEGATIVE (both branches) — a causal rolling Generalized Hurst Exponent, a ninth regime-timing mechanism (conservative) whose alarm almost never fires inside any of the six episode windows, and a GHE-derived adaptive no-trade band (novel) that varies genuinely but barely touches turnover
+
+**Direction.** A causal rolling Generalized Hurst Exponent (GHE, q=1) of
+BTC's own daily log-price series — Hurst, H. E. (1951), "Long-term storage
+capacity of reservoirs", *Trans. ASCE* 116, 770-808 (the rescaled-range
+statistic and its scaling exponent); Mandelbrot, B. B., & Van Ness, J. W.
+(1968), "Fractional Brownian Motions, Fractional Noises and Applications",
+*SIAM Review* 10(4), 422-437 (the fBm generative model H characterizes:
+H=0.5 no memory, H>0.5 persistent/trending, H<0.5 anti-persistent/
+mean-reverting); Barabási, A.-L., & Vicsek, T. (1991), "Multifractality of
+self-affine fractals", *Phys. Rev. A* 44(4), 2730-2733 (the GHE estimator
+itself, from the scaling of the structure function `K(tau)=<|X(t+tau)-X(t)|>`
+against lag on log-log axes); Di Matteo, T. (2007), "Multi-scaling in
+Finance", *Quant. Finance* 7(1), 21-36 (q=1 as the standard, least
+tail-sensitive choice for financial series). Two BTC-specific applications
+confirmed live via WebSearch before being relied on: Bariviera, A. F.
+(2017), "The inefficiency of Bitcoin revisited: a dynamic approach",
+*Economics Letters* 161, 1-4 (arXiv:1709.08090) — a rolling, dynamic Hurst
+exponent applied specifically to BTC daily returns, the direct precedent
+for treating it as a live signal rather than a full-sample constant; and
+Takaishi, T. (2018), "Statistical properties and multifractality of
+Bitcoin", *Physica A* 506, 507-519, plus the companion multiscaling study
+arXiv:1804.05916, both documenting regime-dependent, time-varying Hurst
+behaviour around BTC's own major bull/bear transitions. Two exploitations
+tested: the GHE z-score against its own trailing baseline, as a ninth
+structurally distinct regime-timing alarm (conservative — fed into R-53/
+R-55's validated confirming-vote architecture, had it passed Step A); and
+the same z-score used to widen or narrow `kelly_regime_v4`'s fixed 10%
+rebalance deadband (novel — a COST-axis trading-frequency control, not
+another SIZE-axis retune, on the theory that a rebalance triggered while
+the market is locally anti-persistent/noisy is more likely reacting to
+noise than to real drift). Attacks **ERR** (a formal scaling-law estimator,
+the same posture R-85/86/96/98's mechanisms used) and **N≈3** (a ninth
+theoretical basis for "has the regime already turned") for the
+conservative branch; the novel branch additionally attacks **COST**, the
+one constraint R-65/67/68 showed can actually move. Off-backlog,
+literature-prompted (same posture as R-73–R-98 — the ranked list holds
+only **B-32**, pure infrastructure). Not a duplicate of: R-01 (HMM), R-82
+(BOCPD), R-83 (Kalman LLT), R-84 (vote-latch/volume modulation), R-85
+(CSD), R-86 (transfer entropy), R-96 (Hawkes), R-98 (GPD/POT) — eight
+regime-timing mechanisms from eight different fields; GHE is a ninth, a
+scaling exponent of how variance grows with aggregation horizon, sharing
+no hidden state, segmentation, linearity, information-theoretic functional,
+self-exciting event-rate, or tail-exceedance machinery with any of them
+(the CSD comparison is the closest and is spelled out explicitly in
+`r99_shared.py`'s docstring: CSD asks whether the *level* of variance is
+rising over calendar time; GHE asks how variance *scales* across
+aggregation lags within one fixed window — different axes of the same
+data, and not the same statistic under a new name). Not R-93
+(Grossman-Zhou) or R-97 (Wasserstein-DRO), both of which replace v4's
+`scale` factor directly — R-62 isolated `scale` as carrying none of v4's
+signature (four independent confirmations), and both R-93 and R-97
+reproduced that exact failure mode; this round touches `scale` nowhere —
+the conservative branch is an alarm fed additively into the vote, the
+novel branch modulates only the rebalance-trigger *band width*. Not
+`kelly_regime_ev`/`kelly_regime_ev_fast` (which derive their no-trade band
+from the strategy's own expected-growth-vs-fee tradeoff) — this round's
+band multiplier is derived from a property of the market's own price
+process instead, and multiplies v4's existing fixed band rather than
+replacing it with the EV-derived one. Not one of the fourteen INFO-axis
+rounds — neither branch reads any data beyond the already-committed BTC
+OHLCV close series `kelly_regime_v4` itself consumes. Full grounding, the
+Kill-Switch-A degeneracy check, and both branches' pre-registered gates:
+`experiments/r99_shared.py`.
+
+**What was done.** One shared, read-only module built and run by the
+operator *before* either branch was dispatched (`experiments/
+r99_shared.py` — a dependency-free causal rolling GHE(q=1) fit on daily
+log prices (`rolling_ghe_signal`, structure-function OLS on a 6-point
+1-32-day lag ladder), the identical dated six-episode gate scaffolding
+R-82/83/84/85/86/96/98 all used, and a disclosed **Kill Switch A**
+degeneracy check: all three grid cells (fit windows 90/180/365 days)
+cross `Z_THRESH=2.0` at least once in the full 2017–2022 history, so no
+override was needed — the a-priori grid-centre cell (180d) stood as
+primary). Two branches then worked independently (dispatched as separate
+sub-agents), neither editing `r99_shared.py` or each other's file — the
+operator independently re-ran both files end-to-end afterward and every
+reported number matched exactly. Conservative (`experiments/
+r99_conservative_ghe_alarm.py`): the Step-A detection-lag gate — nearest
+downward `anchor_majority` flip vs. nearest GHE-z upcross through 2.0,
+±60-day window per episode, block-bootstrap null (block_days=5,
+n_draws=500, seed=9902, disclosed as distinct from every prior round's
+seed) — computed across the full 1×3 `FIT_WINDOW_DAYS_GRID`, pre-
+registered stop rule: proceed to Step B only if the primary cell scores
+≥4/6 episodes. Novel (`experiments/r99_novel_ghe_band.py`): a Step-0
+two-part gate on inner-train only — (a) non-degeneracy of the effective
+deadband (`0.10 * clip(1 - K*ghe_z, 0.5, 2.0)`, K ∈ {0.15, 0.30, 0.50}
+fixed a priori) against the 23-prior-round "collapses to near-constant"
+failure mode; (b) an effect check requiring ≥10% relative turnover
+reduction for at least one K without a >0.2 Sharpe loss for any K, before
+proceeding to inner-validation. Both branches restricted every read to
+inner-train/inner-validation (`df.index < 2023-01-01`), guarded by
+`assert_no_holdout()` on every signal built, and ran an independent
+causal-truncation probe on their own signal pipeline before trusting any
+gate number. **Configs evaluated: 4 backtest configs** (novel branch:
+baseline v4 + 3 K variants on inner-train; conservative branch built zero
+strategy code, stopping at its own gate). Diagnostic (non-strategy) cells:
+conservative — 3 grid cells × 6 episodes = 18 episode-lead diagnostics.
+
+**Result.** Conservative: full 1×3 grid (episodes passing/6) — 0/6
+(fw=90), **0/6 (fw=180, PRIMARY)**, 1/6 (fw=365). Primary-cell detail: the
+alarm never crosses `Z_THRESH` inside any of the six ±60-day episode
+windows at all — not a single one, the flattest possible outcome on this
+axis alongside R-96 (Hawkes, 0/9 cells). The one grid-wide pass (fw=365d,
+2018 bear onset, lead +24.93d against a null median of −2.25d) is a
+genuine early alarm, but it is the sole exception across 18 cell×episode
+diagnostics: 17 of 18 resolve to "alarm never fires inside the window,"
+not "fires but lags" — a sharper, sparser failure than R-98's GPD/POT
+(which fired on 1/6 primary, best 2/6 grid-wide, mostly via late alarms).
+Ad hoc diagnostic (not part of the pre-registered gate): the GHE z-score
+is not globally degenerate — it crosses 2.0 upward 3/1/3 times across the
+full six-year history at fw=90/180/365 respectively — the rare crossings
+simply almost never land near one of the six dated stress episodes.
+**Step A: FAIL, 0/6 < 4/6 on primary — STOP.** No confirming-vote strategy
+was built; no bar ≥2023-01-01 was read. Novel: Step-0a non-degeneracy,
+inner-train (n=420,481 bars) — K=0.15: mean=0.1011, std=0.0149, within
+±5%=28.6%, differs>10%=52.3%; K=0.30: mean=0.1021, std=0.0299, within
+±5%=20.8%, differs>10%=71.4%; K=0.50: mean=0.1037, std=0.0459, within
+±5%=17.5%, differs>10%=77.3%. **PASS** — none of the three K values keeps
+>95% of bars within ±5% of the base, so this construction does not
+reproduce the 23-round collapse-to-constant artifact; the multiplier
+genuinely moves. Step-0b effect check, inner-train futures 5x — baseline
+v4: 72 trades, Sharpe 2.28, DD 35.3%, final $30,344; K=0.15: 72 trades
+(0.0% drop), Sharpe 2.29 (+0.001); K=0.30: 70 trades (2.8% drop), Sharpe
+2.27 (−0.011); K=0.50: 70 trades (2.8% drop), Sharpe 2.27 (−0.010). Best
+turnover drop across the grid is **2.8%**, short of the pre-registered 10%
+relative bar; Sharpe is essentially flat throughout (worst −0.011, far
+inside the ±0.2 noise floor — Sharpe was never the failure). **Step 0:
+FAIL on the turnover sub-check — STOP.** No inner-validation or holdout
+bar was read. Diagnosed mechanism, offered as a reusable finding rather
+than part of the decision rule: v4's rebalances are dominated by large,
+sparse, latch-driven jumps (the 20/40/80 anchor vote and volatility-state
+transitions), which clear a 0.05 or a 0.20 band about equally often — with
+only 72 trades in four years, the strategy's own trigger structure gives
+a band-width modulation very little surface area to act on. This is
+distinct from the standing SIZE-axis failure mode: there the *signal*
+collapses to near-constant; here the signal moves genuinely (Step-0a
+passed cleanly) but the *strategy's own decision structure* doesn't expose
+enough marginal-rebalance events for the band to bite on.
+
+**Verdict.** **NEGATIVE, both branches — the round's entire product is
+two pre-registered gates and one small inner-train sweep, no strategy
+promoted or registered.** One-line lesson: the ninth structurally distinct
+regime-timing mechanism (GHE/fractal scaling) fails the identical
+detection-lag gate every predecessor has failed, more starkly than most
+(0/18 cell×episode passes on the primary cell, sparsest since Hawkes'
+0/9-cells), and a genuinely non-degenerate COST-axis construction can
+still fail for a structural reason distinct from the standard "signal
+collapses to constant" pattern — it is not enough for the *signal* to
+vary if the *strategy's own trigger geometry* rarely sits near the
+threshold the signal is meant to move. **Holdout counter: +0 on top of
+R-98's ~637 (running total unchanged at ~637)** — neither branch read any
+bar on or after 2023-01-01 (`assert_no_holdout()` clean on both,
+independently re-verified by the operator by re-running each file
+end-to-end, max timestamp read 2022-12-31 23:55:00 UTC on both). Decision
+rule did not move: both gates and the novel branch's K-grid/thresholds
+were frozen in `r99_shared.py`/each branch's own pre-registration before
+any real-data number was computed, and neither branch loosened its bar
+after seeing a disappointing number. **Next step:** this closes the GHE/
+fractal-scaling approach to regime-timing as tried here, and adds a new,
+reusable failure category to the COST axis (non-degenerate signal, inert
+trigger geometry) alongside the SIZE axis's "collapses to constant" one —
+a future session preferring a fresh mechanism search now needs a
+regime-timing construction sharing no basis with the nine now ruled out
+(discrete-state switching, Bayesian changepoint estimation, linear
+state-space filtering, vote-latch modulation, dynamical-systems
+fluctuation statistics, information-theoretic directed flow, self-exciting
+point processes, extreme-value tail theory, fractal scaling), a
+COST-axis construction whose effect depends on a signal touching the
+strategy's actual decision boundary rather than only being non-degenerate
+in isolation, a data channel this project cannot construct from its
+committed files or fetchable free sources at all (fourteen INFO-axis
+attempts have failed), a SIZE-axis construction outside both the
+"collapses to near-constant exposure" failure mode (23 attempts) and
+R-97's "concentration rate too flat" failure mode, or should work **B-32**
+directly, still the only ranked, unblocked backlog item.
+
 ### R-98 · 08-23 · NEGATIVE (both branches) — causal rolling Peaks-Over-Threshold / GPD tail-shape estimation, an eighth regime-timing mechanism (conservative) and its own forward-loss premise (novel): the alarm clears at most 2 of 6 episodes on any of 9 grid cells, and only 1 of 4 forward-loss horizons shows elevated post-breach loss
 
 **Direction.** A causal rolling Peaks-Over-Threshold (POT) fit of the
@@ -10489,6 +10666,49 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-23 after R-99.** An off-backlog, literature-prompted
+two-branch round (same posture as R-73–R-98 — the ranked list holds only
+B-32, pure infrastructure) tried a causal rolling Generalized Hurst
+Exponent (Hurst 1951; Mandelbrot & Van Ness 1968; Barabási & Vicsek 1991;
+Di Matteo 2007; applied to BTC specifically by Bariviera 2017 and Takaishi
+2018), a ninth structurally distinct regime-timing mechanism (conservative)
+and a GHE-derived adaptive no-trade band (novel). Both **NEGATIVE**.
+Conservative: the Step-A detection-lag gate scores **0/6** episodes on the
+primary cell and at most **1/6** anywhere on its 3-cell grid — the alarm
+never crosses its threshold inside any of the six ±60-day episode windows
+on the primary cell at all, the sparsest failure on this axis alongside
+Hawkes (R-96, 0/9 cells). Novel: its own non-degeneracy check passes
+cleanly (the GHE-derived band multiplier genuinely varies, unlike 23 prior
+SIZE-axis attempts that collapsed to a near-constant fraction), but the
+effect check fails — best turnover reduction across the K grid is 2.8%
+against a pre-registered 10% bar — because `kelly_regime_v4`'s own
+rebalances are dominated by large, sparse, latch-driven jumps that clear a
+narrow or a wide band about equally often, leaving a genuinely-moving
+signal little surface area on the strategy's actual trigger geometry.
+**This closes the ninth structurally distinct theoretical basis this
+project has tried for regime-timing/detection-lag — discrete-state
+switching, Bayesian changepoint estimation, linear state-space filtering,
+vote-latch modulation, dynamical-systems fluctuation statistics,
+information-theoretic directed flow, self-exciting point-process
+clustering, extreme-value tail theory, and now fractal/self-similarity
+scaling — and none has cleared the six-episode gate; separately, it adds a
+new COST-axis failure category distinct from the SIZE axis's
+"collapses to near-constant" one: a signal can be genuinely non-degenerate
+in isolation and still fail because the strategy's own decision structure
+rarely sits near the threshold it modulates.** **B-32 remains the only
+ranked, unblocked backlog item.** A future session preferring a fresh
+mechanism search now needs a data channel this project cannot construct
+from its already-committed files or fetchable free sources at all (fourteen
+INFO-axis attempts have failed), a SIZE-axis construction that does not
+collapse to a low, roughly-constant exposure fraction relative to v4 (23
+attempts) or reproduce R-97's flat-concentration-rate failure, a
+COST-axis construction whose effect reaches the strategy's actual decision
+boundary rather than only being non-degenerate as a standalone series
+(this round's failure mode), or a regime-timing construction with no
+discrete-state/changepoint/filtered-slope/fluctuation-trend/information-
+flow/self-exciting-point-process/extreme-value/fractal-scaling basis in
+common with the nine now ruled out — or should work B-32 directly.
+
 **Re-ranked 08-23 after R-98.** An off-backlog, literature-prompted
 two-branch round (same posture as R-73–R-97 — the ranked list holds only
 B-32, pure infrastructure) tried causal rolling Peaks-Over-Threshold/GPD
@@ -12061,6 +12281,20 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-23 · ~637** — R-99: **+0** on top of R-98's ~637 (unchanged), both
+  branches. Shared gate (`experiments/r99_shared.py`, run by the operator):
+  Kill-Switch-A degeneracy check across all 3 GHE grid cells (no
+  episode-level number computed at this step). Conservative
+  (`experiments/r99_conservative_ghe_alarm.py`): 0 backtest configs
+  (Step-A gate stop, primary cell 0/6, best cell anywhere 1/6); 18
+  episode-lead diagnostics (3 grid cells × 6 episodes); `assert_no_holdout()`
+  clean, max timestamp read 2022-12-31 23:55:00 UTC; independently
+  reproduced end-to-end by the operator. Novel
+  (`experiments/r99_novel_ghe_band.py`): 4 backtest configs on inner-train
+  only (baseline v4 + 3 K variants; Step-0b turnover-effect gate stop,
+  best turnover drop 2.8% vs a 10% relative bar); inner-validation and
+  holdout never reached; same clean holdout guard, same max timestamp,
+  independently reproduced end-to-end by the operator.
 - **08-23 · ~637** — R-98: **+0** on top of R-97's ~637 (unchanged), both
   branches. Shared gate (`experiments/r98_shared.py`, run by the operator):
   Kill-Switch-A degeneracy check across all 9 grid cells (no episode-level
