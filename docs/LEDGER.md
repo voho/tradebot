@@ -315,6 +315,163 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-98 · 08-23 · NEGATIVE (both branches) — causal rolling Peaks-Over-Threshold / GPD tail-shape estimation, an eighth regime-timing mechanism (conservative) and its own forward-loss premise (novel): the alarm clears at most 2 of 6 episodes on any of 9 grid cells, and only 1 of 4 forward-loss horizons shows elevated post-breach loss
+
+**Direction.** A causal rolling Peaks-Over-Threshold (POT) fit of the
+Generalized Pareto Distribution (GPD) to BTC's own daily return
+exceedances — Pickands, J. (1975), "Statistical inference using extreme
+order statistics", *Annals of Statistics* 3(1), 119-131 (the POT
+theorem itself); Hosking, J. R. M., & Wallis, J. R. (1987), "Parameter
+and Quantile Estimation for the Generalized Pareto Distribution",
+*Technometrics* 29(3), 339-349 (the closed-form, dependency-free
+probability-weighted-moments fit used here); McNeil, A. J., & Frey, R.
+(2000), "Estimation of tail-related risk measures for heteroscedastic
+financial time series: an extreme value approach", *Journal of Empirical
+Finance* 7(3-4), 271-300 (the dynamic-POT recipe and the POT quantile/VaR
+formula); Ke, R., Yang, L., & Tan, C. (2022), "Forecasting tail risk for
+Bitcoin: a dynamic peak over threshold approach", *Finance Research
+Letters* (confirmed live via WebSearch before being relied on — applies
+this exact machinery to BTC daily returns specifically, not a generic-
+equity import, and finds it beats GARCH-EVT on BTC's own lower-tail VaR
+out-of-sample). Two exploitations tested: the tail SHAPE parameter `xi`,
+z-scored against its own trailing baseline, as an eighth structurally
+distinct regime-timing alarm (conservative — fed into R-53/R-55's
+validated confirming-vote architecture, had it passed Step A); and a live
+POT-implied VaR BREACH as a discrete kill-switch premise (novel — tested
+at Step 0 before any strategy code, per this project's standard economy).
+Attacks **ERR** (a formal asymptotic tail-inference device, the same
+justification R-87's conformal wrapper and R-97's Wasserstein-DRO ball
+used) and **N≈3** (an eighth theoretical basis for "has the tail regime
+already broken", not a retune of a basis already tried). Off-backlog,
+literature-prompted (same posture as R-73–R-97 — the ranked list holds
+only **B-32**, pure infrastructure). Not a duplicate of: R-01 (HMM),
+R-82 (BOCPD), R-83 (Kalman LLT), R-84 (vote-latch/volume modulation),
+R-85 (CSD), R-86 (transfer entropy), R-96 (Hawkes) — seven regime-timing
+mechanisms from seven different fields; GPD/POT is an eighth, an
+asymptotic distributional theorem about exceedances over a threshold,
+sharing no hidden state, segmentation, linearity, information-theoretic
+functional, or self-exciting event-rate machinery with any of them. Not
+R-93 (Grossman-Zhou) or R-97 (Wasserstein-DRO), both of which replace
+v4's `scale` factor directly — R-62 isolated `scale` as carrying none of
+v4's signature (four independent confirmations), and both R-93 and R-97
+reproduced that exact failure mode; this round touches `scale` nowhere —
+the conservative branch is an alarm fed additively into the vote, the
+novel branch is a discrete total-exposure override, never a continuous
+scale multiplier. Not one of the fourteen INFO-axis rounds — neither
+branch reads any data beyond the already-committed BTC OHLCV close series
+`kelly_regime_v4` itself consumes. Full grounding, the Kill-Switch-A
+degeneracy check that set the primary grid cell, and the pre-registered
+gates: `experiments/r98_shared.py`.
+
+**What was done.** One shared, read-only module built and run by the
+operator *before* either branch was dispatched
+(`experiments/r98_shared.py` — a dependency-free causal rolling POT/GPD
+fit on daily |returns| (`rolling_gpd_signal`, Hosking-Wallis PWM
+`gpd_pwm_fit`, McNeil-Frey `gpd_var`), the identical dated six-episode
+gate scaffolding R-82/83/84/85/86/96 all used, and a disclosed **Kill
+Switch A** degeneracy check: the grid-centre cell that analogy to
+R-85/86/96's own `BASELINE_WINDOW_DAYS=730` convention would have made
+the natural a-priori primary (quantile=0.95, fit_window=730 days) never
+crosses `Z_THRESH=2.0` in the full 2017–2022 history (max z=1.81) — a
+real, disclosed property of that cell, not a bug (its 0.90-quantile
+neighbour fires 3 times) — so the primary was set to quantile=0.90,
+fit_window=730 days instead, chosen for non-degeneracy alone, before any
+episode-level number existed, and disclosed as such rather than silently
+substituted. Two branches then worked independently, neither editing
+`r98_shared.py` or each other's file. Conservative
+(`experiments/r98_conservative_gpd_alarm.py`): the Step-A detection-lag
+gate — nearest downward `anchor_majority` flip vs. nearest GPD-tail-z
+upcross through 2.0, ±60-day window per episode, block-bootstrap null
+(block_days=5, n_draws=500, seed=9801, disclosed as distinct from every
+prior round's seed) — computed across the full 3×3
+`THRESH_QUANTILE_GRID × FIT_WINDOW_DAYS_GRID`, pre-registered stop rule:
+proceed to Step B only if the primary cell scores ≥4/6 episodes. Novel
+(`experiments/r98_novel_gpd_killswitch.py`): a Step-0 sub-claim test —
+does forward N-day realized loss after a live `breach==1` day
+(`VAR_PROB=0.99` POT quantile) exceed a block-bootstrap null's own 95th
+percentile, at ≥3 of an a-priori horizon grid `N∈{1,3,5,10}` days —
+with an explicit, named whipsaw-avoidance design (a fixed K-day calendar
+cooldown timed from the breach day, sharing no inequality with the
+breach trigger itself, unlike B-41/R-90's reclaim-gated re-entry, which
+failed because its re-entry condition shared its own inequality with its
+whipsaw definition) pre-registered for the strategy step, had Step 0
+passed. Both branches restricted every read to inner-train/inner-
+validation (`df.index < 2023-01-01`), guarded by `assert_no_holdout()`
+on every signal built, and ran an independent causal-truncation probe on
+their own signal pipeline before trusting any gate number. The operator
+independently reproduced both branches' full numeric output end-to-end
+by re-running each file (`python experiments/r98_conservative_gpd_alarm.py`,
+`python experiments/r98_novel_gpd_killswitch.py`) — every reported number
+matched exactly. **Configs evaluated: 0 backtest configs** on either
+branch — both stopped at their pre-registered gate before any strategy
+or `ev()` call, matching this project's convention for a pre-registered
+gate failure (R-79/R-91/R-94/R-95/R-96/R-97's precedent). Diagnostic
+(non-strategy) cells: conservative — 9 grid cells × 6 episodes = 54
+episode-lead diagnostics; novel — 4 horizon-grid cells (N∈{1,3,5,10}) at
+the fixed primary GPD config, 500-draw null each.
+
+**Result.** Conservative: full 9-cell grid (episodes passing/6) —
+q=0.90: 1/6 (fw=365), **1/6 (fw=730, PRIMARY)**, 0/6 (fw=1095); q=0.95:
+2/6 (fw=365), 0/6 (fw=730), 0/6 (fw=1095); q=0.975: 0/6 (fw=365), 0/6
+(fw=730), 1/6 (fw=1095). Best cell anywhere on the grid is 2/6 — this is
+not a marginal miss on the chosen primary, the whole grid is short of
+the 4/6 bar. Primary-cell detail: only the 2020-03 COVID crash episode
+alarmed inside its ±60-day window at all (lead +25.78d against a null
+median of −10.01d, a genuine pass); the other five episodes (2018 onset,
+2018 bottom, 2021-11 top, Terra/Luna, FTX) had **no GPD-tail-z alarm
+anywhere in their ±60-day windows** — a sharper failure mode than a late
+alarm, and consistent with Kill Switch A's own finding that this
+estimator, even at its least-degenerate cell, moves in wide, infrequent
+excursions relative to a 6-year history. **Step A: FAIL, 1/6 < 4/6 —
+STOP.** No confirming-vote strategy was built; no bar ≥2023-01-01 was
+read. Novel: Step-0 result table (breach n=12 on inner-train at the
+primary config, ~0.8% of days, matching the ~1% nominal rate `VAR_PROB=
+0.99` implies) — N=1d: true mean loss +0.020958 vs. null mean/std/p95
+−0.003233/0.012926/+0.017996, z=+1.87, **clears p95**; N=3d: −0.012525
+vs. −0.008389/0.023473/+0.029882, z=−0.18, fails; N=5d: +0.002755 vs.
+−0.012662/0.031596/+0.039287, z=+0.49, fails; N=10d: **−0.050634** (sign
+flips negative) vs. −0.025582/0.046564/+0.049062, z=−0.54, fails. **1/4
+horizons clear, need ≥3/4 — Step 0: FAIL, STOP.** Only the 1-day horizon
+shows any elevated forward loss, and by N=10 the point estimate is
+*better* than the unconditional baseline, not worse — no persistent
+post-breach loss signal for a kill-switch to exploit, and the branch's
+own pre-registered power caveat (n=12 breach days can only detect a
+large effect against a 95th-percentile bar) is disclosed rather than
+used to explain away the result. No kill-switch strategy was built; no
+bar ≥2023-01-01 was read.
+
+**Verdict.** **NEGATIVE, both branches — the round's entire product is
+the two pre-registered gates themselves, zero strategy or backtest code
+written on either branch.** One-line lesson: the eighth structurally
+distinct regime-timing mechanism (GPD/POT tail shape) fails the identical
+detection-lag gate every predecessor has failed (HMM/R-01, BOCPD 2/6,
+Kalman LLT 1/6, vote-latch/volume 2/6, CSD 1/6, transfer entropy 0/6,
+Hawkes 0/9-cells, this round 1/6-best-2/6), and the same estimator's own
+designed purpose — a live extreme-quantile breach — does not predict
+elevated forward loss on this series either, closing off the adjacent
+"can't lead, but can it at least confirm damage after the fact"
+question in the same session. **Holdout counter: +0 on top of R-97's
+~637 (running total unchanged at ~637)** — neither branch read any bar
+on or after 2023-01-01 (`assert_no_holdout()` clean on both, independently
+re-verified by the operator, max timestamp read 2022-12-31 23:55:00 UTC
+on both). Decision rule did not move: both gates were frozen in
+`r98_shared.py`/each branch's own pre-registration before any real-data
+number was computed, and neither branch loosened its bar after seeing a
+disappointing number. **Next step:** this closes the POT/GPD approach to
+regime-timing as tried here — a future session preferring a fresh
+mechanism search now needs a regime-timing construction sharing no basis
+with the eight now ruled out (discrete-state switching, Bayesian
+changepoint estimation, linear state-space filtering, vote-latch
+modulation, dynamical-systems fluctuation statistics, information-
+theoretic directed flow, self-exciting point processes, extreme-value
+tail theory), a data channel this project cannot construct from its
+committed files or fetchable free sources at all (fourteen INFO-axis
+attempts have failed), a SIZE-axis construction outside both the
+"collapses to near-constant exposure" failure mode (23 attempts) and
+R-97's "concentration rate too flat at the N reached" failure mode, or
+should work **B-32** directly, still the only ranked, unblocked backlog
+item.
+
 ### R-97 · 08-23 · NEGATIVE (Step-0 gate, both branches) — Wasserstein-DRO Kelly sizing keyed on the causal regime-cycle count: the discount varies only 12.9% across the six historical stress episodes, below the pre-registered 1.3x bar, and the shortfall is robust to the whole defensible parameter neighbourhood
 
 **Direction.** Rather than sizing `kelly_regime_v4`'s bet from the empirical
@@ -10332,6 +10489,41 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-23 after R-98.** An off-backlog, literature-prompted
+two-branch round (same posture as R-73–R-97 — the ranked list holds only
+B-32, pure infrastructure) tried causal rolling Peaks-Over-Threshold/GPD
+tail-shape estimation (Pickands 1975; Hosking & Wallis 1987; McNeil &
+Frey 2000; Ke, Yang & Tan 2022 for the BTC-specific application), an
+eighth structurally distinct regime-timing mechanism (conservative) and
+its own forward-loss premise as a kill-switch trigger (novel). Both
+**NEGATIVE**. Conservative: the Step-A detection-lag gate scores at most
+**2/6** episodes anywhere on its full 9-cell grid (primary cell 1/6) —
+five of six episodes never alarmed at all inside their ±60-day windows
+on the primary cell, a sharper failure than a merely-late alarm. Novel:
+its own Step-0 premise (does a live POT/VaR breach predict elevated
+forward loss?) clears only 1 of 4 pre-registered horizons against a ≥3/4
+bar, with the sign flipping *favourable* by the 10-day horizon — no
+persistent post-breach loss signal exists to build a kill-switch on.
+**This closes the eighth structurally distinct theoretical basis this
+project has tried for regime-timing/detection-lag — discrete-state
+switching, Bayesian changepoint estimation, linear state-space
+filtering, vote-latch modulation, dynamical-systems fluctuation
+statistics, information-theoretic directed flow, self-exciting point-
+process clustering, and now extreme-value tail theory — and none has
+cleared the six-episode gate; separately, the same estimator's live
+breach signal does not even predict forward damage after the fact, the
+first time this project has tested that adjacent question directly.**
+**B-32 remains the only ranked, unblocked backlog item.** A future
+session preferring a fresh mechanism search now needs a data channel
+this project cannot construct from its already-committed files or
+fetchable free sources at all (fourteen INFO-axis attempts have failed),
+a SIZE-axis construction that does not collapse to a low, roughly-constant
+exposure fraction relative to v4 (23 attempts) or reproduce R-97's
+flat-concentration-rate failure, or a regime-timing construction with no
+discrete-state/changepoint/filtered-slope/fluctuation-trend/information-
+flow/self-exciting-point-process/extreme-value basis in common with the
+eight now ruled out — or should work B-32 directly.
+
 **Re-ranked 08-23 after R-97.** An off-backlog, literature-prompted
 two-branch round (same posture as R-73–R-96 — the ranked list holds only
 B-32, pure infrastructure) tried Wasserstein-DRO robust Kelly sizing
@@ -11869,6 +12061,20 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-23 · ~637** — R-98: **+0** on top of R-97's ~637 (unchanged), both
+  branches. Shared gate (`experiments/r98_shared.py`, run by the operator):
+  Kill-Switch-A degeneracy check across all 9 grid cells (no episode-level
+  number computed at this step). Conservative
+  (`experiments/r98_conservative_gpd_alarm.py`): 0 backtest configs
+  (Step-A gate stop, primary cell 1/6, best cell anywhere 2/6); 54
+  episode-lead diagnostics (9 grid cells × 6 episodes); `assert_no_holdout()`
+  clean, max timestamp read 2022-12-31 23:55:00 UTC; independently
+  reproduced end-to-end by the operator. Novel
+  (`experiments/r98_novel_gpd_killswitch.py`): 0 backtest configs (Step-0
+  gate stop, 1/4 horizons clearing the null's 95th percentile against a
+  ≥3/4 bar); 4 horizon-grid diagnostics (N∈{1,3,5,10}); same clean holdout
+  guard, same max timestamp, independently reproduced end-to-end by the
+  operator.
 - **08-23 · ~637** — R-97: **+0** on top of R-96's ~637 (unchanged), both
   branches. Shared gate (`experiments/r97_shared.py`, run by the operator):
   6 episode diagnostics (regime-cycle count + DRO discount at each of the
