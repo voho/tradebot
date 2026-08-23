@@ -315,6 +315,125 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-96 · 08-23 · NEGATIVE (both branches) — a sixth and seventh way to combine `kelly_regime_v4` across BTC+ETH, both structurally distinct from the five prior attempts, both fail because a blend cannot beat whichever single leg happens to lead the test window
+
+**Direction.** With the ranked backlog holding only **B-32** (multi-asset
+registration — pure infrastructure, not urgent while no multi-asset
+candidate has cleared promotion) and every INFO/SIZE/regime-timing/ERR
+avenue this project can check having been closed (13 INFO signals, 22
+SIZE retunes, 6 regime-timing mechanisms, 2 ERR-axis attempts — the
+standing diagnosis above), this round worked the one remaining
+un-exhausted sub-line: **how** to combine `kelly_regime_v4`'s two
+replicated instances (R-57: the matched-exposure drawdown property holds
+on BTC and ETH, nowhere else) into one portfolio. Five prior attempts —
+`kelly_regime_covkelly`/`_v2` (mean/covariance-weighted, **B-16**), a
+never-rebalanced fixed split and an inverse-volatility split (**B-19**),
+a literal calendar 50/50 and a drift-band-triggered 50/50 (**B-20**) —
+all used a *fixed-formula* weight (static, periodic, or
+mean/covariance-estimated) and all were REJECTED, mostly on the holdout.
+Attacks **SIZE** (how much to hold, generalized across instruments), not
+INFO (no new data). **Conservative branch:** Freund & Schapire (1997)
+Hedge / multiplicative-weights reallocation between the two per-asset
+books, reacting to each leg's own trailing realized, fee-adjusted,
+vol-normalized PnL — the identical combination machinery this project's
+own `champions_council`/`hedge_experts`/`game_council` already use
+successfully across *strategies*, applied here across *assets* instead;
+Herbster & Warmuth (1998) fixed-share mixing lets leadership drift
+rather than lock permanently. **Novel branch:** allocate by each asset's
+own contemporaneous regime-vote confidence (R-62: `frac`, the fraction
+of `kelly_regime_v4`'s three anchors currently agreeing, is the factor
+that carries the whole replicated signature) rather than by lagging
+performance — a Grinold–Kahn/Black–Litterman-style conviction tilt,
+zero-lag by construction. Not a duplicate of B-16/B-19/B-20: neither
+prior construction reallocated in response to either the legs'
+*realized performance* or their *own vote-confidence*, only to a fixed
+calendar, a fixed split, or an estimated mean/covariance. **Pre-registered
+falsification test (both branches, identical):** on inner-validation
+(2021-01-01→2022-12-31), the candidate must beat BOTH BTC-solo-or-ETH-solo
+v4 AND a periodically-rebalanced fixed-50/50 reference, on both Sharpe
+and drawdown-adjusted growth — a plateau across the free parameter
+(Hedge's η; confidence-weighting's cadence), not a single lucky setting.
+**Named failure mode, stated before any code ran:** if the two assets'
+regime signals are highly correlated (novel branch) or if one leg simply
+outperforms the other across the whole test window regardless of
+reallocation rule (both branches), no blend — reactive or fixed — can
+clear the better solo leg, since any weighted average sits strictly
+between the two.
+
+**What was done.** Two parallel branches, disjoint files
+(`experiments/r96_conservative_hedge_allocator.py`,
+`experiments/r96_novel_confidence_allocator.py`), neither committed by
+its own author, both built on the continuous-replay engine
+`kelly_regime_covkelly_v3_continuous.py` established (each asset's
+`kelly_regime_v4` run once, continuously, over the whole 2019-03-14 →
+2022-12-31 window so latch/deadband state is never reset — the
+segment-restart bug B-18/R-50 diagnosed in the earlier covkelly
+attempts), with capital reallocation as a separate, causal, post-hoc
+overlay reading only each leg's own past state. **Configs evaluated:**
+conservative 9 (2 solo baselines + 1 fixed-50/50 daily reference + 6 Hedge
+η ∈ {0.01, 0.03, 0.06, 0.1, 0.2, 0.4}, `fixed_share=1e-3` fixed a priori);
+novel 6 (2 solo + 2 fixed-50/50 [daily primary, weekly robustness] + 2
+confidence-weighted [daily primary, weekly robustness]) — **15 total**.
+The novel branch additionally validated its from-scratch reimplementation
+of `frac` bit-for-bit against the registered `KellyRegimeV4.prepare()`
+output on both assets (max abs diff = 0.000e+00) before using it. Both
+branches ran their own truncation-tamper causality probes (max diff
+before the cut = 0.000e+00, both tamper directions) and
+`pytest -q tests/test_causality_strict.py` (51 passed). **Operator
+independently re-ran both branches' CLI entrypoints from a clean shell**
+(`eta_sweep` / `headline` + `corr`) and reproduced every reported
+final-balance, Sharpe, max-drawdown, correlation and falsification-gate
+number bit-for-bit.
+
+**Result.** Both **FAILED at exactly the pre-registered gate, 0/6 and
+0/2, no plateau**. Conservative: on inner-validation the best solo leg
+(ETH, Sharpe 1.122, ddAdjGrowth 3.396) beats every one of the 6 Hedge
+configurations (best Sharpe 0.939 at η=0.01, best ddAdjGrowth 1.840 at
+η=0.06) — 0/6 pass, and the failure is uniform across the whole η grid
+rather than a near-miss at one setting. Novel: the BTC/ETH vote-confidence
+correlation is high (train +0.636, inner-validation **+0.829**), exactly
+the named failure mode — the confidence-weighted portfolio tracks the
+fixed-50/50 reference closely (R²=0.984 train, 0.731 validation) and on
+inner-validation actually scores *below* the trivial fixed-50/50 control
+on both axes (Sharpe 0.65 vs 0.95; ddAdjGrowth 1.02 vs 1.76), not merely
+below the best solo leg. Neither branch changed its decision rule after
+seeing results; each disclosed one implementation bug fixed before any
+headline number was read (conservative: a config-counting double-count;
+novel: an all-NaN pooled-capital recursion from an unhandled inception-day
+NaN), both bug fixes rather than goalpost moves, per ROUTINE.md's own
+distinction.
+
+**Verdict.** **NEGATIVE, both branches.** One-line lesson: a blend —
+whether reactive-to-performance or reactive-to-confidence — is
+mechanically bounded between its two legs' own outcomes, so whenever one
+leg persistently leads across the whole comparison window (BTC in
+2019–2020, ETH in 2021–2022, in this data), no combination rule tested so
+far, fixed or adaptive, can clear that leg's own solo result; Hedge's
+no-regret guarantee promises closeness to the best expert in hindsight,
+not beating it, which is the wrong property when the honest comparison
+set includes the best single leg itself. **This is the sixth and seventh
+independent BTC+ETH `kelly_regime_v4` combination construction to fail**
+(after B-16's two, B-19's two, B-20's two), now covering fixed-formula,
+static, calendar/drift-triggered, performance-adaptive-Hedge and
+contemporaneous-conviction weighting — the only untried constructions on
+this exact pair are a genuinely non-bounded rule (able to go to 100% of
+whichever leg currently leads, rather than a bounded blend) or the
+native joint-decision engine B-17 left unbuilt. **Holdout counter: +0.**
+Neither branch read, printed, or held in memory any bar dated
+2023-01-01 or later; both scripts assert this programmatically at every
+CLI entrypoint and the operator's independent re-run confirmed max
+timestamp 2022-12-31 23:55:00 UTC on both assets in both files. Running
+program-level total stays **~637** (R-72–R-95's figure, unchanged) — see
+the bullet added below in
+[Holdout consultations to date](#holdout-consultations-to-date). Neither
+decision rule moved. Not registered (no strategy code was promotable);
+both experiment files kept in `experiments/` per ROUTINE.md's negative-result
+convention. Next step: per the conservative branch's own recommendation,
+a seventh BTC+ETH weighting variant on this identical pair is not
+recommended without a materially different premise; **B-06** (forward
+paper trading) remains the highest-value item this line has not already
+exhausted, and **B-32** remains the only ranked, unblocked backlog item.
+
 ### R-95 · 08-22 · NEGATIVE (both branches) — the Crypto Fear & Greed Index as a thirteenth INFO-axis signal: the composite is coincident with, not leading, v4's own reactive vote, and its contrarian reading is falsified with the sharpest, most significant sign reversal this project's INFO axis has produced
 
 **Direction.** alternative.me's daily Crypto Fear & Greed Index (FGI) — a
@@ -10020,6 +10139,40 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-23 after R-96.** With the ranked list holding only **B-32**
+(pure infrastructure, not urgent while no multi-asset candidate has
+cleared promotion) and every INFO/SIZE/regime-timing/ERR avenue this
+project can check on a single instrument already closed, this round
+worked the remaining un-exhausted sub-line directly: *how* to combine
+`kelly_regime_v4` across its two replicated instances, BTC and ETH.
+Two parallel branches tried a sixth and seventh construction —
+performance-adaptive Hedge/multiplicative-weights reallocation
+(conservative) and contemporaneous vote-confidence weighting (novel) —
+both structurally distinct from the five prior fixed-formula attempts
+(B-16's covariance allocator, B-19's fixed/inverse-vol splits, B-20's
+calendar/drift-band 50/50s). Both **NEGATIVE**, both failing at their
+identical pre-registered gate with no plateau (0/6, 0/2): a blend is
+mechanically bounded between its two legs, so whenever one leg
+persistently leads the comparison window (BTC 2019–2020, ETH
+2021–2022), no combination rule — fixed or adaptive — can clear that
+leg's own solo result, and the novel branch's own named failure mode
+(BTC/ETH vote-confidence correlation 0.64–0.83) materialized exactly as
+predicted. **This closes the sixth and seventh BTC+ETH combination
+attempts on this exact pair.** The only untried constructions left on
+it are a genuinely non-bounded allocator (able to go to 100% of
+whichever leg currently leads, rather than a bounded blend between the
+two) or **B-17**'s still-unbuilt native joint-decision engine — neither
+recommended as a routine next step absent a specific candidate that has
+already earned the risk of that larger change. **B-32 remains the only
+ranked, unblocked backlog item**, and remains not urgent. A future
+session preferring a fresh mechanism search now needs a data channel
+this project cannot construct from its already-committed files or
+fetchable free sources at all, a SIZE-axis or cross-asset-combination
+construction that is not a bounded blend on the BTC+ETH pair, or should
+work B-32 directly — or should spend itself on **B-06** (forward paper
+trading), the standing zero-cost recommendation this line has not
+already exhausted.
+
 **Re-ranked 08-22 after R-95.** An off-backlog, literature-prompted two-branch
 round (same posture as R-73–R-94 — the ranked list holds only B-32, pure
 infrastructure) tried the thirteenth structurally distinct INFO-axis signal:
@@ -11488,6 +11641,18 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-23 · ~637** — R-96: **+0** on top of R-95's ~637 (unchanged), both
+  branches. Conservative (`experiments/r96_conservative_hedge_allocator.py`):
+  9 configs evaluated (2 solo + 1 fixed-50/50 + 6 Hedge η values), all
+  restricted to the continuous 2019-03-14→2022-12-31 window,
+  `print_max_timestamp_read()` asserts programmatically, max timestamp
+  2022-12-31 23:55:00 UTC on both assets. Novel
+  (`experiments/r96_novel_confidence_allocator.py`): 6 configs evaluated
+  (2 solo + 2 fixed-50/50 + 2 confidence-weighted), identical window and
+  assertion, same max timestamp. Both scripts independently re-run
+  end-to-end by the operator from a clean shell, reproducing every
+  reported final-balance/Sharpe/drawdown/correlation/falsification-gate
+  number bit-for-bit.
 - **08-22 · ~637** — R-95: **+0** on top of R-94's ~637 (unchanged), both
   branches. Conservative (`experiments/r95_conservative_fgi_confirm.py`):
   0 backtest configs (Step-A gate stop, 0/9 cells clearing the bar); 54
