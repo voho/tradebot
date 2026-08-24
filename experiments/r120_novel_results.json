@@ -1,0 +1,67 @@
+{
+  "branch": "r120_novel_basis_momentum",
+  "step_a_results": [
+    {
+      "label": "2020-03 COVID crash",
+      "onset": "2020-03-12",
+      "lead": -3.1770833333333335,
+      "pass_a": false,
+      "pass_b": false,
+      "null_p90": -0.03645833333333215,
+      "null_median": -3.21875,
+      "n_valid_local": 34561,
+      "window_len": 34561
+    },
+    {
+      "label": "2021-11 top / 2022 bear transition",
+      "onset": "2021-11-10",
+      "lead": -5.326388888888889,
+      "pass_a": false,
+      "pass_b": false,
+      "null_p90": -4.898263888888889,
+      "null_median": -5.203125,
+      "n_valid_local": 34561,
+      "window_len": 34561
+    },
+    {
+      "label": "2022-05 Terra/Luna collapse",
+      "onset": "2022-05-09",
+      "lead": -16.98263888888889,
+      "pass_a": false,
+      "pass_b": false,
+      "null_p90": -16.487152777777776,
+      "null_median": -17.006944444444443,
+      "n_valid_local": 34561,
+      "window_len": 34561
+    },
+    {
+      "label": "2022-11 FTX collapse",
+      "onset": "2022-11-08",
+      "lead": 0.3576388888888889,
+      "pass_a": true,
+      "pass_b": false,
+      "null_p90": 1.2788194444444445,
+      "null_median": 0.3819444444444444,
+      "n_valid_local": 32832,
+      "window_len": 32832
+    }
+  ],
+  "n_pass": 0,
+  "min_required": 3,
+  "n_episodes": 4,
+  "step_a_passed": false,
+  "configs_evaluated": {
+    "stepA": 0,
+    "stepB": 0,
+    "diagnostic": 0
+  },
+  "params": {
+    "mom_days": 5,
+    "baseline_window_days": 20,
+    "z_thresh_a": 1.5,
+    "window_days_search": 60,
+    "n_draws": 500,
+    "block_days": 5,
+    "null_seed": 1200
+  }
+}
