@@ -330,8 +330,8 @@ def calibrate_tau(df: pd.DataFrame, cal_end: str, q: float = CRC_TAU_QUANTILE) -
     requires ("name the threshold now, before any code that reacts to it")."""
     e = v4_raw_desired(df)
     loss = bar_forward_loss(e, df["close"])
-    mask = df.index < pd.Timestamp(cal_end, tz="UTC")
-    cal_loss = loss[mask.to_numpy()]
+    mask = df.index < pd.Timestamp(cal_end, tz="UTC")  # already a numpy bool array
+    cal_loss = loss[mask]
     assert len(cal_loss) > BARS_PER_DAY * 30, "calibration window too short"
     return float(np.quantile(cal_loss, q))
 
