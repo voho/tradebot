@@ -315,6 +315,189 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-121 · 08-24 · NEGATIVE (both branches) — a path-signature (order-sensitive) novelty statistic feeding R-109's own unchanged kNN brake (conservative) and a closed-form analytic chi-squared tail probability replacing its empirical percentile rank (novel): both replicate R-109/R-112/R-115's exact ETH sign-inversion / inertness failure, closing R-115's own named follow-on
+
+**Direction.** Off-backlog (the ranked list has held only B-06 since R-110,
+reconfirmed by R-120's own broad ledger survey). One sentence: does a
+genuinely different NOVELTY STATISTIC — not a repair of R-109's reference-
+pool construction, which R-112 and R-115 already tried and both failed —
+close the k-NN distributional-novelty brake's own ETH (B4) falsification
+gap? R-109 (docs/LEDGER.md, "### R-109") gave `kelly_regime_v4` an
+exposure discount keyed on whether the current market state looks unlike
+its own recent history, using five hand-engineered point-in-time scalars
+(log_vol, anchor_disp, kurtosis, volume_z, skew); its k-NN branch was the
+first of six ERR-axis attempts to clear the inner-validation gate (B1) but
+failed ETH replication (B4), spot sign-inverted. R-112 tried a return-space
+feature swap (still point-in-time scalars); its ETH fix never engaged
+because of a data-coverage bug. R-115 fixed that bug, genuinely re-tested,
+and B4 still failed, more decisively. R-115's own closing line, verbatim:
+*"a materially different novelty statistic, not a repair of this one's
+reference distribution, is a different, untested question."* This round is
+exactly that question. **Attacks ERR** (no error control anywhere in the
+signal path) — the fourth notion of uncertainty on this axis (distributional
+novelty), not a new one; like every ERR-axis round since R-87, the statistic
+only ever discounts `kelly_regime_v4`'s existing, completely unchanged
+`frac * scale`, never enters the vote, and is guarded by the identical
+R2_VS_V4_THRESH / R2_VS_VOL_THRESH Step-0 kill switches R-109 built.
+Citations, verified before being relied on: Chevyrev & Kormilitzin (2016,
+arXiv:1603.03788) for the path-signature definition; **Gasteratos, Jacquier,
+Lemercier, Lyons & Salvi (2025), "Novelty detection on path space,"
+arXiv:2512.03243** (title, all five authors and abstract independently
+confirmed via WebSearch) for the novel branch's tail-probability framing —
+disclosed explicitly as a SIMPLIFICATION (a closed-form even-degrees-of-
+freedom chi-squared CDF under an assumed-Gaussian reference, since this
+environment has no `scipy`, confirmed directly and consistent with R-118's
+own identical finding), not a reproduction of the paper's own non-Gaussian
+transportation-cost bound or shuffle-product/CVaR machinery, named here per
+this project's own R-92 precedent for partial-equation literature use.
+**Not a duplicate of:** R-109/R-112/R-115 (identical reference-window
+architecture — `BASELINE_WINDOW_DAYS`, `MIN_REF_DAYS`, the same discount
+curve — with only the FEATURE MAP changed: none of R-109's `FEATURE_BUILDERS`/
+`NOVEL_FEATURE_BUILDERS` point-in-time scalars are reused; this round's
+features are pure iterated-integral functionals of the (log-price,
+realized-vol[, log-volume]) PATH, verified only weakly correlated with
+R-109's own features once measured, see Result); R-113 (kNN/Mahalanobis
+applied to the multi-asset panel, not touched here); R-106 (cross-model-class
+disagreement, no second model here); R-104/R-87/R-28 (sampling significance
+of the vote's own P&L, never read here). Full argument, the hand-verified
+Levy-area shuffle-product identity, and the disclosed failure risks in
+`experiments/r121_shared.py`'s own module docstring, written by the operator
+and self-tested (including a synthetic-data causality probe) before either
+branch was dispatched.
+
+**What was done.** Operator-authored, read-only `experiments/r121_shared.py`:
+depth-2 truncated path-signature feature builders over a trailing 1-day
+window (`build_sig2_features`: 2D path log-price/log-vol → 3 features
+`s1_log_price`, `s1_log_vol`, `levy_log_price_log_vol`; `build_sig3_features`:
+adds log-volume → 6 features, chosen even for the closed-form chi-squared
+CDF), a hand-verified depth-2 signature identity (symmetric part reduces to
+the depth-1 product; only the antisymmetric Levy area carries new,
+order-sensitive information — checked against the textbook corner-path
+example, Levy area = 0.5), and `chi2_cdf_even_df` (exact closed form for even
+integer degrees of freedom, no `scipy`). **Conservative**
+(`experiments/r121_conservative_signature_knn.py`): the `build_sig2_features`
+panel through R-109's own unmodified `rolling_knn_distance` →
+`causal_rolling_percentile_rank` → `apply_discount` pipeline (k=10,
+refit_every=30, R-109's own defaults, not swept) — every stage downstream of
+the feature panel byte-identical to R-109's novel branch. **Novel**
+(`experiments/r121_novel_signature_tailbound.py`): the `build_sig3_features`
+panel through `rolling_mahalanobis_distance(...)**2` (R-109's own causally-
+verified primitive, reused unmodified) scored by `chi2_cdf_even_df` DIRECTLY
+as the `[0,1]` state — an analytic tail probability calibrated once from the
+reference window's own fitted covariance, in place of an empirical
+percentile rank against the state's own trailing history — the genuinely
+different operationalization this branch contributes. Both branches:
+identical Step-0 grid (`STEP0_THRESH_GRID x STEP0_MAXD_GRID`, primary cell
+(0.90, 1.0) per `SELECTION_ORDER`) and identical B1-B5 promotion bar
+(`r105_shared`'s gate code, unmodified), pre-registered before either branch
+was dispatched. **Pre-registered decision rule (frozen, identical to
+R-109's own):** PROMOTE-candidate only if the causal-truncation probe AND B1
+(both markets) AND B3 (plateau) AND B4 (full, both markets — the one
+falsification test) AND B5 all pass; if either branch clears the full bar,
+a holdout comparison would then be run before any final promotion decision
+(neither branch did, so this was never reached). **A real bug was found and
+fixed before any inner-validation number was read**: the novel branch's own
+mandatory causal-truncation probe (run first, before Step-0, per every round
+in this family) correctly FAILED on its first run, tracing to a genuine
+whole-series lookahead in `_level_log_volume`'s zero-volume clip floor (a
+whole-series median, not a causal quantity — 7,471 bars differed under
+truncation). Fixed to a fixed, non-data-dependent floor (`1e-9`); the shared
+module's self-test was strengthened to exercise zero-volume bars directly
+(the original version used strictly-positive synthetic volume, which never
+exercised the buggy branch) and the probe re-verified clean on real BTC data
+before the novel branch was re-run. The conservative branch was never
+affected — it uses only the 2D (log-price, log-vol) panel, no log-volume, no
+`_level_log_volume` call anywhere in its path. Per docs/ROUTINE.md's own
+bug-fix allowance: neither branch's decision rule moved, and no
+inner-validation or holdout number had been read by the novel branch when
+the bug was caught. **Configs evaluated: 52 total** (26 per branch: 6 Step-0
++ 6 primary `compare()` + 12 B3 plateau [2 reused] + 2 B5 fee-tier; k/
+refit_every and the chi-squared reference construction were not swept, per
+this family's own no-hidden-search discipline). Both branches' numbers were
+independently reproduced by the operator from a clean shell after the bug
+fix, bit-for-bit exact match both times. `pytest -q`: **516 passed**
+(unchanged from R-109's own count).
+
+**Result.** *Conservative* — causal probe PASS. Step-0 PASS at the primary
+cell (bind_frac=0.0623, r²_vs_v4=0.9666, r²_vs_vol=−3.2714, state_cv=0.6520).
+Diagnostic correlation of the sig2 k-NN distance against R-109's own
+`anchor_disp`/`kurtosis` features: **+0.031 / +0.222** (n=2,008) — weak, so
+this is genuinely different information, not a renamed copy. **B1 FAILS**
+both markets (spot ΔSharpe +0.024 boot[−0.037,+0.064]; futures +0.063
+boot[−0.060,+0.150] — neither clears +0.2 nor excludes zero). B2
+(diagnostic): spot ΔDD +0.55pp, futures −2.42pp, both risk-matched. **B3
+PASSES** (8 of 12 grid cells share the primary's positive sign). **B4 (ETH,
+pre-registered) FAILS**, and fails in the SAME SHAPE R-109/R-112/R-115 all
+hit: spot inverts sign (ΔSharpe −0.028 vs BTC's +0.024) while futures stays
+same-signed (+0.065) — a partial pass only, and the frozen rule required
+FULL. **B5 FAILS**: the spot cell reverses sign at the 0.40% fee tier
+(+0.024→−0.074), one market reversing being enough by the pre-registered
+rule. *Novel* — causal probe PASS (after the bug fix). Step-0 PASS at the
+primary cell (bind_frac=0.0869, r²_vs_v4=0.9174, r²_vs_vol=−3.0718,
+state_cv=1.1981). A diagnostic (non-gating) decile-occupancy check of the
+chi-squared state on BTC inner-train shows it is **badly miscalibrated**
+against a uniform reference (50.9% of observations in the bottom decile,
+9.9% in the top, mean 0.256 vs. 0.5 expected) — exactly the disclosed risk
+named in the module's own pre-registration (an assumed-Gaussian reference
+for a plausibly heavy-tailed/multimodal signature-feature distribution).
+**B1 FAILS** both markets, more decisively inert than the conservative
+branch's near-miss (spot ΔSharpe +0.025 boot[−0.103,+0.133]; futures −0.013
+boot[−0.120,+0.087]). **B3 FAILS** — no directional majority across the
+12-cell grid (mixed, mostly near-zero signs). **B4 FAILS fully**: both
+markets sign-invert against BTC (spot −0.081 vs BTC's +0.025; futures +0.052
+vs BTC's −0.013). **B5 FAILS**: spot reverses sign at the fee tier; futures
+does not, but both are required. Neither branch reads or holds any bar dated
+2023-01-01 or later; `assert_no_holdout` ran clean on every load site in
+both branches; max timestamp anywhere in either run: `2022-12-31
+23:55:00+00:00` (BTC), `2019-12-31 23:55:00+00:00` (ETH, both branches).
+
+**Verdict.** **NEGATIVE, both branches.** One-line lesson: **this closes
+R-115's own named follow-on decisively — a materially different, verifiably
+weakly-correlated novelty statistic (an order-sensitive path signature, not
+a repair of R-109's reference-pool construction) reproduces the identical
+BTC/ETH sign-inversion failure shape R-109's own point-in-time features
+produced, which is evidence that the ETH generalization gap in this
+distributional-novelty family is a property of the CALIBRATION WINDOW (BTC's
+2017-2020 supercycle-dominated reference), not an artifact of any one
+feature engineering choice.** The conservative branch's failure is the
+closest replica — same qualitative shape as R-109's own novel branch
+(B1 near-miss, B3 plateau passes, B4 fails via a BTC/ETH spot sign flip
+specifically) — while the novel branch's analytic chi-squared scoring is a
+strictly worse, more inert result than an empirical percentile rank on the
+same underlying distance (B1 fails more decisively, B3 loses its plateau
+entirely), consistent with its own diagnosed mis-calibration: an
+assumed-Gaussian reference measurably does not fit this project's own
+signature-feature distribution, so its tail probabilities are not doing what
+a true significance level would. **This is the fourth attempt (after R-109,
+R-112, R-115) to repair or vary R-109's own distributional-novelty
+construction, and the first to vary the feature map rather than the
+reference-pool construction — 0 of 4 have closed the ETH gap, and the
+feature-map variation failed in the same shape as the original, not a new
+one.** Holdout counter: **unchanged** (~698, per R-117's own running total,
+last updated in this list) — neither branch, nor the operator's independent
+bit-for-bit reproduction of both, ever read, printed, or held in memory a
+bar dated 2023-01-01 or later. Neither pre-registered decision rule moved
+after seeing any number; the one bug found (the `_level_log_volume` lookahead)
+was found and fixed via the causal-truncation probe *before* any
+inner-validation number existed, per ROUTINE.md's own bug-fix allowance, and
+is disclosed above rather than silently corrected. **Next step:** the
+distributional-novelty ERR sub-axis is now closed across both its own
+axes of variation (reference-pool construction: R-112/R-115; feature map:
+this round) — a future session preferring this specific construction needs a
+reference distribution NOT dominated by BTC's own single supercycle at all
+(e.g. a purely-synthetic or externally-calibrated reference, in the spirit
+of R-118/R-119's N≈3 line, applied here instead), which is a materially
+different, untested question from either axis tried so far. More broadly,
+the ranked backlog remains empty of anything but B-06 (forward paper-trading,
+already running unattended, per R-78's own costing); every other axis this
+project's own framework can construct — 19 INFO-axis signals, 27+ SIZE-axis
+attempts, ERR now across five notions of uncertainty (sampling significance,
+specification/model disagreement, cross-model-class disagreement,
+distributional novelty — now with two axes of variation both closed —
+temporal duration dependence), ten regime-timing mechanisms, four N≈3
+selection procedures, and the eleven-round multi-asset panel — remains
+exhausted as R-120's own re-ranking described it.
+
 ### R-120 · 08-24 · NEGATIVE (both branches) — Deribit front-quarter calendar (roll-yield) basis vs. spot, an 18th and 19th INFO-axis signal (level, momentum): both fail the identical Step-A lead-time gate at 0 of 4 usable episodes, the level branch lagging and the momentum branch differencing itself into pure noise
 
 **Direction.** Off-backlog (the ranked backlog has held only B-06 since R-110; a broad ledger survey this round ran first, per Step 0, confirmed no unblocked item besides it). One sentence: does the calendar (roll-yield) basis between Deribit's front-quarter DATED BTC future and spot — a genuinely new, independently-transacted instrument this project has never used — lead `kelly_regime_v4`'s own 3-anchor vote around real historical stress episodes, either through the basis's own LEVEL (conservative) or its MOMENTUM/rate-of-change (novel, per Chi et al. 2023's basis-momentum concept)? **Constraint attacked: INFO** (one price series) — a dated future resolves only at a fixed quarterly expiry, structurally unlike R-41's spot-vs-PERPETUAL basis (`kelly_regime_v9_basis_lead`), whose 8-hourly funding reset makes it mechanically mean-reverting by construction (Zhang 2026, SSRN 6185958, "Funding Rate Mechanism in Perpetual Futures"). Citations: Schmeling, Schrimpf & Todorov (2023, rev. 2025), "Crypto carry", BIS Working Papers No. 1087; Chi et al. (2023), "An empirical investigation on risk factors in cryptocurrency futures", *Journal of Futures Markets* (basis and basis-momentum are two distinct, only weakly correlated persistent crypto-futures factors, adapting Erb & Harvey 2006, *Financial Analysts Journal* 62(2)). **Not a duplicate of:** R-41 (spot-vs-PERPETUAL basis, different instrument pair as argued above); B-05/R-35/R-39 (raw Binance funding rate, a COST-axis flat gate, not a term-structure quantity); R-73 (DVOL, implied vol, not a forward price); R-81 (OI + top-trader long/short crowding, positioning STOCKS, not a priced term-structure quantity — though R-81's `oi_chg_z` is the closest prior "rate of change of an exchange-reported series" precedent for this round's novel branch, applied to a different underlying); R-63/R-76 (cross-COIN pairs — this pairs the SAME coin across two MATURITIES, not two coins). Grepped `docs/LEDGER.md`/`docs/RESEARCH.md`/`docs/STRATEGIES.md` for "term structure", "quarterly future", "roll yield", "contango", "backwardation", "calendar future", "dated future": zero hits before this round, independently confirmed by both branches. **What would make it fail**, pre-registered before any code ran: the same failure every one of the 17 prior INFO-axis signals hit — the basis extremity (level or momentum) is reached AFTER the anchor gate's own nearest reaction, or a positive lead is statistically indistinguishable from an arbitrary time-shift of the same series; the novel branch additionally pre-registered a differencing-noise-amplification failure mode as a specifically named alternative outcome.
@@ -12477,6 +12660,53 @@ trip.
 ---
 
 ## D. Backlog (ranked)
+
+**Re-ranked 08-24 after R-121.** Off-backlog (still only B-06, unchanged
+since R-110), a two-branch round closed R-115's own named follow-on: does a
+materially different NOVELTY STATISTIC — not another repair of R-109's
+reference-pool construction, which R-112 and R-115 both already tried and
+both failed — close the k-NN distributional-novelty brake's ETH
+falsification gap? A path-signature (order-sensitive, not point-in-time)
+feature panel fed R-109's own unchanged kNN-distance/percentile-rank
+architecture (conservative) and a closed-form analytic chi-squared tail
+probability in place of an empirical percentile rank (novel). **Both
+branches NEGATIVE.** The conservative branch replicated R-109/R-112/R-115's
+exact failure shape — B1 near-miss, B3 plateau passes, B4 fails via the
+identical BTC/ETH spot sign-inversion — despite its features being verified
+only weakly correlated (+0.03 to +0.22) with R-109's own, so this is
+genuinely new information failing the same way, not the same information
+re-tested. The novel branch's analytic scoring was strictly worse (B1 fails
+more decisively, B3 loses its plateau), consistent with a diagnosed,
+disclosed mis-calibration of its assumed-Gaussian reference against the
+signature-feature distribution's own (measurably non-uniform) shape. **This
+closes the distributional-novelty ERR sub-axis across both its own axes of
+variation** — reference-pool construction (R-112, R-115) and feature map
+(this round) — four repair attempts on R-109's own construction, 0 of 4
+closing the ETH gap, with the evidence now pointing at the CALIBRATION
+WINDOW itself (BTC's 2017-2020-supercycle-dominated reference) rather than
+any one feature or algorithm choice. A real bug (a whole-series-median
+lookahead in the novel branch's own zero-volume clip floor) was found by
+its own causal-truncation probe and fixed before any inner-validation
+number was read — see the round's own entry for the fix and the
+strengthened self-test. **The ranked backlog remains empty of anything but
+B-06** (forward paper-trading, already running unattended, per R-78's own
+costing). A future session preferring a fresh mechanism search now has: the
+single-asset axis's own fully closed lists (19 INFO-axis attempts, 27+
+SIZE-axis attempts, ERR across five notions of uncertainty — distributional
+novelty now closed across both its reference-pool and feature-map axes —
+ten regime-timing mechanisms, two structurally-new-detector-family SIZE
+substitutions, four distinct N≈3-attacking selection procedures); the
+multi-asset panel's own closed list (eleven rounds, all NEGATIVE); or B-28's
+breadth clause (blocked on data this project cannot fetch or simulate). The
+one live, named, untested thread this round leaves behind: a
+distributional-novelty reference NOT dominated by BTC's own single
+supercycle at all (e.g. a purely-synthetic or externally-calibrated
+reference, adapting R-118/R-119's N≈3 machinery to this axis instead) — a
+materially different question from either axis this round and its
+predecessors closed. Absent a new idea clearing Step-0 on one of these, the
+accumulating evidence continues to point the same direction: `kelly_regime_v4`
+is close to efficient with respect to the information, error control and
+parameter-selection procedure available to this project.
 
 **Re-ranked 08-24 after R-120.** Off-backlog (still only B-06, unchanged
 since R-110), a two-branch round tried the calendar (roll-yield) basis
