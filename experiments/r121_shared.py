@@ -295,9 +295,17 @@ def _level_log_vol(df: pd.DataFrame) -> np.ndarray:
 
 
 def _level_log_volume(df: pd.DataFrame) -> np.ndarray:
+    """log(volume), floored by a FIXED (not data-dependent) epsilon to avoid
+    log(0) on exact-zero-volume bars. An earlier version floored at a small
+    multiple of the whole series' own median positive volume, which is a
+    lookahead (the median depends on bars not yet seen) -- caught by the
+    R-121 novel branch's own causal truncation probe (7,471 bars differed
+    under truncation) before any inner-validation number was read, and fixed
+    here per docs/ROUTINE.md's own bug-fix allowance. A fixed floor (1e-9,
+    negligible next to any real BTC/ETH 5-minute volume in this project's
+    data) is trivially causal: a pointwise function of each row alone."""
     vol = df["volume"].to_numpy(dtype=float)
-    eps = np.nanmedian(vol[vol > 0]) * 1e-4 if np.any(vol > 0) else 1e-9
-    return np.log(np.clip(vol, max(eps, 1e-12), None))
+    return np.log(np.clip(vol, 1e-9, None))
 
 
 LEVEL_BUILDERS = {
@@ -459,9 +467,14 @@ def _self_test() -> None:
     innov = rng.normal(0, 0.0006, len(idx))
     drift = np.cumsum(np.full(len(idx), 0.00002))
     close = 10_000 * np.exp(np.cumsum(innov) + drift)
+    volume = rng.lognormal(0, 0.5, len(idx))
+    volume[rng.random(len(idx)) < 0.02] = 0.0   # exercise the zero-volume clip
+    # path -- caught a real whole-series-median lookahead in an earlier
+    # version of _level_log_volume (see its own docstring).
     df = pd.DataFrame({"open": close, "high": close * 1.0005, "low": close * 0.9995,
-                        "close": close, "volume": rng.lognormal(0, 0.5, len(idx))},
+                        "close": close, "volume": volume},
                        index=idx)
+    assert (df["volume"] == 0.0).sum() > 100   # the zero-volume branch is genuinely exercised
     full2 = build_sig2_features(df)
     k = len(df) // 2
     trunc2 = build_sig2_features(df.iloc[:k])
