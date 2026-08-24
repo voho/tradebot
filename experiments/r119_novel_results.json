@@ -1,0 +1,186 @@
+{
+  "branch": "novel_regimeswitch_external",
+  "calibration": {
+    "ext_bear_drawdown": 0.775,
+    "ext_bear_duration_days": 365.0,
+    "ext_jump_prob_per_day": 0.14285714285714285,
+    "state_duration_days": {
+      "bull": 730.0,
+      "chop": 366.0,
+      "bear": 365.0
+    },
+    "state_drift_annual_log": {
+      "bull": 0.7463382791000837,
+      "chop": 0.0,
+      "bear": -1.4926765582001673
+    },
+    "state_vol_annual": {
+      "bull": 0.7723208639750263,
+      "chop": 0.7723208639750263,
+      "bear": 1.5446417279500526
+    },
+    "ordinary_vol_annual_internal_scalar": 0.7723208639750263,
+    "bear_vol_mult": 2.0,
+    "cycle_days": 1461.0
+  },
+  "n_draws": 40,
+  "total_backtests_selection_sweep": 480,
+  "timing": {
+    "sim_seconds": 0.15177559852600098,
+    "backtest_seconds": 5.071370363235474,
+    "sweep_wall_seconds": 2505.3259093761444
+  },
+  "selection_table": {
+    "20_0.45_2.0": {
+      "mean": 0.20940291217849388,
+      "std": 0.647245157973014,
+      "robust": -0.5369606987132969
+    },
+    "20_0.45_2.5": {
+      "mean": 0.20940291217849388,
+      "std": 0.647245157973014,
+      "robust": -0.5369606987132969
+    },
+    "20_0.55_2.0": {
+      "mean": 0.17718192523882842,
+      "std": 0.663638796082761,
+      "robust": -0.5929966947780001
+    },
+    "20_0.55_2.5": {
+      "mean": 0.17718192523882842,
+      "std": 0.663638796082761,
+      "robust": -0.5929966947780001
+    },
+    "26_0.45_2.0": {
+      "mean": 0.22154166052965127,
+      "std": 0.657758848534232,
+      "robust": -0.5639080858978893
+    },
+    "26_0.45_2.5": {
+      "mean": 0.22154166052965127,
+      "std": 0.657758848534232,
+      "robust": -0.5639080858978893
+    },
+    "26_0.55_2.0": {
+      "mean": 0.19158364188221405,
+      "std": 0.6777915929521804,
+      "robust": -0.6104766599692102
+    },
+    "26_0.55_2.5": {
+      "mean": 0.19158364188221405,
+      "std": 0.6777915929521804,
+      "robust": -0.6104766599692102
+    },
+    "32_0.45_2.0": {
+      "mean": 0.1708770026388756,
+      "std": 0.6693920422513888,
+      "robust": -0.6727566377093097
+    },
+    "32_0.45_2.5": {
+      "mean": 0.1708770026388756,
+      "std": 0.6693920422513888,
+      "robust": -0.6727566377093097
+    },
+    "32_0.55_2.0": {
+      "mean": 0.14987888146266654,
+      "std": 0.6762103247477896,
+      "robust": -0.680589488391259
+    },
+    "32_0.55_2.5": {
+      "mean": 0.14987888146266654,
+      "std": 0.6762103247477896,
+      "robust": -0.680589488391259
+    }
+  },
+  "best_config": [
+    20,
+    0.45,
+    2.0
+  ],
+  "v4_default": [
+    20,
+    0.55,
+    2.0
+  ],
+  "selected_equals_v4_default": false,
+  "evaluate_candidate_result": {
+    "label": "R119_novel",
+    "config": [
+      20,
+      0.45,
+      2.0
+    ],
+    "inner_val": [
+      {
+        "market": "spot",
+        "sharpe_cand": 0.08425423670954818,
+        "sharpe_ctrl": 0.1409317015201967,
+        "d_sharpe": -0.05667746481064853,
+        "d_sharpe_lo": -0.12235615191440681,
+        "d_sharpe_hi": 0.0046477821874549964,
+        "dd_cand": 28.612106530389177,
+        "dd_ctrl": 32.81615465583943,
+        "final_cand": 982.1093695428721,
+        "final_ctrl": 997.9766056680674,
+        "liquidated_cand": false
+      },
+      {
+        "market": "futures_5x",
+        "sharpe_cand": 0.28213965989906364,
+        "sharpe_ctrl": 0.25144687883235006,
+        "d_sharpe": 0.03069278106671358,
+        "d_sharpe_lo": -0.23127776019304475,
+        "d_sharpe_hi": 0.277859737597023,
+        "dd_cand": 28.598736095706588,
+        "dd_ctrl": 31.608778883897156,
+        "final_cand": 1080.8861400943442,
+        "final_ctrl": 1063.696073859017,
+        "liquidated_cand": false
+      }
+    ],
+    "b1_pass": false,
+    "b5_fee_tier": [
+      {
+        "market": "spot",
+        "sharpe": -0.22242611915723443,
+        "base_sharpe": 0.08425423670954818,
+        "no_reversal": false
+      },
+      {
+        "market": "futures_5x",
+        "sharpe": 0.12572223244802316,
+        "base_sharpe": 0.28213965989906364,
+        "no_reversal": true
+      }
+    ],
+    "b5_pass": false,
+    "falsification": [
+      {
+        "asset": "BTC_control",
+        "market": "spot",
+        "d_sharpe": 0.019591163118468424,
+        "d_profit_pp": -313.6389453272632
+      },
+      {
+        "asset": "BTC_control",
+        "market": "futures_5x",
+        "d_sharpe": -0.11976258181756405,
+        "d_profit_pp": -1208.6184343420364
+      },
+      {
+        "asset": "ETH_test",
+        "market": "spot",
+        "d_sharpe": -0.16072135808459298,
+        "d_profit_pp": -191.79366049428322
+      },
+      {
+        "asset": "ETH_test",
+        "market": "futures_5x",
+        "d_sharpe": -0.21550106977077443,
+        "d_profit_pp": -161.81316634857643
+      }
+    ],
+    "falsification_pass": false,
+    "promote": false
+  }
+}

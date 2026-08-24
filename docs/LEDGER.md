@@ -315,6 +315,18 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-119 · 08-24 · NEGATIVE (both branches) — externally-calibrated (not window-fit) synthetic stress for v4's own parameter selection: a jump-augmented GBM branch converges onto v4's shipped default exactly like both of R-118's branches did, but a regime-switching branch whose bear state is quantitatively harsher than R-118's own fitted bear state finally moves selection to a materially different point — which then fails the falsification test more decisively than any prior N≈3 attempt has
+
+**Direction.** Off-backlog (the ranked backlog has held only B-06 since R-110). One sentence: does selecting `kelly_regime_v4`'s own already-swept free parameters (anchor-ladder base, `target_vol`, `max_leverage`) by R-118's own robust CVaR criterion, but scored against synthetic paths calibrated from EXTERNALLY PUBLISHED literature estimates rather than parameters fit to this project's own 2017-2020 training window, escape the ceiling R-118 found? **Constraint attacked: N≈3**, via the CALIBRATION SOURCE of the selection procedure — a dimension R-45 (real calendar folds of the realized window) and R-118 (stationary block bootstrap / method-of-moments fit, both of the realized window's own bars) both left untouched, since every synthetic scenario either of those rounds could construct was, by construction, bounded by what 2017-2020 BTC actually did or by that window's own estimated moments. Both branches leave `kelly_regime_v4`'s `frac * scale` mechanism (R-62) completely unchanged. **Not a duplicate of:** R-118 (identical selection/falsification machinery, reused unchanged via `experiments/r118_shared.py` imports — the only thing that differs is the path generator's calibration source, internal-window-fit there vs. external-literature there); R-45 (real calendar folds); R-97/R-98/R-99 (tail/jump parameters fit to this project's own data and used as live regime-timing alarms, a structurally different role from this round's one-shot offline calibration). Full citations (Scaillet, Treccani & Trevisan 2020, *J. Financial Econometrics* 18(2), jump frequency; MDPI *Mathematics* 9(20) 2567 2021, jump-size estimates; a cross-checked crash catalogue — CCN, NYDIG Research, Live Volatile, CNBC 2026-02-12 — for bear-phase severity/duration), fetched via WebSearch this round, are frozen in `experiments/r119_shared.py`'s module docstring alongside the exact constants derived from them. **What would make it fail**, pre-registered before either branch ran: if the externally-sourced numbers turn out to be quantitatively similar to what the training window already contained, both branches reproduce R-118's ceiling for a new reason (external and internal calibration agree, not because internal fitting is inherently bounded); if the external numbers are quantitatively harsher and selection moves to a materially different point, the falsification step is where the round's real news would be.
+
+**What was done.** Operator-authored, frozen, read-only `experiments/r119_shared.py`, importing R-118's generic machinery (`GRID`, `build_kelly`, `robust_score`, `select_config`, `evaluate_candidate`, data loaders, `V4_DEFAULT`) unchanged, so the grid searched and the promotion bar applied are provably identical to R-118's own — self-tested to still reproduce `kelly_regime_v4` bit-for-bit. Three external constants frozen before either branch ran: `EXT_JUMP_PROB_PER_DAY = 1/7` (Scaillet et al.'s "~1 jump day per week"), signed jump-size draws from Normal(+4.65%, 2.33%)/Normal(-4.14%, 2.07%) (MDPI 2021's reported means, std disclosed as a simplification — half the mean magnitude, since the source does not report dispersion), and `EXT_BEAR_DRAWDOWN = 77.5%` over `EXT_BEAR_DURATION_DAYS = 365` (averaged from the crash catalogue's headline figures, not cherry-picked). Two parallel unregistered branches, disjoint files, neither editing the shared module: **conservative** (`experiments/r119_conservative_gbm_jump.py`) — a plain GBM diffusion (80%/yr vol, a coarse round-number literature-typical figure, 0%/yr drift) plus the compound-Poisson jump overlay, no regime structure, nothing fit to real data at all; **novel** (`experiments/r119_novel_regimeswitch_external.py`) — a 3-state (bull/chop/bear) regime-switching structure matching R-118 novel's own shape, with bear-state severity/duration set from the external crash catalogue (translating to bear drift −149.3%/yr, vol 154.5%/yr — 2.30x the drift and 1.08x the vol of R-118's own MOM-fitted bear state, −65%/yr drift, 143%/yr vol) and bull/chop states set from simple, disclosed, round-number assumptions (long-run drift roughly netting to the training window's own realized return over a ~4-year cycle, the same convention `tradebot.data.generate_synthetic_pair` already uses); its one internally-sourced number, disclosed prominently per the pre-registration, is a single pooled ordinary-day (non-crash) volatility scalar (77.2%/yr) from `load_inner_train_btc()`. **24 configurations evaluated** (12 per branch, 40 synthetic draws apiece — 960 synthetic-path backtests total, ~41-42 min wall time per branch), plus one real-data `evaluate_candidate` call per branch. Holdout: **not touched by either branch** — verified by grep of both files for any 2021+ date literal (only `load_inner_train_btc()`'s own pre-registered, self-tested restriction to 2017-01-01..2020-12-31 appears) and by re-reading both path-generator implementations, which read no real market data (conservative) or read only the one disclosed scalar (novel).
+
+**Result.** **Conservative:** selection landed on `(20, 0.55, 2.0)` — bit-for-bit v4's own shipped default (robust CVaR score −0.427, best of all 12 grid points; the `max_leverage` axis was completely inert, 2.0 and 2.5 scoring identically at every other setting, since leverage never binds under this generator). Falsification is therefore an exact identity (Δsharpe/Δprofit = 0.000/0.0pp on all four BTC-control/ETH cells, **PASS by construction, not evidence**) and **B1 FAILED** (Δsharpe = 0.00 both markets, inner-val) and **B5 FAILED** (0.40% fee tier flips both markets negative). **Novel:** selection landed on `(20, 0.45, 2.0)` — **materially different from v4's default** (`target_vol` 0.45 vs. 0.55; the harsher, externally-anchored bear state pushed the criterion toward a lower vol target, `robust` −0.537 vs. −0.593 for the shipped 0.55 point) — the first branch in this N≈3 line of attack (R-45, R-118 x2, R-119 conservative) whose robust-CVaR selection has ever chosen a point other than (a near-copy of) v4's own default. That materially different point then **failed decisively**: inner-val spot Δsharpe −0.057 [−0.122, +0.005], futures Δsharpe +0.031 [−0.231, +0.278] — **B1 FAILED** (neither market clears the noise floor or excludes zero); **B5 FAILED** (spot reverses sign at 0.40%, futures does not — needs both); and **falsification FAILED outright and by a wide margin on every one of 4 cells** — BTC-control Δsharpe −0.120/+0.020, Δprofit **−1208.6pp/−313.6pp**; ETH Δsharpe −0.216/−0.161, Δprofit **−161.8pp/−191.8pp** — the candidate's lower vol target underperforms v4's own shipped point on both pre-2020 real-data falsification legs, not merely inside noise. Operator independently re-verified both branches' causal restriction to `load_inner_train_btc()` (2017-2020 only) and reproduced the reported jump/regime constants from `experiments/r119_shared.py`'s frozen values by hand before either branch was dispatched.
+
+**Verdict.** **NEGATIVE** (both branches). Matches the round's own pre-registered expected outcome for the conservative branch exactly (a structurally simple, literature-literal generator with no regime machinery reproduces R-118's ceiling for a new reason: unconditional jump risk penalizes leverage nowhere selectively enough to move selection off v4's own point). The novel branch is the more informative result, and it resolves the round's own pre-registered fork in the harsher direction: the externally-sourced bear state is genuinely more severe than 2018 BTC's own realized collapse (2.30x the annualized drift R-118's window-fit model found), selection DID move to a materially different configuration for the first time across four attempts at this axis (R-45, R-118 x2, R-119 conservative) — and that different configuration is not merely inert or ambiguous, it is **decisively worse** on both real falsification legs, the sharpest failure any branch in the N≈3 line has produced. Read together with R-118's own closing line ("no resampling or low-order generative method fit to that one window has anywhere to move the selection TO"), this round supplies the missing case that line did not test: a method NOT fit to the window CAN move the selection somewhere else — and where it moves is worse, not better. **One-line lesson: 2017-2020's own realized 2018 bear was not a lower bound the training window artificially imposed on how bad BTC's bear state "should" look — a materially harsher, independently-published external estimate of bear severity does not reveal a better configuration hiding outside the window's own experience, it reveals that the window's own point estimate was already closer to the efficient trade-off than a more pessimistic prior would suggest.** Holdout counter: **unchanged** (neither branch touched `OOS_START`+ data). Decision rule did not move — R-118's own frozen bar (`b1_pass`/`b5_pass`/`falsification_pass`, all required) was applied exactly as written, before either branch's synthetic-path numbers existed. Next step: this project's own N≈3-attacking toolkit is now four-for-four negative (calendar folds, block bootstrap, fitted Monte Carlo, externally-calibrated Monte Carlo) — the calibration-source axis this round opened is itself now closed, having produced its one genuinely different selection and watched it fail harder than any tie did. The only two remaining levers this ledger has ever named for N≈3 are a genuinely different window (ETH, the six-asset panel — both already closed) or forward evidence (B-06, already running unattended). The ranked backlog remains empty of anything but B-06.
+
+---
+
 ### R-118 · 08-24 · NEGATIVE (both branches) — synthetic-path robust calibration of v4's own free parameters, closing R-45's own named follow-on
 
 **Direction.** Off-backlog (the ranked backlog has held only B-06 since
@@ -12453,6 +12465,58 @@ trip.
 ---
 
 ## D. Backlog (ranked)
+
+**Re-ranked 08-24 after R-119.** Off-backlog (still only B-06, unchanged
+since R-110), a two-branch round tested whether calibrating R-118's own
+robust-CVaR parameter-selection criterion from EXTERNALLY PUBLISHED
+literature (Scaillet et al. 2020 jump frequency, MDPI 2021 jump-size
+estimates, a cross-checked BTC crash catalogue) rather than from
+parameters fit to this project's own training window could escape the
+ceiling R-118 found. **Both branches NEGATIVE, but for the first time in
+this N≈3 line of attack (R-45, R-118 x2) the selection procedure actually
+moved to a materially different configuration** — not merely to a
+near-copy of v4's shipped default. The conservative branch (plain GBM +
+literature jump overlay, no regime structure) reproduced R-118's exact
+pattern, selecting v4's own default bit-for-bit. The novel branch (a
+3-state regime-switching structure whose bear-state severity/duration
+came from the external crash catalogue rather than a window fit, working
+out ~2.3x steeper drift and ~1.08x the vol of R-118's own fitted bear
+state) selected `target_vol=0.45` instead of v4's `0.55` — genuinely
+different — and that different configuration then **failed the real-data
+falsification test more decisively than any branch in this axis's
+history**: −161.8 to −1208.6 percentage points of profit against v4's own
+shipped point across all four BTC-control/ETH cells, not merely inside
+noise. **This closes the calibration-source axis for N≈3**: real calendar
+folds (R-45), synthetic block-bootstrap resampling of the realized window
+(R-118 conservative), Monte Carlo from a model fit to the realized
+window's own moments (R-118 novel), and now Monte Carlo from parameters
+sourced independently of this project's own data entirely (R-119 novel)
+have all been tried, and the one round that finally produced a materially
+different selection also produced the sharpest failure — evidence that
+2017-2020's own realized bear (which the training window already
+contains in full) was not an artificially mild lower bound the window
+imposed on the selection space, but already close to the efficient
+point. **The ranked backlog remains empty of anything but B-06** (forward
+paper-trading, already running unattended, per R-78's own costing). A
+future session preferring a fresh mechanism search now has: the
+single-asset axis's own fully closed lists (17 INFO-axis attempts, 27+
+SIZE-axis attempts, ERR across five notions of uncertainty, ten
+regime-timing mechanisms, two structurally-new-detector-family SIZE
+substitutions, and now four distinct N≈3-attacking selection procedures —
+calendar folds, block bootstrap, fitted Monte Carlo, externally-calibrated
+Monte Carlo — all closed); the multi-asset panel's own closed list (eleven
+rounds, all NEGATIVE, plus R-116's cross-asset-feedback construction); or
+B-28's breadth clause (blocked on data this project cannot fetch or
+simulate). Absent a new idea clearing Step-0 on one of these, the
+accumulating evidence across every axis this project's own framework can
+construct — from its committed data OR from published external
+literature calibrated against that data's own promotion bar — continues
+to point the same direction: `kelly_regime_v4` is close to efficient with
+respect to the information, error control and parameter-selection
+procedure available to this project, whatever the calibration source. The
+two remaining untried levers for N≈3 are data from a genuinely different
+window (ETH, the six-asset panel — both already closed) or forward
+evidence (B-06, already running unattended).
 
 **Re-ranked 08-24 after R-118.** Off-backlog (still only B-06, unchanged
 since R-110), a two-branch methodology round closed R-45's own named
