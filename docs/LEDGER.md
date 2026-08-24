@@ -315,6 +315,202 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-109 · 08-24 · NEGATIVE (both branches) — a sixth ERR-axis attempt, the first on DISTRIBUTIONAL NOVELTY rather than significance or disagreement: a Mahalanobis-distance brake (conservative) fails B1/B4/B5, and a k-nearest-neighbour novelty brake (novel) is the FIRST of six ERR-axis attempts to clear B1 on both markets, but fails B4 (ETH) on a spot sign inversion
+
+**Operational note, disclosed up front.** This round was dispatched as "R-107"
+and its two branches ran to completion under that name. By the time its work
+was ready to merge, a second, independently-scheduled session had already
+pushed a different R-107 to `main` (B-32 answered: multi-asset registration).
+The round was renumbered R-108 and rebased — and by the time *that* was ready
+to merge, a *third*, independently-scheduled session had pushed a different
+R-108 to `main` too (B-40's sub-claim, documented NEGATIVE, immediately
+below). This is now **R-109**, its three files renamed a second time to
+`experiments/r109_shared.py` / `experiments/r109_conservative_mahalanobis_brake.py`
+/ `experiments/r109_novel_knn_novelty_brake.py` (no content changes beyond
+the rename and matching self-references each time) and rebased cleanly onto
+the actual current `main` before this entry was written. Per this ledger's
+own precedent for the identical class of incident (R-32, 08-18: "two
+sessions were scheduled onto the same backlog row on the same day and each
+spent the holdout on it independently") — except here, unlike R-32, no
+holdout data was read by any of the three concurrent rounds, and all three
+attack completely disjoint axes (single-asset ERR-axis; multi-asset
+portfolio construction; a B-40 conditional-mean sub-claim) with zero file
+overlap, confirmed by `git status`/`git diff --stat` after each rebase. All
+numbers below were independently re-run by the operator after every rebase
+(three times total) and matched exactly each time — the renames touch no
+logic, only paths and self-referential round numbers. **Flagged for whoever
+reads this next**: at least three sessions of this exact automated routine
+ran concurrently on 08-24 without coordinating round numbers; a future
+session or the human operator may want to look at whether the scheduling
+that launches these sessions can serialize them, or at minimum have each
+session claim its round number by writing a placeholder ledger entry (or
+some other lock) before doing any work, rather than only at push time.
+
+**Direction.** Give `kelly_regime_v4` a live, causal measure of a third,
+previously-untried notion of uncertainty: is the CURRENT market-state
+feature vector unlike its own recent trailing history at all —
+distributional novelty / dataset shift — rather than sampling significance
+of the vote's own edge (R-28/retracted, R-87, R-104: three attempts) or
+specification/model disagreement, either within one model family (R-105) or
+across four structurally different regime detectors (R-106). Literature:
+Rabanser, Gunnemann & Lipton (2019, NeurIPS, "Failing Loudly") for the
+general dataset-shift-detection framing; De Maesschalck, Jouan-Rimbaud &
+Massart (2000) for the conservative branch's literal Mahalanobis distance;
+Ramaswamy, Rastogi & Shim (2000) and Breunig, Kriegel, Ng & Sander (2000,
+LOF) for the novel branch's nonparametric k-NN distance-based alternative
+(Liu, Ting & Zhou 2008's Isolation Forest cited as the closely related
+tree-ensemble alternative motivating a genuinely different algorithm class
+from the conservative branch's single fitted Gaussian). Backlog at dispatch
+time: the ranked list held only **B-32** (pure infrastructure, not urgent —
+see R-83 onward); by the time this entry is written, R-107 has since closed
+B-32 and R-108 has closed B-40 (sub-claim), each re-confirming that the
+single-asset ERR axis specifically still needed "a construction keyed on
+neither sampling significance, within-family specification disagreement,
+nor cross-model-class disagreement" — precisely what this round attacks, so
+the direction remains valid and non-duplicate under the current backlog
+state, not only the one it was dispatched under. Attacks **ERR** (no error
+control anywhere in the signal path). Not a duplicate of R-104 (never reads
+v4's P&L/returns — both branches build their novelty statistic entirely
+from OHLCV-derived market-state features), R-105 (no alternative
+anchor-ladder specification or jackknife of the vote's own three components
+is ever built), R-106 (imports none of the four regime-detector modules and
+computes no cross-model dispersion — a first-order "is today's state unlike
+its own past" question, not a "do models disagree with each other" one),
+R-107 (a multi-asset/portfolio-construction round operating on an
+8-instrument panel via `src/tradebot/multi_engine.py`/
+`experiments/r107_novel_risk_parity.py`; this round never touches the
+multi-asset engine, the U6/U8 panel, or portfolio weighting), R-108 (a
+single pre-registered conditional-mean test of BTC's own price series
+against B-40's own named sub-claim, no strategy built, no exposure decision
+made, no discount or brake of any kind — this round builds and backtests two
+full exposure-discounting strategy variants, never computes a
+state-conditional forward-return table), any of the nine regime-timing
+rounds (no detection-lag race against `STRESS_EPISODES`; a continuous
+distance statistic at every bar, never a binary alarm-crossing check), or
+any of the 26 prior SIZE-axis rounds (bolts a discount onto `v4_target`
+unchanged, exactly like R-87/R-104/R-105/R-106's own architecture, never
+retunes `frac` or `scale` directly). Full citation trail and exhaustive
+non-duplication argument in `experiments/r109_shared.py`'s own module
+docstring.
+
+**What was done.** The operator wrote and unit-tested `experiments/r109_shared.py`
+(read-only Step-0-gate and B1/B2/B4/B5 promotion-bar infrastructure, reusing
+R-105's gate code verbatim for direct comparability) BEFORE dispatching
+either branch, including a smoke test against real BTC data that caught and
+fixed one bug in the module itself (a bare `.reindex()` from a
+daily-indexed series onto the 5-minute bar index, silently leaving >85% of
+bars unfilled before alignment — fixed to a proper union-then-forward-fill,
+`align_daily_to_bars`, before either branch was dispatched). Three novelty
+features, all pure OHLCV-derived and causal: log realized volatility
+(`log_vol`), mean pairwise dispersion of the vote's own 20/40/80-day SMA
+anchors (`anchor_disp`), and rolling 1-day return kurtosis (`kurtosis`) —
+the novel branch adds two more (`volume_z`, `skew`). Conservative branch
+(`experiments/r109_conservative_mahalanobis_brake.py`): literal Mahalanobis
+distance of the daily feature vector from a strictly-prior 730-day rolling
+reference mean/covariance, percentile-ranked to `[0,1]`, discounting
+`v4_target` linearly above a threshold. Novel branch
+(`experiments/r109_novel_knn_novelty_brake.py`): mean Euclidean distance to
+the 10 nearest neighbours in a standardized, strictly-prior 730-day
+reference set refit every 30 days (walk-forward, nonparametric — no
+single-Gaussian assumption, structurally distinct from Mahalanobis distance
+per Ramaswamy/Breunig's own literature framing), same
+`[0,1]`-percentile-rank-then-discount architecture. Both pre-registered an
+identical Step-0 grid (`thresh ∈ {0.80, 0.90, 0.95} × max_discount ∈ {0.5,
+1.0}`, primary cell `(0.90, 1.0)` selected by a fixed non-degeneracy-only
+rule, never by a performance number) and the identical B1/B2/B3/B4/B5
+promotion bar, and both named ETH replication as their one pre-registered
+falsification test before reading any inner-validation number. **Configs
+evaluated: 52 total** (26 per branch: 6 Step-0 grid + 6 primary `compare()`
+cells + 12 B3 plateau cells [2 reused] + 2 B5 fee-tier; the novel branch's
+`k`/`refit_every` were left at their pre-registered literature-grounded
+defaults, disclosed rather than swept, adding 0).
+
+**Result.** *Conservative* — Step-0 **PASS** at the primary cell
+(bind_frac=0.082, r²_vs_v4=0.977 < 0.98, r²_vs_vol=−3.38 ≪ 0.90 — a clean,
+direct confirmation the statistic is not a relabelled volatility rescale —
+state_cv=0.59); causal truncation probe PASS. **B1 FAILS** both markets
+(spot ΔSharpe +0.033 boot[−0.076,+0.114]; futures +0.089
+boot[−0.112,+0.213] — neither clears +0.2 nor excludes zero). B2
+(diagnostic): a small, real, risk-matched drawdown improvement (spot
+−0.93pp, futures −2.46pp). B3 (plateau) PASSES — the whole 6-cell grid
+shares the primary cell's sign, a genuine plateau sitting well under the
+noise floor rather than an isolated spike. **B4 (ETH, pre-registered) FAILS
+decisively**: ETH inverts sign on both markets (spot ΔSharpe −0.756
+boot[−2.878,+0.090]; futures −0.622 boot[−2.653,+0.202]), the same
+asset-specific-fragility shape R-57/R-102(novel)/R-105(novel) all found.
+**B5 FAILS**: the spot cell reverses sign at the 0.40% fee tier
+(+0.033→−0.028), one market reversing being enough to fail as
+pre-registered. *Novel* — Step-0 **PASS** at the primary cell
+(bind_frac=0.060, r²_vs_v4=0.975, r²_vs_vol=−3.39, state_cv=0.63); causal
+truncation probe PASS (including across `rolling_knn_distance`'s own 30-day
+refit boundaries). **B1 PASSES both markets — the first of six ERR-axis
+attempts (R-28/retracted, R-87, R-104, R-105, R-106, this round) to do
+so**: spot ΔSharpe +0.118 boot[+0.007,+0.144] (excludes zero); futures
++0.192 boot[+0.008,+0.232] (excludes zero). B2: risk-matched drawdown
+improvement, spot −3.92pp, futures −7.27pp. B3 (plateau) PASSES — all 12
+grid×market cells share the primary's positive sign. **B4 (ETH,
+pre-registered) is only PARTIAL**: futures replicates BTC's sign (+0.031,
+boot[−0.337,+0.306], interval contains zero) but spot inverts (−0.009,
+boot[−0.227,+0.140]) — the pre-registered rule required a FULL pass (both
+markets), so this is a FAIL by the frozen rule despite the partial
+replication. B5 PASSES (no sign reversal either market at 0.40%). The
+operator independently re-ran both scripts from a clean shell three times —
+once pre-rebase, once after rebasing past R-107, once after rebasing past
+R-108 — and every number above matched every time, bit-for-bit; `pytest -q`
+on the final, post-rebase tree: **516 passed** (unchanged since R-107; R-108
+added one unregistered experiments-only script and no new tests).
+
+**Verdict.** **NEGATIVE, both branches.** One-line lesson: this round's
+genuinely new uncertainty notion — is the market's own state unlike its
+recent past, independent of any model's opinion — produces this ledger's
+cleanest B1 pass yet on the ERR axis (the novel branch, by a wide margin:
+both bootstrap intervals exclude zero, not merely a point estimate over the
+floor), which makes the failure mode informative rather than a near-miss
+shrug: **the novelty statistic's own reference distribution, built
+predominantly from BTC's 2017–2020 supercycle (named in advance as failure
+risk #4 in `r109_shared.py`'s own pre-registration), does not transfer to
+ETH's shorter, differently-shaped history** — spot inverts outright rather
+than merely weakening, the sharpest form this project's now-familiar
+asset-specific-fragility pattern (R-57, R-102 novel, R-105 novel) has taken
+on the ERR axis specifically. The conservative branch's parametric
+(single-Gaussian) construction is smaller in magnitude throughout and fails
+earlier (B1 itself), consistent with the novel branch's own
+literature-grounded reason for existing — real market regimes are more
+plausibly multimodal clusters than one stretched ellipse, and the
+nonparametric statistic captures more of whatever signal is there. **This
+is the sixth ERR-axis attempt; 0 of 6 have promoted, but for the first time
+the failure is a generalization gap (B4) rather than an inertness or
+magnitude gap (B1) — the axis has moved from "can this notion of
+uncertainty bind large enough" (R-87, R-104, R-105 conservative) to "does
+it bind on the right asset."** **Holdout counter: +0 on top of R-108's
+~679** (running total unchanged at **~679**) — neither branch, nor the
+operator's independent re-runs, ever read, printed, or held in memory a bar
+dated 2023-01-01 or later; both scripts' own `max timestamp read` lines
+report 2022-12-31 23:55:00 UTC, both `assert_no_holdout` guards ran clean
+throughout, and neither branch reached a "holdout candidate" outcome (B4
+full pass was required and neither cleared it) — see the bullet added below
+in [Holdout consultations to date](#holdout-consultations-to-date). Neither
+pre-registered decision rule moved after seeing any number; the one bug
+found (the `apply_discount` alignment bug above) was found and fixed in the
+shared module *before* either branch was dispatched, per ROUTINE.md's
+bug-fix allowance. **Next step:** a future session with a genuine reason to
+retry this specific axis has one clearly named, disclosed follow-on — a
+reference distribution NOT dominated by one price cycle (e.g.
+detrended/return-space features only, or an explicit multi-asset reference
+pool) might close the novel branch's B4 gap without needing a new
+mechanism. More broadly: after R-107 (closed B-32) and R-108 (closed B-40),
+**B-42 is now the only ranked, unblocked backlog item** (per R-108's own
+closing line). On the single-asset ERR axis specifically, which this round
+worked: a construction keyed on none of sampling significance,
+specification/model disagreement, or distributional novelty (six attempts
+across all three notions now closed) is what a future session preferring
+this axis needs; the SIZE axis (26 attempts collapsing to a low,
+roughly-constant exposure fraction), the INFO axis (fifteen attempts, no
+unfetched data channel left), and the nine closed regime-timing mechanisms
+remain exhausted as previously documented, and the multi-asset axis R-107
+opened is, on current evidence, the least picked-over direction left in
+this ledger.
+
 ### R-108 · 08-24 · B-40 SUB-CLAIM DOCUMENTED (NEGATIVE) — BTC's Bear-state (80d<0 AND 7d<0) conditional forward daily return is −15 bps/day on 2017–2022, sign is right but the 95% CI contains zero; holdout not spent
 
 **Direction.** Backlog item **B-40** (Goulding, Harvey & Mazzoleni 2023, "Momentum turning points", *Journal of Financial Economics* 149, 378–406), OPEN since R-89, one of two remaining OPEN backlog items after R-107 closed B-32. The row itself names the sharpest sub-claim to test *before* building anything, verbatim: "is BTC's conditional mean return in the Bear state (80d<0 AND 7d<0) significantly negative on 2017–2022, and does the sign hold after?" Its own honest magnitude warning, filed with the row: "Read the honest magnitude with it: the published dynamic blend is ~0.52 vs 0.51 gross Sharpe (1969–2018), and an independent practitioner replication net of costs found both variants lost ~1%/yr and ranked poorly. Treat the mechanism as real and the effect as approximately zero — which makes this a cheap null to document, not a promotion candidate." This round is that documented null: a pure statistical test on price, no strategy built or touched, no fees or funding, no execution model. **Attacks:** SIZE, N≈3 (per B-40's own attacks column) — the state definition is deterministic and lag-free by construction, so it is structurally immune to the six-episode detection-lag gate that killed R-82/83/85/86/96/98/99, but the test hinges on whether the state carries any information distinguishable from noise at BTC's daily-return sample size. **Not a duplicate of** R-01/R-82/R-83/R-85/R-96/R-98/R-99 (nine regime-CHANGE detectors against a shared six-episode gate — this labels each day with a deterministic function of two observable trend signs and asks a plain conditional-mean question, no change point is detected), R-06/R-07/R-40/R-45 (anchor-horizon search on strategy P&L — this uses the 80d/7d horizons named by B-40's own row and never runs a strategy), or any of the 15 INFO-axis, 26 SIZE-axis, 5 ERR-axis rounds since R-38 (none tested a state-conditional forward-return sub-claim before any exposure decision).
@@ -11175,6 +11371,51 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-24 after R-109.** An off-backlog, literature-prompted
+two-branch round (dispatched under R-107's backlog state — the ranked list
+held only B-32, pure infrastructure — and renumbered twice, first to R-108
+then to R-109, as two separate concurrently-scheduled sessions' own R-107
+and R-108 each reached `main` first; see that entry's operational note)
+tried a sixth ERR-axis construction and the first keyed on DISTRIBUTIONAL
+NOVELTY (is the current market state unlike its own recent history) rather
+than sampling significance (three attempts) or specification/model
+disagreement (two attempts): a Mahalanobis-distance brake (conservative)
+and a k-nearest-neighbour nonparametric novelty brake (novel), both
+discounting `kelly_regime_v4`'s exposure against a strictly-causal,
+walk-forward reference distribution built from three-to-five OHLCV-derived
+features. Both **NEGATIVE**, but for the first time on this axis the
+failure modes are qualitatively different from each other AND from every
+prior ERR-axis round: the novel branch cleared B1 on both markets outright
+(both bootstrap intervals exclude zero) — the first of six ERR-axis
+attempts to do so — and failed only at B4, on a spot-market sign inversion
+against ETH, i.e. a generalization-scope failure rather than an inertness
+or magnitude failure; the conservative branch's smaller, single-Gaussian
+construction failed earlier, at B1 itself, before also failing B4 more
+severely. An independent operator re-run (three times, once per rebase)
+reproduced both branches' numbers bit-for-bit every time. **This closes the
+sixth ERR-axis attempt across three genuinely distinct notions of
+uncertainty (sampling significance: 3 attempts; specification/model
+disagreement: 2 attempts; distributional novelty: 2 attempts, this round) —
+0 of 6 have promoted, though this round is the first where a branch
+actually cleared the Sharpe/noise-floor gate (B1) rather than being inert
+or actively harmful.** The two real R-107 and R-108 (immediately below)
+separately closed **B-32** and **B-40** the same day, per their own entries
+— **B-42 is now the only ranked, unblocked backlog item** (per R-108's own
+closing line, unaffected by this round). **Combined state after R-107,
+R-108 and R-109: the single-asset ERR axis is now closed across all three
+tried notions of uncertainty; the ranked backlog holds only B-42; and the
+multi-asset/portfolio axis R-107 opened is the least picked-over direction
+in this ledger.** A future session preferring a fresh mechanism search on
+the single-asset axis now needs an ERR-axis construction keyed on none of
+sampling significance, specification/model disagreement, or distributional
+novelty (six attempts across all three notions now closed), a SIZE-axis
+construction that does not collapse to a low, roughly-constant exposure
+fraction relative to v4 (26 attempts), a data channel this project cannot
+construct from its own committed files or fetchable free sources at all
+(fifteen INFO-axis attempts have failed), or a regime-timing construction
+with no basis in common with the nine already closed — or should work the
+multi-asset axis R-107 opened, or B-42 directly.
+
 **Re-ranked 08-24 after R-108, the second consecutive round that works an
 OPEN backlog item directly rather than off-backlog.** R-107 closed B-32
 by building the multi-asset registration infrastructure; R-108 closed
@@ -13113,6 +13354,25 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-24 · ~679** — R-109: **+0** on top of R-108's ~679 (unchanged), both
+  branches. Conservative (`experiments/r109_conservative_mahalanobis_brake.py`)
+  and novel (`experiments/r109_novel_knn_novelty_brake.py`) both restricted
+  every read to inner-train/inner-validation/ETH; both print their own
+  max-timestamp line (2022-12-31 23:55:00 UTC) and both `assert_no_holdout`
+  guards ran clean. Neither branch reached a holdout-candidate outcome (B4
+  full pass was required by both branches' own pre-registration; the novel
+  branch cleared B1 on both markets but only partially cleared B4).
+  Dispatched as "R-107", then briefly renumbered "R-108", before two
+  separate concurrently-scheduled sessions' own R-107 and R-108 each reached
+  `main` first; renumbered R-109 and rebased onto the real R-108's tree
+  before this entry was written, per the operational note at the top of
+  R-109's own section-B entry — zero holdout reads across all three
+  concurrent rounds, so the renumbering changes no count here. The operator
+  independently re-executed both branches' entire scripts from a clean
+  shell three times (once pre-rebase, once after each of the two rebases),
+  and every reported number — Step-0 tables, B1-B5 cells, causal-probe
+  results, configuration counts — matched exactly every time; `pytest -q`
+  on the final tree: 516 passed.
 - **08-24 · ~679** — R-108: **+0** on top of R-107's ~679 (unchanged), one
   branch (`experiments/r108_bear_state_conditional_mean.py`). The primary
   decision rule is defined over 2017-01-01 → 2022-12-31 and the pre-holdout
