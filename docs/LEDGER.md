@@ -315,6 +315,148 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-114 · 08-24 · NEGATIVE (both branches) — the seventh ERR-axis attempt and the first on TEMPORAL DURATION DEPENDENCE: a marginal life-table hazard on the vote's own regime age clears every clause but B1 (real but inert, like five of six prior ERR attempts); a volatility-stratified extension is actively worse, failing B1/B3/B4/B5
+
+**Direction.** Off-backlog (the ranked list holds only B-06, unchanged
+since R-110). Six prior ERR-axis rounds (R-28 retracted, R-87, R-104,
+R-105, R-106, R-109/R-112) discounted `kelly_regime_v4`'s exposure keyed on
+sampling significance (3 attempts), specification/model disagreement (2
+attempts), or distributional novelty of the OHLCV market state (2
+attempts, the only notion ever to clear B1, in R-109's own novel branch,
+before failing B4). This round attacks **ERR** on the one notion of
+uncertainty named as untried in R-109's, R-112's and R-113's own closing
+lines: is the CURRENT regime old relative to the empirical distribution of
+how long `kelly_regime_v4`'s own vote has historically stayed in one state
+before flipping — a property of TIME SPENT IN STATE, not of the market
+state itself. Literature (fetched and confirmed live via WebSearch this
+round): Diebold & Rudebusch (1990), *JPE* 98(3), 596-616, the nonparametric
+life-table (Cutler & Ederer 1958) hazard method for business-cycle
+duration dependence, transplanted here to the vote's own regime phases —
+the CONSERVATIVE branch's literal operationalization; Maheu & McCurdy
+(2000), *JBES* 18(1), 100-112, a duration-dependent Markov-switching
+bull/bear model on 160+ years of stock returns, the closest prior
+application to identifying bull/bear regimes from price, motivating the
+Fibonacci-like (rather than linear) duration-bucket grid; Diebold, Lee &
+Weinbach (1994), in Hargreaves (ed.), *Nonstationary Time Series Analysis
+and Cointegration* (Oxford), on covariate-dependent (not duration-only)
+transition probabilities — the NOVEL branch's motivation for stratifying
+the life table by a realized-volatility tertile. Full non-duplication
+argument against all six prior ERR-axis rounds, R-97 (regime-CYCLE COUNT,
+a running total, structurally the opposite of a duration that resets on
+every flip), R-92 (analytic anchor-span derivation) and R-90 (a
+path-dependent trailing-stop EXIT rule) is in `experiments/r114_shared.py`'s
+own module docstring, written by the operator before either branch was
+dispatched, including a synthetic-data check that this round's hazard
+statistic and R-109's own Mahalanobis distance are not degenerate re-labels
+of each other.
+
+**What was done.** `experiments/r114_shared.py` (operator-authored, frozen,
+read-only pre-registration and shared machinery: `regime_state_daily`,
+`regime_duration_daily`, `completed_spells`, the marginal
+`rolling_lifetable_hazard` and the covariate-stratified
+`rolling_stratified_hazard` with empirical-Bayes shrinkage toward the
+marginal table, `covariate_tertile_daily`, `hazard_to_state`; Step-0 gate,
+B1-B5 promotion-bar machinery and STEP0_THRESH_GRID/STEP0_MAXD_GRID/
+SELECTION_ORDER all re-exported unmodified from `r109_shared`/`r105_shared`
+so every number is directly comparable to R-104...R-113's own). Self-tested
+(causal truncation of both hazard estimators via prefix-truncation
+comparison on synthetic regime-switching data; non-duplication vs R-109's
+own Mahalanobis distance) and smoke-tested by the operator against real BTC
+inner-train data before either branch was dispatched (89 completed
+vote-flip spells by end of inner-train — durations ranging 1-150 days,
+median 5 — well above the pre-registered `MIN_SPELLS=15` kill switch; all 6
+Step-0 grid cells qualify for both constructions). Two branches dispatched
+as independent subagents on disjoint files:
+`experiments/r114_conservative_lifetable_hazard.py` (marginal, duration-only
+life table) and `experiments/r114_novel_stratified_hazard.py`
+(duration x realized-vol-tertile stratified life table, shrunk toward the
+marginal table with prior strength 8 pseudo-spells). Identical Step-0 rule
+and B1(gating)/B2(diagnostic)/B3(plateau, gating)/B4(ETH falsification,
+gating, pre-registered, full pass required)/B5(0.40% fee tier, gating)
+promotion bar to R-104 through R-109. **Configs evaluated: 52** (26 per
+branch: 6 Step-0 + 6 primary `compare()` + 12 B3 plateau [2 reused each] +
+2 B5 fee-tier). The operator independently re-ran both scripts from a clean
+shell after both branches reported; every number below matched exactly,
+bit-for-bit, both times, including the causal-truncation-probe PASS and the
+`pytest -q` full-suite result (516 passed, unaffected, reported identically
+by both branches and reproduced once more by the operator).
+
+**Result.** *Conservative* (marginal life table) — Step-0 primary cell
+(thresh=0.90, max_discount=1.0) qualifies (bind_frac=0.1150,
+r2_vs_v4=0.6258, r2_vs_vol=-3.1842, state_cv=0.5775; all 6 grid cells
+qualify). **B1 FAILS on both markets**: spot ΔSharpe +0.0081
+boot[-0.0353,+0.0475]; futures_5x ΔSharpe +0.0536 boot[-0.0516,+0.1264] —
+both positive-signed but both intervals straddle zero and both point
+estimates sit inside the ±0.2 noise floor. B2 (diagnostic, both
+risk-matched): spot dd -0.34pp, futures_5x dd -2.12pp — a real but tiny
+drawdown improvement. B3 (plateau) **PASSES**: 12/12 grid×market cells
+same-sign positive, though uniformly small (spot +0.00 to +0.01, futures
++0.05 to +0.06). B4 (ETH, pre-registered) **FULL PASSES**: spot ΔSharpe
++0.0777 boot[-0.2779,+0.2956], same-sign-as-BTC=True; futures_5x ΔSharpe
++0.1014 boot[-0.2265,+0.3691], same-sign-as-BTC=True. B5 **PASSES**: no
+sign reversal at 0.40% taker on either market (spot +0.0173 vs +0.0081
+standard; futures_5x +0.1037 vs +0.0536 standard). *Novel* (stratified life
+table) — Step-0 primary cell qualifies (bind_frac=0.1184, r2_vs_v4=0.7549,
+r2_vs_vol=-3.2859, state_cv=0.8844; all 6 grid cells qualify). Correlation
+between the novel branch's own state and the conservative branch's own
+state (computed read-only from the same shared functions, never importing
+the conservative branch's file): **Pearson r=0.9138** on 1,640 common daily
+observations — high but below the 0.98 near-duplicate flag this ledger has
+used before (R-111), so not a rescaled copy of the conservative branch,
+just correlated as both derive from the same underlying vote-duration
+series. **B1 FAILS on both markets, wrong-signed**: spot ΔSharpe -0.0039
+boot[-0.0330,+0.0319]; futures_5x ΔSharpe -0.0209 boot[-0.0602,+0.0289].
+B2 (diagnostic, both risk-matched): spot dd +0.14pp, futures_5x dd +0.82pp
+— drawdown *worsens* slightly. B3 (plateau) **FAILS**: 10 of 12 grid×market
+cells are zero or negative, no same-sign majority. B4 (ETH, pre-registered)
+**FULL FAILS**: spot ΔSharpe +0.0552 (opposite sign to BTC's -0.0039);
+futures_5x ΔSharpe +0.0867 (opposite sign to BTC's -0.0209) — neither
+market matches BTC's own sign. B5 **FAILS**: spot reverses sign at 0.40%
+taker (-0.0039 → +0.0035); futures_5x holds sign, so not both markets pass.
+Both branches' own `assert_no_holdout` guards, and the operator's
+independent reproduction, confirm a max timestamp of 2022-12-31 23:55:00
+UTC read anywhere in either branch — strictly before `OOS_START`.
+
+**Verdict.** **NEGATIVE, both branches, for two different reasons.** The
+conservative marginal life table is the SIXTH of seven ERR-axis
+constructions in this ledger to reproduce the "real but inert" pattern
+(R-87, R-104's PSR branch, R-105's jackknife branch, R-106's linear
+disagreement branch, this round's conservative branch — R-109's novel
+branch is the sole exception that cleared B1 before failing B4): the
+discount genuinely binds (11.5% of bars), is not a rescale of v4's target
+or its realized-vol input, has non-degenerate dispersion, directionally
+replicates on ETH, and survives the 0.40% fee tier — every clause passes
+except the one that matters, B1's own noise floor. `kelly_regime_v4`'s
+latched, hysteresis-banded vote appears to already price in "old" regimes
+by the time a duration-dependence hazard, however cleanly estimated,
+flags them: the vote's own 1% band and three-anchor structure means a
+regime is only counted as having flipped once price has already moved
+enough to cross all the latching thresholds, which may itself be
+correlated with exactly the conditions under which a life-table hazard
+would flag elevated risk, leaving little independent information for a
+duration-only discount to add. The novel stratified extension is a
+DIFFERENT and more informative failure: adding the volatility-tertile
+covariate does not merely fail to help, it makes the discount actively
+**wrong-signed** on both promotion-bar markets and both B4 legs — the
+empirical-Bayes shrinkage toward the marginal table (prior strength 8
+pseudo-spells) was tuned to guard against sparse-cell noise, but on this
+data the stratification's residual signal, however small, points the
+wrong direction rather than merely adding noise around zero. **This closes
+the seventh ERR-axis attempt and the fourth genuinely distinct notion of
+uncertainty tried on this axis (sampling significance: 3 attempts;
+specification/model disagreement: 2 attempts; distributional novelty: 2
+attempts; temporal duration dependence: this round, 2 attempts) — 0 of 7
+promoted, one (R-109 novel) partial (cleared B1, failed B4).** Holdout
+counter: **+0** (unchanged from R-113's ~679) — neither branch read,
+printed, or held in memory a bar dated 2023-01-01 or later; see the bullet
+added below in [Holdout consultations to date](#holdout-consultations-to-date).
+Neither pre-registered decision rule moved after seeing any number. Next
+step: the single-asset ERR axis has now been tried on all four notions of
+uncertainty this project's own framework has proposed (sampling
+significance, specification/model disagreement, distributional novelty,
+temporal duration dependence); the ranked backlog remains empty of
+anything but B-06 (forward paper-trading, already running unattended).
+
 ### R-113 · 08-24 · NEGATIVE (both branches) — R-109's two validated ERR-axis novelty brakes (Mahalanobis, kNN), applied to the multi-asset panel for the first time instead of `kelly_regime_v4`: both survive the scramble control but fail D1/D2/D3/D5, the brake removing more growth than the drawdown it saves
 
 **Direction.** Off-backlog (the ranked list holds only B-06, unchanged since R-110/R-111/R-112). Seven prior ERR-axis rounds (R-28 retracted, R-87, R-104, R-105, R-106, R-109, R-112) discounted only the single-asset `kelly_regime_v4`'s exposure; no round had ever applied an uncertainty/error-control statistic to the multi-asset `xsmom_entry_band` construction (R-63's score, R-65/67/68's timing, R-107/R-110's allocation weighting, R-111's score variants — nine rounds, all NEGATIVE, none touching error control). This round attacks **ERR** on that untouched target: R-109's own two already-validated novelty statistics (Mahalanobis — De Maesschalck, Jouan-Rimbaud & Massart 2000; kNN — Ramaswamy, Rastogi & Shim 2000 / Breunig et al. 2000), imported verbatim, computed over a new three-feature *panel-level* daily state (cross-sectional return dispersion — Gorman, Sapra & Weigand 2010 — rolling mean pairwise correlation, eligible-count anomaly z-score) instead of R-109's single-instrument OHLCV features, discounting the portfolio's TOTAL notional before R-107/R-110's frozen k=1 equal-weight split. Not a duplicate of R-109/R-112 (different target strategy, different features, no cross-exchange data mismatch since `UNIVERSE_8`'s ETH is Coinbase-native, unlike R-112's blocked Bitfinex/Coinbase gap), R-107/R-110 (allocation-weighting of an already-fixed total vs. discounting the total itself), R-63/65/67/68 (membership timing, untouched here), or R-111 (score formula, frozen and imported unmodified).
@@ -11817,6 +11959,51 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-24 after R-114.** Off-backlog (still only B-06, unchanged
+since R-110), a two-branch round tried the fourth genuinely distinct
+notion of uncertainty on the single-asset ERR axis: is `kelly_regime_v4`'s
+own vote regime currently OLD relative to the historical distribution of
+how long its regimes have lasted before flipping (temporal duration
+dependence, Diebold & Rudebusch 1990 / Maheu & McCurdy 2000), as opposed to
+sampling significance (3 prior attempts), specification/model disagreement
+(2 prior attempts), or distributional novelty of the market state (2 prior
+attempts). **Both branches NEGATIVE.** The conservative marginal
+life-table hazard reproduces the "real but inert" pattern that has now hit
+six of seven ERR-axis attempts (genuine, non-degenerate, ETH-replicating,
+fee-surviving discount that simply doesn't move Sharpe past the noise
+floor); the novel volatility-stratified extension is actively
+wrong-signed on both markets and both B4 legs, a qualitatively different
+and more informative failure than inertness. **This closes the
+single-asset ERR axis on all four notions of uncertainty this project's
+own framework has proposed** (sampling significance: R-87, R-104 x2 —
+3 attempts; specification/model disagreement: R-105 x2, R-106 x2 — 4
+attempts across 2 rounds; distributional novelty: R-109 x2, R-112 x1
+genuinely tested — the return-space half of R-109's own follow-on;
+temporal duration dependence: this round x2) — **0 of 11 single-asset
+ERR-axis configurations promoted, one partial** (R-109's novel branch,
+which cleared B1 before failing B4). **The ranked backlog remains empty of
+anything but B-06** (forward paper-trading, already running unattended,
+per R-78's own costing). A future session preferring a fresh mechanism
+search now has: the single-asset axis's own fully closed list (15 INFO-axis
+attempts, 26+ SIZE-axis attempts, the ERR axis now closed across all four
+tried notions of uncertainty, nine regime-timing mechanisms); the
+multi-asset axis's own closed list (score: 2 rounds; timing: 3 rounds;
+allocation: 2 rounds; error control: 1 round — ten rounds total, all
+NEGATIVE, per R-113); R-112's own named, concrete, disclosed-as-blocked
+next step (a CORAL-pooled multi-asset ETH reference measured against
+`data/ethusd_coinbase_spot_5m.csv.gz` instead of the Bitfinex series R-109/
+R-112 both used, which would for the first time let the multi-asset-pool
+half of R-109's own follow-on actually run inside ETH's evaluation window);
+or B-28's breadth clause (genuinely less-correlated instruments, or a
+lower-frequency bar series — both blocked on data this project cannot
+fetch or simulate). Absent a new idea clearing Step-0 on one of these, the
+single most defensible reading of eleven single-asset ERR-axis
+configurations across four structurally distinct notions of uncertainty,
+zero promoted, is that `kelly_regime_v4`'s vote is already close to
+efficient with respect to the error-control information available from
+OHLCV alone — not proof, but the same kind of accumulating evidence that
+closed the SIZE and INFO axes.
+
 **Re-ranked 08-24 after R-113.** Off-backlog (still only B-06, unchanged
 since R-110), a two-branch round applying R-109's own two validated
 ERR-axis novelty statistics (Mahalanobis, kNN) to the multi-asset
@@ -13950,6 +14137,13 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-24 · ~679** — R-114: **+0** on top of R-113's ~679 (unchanged), both
+  branches. Conservative (`experiments/r114_conservative_lifetable_hazard.py`)
+  failed B1 (noise floor) and novel (`experiments/r114_novel_stratified_hazard.py`)
+  failed B1/B3/B4/B5, so neither reached a promote-candidate state that
+  would authorize reading `OOS_START` data; both branches' own
+  `assert_no_holdout` guards and the operator's independent re-run confirmed
+  a max timestamp of 2022-12-31 23:55:00 UTC.
 - **08-24 · ~679** — R-113: **+0** on top of R-112's ~679 (unchanged), both
   branches. Conservative (`experiments/r113_conservative_mahalanobis_panel.py`)
   and novel (`experiments/r113_novel_knn_panel.py`) both failed
