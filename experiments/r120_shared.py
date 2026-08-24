@@ -42,17 +42,29 @@ Not a duplicate of:
   "backwardation", "calendar future", "dated future": zero hits before
   this round.
 
-DISCLOSED COVERAGE CAVEAT, named before any number below was computed:
-Deribit's quarterly market is thin before ~2019 (probed empirically --
-BTC-29MAR19 has real chart data from >= 2018-10-01 and none before
-2018-06-01, roughly a 6-9 month listed life). The fetcher
-(`scripts/fetch_deribit_quarterly_futures.py`) pulled contracts expiring
-2018-12-28 -> 2023-03-31 (BTC) and 2020-09-25 -> 2023-03-31 (ETH, whose
-quarterly market opened later -- probed, no data before 2020-06-01 for
-ETH-25SEP20). This means, like R-73's DVOL and R-81's Binance metrics
-before it, the STRESS_EPISODES table below is truncated to whichever of
-the six dated regime-transition episodes fall inside actual data
-coverage -- named here, not discovered after running the gate.
+DISCLOSED COVERAGE CAVEAT, named before any Step-A GATE number was
+computed (the coverage measurement itself -- running `front_quarter_basis`
+and checking where it is non-NaN -- is not a gate number, it is the same
+kind of up-front data-shape check R-73/R-81/R-88 ran before naming their
+own usable-episode subset): Deribit's quarterly market is thin before
+~2019 (probed empirically -- BTC-29MAR19 has real chart data from
+>= 2018-10-01 and none before 2018-06-01, roughly a 6-9 month listed
+life). The fetcher (`scripts/fetch_deribit_quarterly_futures.py`) pulled
+contracts expiring 2018-12-28 -> 2023-03-31 (BTC, 18 contracts, 18/18
+returned data) and 2020-09-25 -> 2023-03-31 (ETH, 11 contracts, 11/11
+returned data; ETH's quarterly market opened later -- probed, no data
+before 2020-06-01 for ETH-25SEP20). Measured directly against
+`front_quarter_basis`: BTC's `ann_basis` is 100% non-NaN from
+2019-01-01 onward (front contract BTC-29MAR19 was already listed by
+then), giving **4 of 6** usable stress episodes -- COVID (2020-03-12),
+2021-top (2021-11-10), Terra/Luna (2022-05-09), FTX (2022-11-08); the two
+2018 episodes are unreachable, no quarterly contract existed yet. ETH is
+100% non-NaN from 2020-09-01 onward, giving **3 of 6** usable episodes
+(2021-top, Terra/Luna, FTX) for the B4 falsification leg. Like R-73's
+DVOL and R-81's Binance metrics before it, the pass bar below is
+therefore MAJORITY OF USABLE episodes, not literal >=4/6 -- see
+`USABLE_EPISODES_BTC`/`MIN_EPISODES_PASS_BTC` below, frozen from this
+measurement, not tuned after seeing any lead/lag number.
 
 This module is read-only utility, written by the operator before dispatch
 (same convention as r81_shared.py / r84_shared.py / r88_shared.py).
@@ -106,6 +118,30 @@ STRESS_EPISODES_FULL = [
     ("2022-05 Terra/Luna collapse", "2022-05-09"),
     ("2022-11 FTX collapse", "2022-11-08"),
 ]
+
+# Frozen coverage-truncated subsets, measured directly against
+# `front_quarter_basis` before any gate/lead-lag number was computed (see
+# module docstring's DISCLOSED COVERAGE CAVEAT). BTC front-quarter basis
+# is 100% non-NaN from 2019-01-01; ETH from 2020-09-01. Both branches use
+# these frozen lists, not a live `usable_episodes()` call, so a
+# late-session change to either coverage window cannot silently move the
+# episode set after dispatch.
+USABLE_EPISODES_BTC = [
+    ("2020-03 COVID crash", "2020-03-12"),
+    ("2021-11 top / 2022 bear transition", "2021-11-10"),
+    ("2022-05 Terra/Luna collapse", "2022-05-09"),
+    ("2022-11 FTX collapse", "2022-11-08"),
+]
+USABLE_EPISODES_ETH = [
+    ("2021-11 top / 2022 bear transition", "2021-11-10"),
+    ("2022-05 Terra/Luna collapse", "2022-05-09"),
+    ("2022-11 FTX collapse", "2022-11-08"),
+]
+# Majority-of-usable pass bar (R-81's convention when the full six-episode
+# table is coverage-truncated): >=3 of 4 for BTC's Step-A gate.
+MIN_EPISODES_PASS_BTC = 3
+BTC_BASIS_COVERAGE_START = "2019-01-01"
+ETH_BASIS_COVERAGE_START = "2020-09-01"
 
 
 def load_deribit_quarterly(data_dir: str | Path, asset: str = "BTC") -> pd.DataFrame | None:
