@@ -91,6 +91,32 @@ check that ``disp_ref[t]`` is algebraically reproducible from
 NONLINEAR expanding-quantile statistic (not a simple linear recursion),
 this extra check is warranted beyond the generic truncation probe alone.
 
+SCOPE LIMITATION, DISCLOSED, NOT PATCHED AROUND (identical in shape to
+R-103's RLS branch and both of R-104's branches -- a documented trap this
+file avoids repeating): ``TargetStrategy.warmup`` (imported unchanged from
+``r105_shared``) defaults to 80 calendar days
+(``80 * BARS_PER_DAY + 10`` bars), and ``tradebot.window.run_period`` hands
+``build_target`` only ``frame = df.iloc[lo - prefix : hi]`` -- a prefix
+capped at that 80-day ``warmup``, not this file's own ``MIN_DAYS=120``
+burn-in. ``inner_train`` and ``eth_replication`` both start at their own
+frame's TRUE beginning (``lo=0``, so ``prefix=0`` regardless of
+``warmup``), so they are unaffected. ``inner_val`` (2021-01-01, mid-frame)
+is NOT: it receives only ~80 prior days, less than the 120-day burn-in, so
+the expanding disagreement/disp_ref computation effectively RESTARTS
+close to ``inner_val``'s own start rather than continuing continuously
+from 2017 -- ``discount[t] = 1.0`` (parity with v4) for roughly the first
+40 days of every ``inner_val``-based B1/B3/B5 cell, and ``disp_ref``
+afterward is built from a locally-restarted (not continuous) history. The
+same failure mode named in R-103/R-104's own module docstrings
+(inflating ``warmup`` globally silences ``on_bar`` entirely on any frame
+shorter than the sentinel -- 0 trades, flat equity) rules out "fixing"
+this by raising ``warmup``, so it is disclosed here instead, exactly as
+R-104's own two branches did. Net effect: this UNDERSTATES rather than
+overstates any genuine effect on ``inner_val``-based cells, and it is most
+severe for B3's ``burn_in_bars=250d`` cell (over half of ``inner_val``'s
+own measured window sits inside that longer burn-in given the same
+capped 80-day prefix).
+
 WHAT WOULD MAKE THIS FAIL: named in full in ``r105_shared.py``'s own
 module docstring (three independent failure shapes: disagreement may be a
 common, unremarkable state rather than concentrated around genuine regime
@@ -453,6 +479,13 @@ def main() -> dict:
     print(f"non-primary (disagreement-only) members: bases={NON_PRIMARY_BASES}")
     print(f"MIN_DAYS={MIN_DAYS} calendar days = {BURN_IN_BARS:,} bars burn-in "
           f"(BARS_PER_DAY={BARS_PER_DAY})")
+    print(f"TargetStrategy.warmup LEFT AT SHARED DEFAULT ({TargetStrategy.warmup:,} bars, "
+          f"{TargetStrategy.warmup / BARS_PER_DAY:g} calendar days) -- NOT inflated (R-103/R-104's "
+          f"documented trap: a global sentinel silences on_bar on any shorter frame). Disclosed "
+          f"consequence: inner_val's prefix (~80d) is shorter than this file's own MIN_DAYS=120 "
+          f"burn-in, so inner_val-based cells see a locally-RESTARTED disagreement/disp_ref history, "
+          f"not the continuous-since-2017 one inner_train/eth_replication see -- see pre-registration's "
+          f"own SCOPE LIMITATION paragraph.")
 
     btc = load_btc()
     max_ts_seen.append(btc.index.max())
