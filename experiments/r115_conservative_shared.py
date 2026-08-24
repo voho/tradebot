@@ -32,12 +32,19 @@ README) before any strategy code in this round was written:
         every one of the six starts 2020-01-01 00:00 UTC
 
 So the Coinbase ETH series overlaps UNIVERSE_6's coverage from 2020-01-01
-onward -- the entire 2020-2022 window this round's B4 falsification test
+through the end of this round's non-holdout window (2022-12-31) -- roughly
+three of the full ~3.8-year `eth_replication` evaluation window's years
 (the full pre-`OOS_START` ETH frame, per `compare()`'s own
-`ETH_SLICE_NAME` convention) reads -- with over nine additional months of
-ETH history (2019-03-14 -> 2019-12-31) ahead of UNIVERSE_6's own start,
-which only helps `rolling_knn_distance_pooled`'s target-side window warm up
-earlier, never introduces any lookahead.
+`ETH_SLICE_NAME` convention, spans 2019-03-14 -> 2022-12-31). PRECISION,
+stated plainly: only the 2020-01-01 -> 2022-12-31 portion is genuinely
+POOLED (`rolling_knn_distance_pooled` finds non-empty pool windows there);
+the leading ~9.5 months (2019-03-14 -> 2019-12-31) predates UNIVERSE_6's
+own coverage and falls back to the single-asset (target-only) construction
+for that stretch only, exactly as R-109's own construction did throughout.
+This is still a fundamentally different, and far larger, overlap than
+R-109/R-112's own Bitfinex-sourced ETH series achieved (ZERO overlap,
+every single day) -- the pool now genuinely engages for the majority of
+the falsification window instead of never engaging at all.
 
 CHANGED, and ONLY this: the ETH data SOURCE (Bitfinex -> Coinbase spot).
 NOT changed, at all, from R-112 novel: the 5-feature panel

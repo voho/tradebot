@@ -489,8 +489,11 @@ def main() -> dict:
     print(f"\nETH (Coinbase spot, truncated < {OOS_START} -- THIS ROUND'S ONE CHANGE): "
           f"{len(eth):,} bars  {eth.index[0]} -> {eth.index[-1]}  (< {OOS_START})")
     print(f"  UNIVERSE_6 pool coverage starts 2020-01-01; ETH (Coinbase) starts "
-          f"{eth.index[0].date()} -- genuine overlap for the entire eth_replication window, "
-          f"unlike R-109/R-112's own Bitfinex-sourced ETH (ended 2019-12-31, zero overlap).")
+          f"{eth.index[0].date()} -- genuine pool overlap for 2020-01-01 -> {eth.index[-1].date()} "
+          f"(the majority of this ~3.8y eth_replication window; the leading ~9.5mo, "
+          f"2019-03-14->2019-12-31, predates UNIVERSE_6 and falls back to the single-asset "
+          f"construction for that stretch only), unlike R-109/R-112's own Bitfinex-sourced ETH "
+          f"(ended 2019-12-31, ZERO overlap with UNIVERSE_6, every single day).")
 
     bar = run_promotion_bar(primary_key, step0_rows, btc, eth, pool_dailies)
 
