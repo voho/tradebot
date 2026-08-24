@@ -315,6 +315,148 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-117 · 08-24 · NEGATIVE (both branches) — a Donchian-channel breakout ensemble (Zarattini, Pagani & Barbon 2025), a tenth regime-timing mechanism (conservative) and a SIZE-axis substitution of a structurally new detector family into v4's own vote slot (novel): the tenth mechanism to fail the Step-A detection-lag gate, and the first SIZE-axis substitution to be real-but-unanimously-worse rather than inert
+
+**Direction.** Off-backlog (still only B-06, unchanged since R-110; the
+ranked backlog remains otherwise empty per R-116's own re-ranking). A
+direction-finding pass (grep of `docs/LEDGER.md` for every prior
+regime-timing/SIZE-axis construction, plus a literature search) asked: does
+a Donchian-channel range-BREAKOUT detector — clears the recent N-day
+high/low envelope, a structurally different property of the price series
+than "distance from a rolling mean" — carry a genuinely different regime
+signal than `kelly_regime_v4`'s own 3-anchor mean-crossing vote? Motivated
+directly by Zarattini, Pagani & Barbon (2025, "Catching Crypto Trends: A
+Tactical Approach for Bitcoin and Altcoins," SSRN 5209907, posted April
+2025): an ensemble of Donchian-channel breakout models at several lookback
+periods, aggregated into one signal with volatility-based position sizing,
+measured on a 20-coin rotational crypto book since 2015 (net Sharpe > 1.5,
++10.8%/yr alpha vs BTC — motivating, not load-bearing: a different universe,
+rebalance frequency and cost model than this project's own). Donchian
+itself is the classical 1960s range-breakout rule, later the core of the
+Turtle Trading system (Dennis & Eckhardt). Attacks **regime-timing**
+(conservative — a tenth structurally distinct formal estimator, judged by
+the identical Step-A detection-lag gate R-82 through R-60 used) and **SIZE**
+(novel — a 27th+ construction, substituting a new detector FAMILY into the
+existing `frac` slot, `scale` left untouched per R-62). **Not a duplicate
+of:** R-01 (HMM) / R-82 (BOCPD) / R-83 (Kalman LLT) / R-85 (CSD) / R-86
+(transfer entropy) / R-96 (Hawkes) / R-98 (POT/GPD) / R-84 (vote-latch/
+volume modulation) / R-60 (CUSUM) — nine regime-timing mechanisms, all
+state-space, point-process, information-theoretic or extreme-value
+estimators computed on returns; Donchian is a price-range construct, tried
+here for the first time (confirmed by grep: no prior "donchian" mention
+anywhere in this file). R-105 (anchor-ladder ensemble): same SIZE-axis
+slot-substitution role, but varies the LOOKBACK of the SAME mean-crossing
+family; this round varies the DETECTOR FAMILY itself, holding it fixed at
+Donchian throughout — the flipped axis of variation. `hedge_experts`'s own
+registered Donchian expert: one single-lookback signal mixed via Hedge
+against nine unrelated signal types in an already-measured strategy; this
+round never touches `hedge_experts`, builds a Donchian-ONLY multi-lookback
+ensemble, and substitutes it into `kelly_regime_v4`'s own architecture.
+
+**What was done.** Shared, frozen infrastructure:
+`experiments/r117_shared.py` (a causal, latched `donchian_vote`/
+`donchian_ensemble_frac` primitive built only from `high`/`low`/`close`,
+zero new data; re-exports the established B1-B5 promotion-bar machinery
+from the r102→r105 chain and the Step-A detection-lag gate machinery —
+`STRESS_EPISODES`, `episode_window`, `nearest_transition`,
+`block_bootstrap_shifts` — from `r82_shared`, unchanged). Two parallel
+branches, each on its own disjoint file, neither committing.
+**Conservative** (`experiments/r117_conservative_donchian_gate.py`):
+Donchian ensemble at v4's own exact horizons (20, 40, 80 days) as the
+pre-registered PRIMARY cell, run through the identical Step-A gate every
+prior regime-timing round used — for each of the 6 dated historical BTC
+stress episodes, within a ±60-day window, LEAD = v4's own nearest downward
+vote transition minus the Donchian ensemble's nearest downward transition,
+in days; episode PASSES iff lead ≥ 0 AND lead ≥ the block-bootstrap null's
+median (500 draws, block=5d, seed=11701); decision rule (frozen): PASS
+requires ≥4-of-6 episodes at the primary cell, else STOP with NEGATIVE and
+no Step-B code. Two additional lookback sets, (10,20,40) and (40,60,80),
+computed as disclosed robustness context only, never overriding the primary
+verdict. **Novel** (`experiments/r117_novel_donchian_ensemble_size.py`): a
+5-member Donchian ensemble (10/20/40/60/80-day lookbacks, all ≤80 days so
+the shared 80-day `TargetStrategy` warmup covers every member) replaces
+`v4_vote_frac` in the `frac × scale` product — `scale` (v4's own
+conditional-vol-target factor) completely unchanged — pre-registered Step-0
+kill switch: proceed only if `r_sq < 0.98` against v4's own target path on
+BTC inner-train (i.e. not a near-exact relabeling); if it qualifies, the
+standard B1 (inner-val, gating) / B2 (drawdown, diagnostic only) / B3
+(plateau: primary + two alternative 4-member ensembles, gating) / B4 (ETH
+falsification, full pass required, gating) / B5 (0.40% fee tier, gating)
+promotion bar, identical machinery to every SIZE/ERR-axis round since
+R-89. **Configurations evaluated: 30 total** (18 conservative: 6 episodes ×
+3 lookback-set cells; 12 novel: 6 primary-cell `compare()` cells + 4 fresh
+B3 alternative-ensemble cells + 2 B5 fee-tier cells). A causal-truncation
+probe on the composed Donchian target ran first in both branches and
+passed before any headline number was trusted.
+
+**Result.** Conservative: PRIMARY cell (20,40,80) passes only **1 of 6**
+episodes (only the slow 2018 capitulation bottom, where it leads v4 by
+~40 days — largely because v4's own reaction there is itself unusually
+late — while it lags or ties v4 on the COVID crash, the 2021-11 top,
+Terra/Luna, and FTX), well short of the ≥4/6 bar. The robustness grid
+shows the identical shape: (10,20,40) scores 0/6, (40,60,80) scores 1/6
+(same single capitulation-bottom pass). **STOP per the frozen rule — no
+Step-B code was built.** Novel: Step-0 qualifies cleanly (r_sq=0.5999,
+well under the 0.98 threshold — the ensemble's target path is genuinely
+NOT a relabeling of v4's own, disagreeing in sign on 15.0% of inner-train
+bars, mean breakout-membership 0.57). Causal-truncation probe: PASS. B1
+fails on **both** markets (spot ΔSharpe −0.20 boot[−0.47,+0.27]; futures
+−0.31 boot[−0.54,+0.18] — both drawdown-worse too, +12.6pp/+13.5pp,
+risk-matched so the comparison is valid and the worsening is real). B3
+fails **unanimously**: all 6 cells across the primary 5-member ensemble and
+both alternative 4-member ensembles (spot and futures each) score
+ΔSharpe < 0 — not a majority-negative plateau but a clean sweep. B4
+partially passes (spot agrees in sign with BTC's own losing inner-val cell;
+futures flips sign) — full pass required, so FAIL. B5 fails (spot's sign
+flips between the standard and 0.40% fee tiers; futures alone shows no
+reversal, but of an already-losing cell). **VERDICT: NEGATIVE.** The
+operator independently re-ran the novel branch's script end-to-end and
+reproduced every printed number bit-for-bit (r_sq=0.5999, all six B3
+ΔSharpe values, all B1/B4/B5 cells, [105s] vs the branch's own [109s]).
+
+**Verdict.** **NEGATIVE, both branches.** One-line lesson: Donchian
+breakout is a genuinely distinct, non-collinear detector family from
+`kelly_regime_v4`'s own mean-crossing vote — it is not another instance of
+the "real but inert" pattern R-87/R-104/R-105 found — but it **loses** on
+both roles this round tested it in. As a regime-timing alarm it is the
+**tenth** mechanism (after HMM/BOCPD/Kalman LLT/CSD/transfer-entropy/
+Hawkes/POT-GPD/vote-latch-volume/CUSUM) to fail the identical Step-A
+detection-lag gate, by the same signature every predecessor showed: it can
+front-run a slow, grinding regime change (2018's capitulation) but lags or
+ties v4's own gate on every fast, sudden shock — a breakout is, by
+construction, a rarer and later event than a 1%-past-the-mean crossing, so
+this outcome sharpens rather than merely repeats the standing finding. As a
+full substitute for v4's own directional vote it is the **first**
+structurally-new-detector-family SIZE-axis substitution to be genuinely
+non-degenerate (unlike R-105's anchor-ladder ensemble, which stayed inside
+the same mean-crossing family) **and** decisively worse — 0 of 6 B3 cells
+positive, not a near-miss plateau — closing the "does a different classical
+trend-detector family beat v4's own construction outright" question with a
+clean negative rather than an ambiguous one. **Holdout counter: +0** on top
+of R-116's ~698 (running total unchanged at **~698**) — neither branch, nor
+the operator's independent bit-for-bit reproduction of the novel branch,
+ever read a bar dated 2023-01-01 or later on BTC or ETH; both branches'
+own `max timestamp read` lines report `2022-12-31 23:55:00+00:00`, and the
+conservative branch's pre-registered stop rule meant it never called
+`compare()`/`run_slice()`/`ev()` at all. Neither pre-registered decision
+rule moved after seeing any number. **Next step:** the ranked backlog
+remains empty of anything but **B-06** (forward paper-trading, already
+running unattended). A future session preferring a fresh mechanism search
+now has, in addition to R-116's own closing list: regime-timing closed at
+**10 of 10** structurally distinct mechanisms failing the identical Step-A
+gate (a tenth independent confirmation that this six-episode gate is
+unwinnable by any estimator computed from this project's own committed
+price history); and the "substitute a structurally new detector family
+into v4's own frac slot" line now at **2 of 2** (R-105 mean-crossing
+ensemble: real, inert; R-117 breakout ensemble: real, unanimously worse) —
+a future attempt on this line needs a detector family that is neither a
+mean-crossing variant nor a range-breakout variant to say anything new.
+The accumulating evidence across INFO (17)/SIZE (27+)/ERR (5 notions,
+12+ configurations)/regime-timing (10)/multi-asset (11) continues to point
+the same direction R-115/R-116 already stated: `kelly_regime_v4` is close
+to efficient with respect to the information and error control available
+from this project's own committed data.
+
 ### R-116 · 08-24 · NEGATIVE (both branches) — cross-ASSET breadth as a confirming/disagreement signal for `kelly_regime_v4`'s own vote: a seventeenth INFO-axis signal and a fifth ERR-axis notion of uncertainty, both fail on the same evidence the panel's own measured breadth predicted before either branch ran
 
 **Direction.** Off-backlog (still only B-06, unchanged since R-110; the
@@ -12144,6 +12286,35 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-24 after R-117.** Off-backlog (still only B-06, unchanged
+since R-110), a two-branch round tried a Donchian-channel range-breakout
+detector — the first price-range (as opposed to distance-from-mean)
+construction in this ledger — in two roles: as a tenth regime-timing
+mechanism (conservative, Step-A gate) and as a SIZE-axis substitution of a
+structurally new detector family into `kelly_regime_v4`'s own vote slot
+(novel). **Both branches NEGATIVE.** Conservative failed the identical
+4-of-6 detection-lag gate every prior regime-timing mechanism has failed
+(1/6 at the primary cell), closing that line at 10 of 10. Novel is the more
+informative result: unlike R-105's anchor-ladder ensemble (real but inert)
+this construction is real and non-degenerate (r_sq=0.60 against v4's own
+path, 15% sign-disagreement) yet **unanimously worse** across all 6 B3
+cells — the first "substitute a new detector family" attempt to fail
+decisively rather than ambiguously. **The ranked backlog remains empty of
+anything but B-06** (forward paper-trading, already running unattended). A
+future session preferring a fresh mechanism search now has: the
+single-asset axis's own closed lists (17 INFO-axis attempts, 27+ SIZE-axis
+attempts, ERR across five notions of uncertainty, **ten** regime-timing
+mechanisms, and now two structurally-new-detector-family SIZE substitutions
+both closed); the multi-asset panel's own closed list (eleven rounds, all
+NEGATIVE, plus R-116's cross-asset-feedback construction); or B-28's
+breadth clause (blocked on data this project cannot fetch or simulate).
+Absent a new idea clearing Step-0 on one of these, the accumulating
+evidence across every axis this project's own framework can construct from
+its committed data continues to point the same direction: `kelly_regime_v4`
+is close to efficient with respect to the information and error control
+available from OHLCV (plus the committed on-chain/macro/derivatives-
+positioning feeds) alone.
+
 **Re-ranked 08-24 after R-116.** Off-backlog (still only B-06, unchanged
 since R-110), a two-branch round tried the first CROSS-ASSET construction
 fed back into `kelly_regime_v4`'s own single-asset decision (as opposed to
@@ -14408,6 +14579,17 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-24 · ~698** — R-117: **+0** on top of R-116's ~698 (unchanged), both
+  branches. Conservative (`experiments/r117_conservative_donchian_gate.py`)
+  never called `compare()`/`run_slice()`/`ev()` at all — its pre-registered
+  stop rule (STOP if the primary cell scores <4/6 on the Step-A gate) fired
+  before any Step-B code could exist, so no holdout-adjacent path was even
+  reachable. Novel (`experiments/r117_novel_donchian_ensemble_size.py`)
+  restricts every load to `load_btc()`/`load_eth()`, both truncated below
+  `OOS_START` and `assert_no_holdout`-guarded; its own printed max-timestamp
+  line reads `2022-12-31 23:55:00+00:00` for both instruments, and the
+  operator's independent re-run reproduced this and every other printed
+  number bit-for-bit.
 - **08-24 · ~698** — R-116: **+19** on top of R-115's ~679, both branches,
   per this round's disclosed process deviation (see R-116's own ledger
   entry): like R-106 and unlike R-101–R-105/R-107–R-115, both branches read
