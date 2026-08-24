@@ -53,7 +53,9 @@ DEFAULT_PERIOD = "full"
 
 #: ``bootstrap.csv`` names a market by kind; the table names it by
 #: leverage. Exact, and one-way on purpose — see the module docstring.
-MARKET_ALIASES = {"spot": "spot", "futures": "futures_5x"}
+#: ``"portfolio"`` is the one multi-asset axis (backlog B-32): it carries no
+#: leverage variants, so it aliases to itself.
+MARKET_ALIASES = {"spot": "spot", "futures": "futures_5x", "portfolio": "portfolio"}
 
 #: Above this share of dead trailing days the benchmark is a corpse and the
 #: comparison against it is not a result. Same threshold the inference

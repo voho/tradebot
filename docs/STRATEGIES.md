@@ -635,3 +635,65 @@ every horizon from 1 to 5 days), but the *return* over the same sweep
 swings 3x between adjacent horizon values, and the measured 3.3-day
 default happens to sit near the in-sample best. Read these as a turnover
 and drawdown result, not a return result.
+
+---
+
+## Multi-asset strategies
+
+A separate axis from the twenty-five single-instrument strategies above:
+a bar-by-bar cross-asset allocator that decides across a panel jointly,
+from one shared cash/equity pool, rather than one instrument at a time.
+`tradebot.multiasset`'s composition adapter cannot express this (fixed
+capital splits decided before the run); `src/tradebot/multi_engine.py` and
+`src/tradebot/multi_strategy.py` (backlog **B-32**, closed by **R-107**)
+are the native engine and registration path this family needs, tracked
+separately in the README's own "Multi-asset strategies" section and in
+`reports/inference/bootstrap.csv` under the `portfolio` market rather than
+`spot`/`futures_5x`.
+
+### `xsmom_entry_band` — registered, NEGATIVE
+
+**What it is.** The first (and, as of R-107, only) registered multi-asset
+strategy: R-63's cross-sectional trend score, held under R-65's rank-buffer
+selection loop and R-68's own selected winner (an asymmetric entry band,
+`delta_in=0.080, delta_out=0.0` — a new entrant must clear a raised bar,
+an incumbent is never forced out early), traded across a six-instrument
+panel (BCH, LTC, ETC, DASH, LINK, XTZ, Coinbase 5m spot).
+
+**Why it is registered despite being NEGATIVE.** Five research rounds
+(R-63, R-65, R-67, R-68, R-72) built and refined this construction entirely
+inside `experiments/`, unable to enter the comparison table because no
+multi-asset registration path existed. R-107 built that path and needed a
+correctness check: does the new engine reproduce a result this project
+already trusts? It does, to full float precision (final balance, drawdown,
+every bootstrap interval, matched to R-68's own published numbers bit for
+bit). Registering it is that correctness check made permanent and visible,
+in the spirit of `minority_oracle` and `game_switch` — an instructive
+negative, not a promotion. **`further_work=False`** on R-68's own decision
+rule: it neither beats a volatility-matched hold nor a notional-matched one
+by an interval excluding zero.
+
+**Principles.** Moskowitz, Ooi & Pedersen (2012) time-series momentum,
+cross-sectionally selected and Kelly-scaled by `kelly_regime_v4`'s own
+conditional-volatility target (Bongaerts, Kang & van Dijk 2020); Gârleanu &
+Pedersen's (2013, 2016) aim-portfolio partial adjustment inherited from
+R-65; Constantinides (1986)/Davis & Norman (1990)'s transaction-cost
+no-trade band, generalized by R-68 into asymmetric entry/exit thresholds.
+Full lineage, citations and numbers: `docs/LEDGER.md` rounds R-63 through
+R-68 and R-107.
+
+**A same-round attempt to find a promotable candidate — also NEGATIVE.**
+R-107's novel branch tried replacing the equal-weight allocation across the
+eligible set with a correlation-aware risk-parity weighting (Maillard,
+Roncalli & Teiletche 2010, over a Ledoit & Wolf 2004-shrunk causal
+covariance), motivated by Baltas (2015) and Bruder & Roncalli (2012): this
+project's own R-63 measured the six-to-eight-instrument panel's mean
+pairwise correlation at 0.634 and its Grinold breadth at 1.47 of 8, and
+risk-parity is the literature's answer to exactly that. The mechanism's own
+predicted effect confirmed directly (realized diversification rose on 100%
+of inner-train bars) — but making it bind required widening the eligible
+set enough to dilute R-63's own cross-sectional selectivity, and the
+decisive battery failed hard as a result (D5 gross signal retention +0.061
+against a +0.3415 bar — the construction barely clears even at zero fees).
+Not registered — a NEGATIVE result without a table row, per the routine's
+usual default; full detail in `docs/LEDGER.md` R-107.

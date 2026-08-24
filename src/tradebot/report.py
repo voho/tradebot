@@ -584,6 +584,108 @@ def update_readme(all_metrics: list[Metrics], readme_path: str | Path,
     return True
 
 
+
+# ------------------------------------------------------- multi-asset (B-32)
+
+MULTIASSET_BEGIN = "<!-- multiasset:begin -->"
+MULTIASSET_END = "<!-- multiasset:end -->"
+#: Anchor the new section goes in front of when it has to be inserted for
+#: the first time. Purely a placement choice -- if this heading is ever
+#: renamed, `update_readme_multi_asset` falls back to appending at the end
+#: of the file rather than raising.
+_MULTIASSET_ANCHOR = "## Research routine"
+
+
+def multi_asset_table(rows: list[dict], out_dir: str | Path | None = None) -> str:
+    """One row per registered multi-asset strategy (backlog B-32).
+
+    Deliberately a SEPARATE table from :func:`matrix_table`: a multi-asset
+    row's "instrument" is a whole panel, not a market kind, so it is not a
+    column of that table and does not touch its schema. Each ``row`` is a
+    dict with ``name``, ``instruments``, ``description``, ``final_balance``,
+    ``start_balance``, ``max_drawdown_pct``, ``ew_final_balance`` (the
+    equal-weight-hold benchmark over the SAME instruments and window) and
+    ``period``.
+    """
+    if not rows:
+        return "_No multi-asset strategy is registered yet (backlog B-32)._"
+
+    header = ("| strategy | instruments | balance | vs EW hold | max DD | "
+              "description |")
+    sep = "|---|---|---|---|---|---|"
+    lines = [header, sep]
+    for r in sorted(rows, key=lambda r: r["final_balance"], reverse=True):
+        link = _source_path(r["name"], out_dir) if out_dir is not None else None
+        # multi-asset strategies live under a different registry/module
+        # tree than `_source_path` (built for `tradebot.strategies`)
+        # resolves, so fall back to a plain name when it can't find one.
+        label = f"[{r['name']}]({link})" if link else r["name"]
+        badge = "🟢" if r["final_balance"] > r["start_balance"] else "🔴"
+        vs_ew = r["final_balance"] / r["ew_final_balance"] - 1.0 if r["ew_final_balance"] else float("nan")
+        dd = f"{r['max_drawdown_pct']:.0f}%"
+        if r["max_drawdown_pct"] >= DEEP_DRAWDOWN_PCT:
+            dd += " ⚠️"
+        lines.append(
+            f"| {label} | {', '.join(r['instruments'])} | {badge} "
+            f"{_money(r['final_balance'])} | {vs_ew:+.1%} | {dd} | "
+            f"{r['description']} |"
+        )
+    lines.append("")
+    lines.append(
+        "_Bar-by-bar cross-asset allocators (backlog B-32): one shared "
+        "cash/equity pool across the whole panel, decided at every bar's "
+        "close and filled at the next bar's open — the native multi-"
+        "instrument engine `tradebot.multiasset`'s own docstring says the "
+        "single-asset composition path cannot express. **spot only** "
+        "(`portfolio` market, 0.10% taker); a levered multi-asset book is "
+        "out of scope until a shared-margin engine exists. \"vs EW hold\" "
+        "is the final balance against an equal-weight buy-and-hold of the "
+        "SAME instruments over the SAME window — the panel's own passive "
+        "benchmark, not `buy_and_hold` BTC. A row here being registered is "
+        "not a promotion claim by itself; see the row's own ledger entry "
+        "for its verdict._"
+    )
+    return "\n".join(lines)
+
+
+def update_readme_multi_asset(rows: list[dict], readme_path: str | Path,
+                              period: str = "") -> bool:
+    """Splice the "## Multi-asset strategies" section into the README.
+
+    Additive and independent of :func:`update_readme`: if ``rows`` is empty
+    (no multi-asset strategy registered) this makes no change at all, so a
+    single-asset-only run of `tradebot run` is byte-for-byte unaffected.
+    Inserts the section (heading + markers) before the first run that has
+    something to show; every run after that replaces only the text between
+    the markers, exactly like :func:`update_readme` does for the comparison
+    table.
+    """
+    if not rows:
+        return False
+    readme_path = Path(readme_path)
+    if not readme_path.exists():
+        return False
+    text = readme_path.read_text()
+
+    head = f"_Period: {period}_\n\n" if period else ""
+    table = multi_asset_table(rows, out_dir=readme_path.parent)
+    block = f"{MULTIASSET_BEGIN}\n{head}{table}\n{MULTIASSET_END}"
+
+    if MULTIASSET_BEGIN in text and MULTIASSET_END in text:
+        before = text.split(MULTIASSET_BEGIN)[0]
+        after = text.split(MULTIASSET_END)[1]
+        readme_path.write_text(f"{before}{block}{after}")
+        return True
+
+    section = f"## Multi-asset strategies\n\n{block}\n\n"
+    if _MULTIASSET_ANCHOR in text:
+        before, after = text.split(_MULTIASSET_ANCHOR, 1)
+        readme_path.write_text(f"{before}{section}{_MULTIASSET_ANCHOR}{after}")
+    else:
+        readme_path.write_text(text.rstrip("\n") + "\n\n" + section)
+    return True
+
+
 def comparison_report(all_metrics: list[Metrics], out_dir: str | Path,
                       period: str = "",
                       evidence: dict[tuple[str, str], Evidence] | None = None,

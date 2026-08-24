@@ -315,6 +315,216 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-107 · 08-24 · B-32 ANSWERED (conservative) / NEGATIVE (novel) — the multi-asset registration path five rounds needed now exists and reproduces R-68's own numbers bit-for-bit; a correlation-aware risk-parity reweighting of the same cross-sectional signal raises realized diversification exactly as its own literature predicts, then fails hard because giving it room to operate gutted the signal's selectivity
+
+**Direction.** Backlog item **B-32** ("multi-asset strategy registration, so
+that a bar-by-bar cross-asset allocator can enter the comparison table at
+all") is the only ranked, unblocked backlog item and has been named in
+every re-ranking since R-65 without being worked directly — 30+ consecutive
+rounds instead ran off-backlog literature-prompted mechanism searches on
+the single-asset axis. `tradebot.multiasset`'s own module docstring names
+the exact gap: its adapter composes independent single-asset legs at a
+capital split fixed *before* the run and "cannot express a strategy that
+needs a shared risk or leverage budget decided *during* the run... That
+family needs a native multi-instrument engine." Five rounds (R-63, R-65,
+R-67, R-68, R-72) built exactly that family — a causal, bar-by-bar
+cross-sectional trend allocator across an 8-instrument panel (BTC, ETH,
+BCH, LTC, ETC, DASH, LINK, XTZ) — entirely inside `experiments/`, using a
+bespoke simulation loop, because no registration path existed. R-65 is
+quoted in B-32's own filing as "the first round to produce a candidate
+whose numbers would have been worth a row... and which the table therefore
+cannot hold." **Conservative branch works B-32 directly**: build the
+registration path, and use it to register the most-refined frozen
+candidate from that thread (R-68's `ENTRY_ONLY, δ=0.080`) as the path's own
+correctness check, reproducing R-68's already-published, already-NEGATIVE
+numbers exactly — not a promotion attempt. **Novel branch** asks a question
+no round on that five-round thread ever asked: R-63 measured the panel's
+own correlation structure directly (mean pairwise daily-return correlation
+**0.634**, Grinold breadth **1.47 of 8**) and every one of R-63/65/67/68's
+constructions retuned execution speed/eligibility timing on top of an
+*equal-weight* allocation across the eligible set — none ever changed the
+allocation step itself to account for that correlation. Baltas (2015),
+"Trend-Following, Risk-Parity and the Influence of Correlations," and
+Bruder & Roncalli (2012), "Managing Risk Exposures Using the Risk
+Budgeting Approach" (SSRN), find risk-parity weighting (which incorporates
+pairwise correlation, downweighting an asset highly correlated with the
+rest of the selected set) beats naive equal/inverse-volatility weighting
+specifically when the traded universe is meaningfully correlated —
+directly on point for this panel's own measured 0.634. **Attacks**: the
+methodology gap (ERR, per B-32's own filed classification) for the
+conservative branch; the panel's measured breadth shortfall (INFO/COST,
+the same constraint R-63/R-65/R-67/R-68 worked, per a genuinely different
+mechanism) for the novel branch. **Not a duplicate of** R-63/65/67/68/72
+(none changed the weight-allocation step away from equal-weight; R-72 was
+a methodology audit of the panel's holdout-counting convention, not a
+mechanism change) or any SIZE/ERR-axis round on the single-asset vote
+(this operates on the 8-instrument panel, not `kelly_regime_v4`'s
+single-BTC vote).
+
+**What was done.** Two branches, disjoint files, dispatched in parallel per
+`docs/ROUTINE.md`'s parallelism section; the operator built no shared
+experiment module this round (the conservative branch's own deliverable
+*is* the shared infrastructure).
+
+*Conservative* (`src/tradebot/multi_engine.py`, `src/tradebot/multi_strategy.py`,
+`src/tradebot/multi_strategies/xsmom_entry_band.py`,
+`tests/test_multi_asset_registration.py`, plus wiring into
+`src/tradebot/run.py`, `scripts/inference.py`, `src/tradebot/evidence.py`,
+`tests/test_evidence.py`, `README.md`). Ported (not imported —
+`experiments/` is never imported from `src/tradebot/` anywhere in this
+repo) `experiments/r63_shared.py`'s `simulate_portfolio`/`align_frames`/
+`load_universe` into production as a clean, type-hinted `MultiAssetStrategy`
+ABC (`build_targets(aligned) -> pd.DataFrame`, causal by contract) plus a
+separate `@register_multi_asset` registry, auto-discovered from
+`src/tradebot/multi_strategies/`, entirely independent of the single-asset
+`_REGISTRY`. Wired additively into `tradebot run` (a new README
+"Multi-asset strategies" section, a no-op when nothing is registered),
+`scripts/inference.py` (a new `"portfolio"` market axis feeding the *same*
+`daily_returns.csv.gz`/`bootstrap.csv` files and bootstrap primitives the
+single-asset axis uses, merged by key rather than overwriting), and
+`tests/test_evidence.py` (an analogous CI-enforced interval requirement).
+Registered `xsmom_entry_band`: R-63's cross-sectional score and conditional
+volatility scale, R-65's frozen `k=1, buffer=0.05, hold_days=1`, and R-68's
+selected winner (`ENTRY_ONLY, delta_in=0.080, delta_out=0.0`) on
+`UNIVERSE_6`, ported parameter-for-parameter with each block's exact source
+line cited in-file. **Correctness bar, not a new search**: reproduce R-68's
+own already-published D1/D2/D5/scramble numbers through the new engine to
+verify the port, not to re-decide anything.
+
+*Novel* (`experiments/r107_shared.py`, `experiments/r107_novel_risk_parity.py`
+— new files only, disjoint from the conservative branch's, confirmed by
+`git status`). Pre-registered per `docs/ROUTINE.md` Step 2/4: **falsification
+test** — does the risk-parity construction, measured directly on inner-train,
+raise a portfolio-level diversification statistic (DR², Choueifaty-Coignard's
+analogue of Grinold breadth) relative to R-63's own equal-weight
+construction on the *identical* eligible-asset sequence — if not, stop
+before spending a decisive read. **Decision rule**, frozen before running
+it: reuse `r63_shared.py`'s own `d1_pass`/`d2_pass`/`d3_pass`/`further_work`
+unmodified on the standard `W_FULL6`/`UNIVERSE_6` decisive cell vs.
+`VOLMATCH_HOLD` (D1) and the notional-matched hold (D2), `W_VAL`/`UNIVERSE_8`
+(D3), D5 (gross signal-retention at 0bps) and the scramble control, at both
+the 0.10% and 0.40% fee tiers — identical machinery to R-63/65/67/68, for
+direct comparability. Mechanism: keep R-63's eligibility/score/vol-scale
+unmodified; replace the equal-weight split across the eligible set with
+Maillard, Roncalli & Teiletche's (2010) equal-risk-contribution weights,
+solved by cyclical coordinate descent over a causal daily rolling covariance
+(60-day window, 30-day minimum, day *D*'s own row strictly excluded from
+its own lookup value) shrunk toward Ledoit & Wolf's (2004) constant-correlation
+target (shrinkage intensity λ swept {0, 0.5, 1}). The rank cap `k` (fixed at
+1 by R-65 and inherited unchanged through R-68) had to be swept over
+{2, 3, 4, 6} because risk-parity is mathematically forced identical to
+equal-weight at k=1 (verified as an exact identity) — disclosed at length
+as the reason this is a genuine allocation-mechanism test and not a
+re-tuning of the signal. **Configs evaluated: 24** parameter-search trials
+(12 (k,λ) points × 2 selection windows, the project's DSR-relevant count)
+plus 170 total portfolio backtests including checks/scramble/benchmarks
+(`r63_shared.config_count()`), against the conservative branch's **0** net
+new trials (a pure reproduction of one already-frozen, already-counted
+cell).
+
+**Result.**
+
+*Conservative.* Full test suite: **516 passed** (508 baseline + 8 new),
+independently re-run by the operator from a clean shell, matching the
+branch's own report exactly. `git diff --stat -- src/tradebot/strategies/
+src/tradebot/registry.py src/tradebot/strategy.py` is empty — the
+single-asset path is provably untouched. R-68 reproduction: **bit-identical
+to full float precision on every statistic checked** — final balance
+6533.706771810798, max DD 75.03027378053862%, growth diff vs
+`VOLMATCH_HOLD` +1.0662072063394823 [−2.133924, +4.302950], DD diff
+−9.53902219795809pp [−26.159617, +18.053436], D5 gross growth diff
+1.3105045286330879, growth diff vs `MATCHED_HOLD` 0.9272591378159367,
+`EW_HOLD` final balance 1456.938169497219. Applying `r68_shared.py`'s own
+decision functions to the new-infra numbers: **D1 FAIL** (interval does not
+exclude zero), **D2 FAIL** (interval does not exclude zero), **D5 PASS**
+(3.8x the bar), **scramble SURVIVED** (0/10 seeds beat it), a supplementary
+D3-shaped check on `UNIVERSE_6` (not a bit-identical reproduction of R-68's
+own `UNIVERSE_8` D3 cell, disclosed as such) **FAIL** —
+**`further_work=False`**, matching R-68's own verdict exactly, which is
+the expected and desired outcome of a correctness check, not a surprise.
+Registered in a new README "Multi-asset strategies" section, explicitly
+labeled "a row here being registered is not a promotion claim by itself."
+Independent operator review of `multi_engine.py`/`multi_strategy.py`/
+`xsmom_entry_band.py`: causal-by-construction alignment (forward-fill only
+ever copies a past bar forward), the warm-then-slice padding pattern
+matches `experiments/r63_novel_xsmom_rank.py`'s own convention, the
+README/`inference.py`/`test_evidence.py` wiring is additive and no-ops
+cleanly when nothing is registered — no defect found.
+
+*Novel.* Falsification test on inner-train, frozen config `k=6, λ=1.0`
+(selected on `W_VAL`, growth −0.64 vs. −0.84 to −0.94 for k∈{2,3,4}):
+mean DR² **1.3522** for risk-parity vs. **1.3457** for equal-weight on the
+identical eligible-asset sequence (support match verified bit-for-bit),
+risk-parity ahead on **100% of 140,462 bars** — **PASSED**, though the
+margin is tiny relative to R-63's own measured panel ceiling (1.47 of 8 /
+1.41 of 6), so the branch proceeded to the decisive battery per the frozen
+rule rather than treating a technical pass as sufficient. Decisive battery,
+**all gates FAIL, not narrowly**: D1 (growth vs. `VOLMATCH_HOLD`) −2.859
+[−4.18, −1.62]; D2 (drawdown) +41.28pp [+14.6, +59.9]; D3 (`W_VAL`) FAIL;
+D4 (0.40% fee vs. `EW_HOLD`) $0.02 vs. $1,453.94; D5 (gross signal
+retention, bar +0.3415) **+0.061**, the single most informative number —
+even fee-free, this construction barely beats its own risk-matched
+benchmark, far below R-63/65/67/68's own frictionless edges (+0.68 to
++2.02). Scramble control survives only weakly (real −2.859 vs. p90 −2.920
+— both catastrophically negative, "beating" ten scrambles inside a shared
+collapse). Exposure check clean (`VOLMATCH_HOLD` matched: candidate vol
+0.351 vs. benchmark 0.351); mean total notional 0.316, materially lower
+than R-63/65/67/68's own 0.525 — expected and disclosed, a structural
+consequence of `k=6` vs. `k=1`'s different `m/k` ratio, not an artifact,
+since the auto-matching benchmarks are computed from each candidate's own
+realized notional/vol. **`further_work(d1=False, d2=False, d3=False,
+d5=False, scramble=True) = False`.** The branch's own diagnosis, and the
+round's most reusable finding: choosing `k=6` to give risk-parity enough
+assets to matter forced a diffuse "hold everyone with a positive score"
+basket that independently collapsed most of R-63's own cross-sectional
+*selectivity* (the top-ranked-only construction the signal was actually
+priced on) — a genuine, disclosed tension between "let the allocation
+mechanism operate on enough assets to matter" and "keep the underlying
+ranking signal intact" that no prior round on this axis (all of which held
+`k` fixed) had reason to encounter. `pytest tests/test_causality_strict.py`:
+51 passed, independently confirmed clean of interference from the
+concurrent conservative branch's edits to `src/tradebot/`. Operator
+independently re-derived the ERC solver's first-order condition (Maillard-
+Roncalli-Teiletche's quadratic root formula checks out algebraically) and
+confirmed the causal covariance lookup strictly excludes day *D*'s own row
+from its own lookup value — no lookahead found.
+
+**Verdict.** **Conservative: ANSWERED (B-32 closed).** The multi-asset
+registration path this project has needed since R-65 now exists, is
+tested (8 new tests, 516 total passing), reproduces a known result to full
+float precision, and touches zero single-asset code — the cheapest,
+lowest-risk way to validate new infrastructure is to make it reproduce
+something already known, and that is what this round did rather than
+chasing a fresh promotion. **Novel: NEGATIVE.** One-line lesson: a
+literature-predicted portfolio-construction improvement (risk-parity raises
+realized diversification, exactly as Baltas 2015/Bruder & Roncalli 2012
+predict, confirmed directly and non-degenerately on this panel) can still
+fail to help when realizing it requires trading away the thing that was
+actually carrying the edge — the project's now-familiar "real but
+insufficient/harmful" pattern (R-87, R-104, R-106) extended for the first
+time to portfolio construction rather than a discount/brake on an existing
+signal. **Holdout counter: +0** — both branches restricted every read to
+`W_TRAIN`/`W_VAL`/`W_FULL6` (the conservative branch's `W_FULL6` reads are
+re-reads of R-68's own already-`+0`-counted decision cell, per R-63's
+established convention that the reserved BTC/ETH 2023+ holdout, not the U6
+panel, is what that convention protects; `W_HOLD`/`OOS_START` is never
+imported or read anywhere in either branch's new files, grep-confirmed) —
+running program-level total stays **~679** (R-106's figure, unchanged); see
+the bullet added below in
+[Holdout consultations to date](#holdout-consultations-to-date). Neither
+branch's decision rule moved after seeing any number. **Next step:** B-32
+is closed; a future session extending the multi-asset axis has a
+registration path to use, but nothing on it is promotable yet. The novel
+branch's own honest follow-on, named but not filed as a new item: does a
+milder rank cap (k=2 or k=3, where the falsification margin was smaller
+but the signal's own selectivity survives more intact) or a smoothed/soft
+risk-parity blend (rather than a hard top-k eligibility gate feeding a
+hard risk-parity solve) resolve the disclosed tension — untested, and not
+assumed promising given the falsification margin was already thin at every
+k tried. **B-32 is no longer on the backlog**; the ranked list is empty of
+anything but the same standing methodology items (B-40, B-42) it held
+before this round.
+
 ### R-106 · 08-24 · NEGATIVE (both branches) — a fifth ERR-axis attempt, the first on cross-MODEL-CLASS disagreement: a linear cross-sectional-stddev brake across four independent regime detectors (BOCPD/Kalman/CSD/Hawkes) is real but broadly harmful, and a Shannon-entropy brake over the same panel is structurally distinct but inert on the episodes that matter — both fail B1
 
 **Direction.** Round R-106 tried a fifth ERR-axis construction and the first keyed
@@ -10934,6 +11144,39 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-24 after R-107, and this is the round that finally works
+B-32 instead of re-ranking around it.** After 30+ consecutive rounds
+naming B-32 as the only ranked, unblocked item and choosing an off-backlog
+mechanism search anyway, this round worked it directly. **B-32 is now
+CLOSED, ANSWERED**: a native multi-asset registration path
+(`src/tradebot/multi_engine.py`/`multi_strategy.py`, a separate registry
+under `src/tradebot/multi_strategies/`, additive wiring into `tradebot
+run`/`scripts/inference.py`/`tests/test_evidence.py`) exists, is tested
+(516 passing), and reproduces R-68's own already-published numbers to full
+float precision — `further_work=False`, the same verdict R-68 already
+reached, unchanged by registration. A parallel novel branch tried to find
+a *promotable* candidate for the new path — correlation-aware risk-parity
+weighting (Maillard-Roncalli-Teiletche 2010; Baltas 2015; Bruder & Roncalli
+2012) replacing the equal-weight allocation R-63/65/67/68 never varied —
+and failed for a genuinely new, disclosed reason: giving risk-parity room
+to operate (a wider rank cap) gutted the underlying signal's own
+selectivity, even though the risk-parity mechanism's own literature-
+predicted effect (raised realized diversification) was confirmed directly
+and non-degenerately. **The ranked backlog is now empty of anything but
+the two standing OPEN methodology items, B-40 and B-42** (both filed by
+R-89, neither touched since). A session preferring a fresh mechanism
+search now has the multi-asset axis genuinely open for the first time —
+its own registration path exists and a milder rank cap or a soft
+risk-parity blend (named, not filed, by R-107) is untested — alongside
+everything R-106's own closing line already named unexhausted on the
+single-asset axis (an ERR-axis construction keyed on neither sampling
+significance, within-family specification disagreement, nor cross-model-
+class disagreement; a SIZE-axis construction that does not collapse to a
+low, roughly-constant exposure fraction relative to v4; a data channel
+this project cannot construct from its own committed files or fetchable
+free sources at all; or a regime-timing construction with no basis in
+common with the nine already closed).
+
 **Re-ranked 08-24 after R-106.** An off-backlog, literature-prompted
 two-branch round (same posture as R-73–R-105 — the ranked list holds only
 B-32, pure infrastructure) tried a fifth ERR-axis construction and the first
@@ -12715,7 +12958,7 @@ which only forward paper trading can supply.
 | **B-40** | **State-dependence of the horizon** — the third of the three axes Levine & Pedersen (2016) leave open on a single instrument, and the one R-89 did not take. Goulding, Harvey & Mazzoleni (2023), "Momentum turning points", *Journal of Financial Economics* 149, 378–406, define four states from the intersection of a slow and a fast signal (Bull = both trailing returns ≥0; Correction = slow ≥0, fast <0; Bear = both <0; Rebound = slow <0, fast ≥0) and re-set the slow/fast blend weight after observing a break. Rare among this project's candidate sources in that the headline result is a **single time series** (the US market index), not a panel. Test the sharpest sub-claim first, before building anything: is BTC's conditional mean return in the Bear state (80d<0 AND 7d<0) significantly negative on 2017–2022, and does the sign hold after? | SIZE, N≈3 | **OPEN** | Filed by R-89. **Read the honest magnitude with it**: the published dynamic blend is ~0.52 vs 0.51 gross Sharpe (1969–2018), and an independent practitioner replication net of costs found both variants *lost* ~1%/yr and ranked poorly. Treat the mechanism as real and the effect as approximately zero — which makes this a cheap null to document, not a promotion candidate. Structurally immune to the six-episode detection-lag gate that killed R-82/83/85/86: the state is a deterministic function of two observable signal signs, known at bar close with zero lag, with no hidden state to infer. Main risk named in advance: v4's vote is already *latched*, which is a crude turning-point handler, so the Correction/Rebound states may be entirely absorbed by the existing latch. |
 | ~~B-41~~ | ~~**Path-dependent exit** — a trailing ATR ratchet with a principled re-arm, replacing "hold until the anchors flip". Sepp & Lucic (2026), arXiv:2607.19497, formalise the "American" trend system; Han, Zhou & Zhu (SSRN 2407199) find a fixed stop cuts momentum's worst month roughly in half; Hsieh (2023), arXiv:2303.02613, supplies the restart-mechanism concept~~ | COST, SIZE | **DONE → R-90, ANSWERED (NEGATIVE, both branches)** | Filed by R-89. Tried both ways named in the original filing: a literal fixed-percentage stop with instant restart (conservative — the exact naive case Hsieh's paper motivates a fix for) and an ATR-scaled stop with a reclaim-gated, cooldown-confirmed restart (novel — Hsieh's stated concept, not his unseen exact formula). Both confirm, rather than merely fail to refute, the main risk named in this row before any code: the conservative branch's own finalist has an 80% whipsaw rate on its inner-train stop-outs with a negative point estimate on that same cell; the novel branch's stricter restart drops the whipsaw rate to 0% of *events* only by collapsing to near-zero exposure instead (0.00–0.30 of v4's), reproducing Hsieh's own named failure mode (permanent de-risking) rather than curing it, and separately whipsaws on **100%** of the re-entries it does allow — mechanically near-guaranteed once a reclaim gate shares its own inequality with the whipsaw definition, a reusable finding for any future round pairing the two. Not reopened; a materially looser reclaim condition (a fractional retracement rather than the exact exit price) is a different, untested question. |
 | **B-42** | **Derive the anchor span instead of searching it.** Sepp & Lucic (2026), arXiv:2607.19497, give a closed-form Sharpe for a trend system under any causal linear process plus a net-Sharpe-under-proportional-cost correction; Grebenkov & Serror (2014), *Physica A* 394, 288–303, give the closed-form P&L distribution for an EMA trend system; Valeyre (2025), arXiv:2504.10914, fits that Sharpe formula to 70 futures at **R² = 0.98**, recovering λ = 1/180 ± 17 days and an optimal η ≈ 1/112 business days. Fit BTC's own return autocorrelation on 2017–2022, plug into the closed form, and compare the derived span against v4's shipped 20/40/80 | N≈3, COST | **OPEN** | Filed by R-89. Not a duplicate of R-06/R-07 (empirical ladder sweeps), R-40 (bagging the ladder) or R-45 (walk-forward re-estimation / minimax reselection): all four *search* for a span in backtest space; this derives one from a fitted generative model of the instrument and produces a falsifiable point prediction rather than a distribution over spans. Two named ways it ends cheaply, both of which are still results: BTC's daily ACF is small and noisy, so the implied span may be unstable across subsamples; and Sepp & Lucic's own theory says an **interior** cost-optimal span exists only under ARFIMA long-memory dynamics — if BTC fits short-memory AR(1), the answer is "as slow as you can stand", which is a one-line conclusion rather than an edge. Also worth pricing against their reported **≈37–41bps span-invariant break-even**, against this project's 20bps spot round trip. |
-| **B-32** | Multi-asset strategy **registration**, so that a bar-by-bar cross-asset allocator can enter the comparison table at all. R-49/B-17 built the "can it be done" infrastructure and its own docstring says it cannot express this shape; R-65 is the first round to produce a candidate whose numbers would have been worth a row (net +0.589 vs a volatility-matched hold at 0.19 turnover/day, $1,000 → $5,043) and which the table therefore cannot hold | ERR (methodology gap) | **OPEN** | Filed by R-65, promoted from B-17's deferred half. Until this exists, every result on the cross-sectional axis is confined to `experiments/` and the ledger, and cannot carry a measured interval in `reports/inference/bootstrap.csv` beside the single-asset rows — the exact asymmetry R-30 built the interval requirement to prevent. Not urgent while every candidate fails its interval anyway; it becomes blocking the moment one does not. |
+| ~~B-32~~ | ~~Multi-asset strategy **registration**, so that a bar-by-bar cross-asset allocator can enter the comparison table at all~~ | ERR (methodology gap) | **DONE → R-107, ANSWERED** | Filed by R-65, promoted from B-17's deferred half. A native `MultiAssetStrategy` engine (`src/tradebot/multi_engine.py`/`multi_strategy.py`), a separate registry auto-discovered from `src/tradebot/multi_strategies/`, and additive wiring into `tradebot run`/`scripts/inference.py`/`tests/test_evidence.py` now exist, tested (8 new tests, 516 total passing) and reproduce R-68's own already-published numbers to full float precision as the correctness check. `xsmom_entry_band` (R-68's `ENTRY_ONLY, δ=0.080`) is registered as B-32's first candidate, `further_work=False` — the same NEGATIVE verdict R-68 already reached, unchanged by registration, explicitly labeled in the README as not a promotion claim. Zero touches to the single-asset registry/strategy/strategies path. A same-round novel attempt to find a *promotable* candidate for the new path (correlation-aware risk-parity weighting) also failed — see R-107 in section B — so the path exists and works but nothing on it clears the bar yet. |
 | **B-28** | Reopen "more instruments" only against a universe whose **breadth** — not whose asset count — clears the bar R-63 measured: mean pairwise daily-return correlation materially below 0.634, or a Grinold equal-correlation breadth materially above 1.47, or a holding period long enough that the 2.86 leader-changes-per-day that cost the novel arm 8.02 log units stops being the binding cost. R-63 established that the cross-sectional signal here is real and merely unaffordable, so the axis is closed for this data rather than on principle | INFO, N≈3 | **HALF-CLOSED → R-65**; breadth clause still blocked on data this repo does not have | Filed by R-63. **Its holding-period clause is answered: R-65 ran it and the value/cost curves cross** — the affordable window is turnover 0.06–0.33/day, holding 1.4–5 days, and at a derived trading rate the same signal costs 0.43 log units instead of 8.02 while its frictionless edge rises. Still NEGATIVE on the interval. The **breadth** clause is untouched and remains blocked. Not actionable from inside a session today: the eight committed instruments are the universe, and R-63 measured them at 1.47 effective bets. Reopening needs either genuinely less-correlated instruments (a different asset class, which this project cannot fetch or simulate) or a lower-frequency bar series that would cut the leader-change rate — note that this project's entire dataset is 5-minute bars, so the second is a data-acquisition task, not a strategy task. Recorded so the idea is not re-tried blind on the same eight assets, which is exactly what section C exists to prevent. |
 | ~~B-01~~ | ~~E-process regime detection with unified Kelly sizing~~ | ERR, N≈3 | **DONE → R-28**, qualified by R-31 | NEGATIVE on the promotion bar. It read as the strongest risk result in the project — 0 of 40 windows deeper than the incumbent — until B-11 compared the two at equal risk and found that number was about exposure, not about the gate. (R-26's null round listed this as untried; R-28 is the round that actually ran it.) |
 | ~~B-04~~ | ~~Purged CV, deflated Sharpe, block-bootstrap CIs on every headline~~ | ERR | **DONE → R-29** | The guess was right: 10 of 96 adjacent pairs distinguishable, none of them in the top eight. Also closes R-25. `tradebot.inference` is now a permanent module with 27 tests; step 4 of the routine can be mechanical from here. |
@@ -12810,6 +13053,22 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-24 · ~679** — R-107: **+0** on top of R-106's ~679 (unchanged), both
+  branches. Conservative (`src/tradebot/multi_strategies/xsmom_entry_band.py`
+  via the new `run_multi_asset_backtest`) re-reads exactly R-68's own
+  already-`+0`-counted `W_FULL6`/`UNIVERSE_6` decision cell to reproduce its
+  published numbers — a re-read of an already-counted consultation, not a
+  new one, per R-63's established convention that the reserved BTC/ETH
+  2023+ holdout, not the U6 panel, is what the tally protects; a
+  supplementary `W_VAL` check is pre-2023 and free by the same convention.
+  Novel (`experiments/r107_novel_risk_parity.py`) restricted every read to
+  `W_TRAIN`/`W_VAL`/`W_FULL6`; `W_HOLD`/`OOS_START` is never imported or
+  read anywhere in either branch's new files (grep-confirmed). The operator
+  independently re-ran the full test suite (516 passed) and spot-checked
+  both branches' core machinery (the ERC solver's first-order condition,
+  the causal covariance lookup's exclusion of its own day's row, the
+  `multi_engine.py`/`multi_strategy.py` alignment/warmup wiring) without
+  finding a defect.
 - **08-24 · ~679** — R-106: **+42** on top of R-105's ~637, both branches,
   per this round's disclosed process deviation (see R-106's own ledger
   entry): unlike R-101–R-105, both branches ran the full holdout checklist

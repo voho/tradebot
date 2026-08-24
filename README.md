@@ -230,6 +230,18 @@ ideas being re-tried blind. Explore variants with
 `walkforward`) rather than by editing a registered strategy's defaults,
 so the comparison table stays a stable record.
 
+## Multi-asset strategies
+
+<!-- multiasset:begin -->
+_Period: 2020-04-01 to last bar_
+
+| strategy | instruments | balance | vs EW hold | max DD | description |
+|---|---|---|---|---|---|
+| xsmom_entry_band | BCH, LTC, ETC, DASH, LINK, XTZ | 🟢 $6,534 | +348.5% | 77% ⚠️ | R-63's cross-sectional trend score under R-68's asymmetric entry band (delta_in=0.080); NEGATIVE (R-68, D1/D2 both failed), registered as B-32's infrastructure correctness check. |
+
+_Bar-by-bar cross-asset allocators (backlog B-32): one shared cash/equity pool across the whole panel, decided at every bar's close and filled at the next bar's open — the native multi-instrument engine `tradebot.multiasset`'s own docstring says the single-asset composition path cannot express. **spot only** (`portfolio` market, 0.10% taker); a levered multi-asset book is out of scope until a shared-margin engine exists. "vs EW hold" is the final balance against an equal-weight buy-and-hold of the SAME instruments over the SAME window — the panel's own passive benchmark, not `buy_and_hold` BTC. A row here being registered is not a promotion claim by itself; see the row's own ledger entry for its verdict._
+<!-- multiasset:end -->
+
 ## Research routine
 
 New work follows one procedure, written down in

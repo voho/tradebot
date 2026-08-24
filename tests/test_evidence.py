@@ -293,3 +293,29 @@ def test_the_committed_intervals_carry_a_growth_bar():
     assert ev.growth_cell() != "—", (
         "bootstrap.csv predates the log-growth interval - re-run "
         "'python scripts/inference.py bootstrap'")
+
+
+def test_every_registered_multi_asset_strategy_has_a_measured_interval():
+    """The multi-asset analogue of
+    ``test_every_registered_strategy_has_a_measured_interval`` (backlog
+    B-32): no multi-asset strategy ships without a "portfolio"-market
+    interval either. Only the "full" period, unlike the single-asset rule
+    — this axis has never run a fresh 2023+ holdout account the way
+    ``scripts/inference.py``'s ``holdout`` period does for single-asset
+    strategies (see ``docs/LEDGER.md``'s "Holdout consultations to date"),
+    so there is no ``holdout``-period interval for it to carry.
+    """
+    from tradebot.multi_strategy import available_multi_asset_strategies
+
+    names = available_multi_asset_strategies()
+    if not names:
+        pytest.skip("no multi-asset strategy registered yet (backlog B-32)")
+
+    evidence = load_evidence(REPORTS, "full")
+    assert evidence, ("reports/inference/bootstrap.csv is missing or empty - "
+                      "run 'python scripts/inference.py'")
+    for name in names:
+        assert (name, "portfolio") in evidence, (
+            f"multi-asset strategy {name!r} has no full-period interval for "
+            "portfolio - run 'python scripts/inference.py' and commit "
+            "reports/inference/")

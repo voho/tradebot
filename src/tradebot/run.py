@@ -9,7 +9,15 @@ from pathlib import Path
 from tradebot import data as datamod
 from tradebot.broker import MarketSpec
 from tradebot.engine import BacktestResult, run_backtest
-from tradebot.metrics import Metrics, compute_metrics
+from tradebot.metrics import Metrics, compute_metrics, max_drawdown_pct as _bar_max_drawdown_pct
+from tradebot.multi_engine import align_frames as _ma_align_frames
+from tradebot.multi_engine import load_universe as _ma_load_universe
+from tradebot.multi_engine import static_hold_equity as _ma_static_hold_equity
+from tradebot.multi_strategy import (
+    DEFAULT_WINDOW as MULTI_ASSET_WINDOW,
+    available_multi_asset_strategies,
+    run_multi_asset_backtest,
+)
 from tradebot.registry import available_strategies, get_strategy
 from tradebot.evidence import load_evidence, ordering_counts
 from tradebot.report import (
@@ -18,7 +26,49 @@ from tradebot.report import (
     print_comparison,
     run_chart,
     update_readme,
+    update_readme_multi_asset,
 )
+
+
+def run_multi_asset_matrix(data_dir: Path, out_dir: Path,
+                           spot_fee: float = 0.001,
+                           balance: float = 1_000.0) -> list[dict]:
+    """Run every registered multi-asset strategy (backlog B-32), spot only.
+
+    Additive and independent of the single-asset matrix above: an empty
+    ``available_multi_asset_strategies()`` makes this a no-op, so a run
+    with no multi-asset strategy registered produces exactly the rows this
+    function always would have produced -- none -- and touches nothing
+    downstream. Futures are out of scope for this axis (see
+    ``tradebot.multi_engine``'s module docstring): a levered multi-asset
+    book needs a shared-margin/liquidation model this codebase does not
+    have.
+    """
+    strategies = available_multi_asset_strategies()
+    rows: list[dict] = []
+    market = MarketSpec.spot(fee_rate=spot_fee)
+    for name, cls in sorted(strategies.items()):
+        strategy = cls()
+        print(f"running multi-asset {name} on portfolio with {balance:,.0f} USD ...",
+              file=sys.stderr)
+        eq = run_multi_asset_backtest(strategy, data_dir, market, balance,
+                                      window=MULTI_ASSET_WINDOW)
+
+        frames = _ma_load_universe(strategy.instruments, data_dir)
+        aligned = _ma_align_frames(frames, MULTI_ASSET_WINDOW)
+        ew = _ma_static_hold_equity(aligned, strategy.instruments, market,
+                                    start_balance=balance)
+
+        rows.append({
+            "name": name,
+            "instruments": list(strategy.instruments),
+            "description": strategy.describe(),
+            "start_balance": balance,
+            "final_balance": float(eq.iloc[-1]),
+            "max_drawdown_pct": _bar_max_drawdown_pct(eq.to_numpy(dtype=float)),
+            "ew_final_balance": float(ew.iloc[-1]),
+        })
+    return rows
 
 
 @dataclass
@@ -126,4 +176,18 @@ def run_matrix(cfg: RunConfig) -> tuple[list[Metrics], list[BacktestResult]]:
     else:
         print("README comparison not updated (partial/synthetic/trimmed run)",
               file=sys.stderr)
+
+    # Multi-asset strategies (backlog B-32): additive, after and independent
+    # of everything above. Runs on the same "full, real-data, untrimmed"
+    # gate as the single-asset README update; a no-op when
+    # `available_multi_asset_strategies()` is empty, so single-asset
+    # behaviour is unaffected whether or not this step runs at all.
+    if full_run and real_data and not cfg.max_bars:
+        ma_rows = run_multi_asset_matrix(cfg.data_dir, cfg.out_dir,
+                                         spot_fee=cfg.spot_fee,
+                                         balance=cfg.balances[0])
+        if ma_rows and update_readme_multi_asset(ma_rows, cfg.readme,
+                                                  period=f"{MULTI_ASSET_WINDOW[0]} to last bar"):
+            print(f"updated multi-asset section in {cfg.readme}", file=sys.stderr)
+
     return all_metrics, all_results

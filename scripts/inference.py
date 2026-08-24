@@ -72,6 +72,15 @@ from tradebot.inference import (  # noqa: E402
     paired_bootstrap, probabilistic_sharpe_ratio, purged_train_mask,
     stationary_bootstrap_indices, total_log_return,
 )
+from tradebot.multi_engine import align_frames as ma_align_frames  # noqa: E402
+from tradebot.multi_engine import load_universe as ma_load_universe  # noqa: E402
+from tradebot.multi_engine import static_hold_equity as ma_static_hold_equity  # noqa: E402
+from tradebot.multi_strategy import (  # noqa: E402
+    DEFAULT_WINDOW as MULTI_ASSET_WINDOW,
+    PORTFOLIO_MARKET,
+    available_multi_asset_strategies,
+    run_multi_asset_backtest,
+)
 from tradebot.registry import available_strategies, get_strategy  # noqa: E402
 from tradebot.window import run_period  # noqa: E402
 
@@ -625,6 +634,175 @@ def charts(curves: dict[str, pd.DataFrame], strategies: list[str],
     return paths
 
 
+# --------------------------------------------------------- multi-asset (B-32)
+#
+# Everything above runs single-asset strategies on `MARKETS` (spot/futures)
+# and treats the whole comparison as one big `strategies x market` grid. A
+# multi-asset strategy (`tradebot.multi_strategy`) doesn't fit that grid --
+# it isn't "one instrument, two markets", it's a whole panel decided
+# jointly -- so it gets its own axis, `PORTFOLIO_MARKET = "portfolio"`,
+# rather than a third entry in `MARKETS`. The machinery it feeds is the
+# SAME ONE: the exact functions `bootstrap()` above calls
+# (`paired_bootstrap`, `annualized_sharpe`, `max_drawdown_from_returns`,
+# `total_log_return`, `stationary_bootstrap_indices`), at the same
+# `MEAN_BLOCK`/`N_BOOT`/`LEVEL` constants, feeding the same
+# `daily_returns.csv.gz` cache and the same `bootstrap.csv` table.
+# `bootstrap()`/`ordering()`/`deflated()` themselves are not called directly
+# for this axis: each overwrites its whole output file
+# (`_table` -> `frame.to_csv`), which would erase every single-asset row a
+# normal `all` run just wrote. `_append_table` below is the same shape as
+# `_table` but merges by key instead of truncating, which is what lets this
+# section share the real file rather than write a side one.
+#
+# Ordering/deflated/CPCV are not extended to this axis here -- out of scope
+# for this round; `bootstrap.csv` (which `tests/test_evidence.py`'s CI rule
+# reads) is what's required.
+
+
+def _append_table(rows: list[dict], name: str, key_cols: tuple[str, ...]) -> pd.DataFrame:
+    """Merge ``rows`` into ``{name}.csv`` by ``key_cols``, replacing any
+    existing row with a matching key and leaving every other row untouched.
+    """
+    path = OUT / f"{name}.csv"
+    new = pd.DataFrame(rows)
+    if path.exists():
+        old = pd.read_csv(path)
+        new_keys = set(new[list(key_cols)].apply(tuple, axis=1))
+        old = old[~old[list(key_cols)].apply(tuple, axis=1).isin(new_keys)]
+        merged = pd.concat([old, new], ignore_index=True, sort=False)
+    else:
+        merged = new
+    OUT.mkdir(parents=True, exist_ok=True)
+    merged.to_csv(path, index=False)
+    return merged
+
+
+def build_multi_curves(force: bool = False) -> pd.DataFrame | None:
+    """Daily returns for every registered multi-asset strategy, plus a
+    ``buy_and_hold|portfolio`` benchmark column: equal-weight hold of the
+    SAME instrument panel over the SAME window -- this axis's own standing
+    passive benchmark (there is no single BTC-scale counterpart to a
+    multi-instrument panel; see R-63's own ``EW_HOLD`` arm).
+
+    Merged into the SAME ``daily_returns.csv.gz`` file the single-asset
+    curves live in, "full" period only: this axis has never run a fresh
+    2023+ holdout account the way the single-asset ``holdout`` period does
+    (see ``docs/LEDGER.md``'s "Holdout consultations to date" -- reading
+    ``W_FULL6`` on ``U6``, which is what every multi-asset strategy is
+    evaluated on by default, is already accounted for there and is not a
+    new consultation).
+
+    Returns ``None`` when no multi-asset strategy is registered, so callers
+    can no-op cleanly -- the single-asset cache is untouched in that case.
+    """
+    names = sorted(available_multi_asset_strategies())
+    if not names:
+        return None
+
+    from tradebot.multi_strategy import get_multi_asset_strategy
+
+    market = MarketSpec.spot()  # 0.10% taker, this axis's SPOT_BASE
+    cache = CACHE["full"]
+    want = {f"{n}|{PORTFOLIO_MARKET}" for n in names} | {f"{BENCHMARK}|{PORTFOLIO_MARKET}"}
+
+    if cache.exists() and not force:
+        cached = pd.read_csv(cache, index_col=0, parse_dates=True)
+        if want.issubset(cached.columns):
+            sub = cached[sorted(want)].dropna(how="any")
+            if len(sub):
+                return sub
+        print(f"multi-asset cache is missing {len(want - set(cached.columns))} "
+              f"series; rebuilding", file=sys.stderr)
+
+    series: dict[str, pd.Series] = {}
+    bench_instruments = None
+    for i, name in enumerate(names, 1):
+        t0 = time.time()
+        strategy = get_multi_asset_strategy(name)
+        if bench_instruments is None:
+            bench_instruments = strategy.instruments
+        eq = run_multi_asset_backtest(strategy, ROOT / "data", market, 1_000.0,
+                                      window=MULTI_ASSET_WINDOW)
+        series[f"{name}|{PORTFOLIO_MARKET}"] = daily_returns(eq)
+        print(f"[multiasset {i}/{len(names)}] {name:22s} {PORTFOLIO_MARKET:9s} "
+              f"{time.time() - t0:5.1f}s", file=sys.stderr)
+
+    frames = ma_load_universe(bench_instruments, ROOT / "data")
+    aligned = ma_align_frames(frames, MULTI_ASSET_WINDOW)
+    ew = ma_static_hold_equity(aligned, bench_instruments, market, start_balance=1_000.0)
+    series[f"{BENCHMARK}|{PORTFOLIO_MARKET}"] = daily_returns(ew)
+
+    new_cols = pd.DataFrame(series).sort_index()
+
+    idx = new_cols.index
+    if cache.exists():
+        cached = pd.read_csv(cache, index_col=0, parse_dates=True)
+        idx = cached.index.union(idx)
+        merged = pd.DataFrame(index=idx)
+        for col in cached.columns:
+            merged[col] = cached[col].reindex(idx)
+    else:
+        merged = pd.DataFrame(index=idx)
+    for col in new_cols.columns:
+        merged[col] = new_cols[col].reindex(idx)
+    merged = merged.sort_index()
+
+    OUT.mkdir(parents=True, exist_ok=True)
+    merged.to_csv(cache)
+    return new_cols.dropna(how="any")
+
+
+def multi_asset_bootstrap(curve: pd.DataFrame, names: list[str]) -> pd.DataFrame:
+    """Paired bootstrap for every registered multi-asset strategy against
+    ``buy_and_hold|portfolio`` (the panel's own equal-weight hold) -- same
+    statistics, primitives and constants as :func:`bootstrap`, merged into
+    the SAME ``bootstrap.csv`` :func:`tests/test_evidence.py`'s CI rule
+    reads, via :func:`_append_table` rather than :func:`bootstrap`'s own
+    file-overwriting :func:`_table`.
+    """
+    bench = curve[f"{BENCHMARK}|{PORTFOLIO_MARKET}"].to_numpy(dtype=float)
+    n = len(curve)
+    idx = stationary_bootstrap_indices(n, MEAN_BLOCK, N_BOOT, np.random.default_rng(7))
+
+    rows = []
+    for name in [*names, BENCHMARK]:
+        r = curve[f"{name}|{PORTFOLIO_MARKET}"].to_numpy(dtype=float)
+        sharpe = paired_bootstrap(r, bench, annualized_sharpe, indices=idx, level=LEVEL)
+        dd = paired_bootstrap(r, bench, max_drawdown_from_returns, indices=idx, level=LEVEL)
+        growth = paired_bootstrap(r, bench, total_log_return, indices=idx, level=LEVEL)
+        own_sharpe = bootstrap_interval(r, annualized_sharpe, indices=idx, level=LEVEL)
+        own_dd = bootstrap_interval(r, max_drawdown_from_returns, indices=idx, level=LEVEL)
+        rows.append({
+            "period": "full", "market": PORTFOLIO_MARKET, "strategy": name,
+            "days": n, "dead_tail_pct": dead_tail_pct(r),
+            "sharpe": sharpe.stat_a,
+            "sharpe_lo": own_sharpe.lo, "sharpe_hi": own_sharpe.hi,
+            "d_sharpe": sharpe.diff.point,
+            "d_sharpe_lo": sharpe.diff.lo, "d_sharpe_hi": sharpe.diff.hi,
+            "p_sharpe_beats_hold": sharpe.p_positive,
+            "max_dd_pct": dd.stat_a,
+            "max_dd_lo": own_dd.lo, "max_dd_hi": own_dd.hi,
+            "d_max_dd_pp": dd.diff.point,
+            "d_max_dd_lo": dd.diff.lo, "d_max_dd_hi": dd.diff.hi,
+            "p_dd_deeper_than_hold": dd.p_positive,
+            "d_log_growth": growth.diff.point,
+            "d_log_growth_lo": growth.diff.lo, "d_log_growth_hi": growth.diff.hi,
+            "p_growth_beats_hold": growth.p_positive,
+        })
+    frame = pd.DataFrame(rows)
+    _append_table(rows, "bootstrap", ("period", "market", "strategy"))
+
+    print(f"\nFULL / {PORTFOLIO_MARKET} — {n:,} days, {N_BOOT:,} stationary-bootstrap "
+          f"resamples, {MEAN_BLOCK:.0f}-day mean block  (B-32 multi-asset strategies, "
+          f"vs equal-weight hold of the same panel)")
+    for _, row in frame.sort_values("sharpe", ascending=False).iterrows():
+        gstar = "*" if row.d_log_growth_lo > 0 or row.d_log_growth_hi < 0 else " "
+        print(f"  {row.strategy:22s} sharpe {row.sharpe:>6.2f}  Δlog growth vs "
+              f"EW-hold {row.d_log_growth:>+6.2f} [{row.d_log_growth_lo:>+6.2f},"
+              f"{row.d_log_growth_hi:>+6.2f}]{gstar}")
+    return frame
+
+
 # --------------------------------------------------------------------- main
 
 def main() -> None:
@@ -646,6 +824,11 @@ def main() -> None:
         for period, frame in curves.items():
             print(f"{period}: cached {frame.shape[1]} series x "
                   f"{len(frame):,} days -> {CACHE[period]}")
+        ma_names = sorted(available_multi_asset_strategies())
+        ma_curve = build_multi_curves(force=args.force) if ma_names else None
+        if ma_curve is not None:
+            print(f"multiasset: cached {ma_curve.shape[1]} series x "
+                  f"{len(ma_curve):,} days -> {CACHE['full']}")
         return
 
     if args.command in ("all", "selftest"):
@@ -655,6 +838,16 @@ def main() -> None:
                      ("deflated", deflated), ("cpcv", cpcv), ("charts", charts)):
         if args.command in ("all", name):
             fn(curves, strategies=strategies)
+
+    # Multi-asset strategies (backlog B-32): additive, after and
+    # independent of everything above. A no-op when no multi-asset
+    # strategy is registered.
+    if args.command in ("all", "bootstrap"):
+        ma_names = sorted(available_multi_asset_strategies())
+        ma_curve = build_multi_curves(force=args.force) if ma_names else None
+        if ma_curve is not None:
+            multi_asset_bootstrap(ma_curve, ma_names)
+
     print(f"\nwritten to {OUT}", file=sys.stderr)
 
 
