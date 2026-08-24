@@ -315,6 +315,167 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-116 · 08-24 · NEGATIVE (both branches) — cross-ASSET breadth as a confirming/disagreement signal for `kelly_regime_v4`'s own vote: a seventeenth INFO-axis signal and a fifth ERR-axis notion of uncertainty, both fail on the same evidence the panel's own measured breadth predicted before either branch ran
+
+**Direction.** Off-backlog (still only B-06, unchanged since R-110; the
+ranked backlog remains otherwise empty per R-115's own re-ranking). A
+scoping pass (this session, before either branch was coded) grepped
+`docs/LEDGER.md` for everything touching term-structure/basis, sequential-
+detection/changepoint methods and cross-instrument constructions, and ran a
+literature search, before proposing: does the trend-vote of the six OTHER
+instruments this project already has 5m spot data for (BCH, LTC, ETC, DASH,
+LINK, XTZ — `UNIVERSE_6`), each run through `kelly_regime_v4`'s own
+unmodified 20/40/80-day anchor-vote construction independently per
+instrument, carry information about BTC's own regime that BTC's own vote
+does not already have? Attacks **INFO** (primary — a structurally new kind
+of information, contemporaneous cross-instrument agreement, not a new
+external feed or a transform of BTC's own price/vote) and **ERR**
+(secondary — a fifth notion of uncertainty for the vote's own confidence:
+cross-**asset** disagreement, as opposed to the four already closed:
+sampling significance R-87/R-104; cross-**model** disagreement on one asset
+R-105/R-106; distributional novelty R-109/R-112/R-115; temporal duration
+dependence R-114). **Not a duplicate of:** R-76 (cointegration/distance-
+method pairs trading — trades a spread between two legs, never builds a
+confirmation signal); R-63/R-65/R-67/R-68/R-107/R-110/R-111/R-113
+(`xsmom_entry_band` — trades the 8-instrument panel as a portfolio, never
+feeds it back into BTC's own single-asset decision); R-100 (Binance-vs-
+Deribit funding-rate divergence — a derivatives quantity on BTC alone, not
+spot trend on other instruments); R-41 (BTC spot/perp basis, one instrument,
+one venue-pair); R-105/R-106 (disagreement across different MODELS on the
+SAME BTC series — this round holds the model fixed at v4's own vote and
+varies the ASSET instead, the flipped construction). Literature: Zaremba,
+Szyszka, Karathanasopoulos & Mikutowski (2019/2020, *Economic Modelling*,
+SSRN 3444882) — market breadth predicts equity-index returns incrementally
+over trend-following signals, 64 countries, no crypto, no verified cost
+model here; Mercik, Bedowska-Sojka, Karim & Zaremba (2025, *International
+Review of Financial Analysis* 97(C)) — documents real cross-sectional
+interaction structure in crypto returns; Zweig's (1986) breadth-thrust —
+the classical precedent for breadth as a *confirming* signal rather than a
+standalone forecast, the role both branches below test; Zarnowitz & Lambros
+(1987, *JPE*) / Bomberger (1996, *JMCB*) — disagreement-as-uncertainty,
+reused from R-106's citation with the panel varied by asset instead of
+model. **Named in advance as the single most likely failure mode** (frozen
+in `experiments/r116_shared.py` before either branch ran): R-63 already
+measured this exact six-alt panel's mean pairwise daily-return correlation
+at 0.634 and its Grinold breadth at 1.47-of-8 — direct, already-computed
+evidence that the six alts carry little information independent of
+BTC/ETH, so a breadth/disagreement statistic built from them was predicted,
+before any bar was read, to be either near-collinear with v4's own vote or
+genuinely informative but lagging, the same failure mode 16 of 16 prior
+INFO signals and 6 of 7 prior ERR-axis attempts have shown.
+
+**What was done.** Shared, frozen infrastructure: `experiments/r116_shared.py`
+(panel-vote construction reusing `r82_shared.anchor_majority` per instrument,
+`agree_frac`, `panel_disagreement`, `r_squared`, `attach_to_btc`, and the
+byte-identical `v4_targets` benchmark reused from `r63_shared`). Two
+parallel branches, each on its own disjoint file, dispatched with the same
+Step-0/Step-3/Step-4 instructions. **Conservative**
+(`experiments/r116_conservative_breadth_vote.py`): a discrete, majority-
+gated, never-boost step discount — full trust (1.0x) while the six-alt
+panel agrees with BTC's own vote-side at/above a threshold, discounted to a
+fixed floor otherwise (the R-105/R-106 multiplicative-brake shape, not
+`r82_shared.confirming_vote_frac`'s blend shape, because a blend can move
+the vote either direction and a brake cannot). Pre-registered decision rule:
+promote only if it beats both buy-and-hold and `kelly_regime_v4` out-of-
+sample after real costs, clears the ±0.2 Sharpe/drawdown noise floor,
+survives the six-episode lead-time falsification gate, and sits on a
+plateau. **Novel** (`experiments/r116_novel_breadth_disagreement.py`): a
+continuous Bomberger-style cross-sectional-std disagreement statistic over
+BTC + the six alts (`D_MAX(7)=0.4949`), mapped to a bounded, never-increase
+brake, with a second, decisive falsification test — the identical
+construction run with **ETH as home** against its own 8-asset panel
+(`D_MAX(8)=0.5`), checking whether the mechanism is asset-general or
+BTC-specific, the exact test that closed R-109/R-112's kNN novelty brake.
+Both branches iterated freely on `W_TRAIN` (2020-04-01→2021-12-31),
+selected on `W_VAL` (2022-01-01→2022-12-31), froze their configs and
+falsification tests in each file's own dated pre-registration section
+before reading `OOS_START` (2023-01-01) data, and then — per this round's
+own disclosed process deviation from R-101–R-105/R-107–R-115's tighter
+convention of gating holdout access on a cleared pre-holdout bar — **read
+the holdout regardless of the pre-holdout gate's outcome**, the same
+deviation R-106 made and disclosed. **Configs evaluated: 54 total** (26
+conservative + 28 novel).
+
+**Result.** Step-0 collinearity: clean for both (conservative R²=0.0121
+vote / 0.0374 exposure; novel R²=0.0042 vote / 0.0482 exposure — nowhere
+near R-73's 0.95 flat-rescale line). Causality: both branches' truncation
+probes pass. Conservative's W_VAL selection (floor=0.3, 4-of-6 majority)
+beat `kelly_regime_v4` on the 2022 bear window (+0.194 growth, CI excludes
+zero) but the plateau sign is *negative on train* — the brake costs Sharpe
+in the 2020-21 bull/chop window and only pays off in the one window it was
+selected on. Lead-time falsification: only 3 of 6 `STRESS_EPISODES` have
+any panel coverage (alts start 2020-04-01); of those, 2/3 technically pass
+(beats the block-bootstrap null on low power, n=3) but the one that fails
+is the 2021-11 top — the actual regime change `W_VAL` was selected on.
+Holdout (BTC, both markets, run once): candidate beats `kelly_regime_v4` on
+point-estimate Sharpe (spot +1.54 vs +1.22; futures +1.60 vs +1.12), but
+the paired bootstrap CI on both growth-diff and drawdown-diff **crosses
+zero on both markets** (D1=D2=False everywhere), futures_5x never beats
+leveraged buy-and-hold ($6,888 vs $15,176 — the 2023-26 bull run's
+convexity is missed by a partially-discounted vote), and at the realistic
+0.40% taker tier **the sign reverses outright** (edge +0.317 → −0.083).
+Novel's W_VAL selection (floor=0.5, the grid centre) passed `d3_pass` on
+all three floors and the plateau check; its ETH-symmetry pre-holdout check
+passed narrowly (growth_diff +0.0051). Lead-time falsification: only 1 of
+4 measurable episodes passes (need ≥4) — Terra/Luna leads by 0.43 days,
+COVID/2021-11-top/FTX all lag or miss the null. The frozen P1–P6
+pre-holdout gate therefore **fails outright** (P5) before any holdout bar
+is read — under R-109–R115's tighter convention this round would have
+stopped here with holdout counter +0; it did not, per the disclosed
+deviation above. Holdout (BTC): drawdown improves (D2=True, both markets)
+but growth does not (D1=False, both markets, CI includes zero), and
+buy-and-hold is never beaten (P8=False) — the "holds less, draws down
+less" shape `docs/ROUTINE.md`'s own standing risk-matching warning names
+directly, not new information. The real fee tier and real BTC funding
+(Deribit BTC-PERP, whole holdout) both survive without sign reversal. The
+**decisive result is the ETH-symmetry check**: at ETH's own holdout, the
+identical frozen construction **inverts sign** (BTC spot d_sharpe +0.107
+vs ETH spot d_sharpe −0.020) — exactly the R-109/R-112 BTC-specific-not-
+asset-general failure mode this test was built to catch. Neither branch's
+pre-registered decision rule moved after any number was read.
+
+**Verdict.** **NEGATIVE, both branches**, and the panel's own R-63
+breadth measurement (1.47-of-8 effective bets) predicted the shape of both
+failures before either branch ran: the conservative brake's one passing
+window doesn't survive real costs or a tighter falsification read, and the
+novel brake's own decisive pre-registered test (ETH symmetry) shows the
+mechanism is BTC-specific rather than the genuinely asset-general
+information its own citation (Bomberger 1996, a panel of independent
+forecasters) requires. **INFO now stands at 17 signals, 0 promoted; the
+single-asset ERR axis now stands at 13 configurations across five notions
+of uncertainty, 0 promoted, one partial** (R-109 novel, B1-only, unchanged).
+One-line lesson: a panel whose own breadth was already measured at
+1.47-of-8 was never likely to carry independent information into a
+confirming/disagreement statistic, and the two constructions tried here —
+discrete majority-gate, continuous cross-sectional std — exhaust the
+straightforward ways to build one from it; a future cross-asset attempt on
+this panel needs a construction that does not reduce to "how many of the
+six alts currently agree with BTC," since that quantity itself is now
+tested twice. **Process note, flagged for a future session to correct**:
+this round repeated R-106's holdout-access deviation (reading holdout
+regardless of the pre-holdout gate) rather than R-109–R115's tighter,
+holdout-power-preserving convention; both branches would have reached the
+identical NEGATIVE verdict under the tighter rule with holdout counter +0,
+so nothing here is contaminated, but the ~19 consultations spent were
+avoidable and a future parallel round should default back to R-109–R115's
+gate-then-read discipline unless a specific reason is given to deviate, as
+R-106's entry was. **Holdout counter: +19** on top of R-115's ~679
+(running total ~**698**) — conservative spent 12 (6 holdout base cells + 2
+real-fee cells + 4 funding cells), novel spent 7 (2 BTC holdout cells + 2
+fee-tier cells + 2 funding cells + 1 ETH symmetry cell); see the ledger's
+[Holdout consultations](#holdout-consultations-to-date) list for the
+itemization. **Next step:** the ranked backlog remains empty of anything
+but **B-06** (forward paper-trading, already running unattended). A future
+session preferring a fresh mechanism search now has: the single-asset
+axis's own closed lists (17 INFO-axis attempts, 26+ SIZE-axis attempts, the
+ERR axis across five notions of uncertainty); the multi-asset panel's own
+closed list (eleven rounds, all NEGATIVE); this round's own closed
+cross-asset-breadth-of-the-six-alt-panel construction (two ways tried, both
+negative); or B-28's breadth clause (blocked on data this project cannot
+fetch or simulate) — or should adopt R-115's own reading and work B-06
+directly, or default back to the tighter holdout-gating convention this
+round deviated from.
+
 ### R-115 · 08-24 · NEGATIVE (both branches) — closing R-109's own follow-on for good: the CORAL-pooled ERR-axis novelty brake, re-tested with ETH sourced from Coinbase so the pool finally overlaps its evaluation window, engages genuinely and makes the B4 inversion *more* decisive rather than resolving it; a sixteenth INFO-axis signal (retail-vs-top-trader long/short-ratio divergence) fails the same lead-time gate as its fifteen predecessors, 1 of 5 covered episodes
 
 **Direction.** Off-backlog (the ranked list holds only **B-06**, unchanged since R-110, per R-114's own re-ranking). Two independent, disjoint-file branches, dispatched as subagents per `docs/ROUTINE.md`'s parallelism rules, neither committing; the operator merged and independently reproduced both after they reported.
@@ -11983,6 +12144,48 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-24 after R-116.** Off-backlog (still only B-06, unchanged
+since R-110), a two-branch round tried the first CROSS-ASSET construction
+fed back into `kelly_regime_v4`'s own single-asset decision (as opposed to
+the eleven multi-asset-panel rounds, R-63 onward, which all traded the
+panel as its own portfolio): does the six-alt panel's own trend-vote, run
+through v4's byte-identical anchor construction, confirm or disagree with
+BTC's own vote? **Both branches NEGATIVE**, and R-63's own five-round-old
+breadth measurement (1.47-of-8 effective bets on this exact panel)
+predicted the shape of both failures before either ran: conservative
+(discrete majority-gated confirming brake) passed its inner-validation
+selection window but the holdout CI crosses zero on both markets and the
+sign reverses outright at the realistic 0.40% fee tier; novel (continuous
+cross-asset disagreement brake, the flipped analog of R-106's cross-model
+disagreement) failed its own decisive pre-registered test — the identical
+construction run with ETH as home inverts sign at ETH's holdout, the same
+BTC-specific-not-asset-general failure that closed R-109/R-112's kNN
+brake. **INFO now stands at 17 signals, 0 promoted; the single-asset ERR
+axis now stands at 13 configurations across five notions of uncertainty, 0
+promoted, one partial.** This closes the straightforward ways to build a
+confirming/disagreement statistic from the six-alt panel (discrete
+majority vote, continuous cross-sectional std) — a future cross-asset
+attempt on this panel needs a construction that does not reduce to "how
+many of the six alts currently agree with BTC," since both have now been
+tried. Separately, this round disclosed and flagged its own process
+deviation (reading the holdout regardless of the pre-holdout gate,
+matching R-106 rather than R-109–R115's tighter convention) — a future
+parallel round should default back to gating holdout access on a cleared
+pre-holdout bar. **The ranked backlog remains empty of anything but B-06**
+(forward paper-trading, already running unattended). A future session
+preferring a fresh mechanism search now has: the single-asset axis's own
+closed lists (17 INFO-axis attempts, 26+ SIZE-axis attempts, ERR across
+five notions of uncertainty, nine regime-timing mechanisms); the
+multi-asset panel's own closed list (eleven rounds, all NEGATIVE) now
+joined by this round's cross-asset-feedback construction (also closed); or
+B-28's breadth clause (blocked on data this project cannot fetch or
+simulate). Absent a new idea clearing Step-0 on one of these, the
+accumulating evidence across every axis this project's own framework can
+construct from its committed data continues to point the same direction:
+`kelly_regime_v4` is close to efficient with respect to the information
+and error control available from OHLCV (plus the committed on-chain/macro/
+derivatives-positioning feeds) alone.
+
 **Re-ranked 08-24 after R-115.** Off-backlog (still only B-06, unchanged
 since R-110), a two-branch round closed the one concretely-named open
 thread the ledger carried into this session — R-112's own disclosed next
@@ -14205,6 +14408,22 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-24 · ~698** — R-116: **+19** on top of R-115's ~679, both branches,
+  per this round's disclosed process deviation (see R-116's own ledger
+  entry): like R-106 and unlike R-101–R-105/R-107–R-115, both branches read
+  the holdout regardless of whether their own pre-holdout falsification
+  gate had cleared. Conservative (`experiments/r116_conservative_breadth_vote.py`):
+  12 holdout-window reads (6 base cells across spot/futures_5x, 2 real-0.40%-
+  fee cells, 4 funding cells) after its lead-time falsification test passed
+  only on n=3 low power. Novel (`experiments/r116_novel_breadth_disagreement.py`):
+  7 holdout-window reads (2 BTC base cells, 2 fee-tier cells, 2 funding
+  cells, 1 ETH-symmetry cell) after its own P1–P6 pre-holdout gate had
+  already failed outright (P5, the lead-time test, 1 of 4 measurable
+  episodes). Both branches' own scripts print their max-timestamp-read line
+  and both verdicts were NEGATIVE regardless of the holdout numbers (the
+  pre-holdout gates alone would have produced the same verdict at +0), so
+  nothing is contaminated, but the spend was avoidable — flagged in R-116's
+  own entry as a process note for a future round to correct.
 - **08-24 · ~679** — R-115: **+0** on top of R-114's ~679 (unchanged), both
   branches. Conservative (`experiments/r115_conservative_pooled_eth_coinbase.py`)
   and novel (`experiments/r115_novel_smartmoney_divergence.py`) both truncate
