@@ -315,6 +315,18 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-113 · 08-24 · NEGATIVE (both branches) — R-109's two validated ERR-axis novelty brakes (Mahalanobis, kNN), applied to the multi-asset panel for the first time instead of `kelly_regime_v4`: both survive the scramble control but fail D1/D2/D3/D5, the brake removing more growth than the drawdown it saves
+
+**Direction.** Off-backlog (the ranked list holds only B-06, unchanged since R-110/R-111/R-112). Seven prior ERR-axis rounds (R-28 retracted, R-87, R-104, R-105, R-106, R-109, R-112) discounted only the single-asset `kelly_regime_v4`'s exposure; no round had ever applied an uncertainty/error-control statistic to the multi-asset `xsmom_entry_band` construction (R-63's score, R-65/67/68's timing, R-107/R-110's allocation weighting, R-111's score variants — nine rounds, all NEGATIVE, none touching error control). This round attacks **ERR** on that untouched target: R-109's own two already-validated novelty statistics (Mahalanobis — De Maesschalck, Jouan-Rimbaud & Massart 2000; kNN — Ramaswamy, Rastogi & Shim 2000 / Breunig et al. 2000), imported verbatim, computed over a new three-feature *panel-level* daily state (cross-sectional return dispersion — Gorman, Sapra & Weigand 2010 — rolling mean pairwise correlation, eligible-count anomaly z-score) instead of R-109's single-instrument OHLCV features, discounting the portfolio's TOTAL notional before R-107/R-110's frozen k=1 equal-weight split. Not a duplicate of R-109/R-112 (different target strategy, different features, no cross-exchange data mismatch since `UNIVERSE_8`'s ETH is Coinbase-native, unlike R-112's blocked Bitfinex/Coinbase gap), R-107/R-110 (allocation-weighting of an already-fixed total vs. discounting the total itself), R-63/65/67/68 (membership timing, untouched here), or R-111 (score formula, frozen and imported unmodified).
+
+**What was done.** `experiments/r113_shared.py` (operator-authored, frozen, read-only pre-registration and shared machinery — panel feature builders, `frozen_targets`, `build_r113_targets`, `step0_gate`, `further_work`), `experiments/r113_conservative_mahalanobis_panel.py`, `experiments/r113_novel_knn_panel.py`. Zero new data: `UNIVERSE_6`/`UNIVERSE_8`'s already-committed Coinbase 5m panels. Pre-registered decision rule: `further_work = (D1 or D2) and D3 and D5 and scramble_survived` (R-65's four-clause form, no M1' since membership timing is untouched), gating exactly one `W_HOLD` read; PROMOTION bar is R-63's own, unreachable without clearing `further_work` first. Falsification test: a Step-0 structural gate (bind_frac > 1%, mean discount magnitude on binding bars >= 5%, R² of the discount fraction vs the basket's own realized-vol input < 0.90, state coefficient-of-variation >= 5%) computed on `W_TRAIN`, resolved by the operator against real data *before* either branch was dispatched — both models pass at `(thresh, max_discount) = (0.90, 1.0)`, independently landing on the same primary cell R-109 selected for its own round. **One pre-dispatch design correction, made before any decisive/inner-validation number existed:** the Step-0 gate's first design checked whole-series R² of the discounted total notional against the undiscounted path, mirroring R-109's `R2_VS_V4_THRESH` — on real data this measured *sparsity*, not inertness (a discount latched by R-63's own 0.10 deadband and firing on <5% of days is >0.99 R²-similar to its own undiscounted path regardless of how large the discount is on the days it fires), so it was replaced with a check restricted to bars where the discount actually binds. Configs evaluated: **58** (28 conservative + 30 novel), the round's trials count for deflated Sharpe per ROUTINE.md's parallelism rule.
+
+**One further, disclosed methodological gap, caught by the novel branch's own live reconfirmation rather than by the operator.** The operator's own pre-dispatch Step-0 verification checked `U8` only; `W_FULL6`, the decisive cell, runs on `U6`. Re-run on `U6`, `mahalanobis` passes cleanly (`bind_frac=0.0229`, independently reproduced by the operator); `knn`'s `bind_frac` on `U6/W_TRAIN` is **0.0093, a hair under the 0.01 floor** (`U8`'s is 0.0119). The novel branch disclosed this live rather than silently proceeding or silently stopping, and ran the decisive battery anyway on the pre-registration's own U8-keyed claim, carrying the near-miss forward as an explicit caveat on every `W_FULL6` number it reports — the honest resolution of an incomplete pre-dispatch check, not a retuned threshold (no Sharpe/PnL number existed when this was found or when the decision to proceed was made).
+
+**Result.** Both branches clear the scramble control — candidate beats its own scrambled counterpart on `W_FULL6`/`SPOT_BASE` (mahalanobis: candidate log-return 1.069 vs. scrambled 90th-percentile 0.140 across 10 seeds; knn: 1.092 vs. 0.328) — so both discounts carry genuine cross-sectional information, not noise. Both fail every other gate. Primary comparator throughout is candidate (discounted) vs. FROZEN (undiscounted `xsmom_entry_band`), the round's own question: does the brake help the already-registered construction, not "does the construction beat a passive benchmark" (VOLMATCH_HOLD/MATCHED_HOLD/STATIC_HOLD reported as secondary context only, per R-63 onward's convention). `W_FULL6`/U6/SPOT_BASE (0.10%): mahalanobis `growth_diff=-0.808 [-2.094, +0.311]`, `dd_diff=-3.527 [-8.506, +10.346]`; knn `growth_diff=-0.785 [-2.096, +0.258]`, `dd_diff=-2.205 [-7.043, +10.641]` — both intervals span zero on both legs, **D1 and D2 both fail for both branches**. `W_VAL`/U8/SPOT_BASE (D3): mahalanobis `growth_diff=-0.284`, knn `growth_diff=-0.192`, both negative point estimates — **D3 fails for both**. D5 (gross, `SPOT_FREE`, vs `D5_BAR_R68=+0.342`): mahalanobis `gross_growth_diff=-0.756`, knn `-0.734` — **D5 fails for both, by a wide margin**; disclosed explicitly as a structurally harder bar here than its original calibration, since `D5_BAR_R68` was set for a candidate-vs-VOLMATCH_HOLD comparison and a brake can only ever shrink exposure relative to its own frozen baseline, never grow it. `SPOT_REAL` (0.40%) robustness cells are directionally identical for both branches. `further_work = False` for both; `W_HOLD` was correctly **not read** by either branch (an agent explicitly declined to read it once its own bar failed, naming the undisclosed-consultation risk by name).
+
+**Verdict.** **NEGATIVE, both branches.** R-109's ERR-axis machinery generalizes *mechanically* to the multi-asset construction — both discounts are real, non-degenerate, and survive the scramble control, the first time this exact family of statistics has cleared that specific bar on a target other than `kelly_regime_v4` — but not *economically*: same "real but harmful/inert" pattern that has now hit five of seven single-asset ERR attempts, replicated here on a structurally different target for the first time. This is the tenth research round on the multi-asset panel opened by R-63 (score: R-63, R-111 x2; timing: R-65, R-67, R-68; allocation: R-107, R-110 x2; error control: this round x2) and the first to test error control specifically — 0 of 10 promoted, joining the standing diagnosis that every mechanism tried on this panel fails on interval width/gate clearance regardless of which mechanism. **Two reusable lessons for a future ERR-axis or multi-asset round, named explicitly so they are not re-discovered at cost:** (1) a whole-series R²-vs-undiscounted-path Step-0 check is miscalibrated for any deadband-latched, sparsely-binding target — it measures how rarely the mechanism fires, not whether it is inert when it does; check the magnitude on binding bars instead. (2) when a Step-0 gate is verified pre-dispatch against one universe/data slice, verify it separately against every universe a later decisive read will actually use — training-period and decisive-period universes are not guaranteed to agree (here they very nearly didn't, for `knn`). **Holdout counter: +0** (unchanged from R-112 — neither branch read `W_HOLD`). Decision rule did not move at any point. Next step: this closes the multi-asset panel's first error-control attempt; the ranked backlog remains empty of anything but B-06 (forward paper-trading, already running unattended).
+
 ### R-112 · 08-24 · NEGATIVE (both branches) — closing R-109's own named follow-on: a return-space feature swap fixes the kNN novelty brake's B4 (ETH) failure but costs enough BTC signal to fail B1; a CORAL-pooled multi-asset reference never engages inside ETH's own evaluation window, so it re-tests nothing on the one clause it targeted
 
 **Direction.** R-109's novel branch (a k-nearest-neighbour distributional-
@@ -11805,6 +11817,45 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-24 after R-113.** Off-backlog (still only B-06, unchanged
+since R-110), a two-branch round applying R-109's own two validated
+ERR-axis novelty statistics (Mahalanobis, kNN) to the multi-asset
+`xsmom_entry_band` panel for the first time — every prior ERR-axis round
+had discounted only the single-asset `kelly_regime_v4`, and every prior
+multi-asset round (nine, R-63 through R-111) had varied score, timing or
+allocation but never error control. **Both branches NEGATIVE**, but both
+clear the scramble control (genuine cross-sectional information present in
+both discounts, the first time this statistic family has cleared that bar
+on a target other than `kelly_regime_v4`) and fail only on economics: D1,
+D2, D3 and D5 all fail for both, the brake removing more growth than the
+drawdown it saves, on the round's own candidate-vs-frozen framing. **This
+closes the multi-asset panel's tenth research round and its first
+error-control attempt (0 of 10 promoted)**, joining this panel's own
+standing diagnosis (R-67 onward) that no mechanism tried on it — score,
+timing, allocation weight, or now error control — has ever cleared a
+decisive gate, regardless of mechanism. Two reusable methodology lessons
+were filed alongside the result: a whole-series R²-vs-undiscounted-path
+Step-0 check is miscalibrated for a deadband-latched, sparsely-binding
+target (it measures firing frequency, not inertness); and a Step-0 gate
+verified pre-dispatch against one universe does not guarantee the same
+verdict on the universe a later decisive read actually uses (`knn` nearly
+failed Step-0 on `U6`, the decisive universe, despite passing cleanly on
+`U8`, the universe the operator's own pre-dispatch smoke test checked).
+**The ranked backlog remains empty of anything but B-06** (forward
+paper-trading, already running unattended, per R-78's own costing). A
+future session preferring a fresh mechanism search now has: the
+single-asset axis's own closed list (15 INFO-axis attempts, 26+ SIZE-axis
+attempts, seven ERR-axis attempts across three notions of uncertainty, nine
+regime-timing mechanisms); the multi-asset axis's own closed list (score:
+2 rounds; timing: 3 rounds; allocation: 2 rounds; error control: this
+round — ten rounds total, all NEGATIVE); an ERR-axis construction on
+EITHER target keyed on a fourth notion of uncertainty (this round and
+R-109/R-112 both used distributional novelty; sampling significance and
+specification/model disagreement are the two other notions already tried,
+both only ever on the single-asset target); or B-28's breadth clause
+(genuinely less-correlated instruments, or a lower-frequency bar series —
+both blocked on data this project cannot fetch or simulate).
+
 **Re-ranked 08-24 after R-112.** Off-backlog (still only B-06, unchanged
 since R-110), worked R-109's own two named, disclosed follow-ons directly
 rather than opening a fresh ERR-axis mechanism: does a reference
@@ -13898,6 +13949,15 @@ Rules that the format exists to enforce:
 Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
+
+- **08-24 · ~679** — R-113: **+0** on top of R-112's ~679 (unchanged), both
+  branches. Conservative (`experiments/r113_conservative_mahalanobis_panel.py`)
+  and novel (`experiments/r113_novel_knn_panel.py`) both failed
+  `further_work = (d1 or d2) and d3 and d5 and scramble_survived` on
+  `W_FULL6`/`W_VAL` before any holdout-authorizing bar was reached, so
+  `W_HOLD` was never touched by either — confirmed by each branch's own
+  script explicitly logging "further-work bar NOT cleared, W_HOLD is NOT
+  read" rather than silently skipping the check.
 
 - **08-24 · ~679** — R-112: **+0** on top of R-111's ~679 (unchanged), both
   branches. Conservative (`experiments/r112_conservative_returnspace_knn.py`)
