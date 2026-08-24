@@ -315,6 +315,202 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-104 · 08-24 · NEGATIVE (both branches) — Conformal Risk Control (Angelopoulos et al. 2024) on kelly_regime_v4's exposure: static calibration collapses to the familiar SIZE-axis rescale, online control escapes that collapse but is decisively worse than v4, not merely indistinguishable from it
+
+**Direction.** Wrap `kelly_regime_v4`'s raw exposure (`frac * scale`, before its
+own 10% deadband) in a discount `d` calibrated by **Conformal Risk Control**
+(Angelopoulos, Bates, Fisch, Lei & Schuster, 2024, ICLR, spotlight;
+arXiv:2208.02814) — a formal, distribution-free bound on the probability that
+a single bar's realized loss under the current exposure exceeds a
+pre-registered threshold `tau`, generalizing split-conformal prediction's
+coverage guarantee to an arbitrary bounded, lambda-monotone loss. Two
+branches: **conservative**, a classic split-conformal calibration (threshold
+and discount both fixed once on 2017-2018 data, frozen through 2022);
+**novel**, an online feedback controller (Feldman, Bates & Romano 2023,
+*Achieving Risk Control in Online Learning Settings*, TMLR; the online
+variant Angelopoulos et al. 2024 sketch in Appendix D) that updates the
+discount every bar via `d_{t+1} = clip(d_t + eta*(L_t(d_t) - alpha), 0,
+d_max)`, carrying state causally and continuously from 2017 through
+inner-validation. Attacks **ERR** primarily — "no error control anywhere in
+the signal path" is one of this project's four standing constraints, and
+only two prior rounds attacked it directly before this one: the retired
+e-process (R-28, R-31 found the whole effect was an exposure-level artifact)
+and R-87's Adaptive Conformal Inference (wrapped around the vote's confidence
+calibration and the Kelly scale's dispersion estimator — a MISCOVERAGE
+construction). This round is the first to control a **realized loss**
+functional directly (`P(bar loss > tau) <= alpha`) rather than a confidence
+interval's coverage — per Angelopoulos et al. (2024) themselves, miscoverage
+is risk control's special case, not the reverse. It also touches SIZE, since
+the output is an exposure discount applied as an overlay on `frac * scale`
+(the same overlay architecture R-102's novel branch used) — but the state
+variable driving it is neither an exogenous market statistic, a decomposition
+of v4's own realized-variance object (R-99, R-102, R-103), nor a
+resampling/robustness bound over six sparse historical episodes (R-97,
+R-101); it is a formal, provable control on the strategy's own realized
+outcome distribution, updated from every bar. **Not a duplicate of** R-28
+(a sequential likelihood-ratio test for whether the trend signal is
+profitable at all, not a loss-probability bound on whatever exposure the
+vote already produces); R-87 (controls interval coverage, not a realized-loss
+rate — a different formal object entirely); R-97/R-101 (both derive a
+confidence/ambiguity multiplier from the same six discrete historical
+episodes; this round reads no episode calendar, every bar supplies one loss
+observation); R-99/R-102/R-103 (all replace or discount `scale`'s volatility
+*input*; this round never touches `scale`'s statistic, it discounts the
+*finished* `frac * scale` product, exactly as R-102's overlay did, but
+derived from a loss-control guarantee rather than a signed-jump-asymmetry
+regression); the fifteen INFO-axis rounds (no new external data channel —
+both branches read only the already-committed `close` column at v4's own
+cadence).
+
+**What was done.** Operator-written, read-only pre-registration and shared
+harness: `experiments/r104_shared.py` (v4 reproduced exactly; `bar_forward_loss`,
+`calibrate_tau`, `crc_static_lambda`, `crc_online_lambda_path`; self-tested on
+synthetic data before either branch was dispatched). Two independent, parallel
+branches, each in its own file, neither editing the shared module:
+`experiments/r104_conservative_static_crc.py` and
+`experiments/r104_novel_online_crc.py`. Pre-registered decision rule, frozen
+before either branch read a real-data number: **A0** (measurement gate — does
+the empirical exceedance rate track the target `alpha=0.01`, within
+[0.33x, 3x]); **A2** (non-inertness kill switch — R² of the candidate's raw
+exposure path against v4's own unmodified path must be `< 0.98`, else it is
+read as the familiar SIZE-axis collapse); **B1** (promotion clause — on
+inner-validation, both markets, `|dSharpe| > 0.2` favouring the candidate OR a
+paired-bootstrap log-growth interval excluding zero in the candidate's favour);
+**falsification** (the ETH replication slice must show a sign consistent with
+BTC inner-validation, not opposite); **cost check** (must not get worse than
+v4 at the realistic 0.40% taker tier). `tau = 0.0035447` (v4's own 99th-pct
+single-bar loss, 2017-01-01 to 2019-01-01), computed identically and
+independently by both branches and confirmed to match to 10 significant
+figures. **Configurations evaluated: 2** — one frozen construction per branch
+(conservative: `d*=0.05`, selected by a 20-point grid search over
+`CRC_D_GRID` against *calibration-set risk*, not backtested performance;
+novel: a single fixed `eta=0.02`, `alpha=0.01` online controller) — neither
+branch swept a strategy-level hyperparameter against backtested Sharpe or
+growth, so the trials count for deflated Sharpe is 2, not 20.
+
+**Two bugs found and fixed, both load-bearing, both worth a future round's
+attention.** (1) `r104_shared.calibrate_tau` raised `AttributeError` on every
+real call — a `DatetimeIndex` comparison (`df.index < Timestamp(...)`) already
+returns a plain `numpy.ndarray` on this project's pandas version, so the
+function's own extra `.to_numpy()` call failed. Found by the conservative
+branch (worked around locally, in its own file, per the read-only convention),
+confirmed and fixed by the operator in the shared file once both branches had
+reported, re-verified to reproduce the conservative branch's own
+independently-worked-around `tau` value exactly. (2) **A new, distinct
+failure mode from R-91's continuity bug, found by the novel branch's own
+trade-sanity check.** To give the online controller genuine continuity across
+`run_period`'s per-slice warmup-prefix convention (the R-91 lesson: without a
+long enough `warmup`, an online estimator silently restarts its state at each
+slice boundary), the pre-registration suggested a large `warmup` (1,600,000
+bars). This **silently breaks the trading engine entirely**:
+`tradebot.engine.run_backtest` gates every `on_bar` call (hence every order)
+on the bar's position *within the already-prefixed frame* being `>=
+strategy.warmup` — a check independent of `trade_start` — and since no
+slice's frame ever reaches 1.6M bars (the whole committed BTC series is
+~631K), `on_bar` never fired anywhere: every cell showed
+`final_balance == start_balance` to the cent and `num_trades=0`, with no
+exception raised. This would have produced a false "does nothing" read had
+the novel branch not checked trade counts explicitly. Fixed, within the
+novel branch's own file only, by using `warmup = lo_for(df, start)` per job —
+the slice start's own position in that dataframe, which both maximises the
+available prefix (`prefix_bars` saturates at `lo` regardless of how much
+larger `warmup` is set) and keeps the engine's trading gate at the slice's
+own first bar. **Reusable finding for any future online/adaptive branch**:
+a large warmup chosen only to satisfy R-91's continuity lesson must be
+checked against `run_backtest`'s own `on_bar` gate, not just against
+`prefix_bars` — the two are separate mechanisms and only one of them is
+visible in `run_period`'s docstring.
+
+**Result.** Both independently reproduced by the operator, bit-for-bit,
+from a clean shell, after both branches reported (`python
+experiments/r104_conservative_static_crc.py` and `python
+experiments/r104_novel_online_crc.py`, run post-fix). **Conservative**:
+A0 holds (CHECK-window exceedance 0.85x alpha, inner-val 0.42x alpha* —
+*figures as printed; both within the pre-registered [0.33x,3x] band);
+causal truncation probe passes; **A2 fails** — R²=0.990817 against v4's
+own raw path, the same near-constant-rescale shape this ledger has now
+seen in the majority of its 26+ prior SIZE-axis attempts (R-38 through
+R-103). No inner-validation cell clears B1 (spot dSharpe -0.02, CI
+[-0.039,+0.024]; futures_5x dSharpe -0.09, CI [-0.194,+0.094], both
+containing zero); ETH is sign-consistent with BTC (both mildly negative);
+the 0.40% fee tier is a wash on spot, mildly worse on futures_5x. A small,
+mostly-statistically-insignificant negative, consistent with the
+established collapse pattern. **Novel**: the operator's independent
+continuity check matched the branch's own report exactly
+(`d` at the 2021-01-01 boundary = 0.48460000000008746 via both the direct
+full-series pass and the harness's own long-warmup path, `|diff|=0`, so
+the entire inner-validation `d`-path is causally continuous with
+inner-train, not merely its first bar). Causal truncation probe passes.
+**A2 passes** — R²=0.926852, genuinely below the 0.98 threshold; the
+controller is not a rescale (std(d)=0.095 on inner-validation, 17.2% of
+bars with d>0.05). But A0 shows the controller under-shoots its own
+target: empirical exceedance 0.30% against a 1% alpha (~3x
+over-conservative), not tightly tracking the guarantee. And economically,
+the result is a clean, often *significant*, negative rather than a near
+miss: inner_train spot dSharpe -0.11 (CI [-1.290,-0.159], excludes zero
+**against** the candidate), inner_train futures_5x dSharpe -0.09 (CI
+[-1.438,-0.165], excludes zero against); inner_val spot dSharpe -0.06 (CI
+contains zero) but inner_val futures_5x dSharpe **-0.50** (CI
+[-0.487,-0.067], excludes zero against); ETH both markets significantly
+worse (CI excludes zero against on both); the 0.40% fee tier futures_5x
+cell is also significantly worse. **Every bootstrap interval in this
+round that excludes zero does so in v4's favour, none in the candidate's.**
+`pytest -q`: **508 passed** (operator, full suite, post both fixes —
+`experiments/` is not auto-discovered, so this round's new files cannot
+break it; run to confirm the `calibrate_tau` fix did not touch anything
+registered — same count as R-103's).
+
+**Verdict.** **NEGATIVE, both branches.** One-line lesson: this is the
+third ERR-axis attempt (after the retired e-process and R-87's ACI) and it
+splits into the two failure shapes this ledger has now separately
+documented — the static branch reproduces the familiar SIZE-axis collapse
+(the near-constant rescale, R-38 through R-103's shared failure mode), while
+the online branch is the sharper result: it genuinely escapes that collapse
+(R²=0.927, matching R-87's own pattern of a non-degenerate SIZE-touching
+construction), but escaping the collapse does not buy an edge — it buys a
+construction that is measurably, sometimes significantly, *worse* than doing
+nothing, concentrated exactly where v4's own vote/gate already does the
+work (inner_train's early loss history, and ETH throughout). The controller
+reacts to realized loss by discounting exposure, but the bars it discounts
+most heavily turn out to include recovery bars v4's own unmodified exposure
+needed to hold through — a formal loss-control guarantee on single-bar
+downside says nothing about whether the *path* that avoids those bars also
+avoids the gains that follow them, and on this data it does not. Where
+R-87's ACI failed by falling just short of the noise floor (an inert-ish
+near miss), this round's online branch fails by a wide, often significant,
+margin in the wrong direction — a more informative negative, not merely a
+repeat of R-87's shape. **Holdout counter: +0**, running program-level
+total stays **~637** (R-103's figure, unchanged) — neither branch, nor the
+operator's independent reproduction, read, printed, or held in memory any
+bar dated 2023-01-01 or later; both scripts assert this via
+`assert_no_holdout` throughout, and both print/confirm a max timestamp of
+2022-12-31 23:55:00 UTC on every load. See the bullet added below in
+[Holdout consultations to date](#holdout-consultations-to-date). Neither
+pre-registered decision rule moved after seeing any number — the two bug
+fixes (the shared-module `.to_numpy()` crash; the novel branch's warmup/
+trading-gate interaction) were made and disclosed *before* either verdict
+was read, per ROUTINE.md's bug-fix allowance, not after. **Next step:**
+this closes the third ERR-axis mechanism this ledger has tried (e-process,
+ACI, now CRC) against the same standing question — none has produced a
+promotable construction, and this round adds a specific, reusable
+diagnosis for why a *formally correct* risk-control guarantee on
+single-bar loss does not translate into a strategy-level edge on this
+instrument: the guarantee is about the marginal bar, not the path, and
+v4's own drawdown property (this project's one robust finding) already
+lives in exactly the multi-bar recovery structure a bar-local loss
+control has no visibility into. **B-32 remains the only ranked, unblocked
+backlog item.** A future session preferring a fresh mechanism search now
+needs either an ERR-axis construction that controls a *path* functional
+(e.g. a running-maximum or drawdown-referenced risk, not a single-bar
+loss) rather than a bar-local one — a materially different target than
+all three ERR-axis attempts to date — a data channel this project cannot
+construct from its own committed files or fetchable free sources at all
+(fifteen INFO-axis attempts have failed), a SIZE-axis construction outside
+the near-constant-rescale family (26+ attempts) that does not merely
+re-discount `frac * scale` as an overlay (R-102's novel branch, this
+round's both branches), or a regime-timing construction with no basis in
+common with the nine already closed — or should work B-32 directly.
+
 ### R-103 · 08-24 · NEGATIVE (both branches) — a causally-fit RSJ discount weight, R-102's own named follow-on, fails the same bar twice
 
 **Direction.** Off-backlog, same posture as R-73–R-102 (the ranked backlog holds only **B-32**, pure infrastructure). R-102's ledger entry closed with an explicit, named, untried follow-on on its novel branch's near-miss: *"a materially different asymmetric-persistence specification (a causally-fit rather than a-priori-gridded asymmetric-persistence weight ...) is a live, named, but untried follow-on."* This round is exactly that follow-on, and nothing else. R-102 novel multiplied `kelly_regime_v4`'s unchanged `frac*scale` by `discount = clip(1+k*rsj, floor, 1.0)` where `k` was a hand-picked constant swept over a 3x3 a-priori grid, chosen by a non-degeneracy rule that never read a Sharpe number — a mismatch with Patton & Sheppard (2015)'s own method, which is a *fitted* predictive regression (future realized volatility on RSJ), not a chosen multiplier. This round fits that regression causally — using only information available at each bar — and lets its sign and magnitude decide the discount, via two structurally different estimators: an expanding-window OLS refit daily (conservative, Corsi 2009-style) and a continuous online recursive-least-squares filter with an exponential forgetting factor, updated at every bar whose forward label has resolved (novel; the same "frozen/periodic vs. causally-continuous" axis R-101 used, and the "batch vs. rolling-online filter" axis R-83 used, applied here to a new object). Both branches also generalize R-102's construction in one respect: rather than hard-coding "only discount when RSJ<0", the fitted forecast's own standardized value decides when to discount, letting the data — not an a-priori sign assumption — decide when danger is signalled. **Attacks SIZE** (same axis and same slot as R-102, not a new axis). **Not a duplicate of** R-102 (fixed constant vs. fitted regression — see the full non-duplication argument, including against R-101's jackknife and R-87's conformal-coverage wrapper, in `experiments/r103_shared.py`'s own module docstring, written before either branch was dispatched).
@@ -10752,6 +10948,42 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-24 after R-104.** An off-backlog, literature-prompted
+two-branch round (same posture as R-73–R-103 — the ranked list holds only
+B-32, pure infrastructure) tried Conformal Risk Control (Angelopoulos,
+Bates, Fisch, Lei & Schuster 2024, ICLR) as a third ERR-axis mechanism
+(after the retired e-process and R-87's ACI) — a discount on
+`kelly_regime_v4`'s raw exposure calibrated to bound the probability a
+single bar's realized loss exceeds a threshold, tried as a static
+split-conformal calibration (conservative) and an online feedback
+controller (novel). Both **NEGATIVE**. Conservative: collapses to the
+familiar SIZE-axis near-constant rescale (R²=0.991 against v4's own raw
+path). Novel: genuinely escapes that collapse (R²=0.927, and a real,
+moving discount path on inner-validation, not a frozen one) but is
+decisively — and on several cells significantly — *worse* than v4 rather
+than merely indistinguishable from it, most sharply on inner-train and the
+ETH replication slice; every bootstrap interval in the round that excludes
+zero does so against the candidate. **This is the sharpest ERR-axis result
+this project has produced**: unlike R-87's ACI, which failed by falling
+just short of the noise floor, this round's online branch shows a formal,
+correctly-functioning loss-control guarantee on single-bar downside
+actively costs the strategy money, because the bars it discounts on
+realized loss include recovery bars v4's own unmodified exposure needed to
+hold through — a bar-local risk guarantee has no visibility into the
+multi-bar path structure this project's one robust finding (the drawdown
+property) actually lives in. **B-32 remains the only ranked, unblocked
+backlog item.** A future session preferring a fresh mechanism search now
+needs an ERR-axis construction that controls a *path* functional (a
+running-maximum or drawdown-referenced risk) rather than a bar-local one —
+untried by any of the three ERR-axis attempts to date — a data channel this
+project cannot construct from its already-committed files or fetchable
+free sources at all (fifteen INFO-axis attempts have failed), a SIZE-axis
+construction outside the near-constant-rescale family that does not merely
+re-discount `frac * scale` as an overlay (R-102's novel branch and both of
+this round's branches now share that architecture), or a regime-timing
+construction with no basis in common with the nine already closed — or
+should work B-32 directly.
+
 **Re-ranked 08-24 after R-103.** An off-backlog, literature-prompted two-branch
 round (same posture as R-73–R-102 — the ranked list holds only B-32, pure
 infrastructure) worked R-102's own named follow-on directly: replace the
@@ -12510,6 +12742,16 @@ Rules that the format exists to enforce:
 Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
+
+- **08-24 · ~637** — R-104: **+0** on top of R-103's ~637 (unchanged), both
+  branches. Conservative (`experiments/r104_conservative_static_crc.py`)
+  and novel (`experiments/r104_novel_online_crc.py`) both restricted every
+  read to inner-train/inner-validation/ETH via `r104_shared.py`'s
+  `assert_no_holdout`; both print a max-timestamp line of 2022-12-31
+  23:55:00 UTC on every load. The operator independently re-executed both
+  branches' entire runs from a clean shell (post both bug fixes) and every
+  reported number — tau, d_star/d-path diagnostics, A0/A2 gates, the full
+  comparison and fee-tier tables — matched exactly.
 
 - **08-24 · ~637** — R-103: **+0** on top of R-102's ~637 (unchanged), both
   branches. Conservative (`experiments/r103_conservative_causal_ols.py`)
