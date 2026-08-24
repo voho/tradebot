@@ -315,6 +315,185 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-122 · 08-24 · NEGATIVE (both branches) — a pooled, externally-calibrated SYNTHETIC reference distribution (zero real price data) for R-109's ERR-axis novelty brake, pairing R-119's GBM+jump generator with Mahalanobis distance (conservative) and R-119's regime-switching generator with kNN distance (novel): both produce the strongest BTC-side signal in this five-round family, and both still fail B4 fully — closing R-121's own named follow-on and the distributional-novelty sub-axis's third and last axis of variation
+
+**Direction.** Off-backlog (the ranked list has held only B-06 since R-110,
+reconfirmed by R-120's and R-121's own broad ledger surveys). One sentence:
+does replacing the distributional-novelty brake's reference distribution —
+BTC's own real trailing price history, the one thing R-109/R-112/R-115/R-121
+all held fixed — with a POOLED, EXTERNALLY-CALIBRATED SYNTHETIC reference
+built from zero real price bars, close the k-NN/Mahalanobis novelty brake's
+ETH (B4) falsification gap? R-121's own closing line, verbatim: *"a future
+session preferring this specific construction needs a reference distribution
+NOT dominated by BTC's own single supercycle at all (e.g. a purely-synthetic
+or externally-calibrated reference, in the spirit of R-118/R-119's N approx 3
+line, applied here instead), which is a materially different, untested
+question from either axis tried so far."* This round is exactly that
+question, and the fifth attempt on this construction overall (after R-109,
+R-112, R-115, R-121). **Attacks ERR** (no error control anywhere in the
+signal path) — the same distributional-novelty sub-axis as every round in
+this family; the statistic only ever discounts `kelly_regime_v4`'s existing,
+unchanged `frac * scale`, guarded by the identical R2_VS_V4_THRESH/
+R2_VS_VOL_THRESH Step-0 kill switches R-109 built. Citations, verified before
+being relied on: Rabanser, Gunnemann & Lipton (2019, NeurIPS, "Failing
+Loudly") reused unchanged from R-109; **Abbas, Azmat, Horesh & Yurochkin
+(2025), "Out-of-Distribution Detection using Synthetic Data Generation,"
+arXiv:2502.03323** (title, all four authors, abstract and venue independently
+confirmed via WebFetch on the arXiv abstract page) — disclosed precisely as a
+different-domain (text/LLM, not financial time series) and mirror-image
+(they synthesize the OOD side; this round synthesizes the reference/
+in-distribution side) precedent, cited only for the general principle that a
+synthetically-constructed reference is a legitimate substitute for an
+empirically-sourced one in this literature; **Wiese, Knobloch, Korn &
+Kretschmer (2020), "Quant GANs: Deep Generation of Financial Time Series,"
+*Quantitative Finance* 20(9), 1419–1440** (title, all four authors, journal,
+volume and page range independently confirmed via WebSearch) — on-domain
+(financial time series) precedent that synthetic generated price paths are
+already a standard quant-finance tool for stress-testing/risk-model
+validation, disclosed precisely as citing the general precedent rather than
+the GAN method itself (this round's generator is R-119's much simpler,
+non-learned, externally-calibrated stochastic-process simulator, reused
+unchanged, never a GAN). No new external calibration NUMBER is introduced —
+every synthetic path reuses R-119's own three frozen literature constants
+(Scaillet, Treccani & Trevisan 2020 jump frequency; MDPI *Mathematics* 9(20)
+2567, 2021 jump sizes; the four-source BTC crash catalogue) unchanged.
+**Not a duplicate of:** R-109/R-112/R-115/R-121 (four attempts, all build
+their reference distribution EXCLUSIVELY from BTC's own real trailing price
+history — R-112 varied the feature space, R-115 varied the pooling, R-121
+varied the feature map; none ever built a reference containing zero real
+price bars); R-118/R-119 (same two synthetic-path-generator families, same
+day, but for a structurally different purpose — selecting `kelly_regime_v4`'s
+own free parameters via a robust CVaR criterion; this round never touches
+`r118_shared.GRID`/`select_config`/`evaluate_candidate`, and `kelly_regime_v4`'s
+own shipped parameters are used completely unmodified throughout, exactly as
+R-109/R-112/R-115/R-121 do — the two `path_generator(seed)` functions are
+reused purely as synthetic-OHLCV SOURCES for an entirely different downstream
+use). Full argument and all four of this round's own named failure risks live
+in the operator-authored, read-only `experiments/r122_shared.py`'s own module
+docstring, written and self-tested before either branch was dispatched.
+
+**What was done.** Operator-authored `experiments/r122_shared.py`: pools
+daily market-state features (`log_vol`, `anchor_disp`, `kurtosis` — R-109's
+original 3-feature panel, reused for BOTH branches rather than R-109 novel's
+richer 5-feature panel, a disclosed scope limit since R-119's synthetic
+generators emit a flat, constant `volume=1.0`, making `volume_z` degenerate
+by construction) from 20 seeded draws (seed 0–19, a round number chosen once
+before any panel was built) of R-119's two frozen `path_generator(seed)`
+functions, pooled into one FIXED, time-invariant reference panel (~28,420
+rows, ~37x R-109's own 730-day real-reference window), plus fixed-reference
+Mahalanobis and kNN distance functions scoring each real day's feature
+vector against that fixed panel — no rolling window, no walk-forward refit,
+since a purely synthetic reference has no dependency on real calendar time
+at all. Self-tested: determinism, non-negativity, and a new invariant this
+construction introduces beyond R-109's own causal guarantee — a real day's
+score cannot depend on any OTHER real day at all (verified by truncating and
+row-permuting the real panel and confirming bit-identical scores). Sanity-run
+against the real R-119 generators before dispatch: panel construction ~0.2–
+0.5s for 2 draws, sane non-degenerate feature distributions, real-BTC scoring
+in milliseconds. **Conservative** (`experiments/r122_conservative_gbm_
+mahalanobis.py`): R-119's plain GBM-diffusion + externally-calibrated
+compound-Poisson-jump generator (no regime structure) → fixed Mahalanobis
+distance — R-119's simplest generator paired with R-109's simplest algorithm.
+**Novel** (`experiments/r122_novel_regimeswitch_knn.py`): R-119's 3-state
+bull/chop/bear regime-switching generator (bear severity/duration from the
+external crash catalogue) → fixed k=10 kNN distance (R-109's own default,
+reused not swept) — the richer generator paired with the nonparametric
+algorithm. Both branches: identical Step-0 grid (`STEP0_THRESH_GRID x
+STEP0_MAXD_GRID`, primary cell (0.90, 1.0) per `SELECTION_ORDER`) and
+identical B1–B5 promotion bar (`r109_shared`'s gate code, unmodified, via
+`r122_shared`'s re-export), pre-registered before either branch was
+dispatched, dispatched to two independent sessions with disjoint files.
+**Configs evaluated: 52 total** (26 per branch: 6 Step-0 + 6 primary
+`compare()` + 12 B3 plateau [2 reused] + 2 B5 fee-tier; the panel's 20 draws
+are built once and are not themselves a swept configuration; k/n_draws not
+swept, per this family's no-hidden-search discipline). `pytest -q`: **516
+passed** (unchanged from R-121's own count — neither branch registers a
+strategy). Both branches' full JSON output independently reproduced by the
+operator from a clean shell after both agents reported: **zero diffs across
+412 fields (conservative) and 411 fields (novel)**, bit-for-bit exact.
+Operator also read both branch files in full against the frozen
+`r122_shared.py` interface: no hidden full-series fit, no logic beyond the
+pre-registered composition, `experiments/r122_shared.py` itself confirmed
+byte-unmodified by either branch (`git diff` empty).
+
+**Result.** *Conservative* — causal probe PASS, no bug found. Step-0: 5 of 6
+cells qualify (bind_frac 0.066–0.218, all r²_vs_v4 < 0.98, all r²_vs_vol
+strongly negative i.e. anti-correlated not degenerate, state_cv=0.571
+throughout); primary cell (0.90, 1.0) qualifies directly (bind_frac=0.1205,
+r²_vs_v4=0.8089, r²_vs_vol=−3.1268). **B1 PASSES both markets** — spot
+ΔSharpe **+0.2198**, futures **+0.3650** boot[+0.028,+0.391] (excludes
+zero) — comfortably clearing R-109 novel's own "cleanest B1 pass yet" record
+(+0.118 spot / +0.192 futures) by a wide margin on both markets. B2
+(diagnostic): spot ΔDD −7.77pp, futures −11.25pp, both **VOID** (not
+risk-matched). **B3 PASSES** (10 of 12 grid×market cells same-signed
+positive). **B4 (ETH, pre-registered) FAILS FULLY**: spot ΔSharpe **−0.0903**
+boot[−0.805,+0.052], futures **−0.1338** boot[−0.995,+0.066] — both markets
+sign-inverted against BTC, a FULL failure (not R-109 novel's own PARTIAL,
+where futures replicated). **B5 PASSES**: no sign reversal at the 0.40% fee
+tier on either market (spot +0.2198→+0.2320, futures +0.3650→+0.2788).
+*Novel* — causal probe PASS, no bug found. Step-0: **6 of 6 cells qualify**
+(bind_frac 0.085–0.270, all r²_vs_v4 < 0.98, r²_vs_vol strongly negative,
+state_cv=0.550 throughout) — the first fully-qualifying Step-0 grid in this
+five-round family; primary cell (0.90, 1.0) selected directly
+(bind_frac=0.1396, r²_vs_v4=0.7660, r²_vs_vol=−3.5121). **B1 PASSES both
+markets** — spot ΔSharpe **+0.2841**, futures **+0.2599** — again clearing
+R-109 novel's own record on both markets. B2 (diagnostic): spot ΔDD
+−8.53pp, futures −10.70pp, both **VOID**. **B3 PASSES** (all 12 cells
+same-signed positive — the cleanest plateau in the family). **B4 FAILS
+FULLY**: spot ΔSharpe **−0.2035** boot[−1.111,+0.015], futures **−0.0408**
+boot[−0.902,+0.189] — both sign-inverted, again a FULL failure. **B5
+PASSES**: no reversal (spot +0.2841→+0.2715, futures +0.2599→+0.2928).
+Neither branch reads or holds any bar dated 2023-01-01 or later; both own
+printed max-timestamp lines read `2022-12-31 23:55:00+00:00`; the operator's
+bit-for-bit reproduction of both confirms this independently.
+
+**Verdict.** **NEGATIVE, both branches.** One-line lesson: **moving the
+distributional-novelty brake's reference distribution from BTC's own real
+price history to a pooled, externally-calibrated, zero-real-data synthetic
+reference produced this five-round family's strongest BTC-side signal by a
+wide margin (both branches clear B1 on both markets, comfortably past
+R-109's own prior best) — and both branches' ETH failure is nonetheless
+FULL rather than PARTIAL, undercutting the hypothesis that a stronger
+BTC-side statistic would generalize better: if anything, the relationship
+runs the other way in this one comparison.** The mechanism named in
+`r122_shared.py`'s own pre-registered failure risk (4) is the most
+consistent reading: the synthetic reference's GENERATOR PARAMETERS were
+themselves calibrated from BTC-specific crash-catalogue and jump-study
+literature (R-119's own citations), so a reference built from them is not
+asset-neutral either — it is BTC-flavoured by its calibration source rather
+than by its raw data, and the B4 test (designed to distinguish exactly this)
+found the same BTC-specificity by the new route that it found by the old
+one. **This closes the distributional-novelty ERR sub-axis's third and last
+named axis of variation**: reference-pool construction (R-112, R-115),
+feature map (R-121), and now reference DATA SOURCE — real vs. purely
+synthetic (this round) — five repair attempts across three independent axes,
+0 of 5 closing the ETH gap, with the two strongest BTC-side results in the
+family (this round's own two branches) failing no less decisively than the
+weakest. Holdout counter: **unchanged** (~698, per R-117's own running
+total) — neither branch, nor the operator's independent bit-for-bit
+reproduction of both, ever read, printed, or held in memory a bar dated
+2023-01-01 or later; see the bullet added below in [Holdout consultations to
+date](#holdout-consultations-to-date). Neither pre-registered decision rule
+moved after seeing any number. **Next step:** this specific distributional-
+novelty construction (R-109's discount-on-`frac*scale` architecture, scored
+by a reference-distance statistic of any kind) has now been varied along
+every axis this ledger has named for it — reference pool, feature map,
+reference data source — and failed identically on all three; a future
+session preferring this ERR sub-axis needs either a structurally different
+ARCHITECTURE (not a discount bolted onto `v4_target`, e.g. a role the
+statistic could play inside the vote or scale directly) or should treat the
+sub-axis as closed. More broadly, the ranked backlog remains empty of
+anything but B-06 (forward paper-trading, already running unattended, per
+R-78's own costing); every other axis this project's own framework can
+construct — 19 INFO-axis attempts, 27+ SIZE-axis attempts, ERR now closed
+across five notions of uncertainty AND all three axes of the distributional-
+novelty family specifically, ten regime-timing mechanisms, two structurally-
+new-detector-family SIZE substitutions, four distinct N≈3-attacking
+selection procedures, the multi-asset panel's own eleven-round closed list —
+continues to point the same direction: `kelly_regime_v4` is close to
+efficient with respect to the information, error control and
+parameter-selection procedure available to this project.
+
 ### R-121 · 08-24 · NEGATIVE (both branches) — a path-signature (order-sensitive) novelty statistic feeding R-109's own unchanged kNN brake (conservative) and a closed-form analytic chi-squared tail probability replacing its empirical percentile rank (novel): both replicate R-109/R-112/R-115's exact ETH sign-inversion / inertness failure, closing R-115's own named follow-on
 
 **Direction.** Off-backlog (the ranked list has held only B-06 since R-110,
@@ -12661,6 +12840,43 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-24 after R-122.** Off-backlog (still only B-06, unchanged
+since R-110), a two-branch round closed R-121's own named follow-on: does a
+reference distribution NOT dominated by BTC's own real price history at all —
+a pooled, externally-calibrated SYNTHETIC reference built from zero real
+price bars, reusing R-119's two frozen Monte Carlo generators — close the
+distributional-novelty brake's ETH falsification gap? R-119's plain
+GBM+jump generator fed a fixed Mahalanobis distance (conservative) and
+R-119's regime-switching generator fed a fixed k=10 kNN distance (novel),
+both against R-109's own unchanged discount-on-`frac*scale` architecture.
+**Both branches NEGATIVE**, and both produced this five-round family's
+strongest BTC-side signal by a wide margin — B1 clears on both markets for
+both branches (conservative +0.22/+0.37, novel +0.28/+0.26), comfortably
+past R-109 novel's own prior-best record (+0.118/+0.192) — yet **both B4
+failures are FULL (both markets sign-inverted)**, not partial, which is if
+anything the opposite of what "the BTC signal was just too weak to
+generalize" would predict. **This closes the distributional-novelty ERR
+sub-axis's third and last named axis of variation**: reference-pool
+construction (R-112, R-115), feature map (R-121), and reference data source
+— real vs. synthetic (this round) — five attempts across three independent
+axes, 0 of 5 closing the ETH gap. A future session preferring this specific
+discount-on-`frac*scale` architecture for a novelty brake needs it to enter
+the vote or scale directly rather than sit as a multiplicative discount on
+top of them; otherwise this ERR sub-axis is closed. **The ranked backlog
+remains empty of anything but B-06** (forward paper-trading, already running
+unattended, per R-78's own costing). A future session preferring a fresh
+mechanism search now has: the single-asset axis's own fully closed lists (19
+INFO-axis attempts, 27+ SIZE-axis attempts, ERR across five notions of
+uncertainty — distributional novelty now closed across all three of its own
+axes of variation — ten regime-timing mechanisms, two structurally-new-
+detector-family SIZE substitutions, four distinct N≈3-attacking selection
+procedures); the multi-asset panel's own closed list (eleven rounds, all
+NEGATIVE); or B-28's breadth clause (blocked on data this project cannot
+fetch or simulate). Absent a new idea clearing Step-0 on one of these, the
+accumulating evidence continues to point the same direction: `kelly_regime_v4`
+is close to efficient with respect to the information, error control and
+parameter-selection procedure available to this project.
+
 **Re-ranked 08-24 after R-121.** Off-backlog (still only B-06, unchanged
 since R-110), a two-branch round closed R-115's own named follow-on: does a
 materially different NOVELTY STATISTIC — not another repair of R-109's
@@ -15144,6 +15360,16 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-24 · ~698** — R-122: **+0** on top of R-121's ~698 (unchanged), both
+  branches. Neither branch's pooled synthetic reference panel touches any
+  real price data at all (built entirely from R-119's frozen
+  `path_generator(seed)` functions); both branches' only real-data reads are
+  `load_btc()`/`load_eth()`, truncated below `OOS_START` and
+  `assert_no_holdout`-guarded, identical to every prior round in this
+  family. Both branches' own printed max-timestamp lines read `2022-12-31
+  23:55:00+00:00`; the operator's independent re-run from a clean shell
+  reproduced both branches' full JSON output bit-for-bit (zero diffs across
+  412 and 411 fields respectively).
 - **08-24 · ~698** — R-117: **+0** on top of R-116's ~698 (unchanged), both
   branches. Conservative (`experiments/r117_conservative_donchian_gate.py`)
   never called `compare()`/`run_slice()`/`ev()` at all — its pre-registered
