@@ -198,6 +198,17 @@ once cleared). Instead:
   design: no grid, no selection step, one frozen configuration per branch,
   decided by a rule stated here before either sigma was measured.
 
+  **Both new scores are RECENTERED by their own pooled W_TRAIN mean before
+  delta_in/delta_out are applied** (`recenter_score`) -- found necessary
+  during this round's own pre-dispatch validation (a literal, uncentered
+  transfer collapses `conservative_score` to permanently flat, since it is
+  bounded above by 0 and measures pooled mean -0.203, so `delta_out=0.0`'s
+  "hold while score > 0" is nearly never true). This is a construction fix,
+  not a re-selection -- see `recenter_score`'s own docstring for the full
+  reasoning and the pre-fix diagnostic that caught it. Applied uniformly to
+  BOTH new scores (not only the one it visibly broke), never to the old
+  score, which keeps its own already-published, uncentered convention.
+
   A NEIGHBOURHOOD CHECK (not a selection) is still run and reported, per
   ROUTINE step 4's plateau requirement: delta_in at 0.5x, 1.0x (frozen) and
   1.5x the transferred value, held fixed once measured, reported for every
@@ -351,12 +362,7 @@ DELTA_OUT_FIXED = 0.0
 NEIGHBOUR_MULTIPLIERS = (0.5, 1.0, 1.5)      # 1.0 is the frozen decisive point
 
 
-def pooled_std_w_train(score: pd.DataFrame, window=W_TRAIN) -> float:
-    """The new score's own W_TRAIN standard deviation, pooled across assets
-    and bars -- the exact quantity `SIGMA_SCORE_W_TRAIN` measured for the old
-    score, reproduced here for a new score so `REL_DELTA_IN`/`REL_BUFFER`
-    have something to multiply. Finite values only.
-    """
+def _w_train_slice(score: pd.DataFrame, window=W_TRAIN) -> np.ndarray:
     start, end = window
     sub = score.loc[pd.Timestamp(start, tz="UTC"):pd.Timestamp(end, tz="UTC")
                     + pd.Timedelta(days=1) - pd.Timedelta(nanoseconds=1)]
@@ -364,18 +370,72 @@ def pooled_std_w_train(score: pd.DataFrame, window=W_TRAIN) -> float:
     vals = vals[np.isfinite(vals)]
     if len(vals) == 0:
         raise ValueError("no finite score values in W_TRAIN")
-    return float(np.std(vals, ddof=1))
+    return vals
+
+
+def pooled_std_w_train(score: pd.DataFrame, window=W_TRAIN) -> float:
+    """The new score's own W_TRAIN standard deviation, pooled across assets
+    and bars -- the exact quantity `SIGMA_SCORE_W_TRAIN` measured for the old
+    score, reproduced here for a new score so `REL_DELTA_IN`/`REL_BUFFER`
+    have something to multiply.
+    """
+    return float(np.std(_w_train_slice(score, window), ddof=1))
+
+
+def pooled_mean_w_train(score: pd.DataFrame, window=W_TRAIN) -> float:
+    """The new score's own W_TRAIN pooled mean -- see `recenter_score` for
+    why this is measured at all."""
+    return float(np.mean(_w_train_slice(score, window)))
+
+
+def recenter_score(score: pd.DataFrame, window=W_TRAIN) -> tuple[pd.DataFrame, float]:
+    """CORRECTION, found during this round's own pre-dispatch validation,
+    before either branch's decisive battery ran -- the ROUTINE-permitted
+    "fix a bug" case (step 3), not a re-selection: the old score's own
+    `delta_out=0.0` convention means "hold_eligible = score > 0", which is a
+    genuinely loose condition for the OLD score because it is
+    APPROXIMATELY ZERO-CENTERED over W_TRAIN (pooled mean +0.070) -- but
+    `conservative_score` is bounded ABOVE by 0 by construction (a rolling
+    max is never smaller than the current close) and measures pooled mean
+    -0.203 over W_TRAIN, so a literal `score > 0` transfer would require
+    being at an exact simultaneous new high on all three horizons to hold
+    ANYTHING -- collapsing the arm to permanently flat, an artifact of the
+    new score's bounded range, not a finding about its economic content.
+    (Verified directly: pre-fix, `build_targets_from_score` on
+    `conservative_score` at the literal transferred `delta_in`/`delta_out=0`
+    produces zero trades over the whole W_TRAIN window.)
+
+    FIX: both new scores are recentered by their OWN pooled W_TRAIN mean
+    before `delta_in`/`delta_out` are applied, so `delta_out=0.0` means the
+    same thing for every score -- "hold while at least as good as this
+    score's own W_TRAIN-average level" -- regardless of where that score's
+    raw values happen to sit. This is NOT a new fitted parameter: the mean
+    is measured, not selected against any objective, and it collapses to a
+    ~+0.07 no-op shift for a score that is already close to zero-centered
+    (as `novel_score` measures: pooled mean +0.043, negligible next to its
+    own sigma of ~0.134). The OLD score's own already-published R-63/65/67/
+    68/107/110 numbers are UNTOUCHED by this -- centering is applied only to
+    this round's two new scores, never to `r63_cross_sectional_score`.
+
+    Returns ``(recentered_score, center)``.
+    """
+    center = pooled_mean_w_train(score, window)
+    return score - center, center
 
 
 def transferred_thresholds(score: pd.DataFrame) -> dict:
     """The zero-new-fitted-parameter transfer this round's whole design
-    rests on. Returns sigma and the three (delta_in, buffer) pairs at
-    NEIGHBOUR_MULTIPLIERS, keyed by multiplier, with delta_out/k/hold_days
-    restated for convenience.
+    rests on, applied to the RECENTERED score (see `recenter_score`).
+    Returns sigma, the measured center, and the three (delta_in, buffer)
+    pairs at NEIGHBOUR_MULTIPLIERS, keyed by multiplier, with delta_out/k/
+    hold_days restated for convenience. `sigma` is invariant to centering
+    (subtracting a constant does not change a standard deviation), so it is
+    measured on the raw score directly.
     """
     sigma = pooled_std_w_train(score)
-    out = {"sigma": sigma, "delta_out": DELTA_OUT_FIXED, "k": K_FIXED,
-           "hold_days": HOLD_DAYS_FIXED}
+    center = pooled_mean_w_train(score)
+    out = {"sigma": sigma, "center": center, "delta_out": DELTA_OUT_FIXED,
+           "k": K_FIXED, "hold_days": HOLD_DAYS_FIXED}
     for m in NEIGHBOUR_MULTIPLIERS:
         out[m] = {
             "delta_in": m * REL_DELTA_IN * sigma,
@@ -530,6 +590,129 @@ def check_band_selection_matches_r68(frames=None, bars: int = 60_000) -> tuple[b
     return bool(err <= 1e-9), err
 
 
+# ------------------------------------------------- THE TWO SCORE FORMULAS
+#
+# Both are this round's ONLY new machinery besides the threshold-transfer
+# rule above. Written here, in the shared file, rather than split one per
+# branch file: the daily-causal lookup the novel score needs is exactly the
+# kind of computation this project's own history (R-21's i+1 lookahead, R-63's
+# own `_hi()` off-by-one, R-72's B-33 finding) shows is easy to get subtly
+# wrong, so it is written once, causality-checked once (`check_causality`,
+# imported, run against BOTH scores below before either branch's decisive
+# battery), and both branches import rather than each re-deriving it.
+
+
+def conservative_score(aligned: dict[str, pd.DataFrame]) -> pd.DataFrame:
+    """George & Hwang (2004): rank by NEARNESS TO THE TRAILING HIGH, not by
+    trailing return magnitude. Structurally parallel to R-63's own
+    `cross_sectional_score` -- same three horizons, same per-horizon
+    averaging -- swapping the anchor (`rolling(h).mean()`) for a trailing
+    high (`rolling(h).max()`) and the deviation term accordingly:
+
+        score_i(t) = mean_h ( close_i(t) / rolling_max_h(close_i)(t) - 1 )
+
+    Bounded above by 0 (a new high on every horizon simultaneously); more
+    negative the further price sits below its own recent high on each
+    horizon. `rolling(...).max()` at row t uses rows <= t only -- causal by
+    the identical construction as the old score's `rolling(...).mean()`.
+    """
+    cols = {}
+    for t, df in aligned.items():
+        close = df["close"]
+        acc = None
+        for h in HORIZONS:
+            roll_high = close.rolling(int(h * BARS_PER_DAY)).max()
+            term = close / roll_high - 1.0
+            acc = term if acc is None else acc + term
+        cols[t] = acc / len(HORIZONS)
+    return pd.DataFrame(cols, index=next(iter(aligned.values())).index)
+
+
+def _daily_consistency_by_horizon(aligned: dict[str, pd.DataFrame], universe,
+                                  horizon_days: int) -> pd.DataFrame:
+    """Da/Gurun/Warachka (2014) path-consistency, one horizon, DAILY grid.
+
+    For calendar day D, uses ONLY daily log returns strictly BEFORE D (the
+    window ending at day D-1's close) -- day D's own not-yet-realized return
+    never enters its own day's value, the identical per-day-lookup causality
+    convention `r107_shared.build_cov_lookup` already uses in this repo for
+    a rolling covariance. Per asset, per day D:
+
+        trend_sign  = sign(sum of the trailing `horizon_days` daily log
+                      returns, strictly before D)
+        consistency = fraction of those days whose OWN sign matches
+                      trend_sign (0.5 on a day with no prior history, or
+                      when trend_sign == 0 -- genuinely uninformative, not a
+                      missing value, so it must not silently drop out of the
+                      mean the caller takes across horizons)
+
+    Equivalent, up to the known affine map, to Da/Gurun/Warachka's own
+    `ID = sign(PRET) * (%neg - %pos)`: `consistency = (1 - ID) / 2`. A smooth,
+    continuous trend (their "frog in the pan" case, ID very negative) maps to
+    consistency near 1; a jumpy, discrete trend (ID positive) maps to
+    consistency near 0.
+    """
+    closes = pd.DataFrame({t: aligned[t]["close"] for t in universe})
+    daily_close = closes.resample("1D").last()
+    daily_ret = np.log(daily_close).diff()
+    dates = daily_ret.index
+    vals = daily_ret.to_numpy(dtype=float)
+    n, k = vals.shape
+
+    out = np.full((n, k), 0.5)
+    for i in range(n):
+        lo = max(0, i - horizon_days)
+        window = vals[lo:i]  # STRICTLY before day i
+        if len(window) < max(5, horizon_days // 4):
+            continue
+        finite = np.isfinite(window)
+        count = finite.sum(axis=0)
+        trend = np.where(count > 0, np.nansum(np.where(finite, window, 0.0), axis=0), 0.0)
+        trend_sign = np.sign(trend)
+        same = np.where(finite, np.sign(window) == trend_sign, False)
+        frac = np.divide(same.sum(axis=0), np.maximum(count, 1),
+                         out=np.full(k, 0.5), where=count > 0)
+        frac = np.where(trend_sign == 0, 0.5, frac)
+        out[i] = frac
+
+    return pd.DataFrame(out, index=dates, columns=universe)
+
+
+def novel_score(aligned: dict[str, pd.DataFrame]) -> pd.DataFrame:
+    """Da/Gurun/Warachka (2014) path-consistency, applied as a multiplicative
+    weight on R-63's own per-horizon magnitude term (Kim 2025/26's crypto
+    extension, same era, same asset class as this project's own window):
+
+        score_i(t) = mean_h ( (close_i(t)/anchor_{i,h}(t) - 1)
+                              * consistency_i(t, h) )
+
+    `consistency_i(t, h)` is day D's causal value (built from days strictly
+    before D, see `_daily_consistency_by_horizon`) held constant across every
+    5-minute bar inside day D -- forward-filled from the daily grid onto the
+    bar grid, which cannot leak day D's own return into day D's own bars
+    since the value itself never depends on day D at all.
+    """
+    universe = list(aligned.keys())
+    idx = next(iter(aligned.values())).index
+    day_key = idx.floor("D")
+
+    cons_by_h = {h: _daily_consistency_by_horizon(aligned, universe, h) for h in HORIZONS}
+
+    cols = {}
+    for t in universe:
+        close = aligned[t]["close"]
+        acc = None
+        for h in HORIZONS:
+            anchor = close.rolling(int(h * BARS_PER_DAY)).mean()
+            base_term = (close / anchor - 1.0)
+            cons_daily = cons_by_h[h][t]
+            cons_bar = cons_daily.reindex(day_key).to_numpy()
+            weighted = pd.Series(base_term.to_numpy() * cons_bar, index=idx)
+            acc = weighted if acc is None else acc + weighted
+        cols[t] = acc / len(HORIZONS)
+    return pd.DataFrame(cols, index=idx)
+
+
 # ------------------------------------------------------ F1 rank-agreement
 
 def rank_agreement(score_a: pd.DataFrame, score_b: pd.DataFrame, window=W_TRAIN) -> dict:
@@ -573,10 +756,12 @@ __all__ = [
     "W_VAL", "align_frames", "band_selection", "basket_log_returns",
     "build_targets_from_score", "check_against_engine",
     "check_band_selection_matches_r68", "check_causality",
-    "conditional_vol_scale", "compare", "config_count", "d1_pass", "d2_pass",
+    "conditional_vol_scale", "compare", "config_count",
+    "conservative_score", "novel_score", "d1_pass", "d2_pass",
     "d3_pass", "d5_pass", "excludes_zero", "frontier_row",
     "holding_period_days", "load_universe", "matched_hold_targets",
-    "mean_total_notional", "pooled_std_w_train", "r63_baseline_targets",
+    "mean_total_notional", "pooled_mean_w_train", "pooled_std_w_train",
+    "recenter_score", "r63_baseline_targets",
     "r63_cross_sectional_score", "rank_agreement", "realized_vol",
     "scramble_fixed_perm", "scramble_targets", "simulate_portfolio",
     "static_hold_equity", "transferred_thresholds", "turnover_stats",
