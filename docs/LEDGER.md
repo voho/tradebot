@@ -315,6 +315,178 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-112 · 08-24 · NEGATIVE (both branches) — closing R-109's own named follow-on: a return-space feature swap fixes the kNN novelty brake's B4 (ETH) failure but costs enough BTC signal to fail B1; a CORAL-pooled multi-asset reference never engages inside ETH's own evaluation window, so it re-tests nothing on the one clause it targeted
+
+**Direction.** R-109's novel branch (a k-nearest-neighbour distributional-
+novelty discount on `kelly_regime_v4`) was the first of six ERR-axis
+attempts in this ledger (R-28/retracted, R-87, R-104, R-105, R-106, R-109)
+to clear B1 on both markets, but failed its pre-registered B4 ETH
+falsification test — spot inverted sign. R-109's own Verdict section named
+one specific, disclosed follow-on rather than leaving the gap open:
+"a reference distribution NOT dominated by one price cycle (e.g.
+detrended/return-space features only, or an explicit multi-asset reference
+pool) might close the novel branch's B4 gap without needing a new
+mechanism." This round takes both halves of that sentence literally as its
+two branches, changing **exactly one thing** each from R-109's own winning
+construction and re-running the identical Step-0/B1-B5 bar. Attacks **ERR**
+(no error control anywhere in the signal path) — not a seventh independent
+mechanism, a targeted repair of R-109's sixth mechanism's one named failure
+mode. Literature (fetched via WebSearch this round): Rabanser, Gunnemann &
+Lipton (2019) carried over from R-109 for the general dataset-shift framing;
+Arjovsky, Bottou, Gulrajani & Lopez-Paz (2019), "Invariant Risk
+Minimization," for the general domain-generalization argument the NOVEL
+branch operationalizes (a statistic calibrated against one environment risks
+learning that environment's non-transferable idiosyncrasies); Sun & Saenko
+(2016), "Deep CORAL," for the NOVEL branch's specific mechanical recipe
+(standardize each domain to zero-mean/unit-variance before pooling, so no
+domain's absolute scale dominates); the 2023-2025 novelty-detection-under-
+domain-shift literature (arXiv:2309.12301, arXiv:2504.21247) independently
+converging on R-109's own diagnosis — a detector calibrated on one
+environment's dominant "style" conflates that style with genuine "core"
+novelty and degrades on a related-but-distinct environment. Full
+non-duplication argument (against R-109's own two branches, against
+R-105/R-106's disagreement constructions, against the R-63/65/67/68/72/107/
+110/111 multi-asset SCORE/allocator family whose six-instrument panel this
+round's NOVEL branch reads from but never scores or allocates with, and
+against all 26+ SIZE-axis rounds) is in `experiments/r112_shared.py`'s own
+module docstring, written by the operator before either branch was
+dispatched.
+
+**What was done.** Operator-authored shared module `experiments/
+r112_shared.py` (chaining R-109/R-105/R-102's control machinery and R-63's
+`UNIVERSE_6`/`load_universe` unchanged), containing: (1)
+`feature_anchor_dispersion_returns`, a return-space analogue of R-109's
+`anchor_disp` (mean pairwise dispersion of rolling MEAN LOG RETURNS over the
+vote's own 20/40/80-day horizons, instead of mean pairwise dispersion of SMA
+*price-level* anchors) — the only feature in R-109's 5-feature panel that
+touched a price level rather than a pure return/volume/moment quantity; and
+(2) `rolling_knn_distance_pooled`, R-109's kNN distance metric unchanged but
+measured against a reference set pooling the target instrument's own
+trailing 730 days WITH the six `UNIVERSE_6` instruments' (BCH, LTC, ETC,
+DASH, LINK, XTZ) contemporaneous trailing 730 days, each CORAL-standardized
+against its own local mean/std before concatenation — neither BTC nor ETH
+is ever a pool member (asserted in `load_pool_daily_panels`). Module
+self-test (causal truncation on both new pieces, on synthetic data) passes.
+Two branches dispatched as independent subagents on disjoint files, each
+given the shared module, R-109's own three files as a structural template,
+and an explicit instruction to change exactly one thing from R-109's novel
+branch: **conservative** (`experiments/r112_conservative_returnspace_knn.py`)
+swaps only the feature panel (R-109's `NOVEL_FEATURE_BUILDERS` →
+`RETURNSPACE_FEATURE_BUILDERS`), keeping the single-asset reference
+unchanged; **novel** (`experiments/r112_novel_pooled_reference_knn.py`)
+swaps only the reference-set construction (`rolling_knn_distance` →
+`rolling_knn_distance_pooled`), keeping R-109's original 5-feature panel
+unchanged. Both keep k=10/refit_every=30 (R-109's own defaults, not swept),
+the identical `STEP0_THRESH_GRID`×`STEP0_MAXD_GRID` (6 cells) and
+`SELECTION_ORDER`, and the identical B1 (gating)/B2 (diagnostic)/B3
+(plateau, gating)/B4 (ETH falsification, gating, full-pass-both-markets
+required, pre-registered)/B5 (0.40% fee tier, gating) promotion bar R-105
+onward all share. **Configs evaluated: 52 total** (26 per branch: 6 Step-0
++ 6 primary `compare()` + 12 B3 plateau [2 reused] + 2 B5 fee-tier; k/
+refit_every not swept, adds 0 to either branch). The operator independently
+re-ran both scripts from a clean shell after both branches reported; every
+number below matched exactly, bit-for-bit, both times.
+
+**Result.** *Conservative* — Step-0 primary cell (thresh=0.90,
+max_discount=1.0) qualifies directly (bind_frac=0.0609, r²_vs_v4=0.9727,
+r²_vs_vol=−3.365, state_cv=0.6391). **B1 FAILS**: spot ΔSharpe +0.1066
+boot[+0.0037,+0.1321] (excludes zero, passes) but futures_5x ΔSharpe
++0.0588 boot[−0.0336,+0.1099] (contains zero, fails) — B1 requires both
+markets. Both magnitudes are markedly smaller than R-109 novel's own B1
+(spot +0.118, futures +0.192). B2 (diagnostic): risk-matched drawdown
+improvement, spot −3.82pp, futures −2.28pp. B3 (plateau) **PASSES** — 12/12
+grid×market cells share the primary's positive sign. **B4 (ETH,
+pre-registered) FULL PASSES — the headline result**: spot ΔSharpe +0.0305
+boot[−0.2071,+0.1952], same-sign-as-BTC=True; futures +0.0238
+boot[−0.3506,+0.2787], same-sign-as-BTC=True — the exact clause R-109
+novel failed (BTC-analogue construction inverted sign on ETH spot) now
+replicates on both markets. B5 **PASSES**: no sign reversal at 0.40% taker
+either market (spot +0.0351 vs +0.1066 standard; futures +0.0111 vs +0.0588
+standard). *Novel* — Step-0 primary cell (thresh=0.90, max_discount=1.0)
+qualifies directly (bind_frac=0.0602, r²_vs_v4=0.9761, r²_vs_vol=−3.39,
+state_cv=0.698). **B1 FULL PASSES**: spot ΔSharpe +0.1401
+boot[+0.0137,+0.1719] (excludes zero); futures +0.2020
+boot[+0.0164,+0.2305] (excludes zero, also clears the +0.2 floor) — both
+slightly *larger* than R-109 novel's own numbers. B2: risk-matched drawdown
+improvement, spot −3.89pp, futures −6.10pp. B3 (plateau) **PASSES** —
+12/12 grid×market cells share the primary's positive sign, several
+individually excluding zero. **B4 (ETH, pre-registered) FAILS**: spot
+ΔSharpe −0.0090 boot[−0.2269,+0.1396] (sign-inverted vs. BTC, contains
+zero); futures +0.0309 boot[−0.3372,+0.3056] (same sign, contains zero) —
+only a partial pass against the frozen full-pass rule. These two numbers
+are **bit-for-bit identical to R-109 novel's own B4 numbers**
+(spot −0.009 boot[−0.227,+0.140]; futures +0.031 boot[−0.337,+0.306]), and
+the operator traced why: `experiments.r63_shared.UNIVERSE_6`'s six
+committed Coinbase panels all start **2020-01-02**, while `r109_shared.
+load_eth()` (the Bitfinex series this round reused unchanged) ends
+**2019-12-31** — independently confirmed by the operator via direct range
+inspection of both loaders. Zero calendar overlap means every
+`rolling_knn_distance_pooled` refit inside ETH's own evaluation window
+finds every pool instrument's window empty and falls back to exactly the
+target's own trailing window — mechanically identical to R-109's
+single-asset `rolling_knn_distance` on that instrument. This is not a bug:
+`load_pool_daily_panels()` was used exactly as specified and the causal
+truncation probe passed; it is a real, disclosed data-coverage limitation
+of this round's specific implementation. B5 **PASSES**: no sign reversal at
+0.40% taker either market (spot +0.0705 vs +0.1401 standard; futures
++0.1717 vs +0.2020 standard). `pytest -q` (operator, clean shell, after
+both branch files existed): **516 passed**, unchanged from R-109/R-111
+(neither branch touches a registered strategy or an existing test).
+
+**Verdict.** **NEGATIVE, both branches — but for two different reasons, and
+only one is a genuine test of its own hypothesis.** The conservative
+branch's return-space feature swap does exactly what it was built to do:
+B4 goes from R-109's decisive spot-sign inversion to a full same-sign pass
+on both markets, confirming R-109's own diagnosis that the price-level
+SMA-anchor feature — not the kNN mechanism itself — was the ETH-specific
+fragility source. But the repair is not free: stripping the price-level
+information also weakens the BTC-side signal enough that B1 drops from
+R-109 novel's double-market bootstrap-excludes-zero pass to a single-market
+pass (futures ΔSharpe collapses to +0.059, interval containing zero) — the
+branch trades away the magnitude that made R-109 novel this ledger's first
+clean ERR-axis B1 pass. This is a real, mechanistically informative
+negative: it isolates that the FEATURE was the source of the B4 gap, and
+prices what fixing it costs. The novel branch's CORAL-pooled reference, by
+contrast, **never actually tested R-109's own named hypothesis on the one
+clause it exists to test**: because `UNIVERSE_6`'s committed history begins
+after ETH's own evaluation window ends, the pooling mechanism was inert for
+every ETH bar this round could read, and B4 reproduces R-109's own numbers
+bit-for-bit. On BTC, where the pool genuinely does engage (2020 onward,
+inside BTC's own inner-validation window), the pooled reference reproduces
+and modestly *strengthens* R-109 novel's clean B1 pass (both markets now
+excluding zero, futures also clearing the +0.2 floor) and shows no Step-0
+degradation (r²_vs_vol still strongly negative, state CoV higher than the
+single-asset version) — evidence the pooling mechanism itself is not
+obviously harmful where it can run, but this round's committed data made it
+impossible to learn anything about whether it helps ETH generalization
+specifically. **Per this project's own standing rule ("not tested is not a
+negative result"), the multi-asset-pool half of R-109's follow-on is
+correctly read as UNTESTED, not ruled out** — distinct from the
+return-space half, which is a genuine, decisive NEGATIVE. **Holdout
+counter: +0** on top of R-111's ~679 (running total unchanged at **~679**)
+— neither branch, nor the operator's two independent re-runs, ever read,
+printed, or held in memory a bar dated 2023-01-01 or later, for BTC, ETH,
+or any of the six pool instruments; every `max timestamp read` line (and
+every `assert_no_holdout` guard, including the one added to
+`load_pool_daily_panels` for each of the six pool instruments) reports
+2022-12-31 23:55:00 UTC; see the bullet added below in [Holdout
+consultations to date](#holdout-consultations-to-date). Neither
+pre-registered decision rule moved after seeing any number. **Next step,
+named now and disclosed rather than left implicit:** a future round that
+wants to genuinely test the multi-asset-pool hypothesis on B4 has one
+concrete, low-cost path already found by this round's own diagnosis —
+`data/ethusd_coinbase_spot_5m.csv.gz` (the same exchange as `UNIVERSE_6`,
+independently confirmed by the operator to span 2019-03-14 through the
+present) overlaps `UNIVERSE_6`'s 2020-01-02 start for the entire
+2020–2022 inner-validation window, unlike the Bitfinex series R-109/R-112
+both used. Swapping `load_eth()`'s source is a genuine, disclosed change to
+the falsification instrument itself, not a parameter tweak, so it needs its
+own fresh pre-registration rather than being folded into this round after
+the fact — flagged here as the concrete next step rather than attempted
+now. Absent that, this ERR-axis sub-line (R-109's own two named follow-ons)
+is closed on the return-space half and open-but-blocked-on-data on the
+multi-asset-pool half. The ranked backlog re-ranking below reflects this.
+
 ### R-111 · 08-24 · NEGATIVE (both branches) — the first round to vary R-63's cross-sectional SCORE itself (never touched since R-63): a 52-week-high proximity score fails decisively and *increases* churn exactly as pre-registered; a path-consistency score is too close to a rescaled copy of the incumbent (Spearman rho=0.971) to move its own uncertainty
 
 **Direction.** R-63 through R-68 froze the multi-asset panel's cross-sectional score (a multi-horizon trailing-return-vs-moving-average vote, `cross_sectional_score`) and spent five rounds on WHEN the portfolio acts on it (R-65 holding period, R-67 hysteresis, R-68 band decomposition). R-107/R-110 froze both score and timing and spent two more on HOW MUCH of the total notional each eligible asset gets (equal-weight vs. correlation-aware risk-parity vs. a continuous blend, 12 configurations across both rounds, equal-weight winning every one). Neither axis is the score. This round, following R-110's own closing recommendation verbatim ("should genuinely reconsider whether R-63's cross-sectional score itself... is the thing worth varying next"), attacks **INFO** — the same constraint R-63 opened — by varying the SCORE for the first time since R-63 wrote it, holding everything else (R-68's ENTRY_ONLY architecture, k=1, hold_days=1, delta_out=0.0, R-63's sizing) frozen.
@@ -11633,6 +11805,44 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-24 after R-112.** Off-backlog (still only B-06, unchanged
+since R-110), worked R-109's own two named, disclosed follow-ons directly
+rather than opening a fresh ERR-axis mechanism: does a reference
+distribution not dominated by one instrument's price cycle close the kNN
+novelty brake's B4 (ETH) gap? **Both branches NEGATIVE, but asymmetrically
+so.** The return-space feature swap (conservative) genuinely closes B4 —
+full same-sign pass on both markets, versus R-109's own decisive spot-sign
+inversion — but costs enough of the BTC-side signal that B1 drops to a
+single-market pass, so it does not clear the promotion bar; this is a
+decisive, informative result and closes that half of R-109's follow-on for
+good (do not re-try a return-space-only feature panel on this construction
+expecting to keep R-109's full B1 magnitude). The CORAL-pooled multi-asset
+reference (novel) reproduces and modestly strengthens R-109's own B1 pass
+on BTC where the pool genuinely engages, but the pool's committed
+data — `UNIVERSE_6`'s six Coinbase panels, starting 2020-01-02 — never
+overlaps the Bitfinex ETH series' own evaluation window (ending
+2019-12-31), so the B4 test this branch was built to run never actually
+ran: its numbers are bit-for-bit identical to R-109's own single-asset
+result. **Per this ledger's own "not tested is not a negative result"
+rule, this half of R-109's follow-on is UNTESTED and BLOCKED ON DATA, not
+ruled out** — R-112's own entry names a concrete unblock
+(`data/ethusd_coinbase_spot_5m.csv.gz` overlaps `UNIVERSE_6`'s window for
+the entire 2020–2022 inner-validation period, unlike the Bitfinex series
+both R-109 and R-112 used) that a future round could take up with its own
+fresh pre-registration, since swapping the falsification instrument's data
+source is a change to the test itself, not a parameter tweak. **The ranked
+backlog remains empty of anything but B-06** (forward paper-trading,
+already running unattended, per R-78's own costing). A future session has
+the single-asset ERR axis, now with R-109's own follow-on closed on one
+half and named-but-blocked on the other (a CORAL-pooled reference measured
+against a `load_eth()` swapped to the Coinbase series is the cheapest
+concrete next step on this specific axis, if the operator judges revisiting
+a sixth-generation ERR construction worth another round rather than
+treating six attempts, 0 promoted, as sufficient); the SIZE axis (26+
+attempts, closed), the INFO axis (15 attempts, closed), nine closed
+regime-timing mechanisms, or the multi-asset SCORE/timing/allocation axis
+(nine rounds, closed per R-111).
+
 **Re-ranked 08-24 after R-111.** Off-backlog (the ranked list holds only
 B-06, per R-110's own close), acting directly on R-110's own closing
 recommendation rather than inventing a fresh direction: a two-branch round
@@ -13688,6 +13898,18 @@ Rules that the format exists to enforce:
 Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
+
+- **08-24 · ~679** — R-112: **+0** on top of R-111's ~679 (unchanged), both
+  branches. Conservative (`experiments/r112_conservative_returnspace_knn.py`)
+  and novel (`experiments/r112_novel_pooled_reference_knn.py`) both ran their
+  full Step-0/B1-B5 promotion bar on BTC/ETH (plus, for the novel branch,
+  the six `UNIVERSE_6` pool instruments) with every `max timestamp read`
+  line reporting 2022-12-31 23:55:00 UTC; `assert_no_holdout` ran clean on
+  every source, including the six pool instruments' own panels inside
+  `load_pool_daily_panels`. The operator independently re-ran both scripts
+  twice (once per branch report, once for this bullet) from a clean shell
+  and confirmed the same timestamps and bit-for-bit identical numbers each
+  time.
 
 - **08-24 · ~679** — R-111: **+0** on top of R-110's ~679 (unchanged), both
   branches. Conservative (`experiments/r111_conservative_52w_high.py`)
