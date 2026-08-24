@@ -315,6 +315,154 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-123 · 08-24 · NEGATIVE (both branches) — move the ERR-axis distributional-novelty statistic OFF the discount-on-`v4_target` architecture and INTO `frac`/`scale` directly: frac-shrinkage Kelly (conservative) and a joint distributionally-robust multiplier (novel), closing the fourth and last axis of variation R-122 named for this sub-axis
+
+**Direction.** Off-backlog (the ranked list has held only B-06 since R-110).
+One sentence: does moving the ERR-axis distributional-novelty statistic from
+a multiplicative discount bolted onto `kelly_regime_v4`'s already-deadbanded
+final target — `v4_target(df) * (1 - discount)`, the one architecture R-109,
+R-112, R-115, R-121 and R-122 all shared — into the vote (`frac`) or the
+volatility target (`scale`) directly, close the k-NN/Mahalanobis novelty
+brake's ETH (B4) falsification gap? R-122's own closing line, verbatim: *"A
+future session preferring this specific discount-on-`frac*scale` architecture
+for a novelty brake needs it to enter the vote or scale directly rather than
+sit as a multiplicative discount on top of them; otherwise this ERR sub-axis
+is closed."* This round takes up that named, concrete next step, holding the
+feature panel and distance statistic fixed at R-109's own original
+convention (Mahalanobis/3-feature for conservative, kNN/5-feature for novel,
+both against a rolling 730-day trailing window of BTC's own real history —
+deliberately **not** R-122's synthetic reference, so architecture is the only
+new variable relative to R-109 specifically) so this round isolates
+architecture as the one thing under test. **Attacks ERR** (no error control
+anywhere in the signal path); sixth round in the distributional-novelty
+family (after R-109, R-112, R-115, R-121, R-122) and the fourth independent
+axis of variation tried on it (reference-pool: R-112, R-115; feature map:
+R-121; reference data source: R-122; **architecture: this round**).
+
+**Not a duplicate of:** R-109/R-112/R-115/R-121/R-122 (identical discount-
+after-deadband formula, verified unchanged across all five by their own
+Step-0 `R2_VS_V4_THRESH` kill switch); every SIZE-axis round (`scale`'s own
+magnitude/inputs untouched, reproduced byte-for-byte from
+`experiments/r102_shared.py`); every other ERR-axis round (R-87, R-104,
+R-105, R-106, R-114 — different uncertainty notions entirely, not the
+application point of this one).
+
+**Citations, fetched via WebSearch this round and confirmed by venue/volume/
+page:** Baker, R. D., & McHale, I. G. (2013), "Optimal Betting Under
+Parameter Uncertainty: Improving the Kelly Criterion," *Decision Analysis*
+10(3), 189–199 — the conservative branch's mechanism: under genuine
+parameter uncertainty the Kelly-optimal policy shrinks the *edge estimate*
+toward "no edge," not the already-sized position, after the fact. Sun, Q., &
+Boyd, S. (2018), "Distributional Robust Kelly Gambling: Optimal Strategy
+under Uncertainty in the Long-Run," arXiv:1812.10371 — the novel branch's
+mechanism: worst-case log-growth over a divergence ball whose radius this
+round sets from the novelty state, with a first-order (Pinsker-bounded)
+`sqrt`-shaped correction applied **jointly** to `frac*scale`, disclosed
+explicitly in `experiments/r123_shared.py`'s own docstring as an
+approximation of Sun & Boyd's own convex program, not a re-solve of it.
+
+**What was done.** `experiments/r123_shared.py` (frozen before either branch
+was dispatched) implements both application points —
+`conservative_target()` (shrink `frac` pre-scale, pre-deadband) and
+`novel_target()` (joint `sqrt`-shaped multiplier on `frac*scale`,
+pre-deadband) — plus a generalized `step0_gate_generic()` reusing R-109's
+four kill switches (bind_frac > 1%, R² vs `v4_target` < 0.98, R² vs realized
+vol < 0.90, state CoV ≥ 5%) against arbitrary candidate paths, since neither
+branch's candidate path is `v4_target(df)*(1-discount)` any more.
+`experiments/r123_conservative_shrinkage_kelly.py` (Mahalanobis, 6-cell grid
+`thresh∈{0.80,0.90,0.95}×max_discount∈{0.5,1.0}`, primary `(0.90,1.0)`) and
+`experiments/r123_novel_robust_kelly.py` (kNN k=10, 4-cell grid
+`eps_max∈{0.25,0.5}×c∈{1.0,1.414}`, primary `(0.5,1.414)`), both built by
+independent agents from the frozen shared module and independently
+re-executed from a clean shell by the operator (bit-for-bit reproduction of
+every printed statistic). **Decision rule, pre-registered verbatim from
+R-109 through R-122 and unchanged here:** PROMOTE-candidate only if the
+causal-truncation probe AND B1 (both markets) AND B3 (plateau majority) AND
+B4 (full, both markets) AND B5 all pass; B2 (drawdown) is diagnostic only
+and never gates. **Falsification test, pre-registered exactly as in every
+prior round in this family:** B4, the ETH replication slice — same-sign
+`d_sharpe` as BTC inner-validation required on both markets. **Configs
+evaluated: 46 total** (conservative 26 = 6 Step-0 + 6 primary `compare()` +
+12 B3 plateau rows + 2 B5 fee-tier; novel 20 = 4 Step-0 + 6 primary
+`compare()` + 8 B3 plateau rows + 2 B5 fee-tier).
+
+**Result.** Both causal-truncation probes passed (real BTC data, checked
+before any inner-validation number). **Conservative** (frac-shrink): Step-0
+passed for only 2 of 6 grid cells (the other 4 KILL on `R2_VS_V4_THRESH` —
+shrinking `frac` pre-deadband collapses toward a near-exact v4 rescale far
+more readily than a post-deadband discount ever did, itself informative about
+how much of this construction's apparent freedom the deadband absorbs); at
+the primary cell `(0.90,1.0)`, **B1 FAILED outright** (spot d_sharpe=+0.03,
+futures d_sharpe=+0.06, both far inside the ±0.2 noise floor and both
+bootstrap CIs straddling zero) — the first round in this six-round family
+whose BTC-side signal never clears B1 at all, a qualitatively worse failure
+than R-109→R-122's uniform "passes B1, fails B4" shape. B3 passed (9/12
+same-signed), B4 failed in full (ETH spot d_sharpe=−0.76, futures
+d_sharpe=−0.64, both sign-inverted vs. BTC), and B5 also failed (spot fee-tier
+flips sign vs. standard-fee, −0.03 vs. +0.03). **Novel** (joint `sqrt`
+multiplier): Step-0 passed all 4 cells; at the primary cell `(0.5,1.414)`,
+B1 PASSED on both markets (spot d_sharpe=+0.23 [boot −0.20,+0.41], futures
+d_sharpe=+0.33 [boot −0.13,+0.46] — the strongest BTC-side point estimate in
+this family after R-121/R-122's synthetic-reference rounds), B3 PASSED
+unanimously (8/8 same-signed across the full grid), B5 PASSED (no sign
+reversal at 0.40% fee on either market) — but **B4 FAILED in full**: ETH
+spot d_sharpe=−0.13 [boot −1.74,+0.13], futures d_sharpe=−0.19
+[boot −1.98,+0.26], both opposite sign to BTC, the identical sign-inversion
+shape every prior round in this family has produced. The pre-registered
+turnover diagnostic (`r123_shared.py`'s own named risk #4) resolved
+concretely and asymmetrically: the conservative branch's trade count barely
+moved (BTC spot, summed inner period: 111 candidate vs. 124 control), while
+the novel branch's fell sharply (inner_train 44 vs. 72, inner_val 36 vs. 52,
+ETH 21 vs. 75) — moving the discount pre-deadband does change deadband
+triggering exactly as predicted, and does so far more for the novel
+branch's un-thresholded, always-binding multiplier (bind_frac=0.79 at every
+cell) than for the conservative branch's threshold-gated ramp
+(bind_frac=0.04–0.13). Neither branch read a bar at or after
+`OOS_START=2023-01-01`; both branches' own printed max-timestamp lines read
+`2022-12-31 23:55:00+00:00`. **Skeptic reproduction:** the operator
+independently re-ran both branch files from a clean shell; the novel
+branch's numbers matched its implementing agent's own self-reported numbers
+exactly (bind_frac, R², d_sharpe, bootstrap bounds, trade counts, all
+digits); a grep for whole-series (non-rolling) `.mean()`/`.std()`/
+`.quantile()`/`np.percentile()` calls in both new branch files returned zero
+matches, consistent with both files' own passing causal-truncation probes.
+
+**Verdict.** **NEGATIVE, both branches. Decision rule did not move** —
+frozen before any inner-validation number was read, applied exactly as
+written, no goalposts moved after seeing results. **This closes the fourth
+and final axis of variation R-122's own re-ranking named for the
+distributional-novelty ERR sub-axis** (reference-pool: R-112, R-115; feature
+map: R-121; reference data source: R-122; architecture: this round) — six
+rounds, 0 promoted, and the sixth consecutive B4 (ETH) failure regardless of
+which single element of the construction was varied. The one-line lesson:
+**the ETH gap is not a property of the reference pool, the feature map, the
+data source, or the application point — every one of those four axes has now
+been varied independently with the other three held fixed, and B4 failed
+every time**, which is the strongest evidence yet in this family for R-115's
+own diagnosis (the calibration window — BTC's 2017–2020-supercycle-dominated
+history — rather than any one mechanism choice) over a fixable
+implementation detail. A second, narrower lesson specific to this round:
+moving the discount pre-deadband is not a free architectural change — the
+conservative branch's B1 failure (the first in this family) shows that
+*how* the discount is fused matters independently of *where* the reference
+comes from, and a future round attempting any further pre-deadband fusion
+on this specific vote/scale construction should expect the deadband
+interaction to dominate the result before any reference-distribution
+question can even be asked. **Holdout counter: +0** on top of R-122's
+~698 (unchanged) — neither branch's decision rule ever qualified for holdout
+access; running program-level total remains ~698. **Next step:** per
+R-122's own framing, a future session preferring this specific
+discount-vs-native-fusion family for a novelty brake now has no further
+named axis of variation left to try on `kelly_regime_v4`'s own construction;
+the single-asset ERR axis's remaining unexplored territory is a fifth notion
+of uncertainty this project's framework has not yet proposed at all (the
+four tried — sampling significance, specification/model disagreement,
+distributional novelty, temporal duration dependence — are all now closed
+per R-114's and this round's own findings), or the multi-asset panel's own
+still-open ERR question (R-113 tried it once, NEGATIVE, on the pre-existing
+discount architecture only — the vote/scale-fusion architecture this round
+introduces has never been tried on the panel).
+
 ### R-122 · 08-24 · NEGATIVE (both branches) — a pooled, externally-calibrated SYNTHETIC reference distribution (zero real price data) for R-109's ERR-axis novelty brake, pairing R-119's GBM+jump generator with Mahalanobis distance (conservative) and R-119's regime-switching generator with kNN distance (novel): both produce the strongest BTC-side signal in this five-round family, and both still fail B4 fully — closing R-121's own named follow-on and the distributional-novelty sub-axis's third and last axis of variation
 
 **Direction.** Off-backlog (the ranked list has held only B-06 since R-110,
@@ -12840,6 +12988,49 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-24 after R-123.** Off-backlog (still only B-06, unchanged
+since R-110), a two-branch round took up R-122's own named next step
+directly: does the distributional-novelty ERR-axis statistic close its own
+ETH (B4) falsification gap when it enters `kelly_regime_v4`'s vote or scale
+*directly*, instead of sitting as a discount on the final target the way
+R-109/R-112/R-115/R-121/R-122 all built it? **Both branches NEGATIVE.** The
+conservative branch (Baker & McHale 2013 shrinkage-Kelly, shrinking `frac`
+pre-deadband) failed *more* decisively than any prior round in this family —
+the first to fail B1 itself (BTC d_sharpe +0.03/+0.06, both inside the noise
+floor), on top of failing B4 and B5. The novel branch (Sun & Boyd 2018
+distributionally-robust joint multiplier on `frac*scale`, pre-deadband)
+reproduced the familiar B1-pass/B4-fail shape cleanly (BTC d_sharpe
++0.23/+0.33, both markets; ETH d_sharpe −0.13/−0.19, both sign-inverted) —
+the sixth consecutive round in this family to pass on BTC and fail on ETH.
+**This closes the fourth and last axis of variation R-122's own re-ranking
+named for the distributional-novelty ERR sub-axis**: reference-pool
+construction (R-112, R-115), feature map (R-121), reference data source
+(R-122), and now architecture — application point and functional form
+(R-123). Four axes, six rounds, 0 promoted, B4 failing every single time
+regardless of which one element was varied while the other three were held
+fixed — the strongest evidence yet that the ETH gap is a property of the
+calibration window (BTC's 2017–2020-supercycle-dominated reference history,
+first named as the live suspect in R-115's own re-ranking) rather than of
+any one mechanism choice this project's framework can still vary. **The
+ranked backlog remains empty of anything but B-06** (forward paper-trading,
+already running unattended, per R-78's own costing). A future session
+preferring a fresh mechanism search now has: the single-asset axis's own
+fully closed lists (19 INFO-axis attempts, 27+ SIZE-axis attempts, ERR
+across five notions of uncertainty — distributional novelty now closed
+across all four of its own axes of variation, including application
+point/architecture — ten regime-timing mechanisms, two structurally-new-
+detector-family SIZE substitutions, four distinct N≈3-attacking selection
+procedures); the multi-asset panel's own closed list (eleven rounds, all
+NEGATIVE, one of them — R-113 — an ERR-axis attempt using the pre-existing
+discount architecture only, so this round's vote/scale-fusion architecture
+has never been tried on the panel, the one genuinely untested combination
+this round's own result leaves behind); or B-28's breadth clause (blocked
+on data this project cannot fetch or simulate). Absent a new idea clearing
+Step-0 on one of these, the accumulating evidence continues to point the
+same direction: `kelly_regime_v4` is close to efficient with respect to the
+information, error control and parameter-selection procedure available to
+this project.
+
 **Re-ranked 08-24 after R-122.** Off-backlog (still only B-06, unchanged
 since R-110), a two-branch round closed R-121's own named follow-on: does a
 reference distribution NOT dominated by BTC's own real price history at all —
@@ -15360,6 +15551,15 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-24 · ~698** — R-123: **+0** on top of R-122's ~698 (unchanged), both
+  branches. Neither branch's decision rule ever qualified for holdout access
+  (conservative failed B1/B4/B5; novel failed B4) — both branches' only real-
+  data reads are `load_btc()`/`load_eth()`, truncated below `OOS_START` and
+  `assert_no_holdout`-guarded, identical to every prior round in this family.
+  Both branches' own printed max-timestamp lines read `2022-12-31
+  23:55:00+00:00`; the operator's independent re-run from a clean shell
+  reproduced both branches' full printed output, including every Step-0/B1-
+  B5 statistic to the printed digit.
 - **08-24 · ~698** — R-122: **+0** on top of R-121's ~698 (unchanged), both
   branches. Neither branch's pooled synthetic reference panel touches any
   real price data at all (built entirely from R-119's frozen
