@@ -372,6 +372,47 @@ def episode_null_leads(mom_z: pd.Series, window: pd.DatetimeIndex,
 
 
 # =====================================================================
+# post-gate diagnostics -- which named failure mode actually occurred
+# (lag vs. noise amplification from differencing). Not part of the
+# pre-registered pass/fail rule; computed only to explain a FAIL, per
+# this branch's pre-registration item 2.
+# =====================================================================
+
+def noise_diagnostics(mom_z: pd.Series) -> dict:
+    valid = mom_z.dropna()
+    extreme = (valid.abs() >= Z_THRESH_A).to_numpy()
+    n_bars = len(valid)
+    n_extreme_bars = int(extreme.sum())
+    crossings = np.where(extreme[1:] & ~extreme[:-1])[0]
+    n_crossings = len(crossings)
+    span_days = (valid.index[-1] - valid.index[0]).total_seconds() / 86400.0
+    mean_days_between = span_days / n_crossings if n_crossings else float("nan")
+    return dict(
+        n_valid_bars=n_bars,
+        pct_bars_extreme=100.0 * n_extreme_bars / n_bars if n_bars else float("nan"),
+        n_threshold_crossings=n_crossings,
+        span_days=span_days,
+        mean_days_between_crossings=mean_days_between,
+    )
+
+
+def run_causality_probe(bars: pd.DataFrame, quarterly: pd.DataFrame) -> list[bool]:
+    from experiments.r120_shared import truncation_causality_probe
+
+    def build_mom_z(frame: pd.DataFrame) -> np.ndarray:
+        mz, _ = compute_mom_z(frame, quarterly)
+        return mz.to_numpy()
+
+    results = []
+    for check_at in (200_000, 400_000, 500_000):
+        ok = truncation_causality_probe(build_mom_z, bars, check_at=check_at, shorter_by=20_000)
+        print(f"  [causality] check_at={check_at} ({bars.index[check_at]}): {'PASS' if ok else 'FAIL'}")
+        results.append(ok)
+        _count("diagnostic")
+    return results
+
+
+# =====================================================================
 # STEP A -- lead-time gate
 # =====================================================================
 
@@ -517,9 +558,43 @@ def main() -> None:
         print("# Per this file's own pre-registration, STOP HERE. No Step-B strategy")
         print("# code is written or run. This gate result is this branch's whole product.")
         print("#" * 78)
+
+        print("\n" + "=" * 78)
+        print("DIAGNOSIS: which pre-registered failure mode actually occurred (lag vs.")
+        print("noise amplification from differencing)? Not part of the pass/fail rule.")
+        print("=" * 78)
+        diag = noise_diagnostics(gate_result["mom_z"])
+        print(f"  bars with |mom_z|>=1.5: {diag['pct_bars_extreme']:.1f}% of all valid bars")
+        print(f"  threshold-crossing events: {diag['n_threshold_crossings']:,} over "
+              f"{diag['span_days']:.0f} days  "
+              f"(mean {diag['mean_days_between_crossings']:.2f} days between crossings)")
+        for r in gate_result["results"]:
+            if np.isfinite(r["lead"]) and np.isfinite(r.get("null_median", float("nan"))):
+                gap = r["lead"] - r["null_median"]
+                print(f"  [{r['label']}] true lead ({r['lead']:+.2f}d) vs. null median "
+                      f"({r['null_median']:+.2f}d): gap={gap:+.2f}d")
+        print("  Interpretation: crossings occur roughly every "
+              f"{diag['mean_days_between_crossings']:.2f} days on average -- far more often "
+              "than any real episode-specific signal would need -- and in every episode the "
+              "true lead sits almost exactly ON the null's own median (not merely failing to "
+              "clear its p90), meaning an arbitrarily time-shifted copy of the same series "
+              "looks just as 'informative'. This matches the pre-registered NOISE-AMPLIFICATION "
+              "failure mode, not a clean lag: the differenced series crosses |z|>=1.5 so "
+              "frequently that 'nearest crossing to onset' is close to a fixed function of the "
+              "search window's own geometry, not of any episode-specific information content.")
+
+        quarterly = load_deribit_quarterly(DATA_DIR, asset="BTC")
+        quarterly_pre_holdout = quarterly.loc[quarterly.index < pd.Timestamp(OOS_START, tz="UTC")].copy()
+        print("\n  causal-truncation probe on the mom_z construction itself:")
+        causal_ok = run_causality_probe(gate_result["bars"], quarterly_pre_holdout)
+
+        out["failure_mode_diagnostics"] = diag
+        out["causality_probe"] = causal_ok
+        out["configs_evaluated"] = dict(CONFIG_COUNTER)
         with open(ROOT / "experiments" / "r120_novel_results.json", "w") as f:
             json.dump(out, f, indent=2, default=str)
-        print(f"\nCONFIGS EVALUATED (TOTAL): stepA=0 stepB=0 diagnostic=0")
+        print(f"\nCONFIGS EVALUATED (TOTAL): stepA=0 stepB=0 "
+              f"diagnostic={CONFIG_COUNTER['diagnostic']}")
         print(f"[{time.time()-t0:.0f}s]")
         return
 

@@ -53,7 +53,7 @@
   "configs_evaluated": {
     "stepA": 0,
     "stepB": 0,
-    "diagnostic": 0
+    "diagnostic": 3
   },
   "params": {
     "mom_days": 5,
@@ -63,5 +63,17 @@
     "n_draws": 500,
     "block_days": 5,
     "null_seed": 1200
-  }
+  },
+  "failure_mode_diagnostics": {
+    "n_valid_bars": 458976,
+    "pct_bars_extreme": 16.299762950568223,
+    "n_threshold_crossings": 8491,
+    "span_days": 1593.6631944444443,
+    "mean_days_between_crossings": 0.18768851659927505
+  },
+  "causality_probe": [
+    true,
+    true,
+    true
+  ]
 }
