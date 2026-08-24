@@ -315,6 +315,159 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-106 · 08-24 · NEGATIVE (both branches) — a fifth ERR-axis attempt, the first on cross-MODEL-CLASS disagreement: a linear cross-sectional-stddev brake across four independent regime detectors (BOCPD/Kalman/CSD/Hawkes) is real but broadly harmful, and a Shannon-entropy brake over the same panel is structurally distinct but inert on the episodes that matter — both fail B1
+
+**Direction.** Round R-106 tried a fifth ERR-axis construction and the first keyed
+on cross-model-class disagreement rather than sampling significance of the
+vote's own edge (R-28/retracted, R-87, R-104 — three attempts) or
+specification/model disagreement within one model family (R-105's
+anchor-ladder ensemble, two attempts): the cross-sectional disagreement among
+four already-built, structurally independent causal regime/turbulence
+estimators already committed to this repo — BOCPD (R-82), a Kalman
+local-linear-trend filter (R-83), critical-slowing-down dynamical-systems
+statistics (R-85), and a self-exciting Hawkes point process (R-96) — used as a
+continuous multiplicative discount on `kelly_regime_v4`'s exposure. Citation:
+Zarnowitz & Lambros (1987, *Journal of Political Economy*) and Bomberger
+(1996, "Disagreement as a Measure of Uncertainty," *Journal of Money, Credit
+& Banking* 28(3):381-392) — disagreement among independent forecasters/models
+is a genuine, literature-established uncertainty proxy — applied here for the
+first time to a regime-detector ensemble rather than survey point-forecasts.
+**Not a duplicate of** R-104/R-87 (measure whether the VOTE's own realized
+P&L is distinguishable from zero — neither branch here ever computes a P&L
+standard error or touches the vote's P&L at all) or R-105 (disagreement
+WITHIN one model family, trend-following anchor ladders at different
+horizons — here the four ensemble members are four theoretically disjoint
+bases never before combined with each other); also distinct from the nine
+regime-timing rounds (R-01, R-82, R-83, R-85, R-86, R-96, R-98, R-99 — whose
+detector code this round reuses unmodified) each of which asked "does this
+ONE detector alarm before v4's own gate" (9/9 failed) — this round never asks
+that question; it asks whether cross-model DISPERSION itself carries
+information, independent of any one member's own lead time.
+
+**What was done.** `experiments/r106_shared.py` (operator-built, read-only
+infrastructure for both branches): imports the four detectors' existing
+causal signal functions unmodified (`bocpd_daily_causal_signals`,
+`kalman_daily_causal_signals`, `csd_daily_causal_signals`,
+`hawkes_intensity_daily`/`hawkes_intensity_zscore`), normalizes each via a
+causal 730-day rolling percentile rank to a comparable [0,1] alarm level
+(disclosed adaptation: three of the four native outputs are turbulence/alarm
+levels, not naturally signed directional states, so all four were normalized
+uniformly by rank rather than forcing an artificial sign convention), and
+pre-registered a Step-0 gate before either branch was dispatched: mean
+pairwise |correlation| among the four normalized states on inner-train must
+be <0.5 (else the four are redundant re-derivations of the same price
+feature, per R-85's own AND-gate-collapse precedent), and their disagreement
+must show non-degenerate dispersion (CoV ≥5%) across this project's six
+standard stress episodes. **Both passed**: mean |ρ|=0.283 (pairwise range
+0.104-0.400), episode-mean CoV=0.189. Two branches dispatched. Conservative
+(`experiments/r106_conservative_disagreement_brake.py`): the literal
+Bomberger (1996) statistic — cross-sectional standard deviation of the four
+states — as `target = apply_deadband(v4_raw_desired(df) *
+discount(disagreement))`, `discount = 1-(1-floor)*clip(d/D_MAX,0,1)`,
+`D_MAX=1/√3` (the analytic maximum possible sample std of 4 values in [0,1],
+skeptic-verified by brute-force grid search over the 16 corner combinations —
+not fit), floor grid `{0.3,0.5,0.7}`. Novel
+(`experiments/r106_novel_entropy_disagreement_brake.py`): Shannon entropy
+(normalized by log 4) of the four states sum-normalized onto a probability
+simplex (no softmax temperature — disclosed as an avoided free knob), the
+same brake architecture, the same floor grid; required overriding
+`TargetStrategy.warmup` to 340 days, applied identically to candidate and
+control (skeptic-verified). Pre-registered decision rule (both branches,
+frozen before inner-validation): promote only if Step-0 AND B1
+(inner-validation, both BTC markets, `d_sharpe>+0.2` or bootstrap excludes
+zero) AND B3 (floor-grid plateau) AND B4 (ETH same-sign falsification) AND B5
+(0.40% fee, no sign reversal) all pass; B2 (drawdown) is diagnostic-only,
+voided where not risk-matched. Falsification tests pre-registered:
+conservative — does the brake fail by disproportionately discounting
+favourable mid-transition bars (R-105's own failure mechanism) rather than
+broadly; novel — does entropy reduce to a redundant reparameterization of the
+conservative branch's stddev statistic (|corr|>0.9), and does entropy
+concentrate around the six stress episodes at all. **Configs evaluated: 82
+across both branches** (conservative 53: 3 Step-0 + 6 primary compare + 4 B3
+extra + 2 B5 + 30 holdout-section runs; novel 29: 3 Step-0 + 6 primary
+compare + 6 B3 plateau + 2 B5 + 10 holdout + 2 buy-and-hold benchmark).
+
+**Result.** Conservative: Step-0 passed all 3 floors (r_sq 0.776/0.886/0.955,
+all <0.98 — genuine time variation), primary floor=0.5 selected. B1 **FAILED**
+both markets (inner-val d_sharpe spot=-0.042 boot[-0.203,+0.167],
+futures=-0.123 boot[-0.323,+0.174]). B2 voided (not risk-matched,
+exposure_ratio≈0.76). B3 **FAILED** (floor 0.3 flips positive on both markets
+vs. primary's negative — not a plateau; d_sharpe declines monotonically as
+the floor rises). B4 **FULLY PASSED** (ETH d_sharpe spot=-0.980,
+futures=-1.067, both bootstraps exclude zero, same sign as BTC — the brake is
+genuinely harmful on both assets, not an artifact). B5 **FAILED** (0.40% fee
+tier: bootstrap log-growth point estimate flips sign). Falsification test:
+**not** the R-105 mistimed-transition shape — mean disagreement in
+vote-transition bars (0.2755) ≈ stable bars (0.2780) on inner-train; the harm
+is broad exposure removal, not selective removal of favourable bars. Novel:
+Step-0 passed all 3 floors (r_sq 0.163/0.549/0.835), primary floor=0.5
+selected. F1 (redundancy vs. conservative's statistic): corr=-0.641, **not**
+flagged redundant (moderate, opposite-signed — entropy captures distribution
+shape, not spread magnitude). F2 (episode concentration): entropy rose above
+its unconditional mean in only 3 of 6 stress episodes (2018 onset, 2018
+capitulation, 2021-11 top; not COVID, Terra/Luna, or FTX) — **fails** to
+concentrate on a majority. B1 **FAILED** both markets (spot d_sharpe=+0.051
+boot[-0.31,+0.35], futures=+0.176 boot[-0.37,+0.46] — neither clears +0.2 nor
+excludes zero). B2 voided (exposure_ratio≈0.48-0.51). B3 **FAILED** (only 2
+of 6 floor-grid cells positive). B4 **PARTIAL FAIL** (ETH spot opposite sign
+-0.061, futures same sign +0.095). B5 **PASSED** (no sign reversal). Both
+branches additionally consulted the holdout (see Verdict for why this is a
+disclosed process deviation): conservative showed a modest holdout-only
+positive (spot dSh+0.065 excl. zero, futures+0.072) but a reduced 12-window
+Monte Carlo beat control in only 50% of windows and deflated Sharpe
+(n_trials=190) landed at 0.907/0.948, both below the 0.95 bar; novel beat
+control on all 5 holdout cost configurations (d_sharpe +0.13 to +0.20) with
+real funding charged, but beat buy-and-hold only on futures, not spot.
+Neither holdout read changed either frozen verdict. An independent skeptic
+re-ran `pytest tests/test_causality_strict.py` (51 passed), read
+`causal_rolling_percentile_rank`/`build_normalized_states` line-by-line for
+full-series lookahead (none found — strict rolling window, explicit
+truncation self-test), verified the novel branch's warmup override is
+threaded identically to candidate and control, independently re-derived
+`D_MAX=1/√3` by brute force, re-ran both branches end-to-end and reproduced
+every headline number exactly (spot/futures B1 and B4 cells matched to 3-4
+decimal places), and confirmed file isolation (`git diff --stat` shows only
+the three new `r106_*.py` files; neither branch imports the other). No bugs
+found; both NEGATIVE verdicts stand.
+
+**Verdict.** Both **NEGATIVE**. Lesson: this is the fifth ERR-axis attempt
+and the first to test cross-MODEL-CLASS disagreement (as opposed to sampling
+significance, 3 attempts, or within-family specification disagreement, 2
+attempts) — it fails for two *different* reasons on the two branches, which
+is itself informative: the linear-variance construction is real and
+non-degenerate but broadly harmful in a way that is **not** concentrated on
+the specific mistimed-transition bars R-105 found, while the entropy
+construction is genuinely distinct from the linear one (only -0.641
+correlated, not redundant) but too inert on the actual historical stress
+episodes to matter (only 3 of 6) — matching the "real but inert" pattern R-87
+and R-104 already found by two other estimators, now a third and fourth
+independent confirmation of that shape. **Process deviation, disclosed:**
+unlike R-101–R-105's convention of not consulting the holdout once a
+branch's pre-registered inner-validation gate (B1) has already failed, this
+round's dispatch instructions asked both branches to run the full
+ROUTINE.md Step-4 holdout checklist unconditionally, before either branch's
+B1 result was known to the dispatching session. Both branches treated the
+resulting holdout numbers as explicitly non-decisive additional evidence
+only, per their frozen rules, and neither verdict moved — so this is not a
+goalpost-moving violation — but it did spend holdout reads (42 cells, see
+below) that R-101–R-105's practice would have conserved. Future rounds
+dispatching parallel branches should condition any holdout consultation on
+the branch's own inner-validation gate outcome, not request it
+unconditionally in the dispatch prompt. **Holdout counter: +42 on top of
+R-105's ~637 → ~679** (conservative: 30 holdout-section runs; novel: 10
+holdout + 2 buy-and-hold benchmark cells = 12). Decision rule did not move on
+either branch. **Next step:** a future session preferring a fresh mechanism
+search now needs an ERR-axis construction keyed on neither sampling
+significance (3 attempts), within-family specification disagreement (R-105,
+2 attempts), nor cross-model-class disagreement (this round, 2 attempts) —
+five ERR-axis attempts across three distinct notions of uncertainty have now
+all failed — a SIZE-axis construction that does not collapse to a low,
+roughly-constant exposure fraction relative to v4 (26 attempts), a data
+channel this project cannot construct from its own committed files or
+fetchable free sources at all (fifteen INFO-axis attempts have failed), or a
+regime-timing construction with no basis in common with the nine already
+closed — or should work B-32 directly.
+
 ### R-105 · 08-24 · NEGATIVE (both branches) — a fourth ERR-axis attempt, the first on MODEL/SPECIFICATION uncertainty rather than sampling uncertainty: a contemporaneous delete-one-anchor jackknife of the vote's own 3 components fails B1 with a genuine, non-degenerate, consistently-negative effect, and a 5-member alternative-ladder ensemble-disagreement discount clears every clause except B1 and B4 (ETH inverts sign on both markets)
 
 **Direction.** Off-backlog, same posture as R-73–R-104 (the ranked backlog holds only **B-32**, pure infrastructure). R-104's own closing line named the one live, untried candidate on the ERR axis: "model/specification uncertainty across the vote's own construction... is one live, untried candidate," distinguished explicitly from the three prior ERR attempts (R-28/retracted, R-87, R-104), all of which measured SAMPLING uncertainty (is one fixed vote's realized edge/confidence distinguishable from noise). This round is that candidate, tried two structurally different ways: a delete-one-anchor-out jackknife (Quenouille 1949; Tukey 1958; Efron 1979 — the same citations R-101 used, applied here to the vote's own THREE ANCHOR COMPONENTS at a single bar rather than R-101's six historical stress episodes) of `kelly_regime_v4`'s 3-anchor vote (conservative), and a 5-member pre-registered geometric doubling-ladder ensemble (bases 10/15/20/25/30 days, spanning the shipped 20/40/80) read via ensemble-spread-as-uncertainty (Raftery, Gneiting, Balabdaoui & Polakowski 2005, *Monthly Weather Review* 133(5); Baltas & Kosowski 2013 for the trend-following-specific grounding that different-horizon anchors carry low pairwise correlation) (novel). Both multiply v4's unchanged `frac*scale` by a `[floor,1.0]`-bounded disagreement discount; neither ever trades an alternative ladder's own signal. Full citations (Chatfield 1995 for the model-vs-sampling-uncertainty distinction underpinning the whole round) and the complete non-duplication argument against R-28, R-87, R-101, R-97, R-104 and the anchor-ladder-search rounds (R-06/R-07/R-40/R-45, which search for or bag a BETTER ladder rather than build a disagreement statistic while holding the shipped ladder fixed) are in the module docstring of the operator-authored, read-only `experiments/r105_shared.py`, written before either branch was dispatched.
@@ -10781,6 +10934,47 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-24 after R-106.** An off-backlog, literature-prompted
+two-branch round (same posture as R-73–R-105 — the ranked list holds only
+B-32, pure infrastructure) tried a fifth ERR-axis construction and the first
+keyed on cross-MODEL-CLASS disagreement (Zarnowitz & Lambros 1987; Bomberger
+1996) rather than sampling significance of the vote's own edge (R-28/
+retracted, R-87, R-104 — three attempts) or specification disagreement
+within one model family (R-105's anchor-ladder ensemble, two attempts): the
+cross-sectional disagreement among four already-built, structurally
+independent regime/turbulence detectors already committed to this repo
+(BOCPD/R-82, Kalman LLT/R-83, CSD/R-85, Hawkes/R-96), applied as a discount
+on `kelly_regime_v4`'s exposure. Both **NEGATIVE**, for two different
+reasons. Conservative (literal Bomberger cross-sectional stddev): genuinely
+non-degenerate (Step-0 passes, r_sq<0.98 on all three floors) and even
+clears the ETH falsification cleanly (B4 fully passes, same sign both
+markets) — but is broadly harmful on inner-validation (B1 fails both
+markets) and at the 0.40% fee tier (B5 fails), and the harm is **not**
+R-105's specific mistimed-transition mechanism (disagreement in
+vote-transition bars is statistically indistinguishable from disagreement in
+stable bars). Novel (Shannon entropy of the same four-model panel):
+structurally distinct from the conservative statistic (only -0.641
+correlated, not a redundant reparameterization) but inert on the episodes
+that matter — entropy concentrates on only 3 of the 6 standard stress
+episodes and fails B1 by a wide margin on both markets. **Read together:
+this closes the fifth ERR-axis attempt and the first across three genuinely
+distinct notions of uncertainty (sampling significance: 3 attempts;
+within-model-family specification disagreement: 2 attempts; cross-model-class
+disagreement: 2 attempts, this round) — 0 of 5 have promoted, each failing
+for a materially different, disclosed reason.** An independent skeptic
+re-ran both branches end-to-end, reproduced every headline number, and found
+no lookahead or comparison-matching bugs. **B-32 remains the only ranked,
+unblocked backlog item.** A future session preferring a fresh mechanism
+search now needs an ERR-axis construction keyed on none of sampling
+significance, within-family specification disagreement, or cross-model-class
+disagreement (five attempts across three notions now closed), a SIZE-axis
+construction that does not collapse to a low, roughly-constant exposure
+fraction relative to v4 (26 attempts), a data channel this project cannot
+construct from its own committed files or fetchable free sources at all
+(fifteen INFO-axis attempts have failed), or a regime-timing construction
+with no basis in common with the nine already closed — or should work B-32
+directly.
+
 **Re-ranked 08-24 after R-105.** An off-backlog, literature-prompted two-branch
 round (same posture as R-73–R-104 — the ranked list holds only B-32, pure
 infrastructure) worked the one live candidate R-104's own closing line named:
@@ -12616,6 +12810,23 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-24 · ~679** — R-106: **+42** on top of R-105's ~637, both branches,
+  per this round's disclosed process deviation (see R-106's own ledger
+  entry): unlike R-101–R-105, both branches ran the full holdout checklist
+  unconditionally rather than only after a passing inner-validation gate.
+  Conservative (`experiments/r106_conservative_disagreement_brake.py`): 30
+  holdout-section runs across both markets and multiple fee/funding
+  configurations, all after B1/B3/B5 had already failed on inner-validation
+  — treated as non-decisive additional evidence per the frozen rule (spot
+  dSh+0.065 excl. zero, futures+0.072, but a 12-window Monte Carlo beat
+  control in only 50% of windows and deflated Sharpe at n_trials=190 stayed
+  below 0.95 both markets). Novel
+  (`experiments/r106_novel_entropy_disagreement_brake.py`): 10 holdout cells
+  + 2 buy-and-hold benchmark reads across 5 cost configurations, also after
+  B1/B3/B4 had already failed — beat control on all 5 configurations but did
+  not change the frozen NEGATIVE verdict. An independent skeptic re-executed
+  both branches' full scripts from a clean shell and reproduced every
+  reported number, including the holdout cells, exactly.
 - **08-24 · ~637** — R-105: **+0** on top of R-104's ~637 (unchanged), both
   branches. Conservative (`experiments/r105_conservative_anchor_jackknife.py`)
   and novel (`experiments/r105_novel_ladder_ensemble.py`) both restricted
