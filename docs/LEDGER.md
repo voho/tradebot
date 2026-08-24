@@ -315,6 +315,36 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-111 · 08-24 · NEGATIVE (both branches) — the first round to vary R-63's cross-sectional SCORE itself (never touched since R-63): a 52-week-high proximity score fails decisively and *increases* churn exactly as pre-registered; a path-consistency score is too close to a rescaled copy of the incumbent (Spearman rho=0.971) to move its own uncertainty
+
+**Direction.** R-63 through R-68 froze the multi-asset panel's cross-sectional score (a multi-horizon trailing-return-vs-moving-average vote, `cross_sectional_score`) and spent five rounds on WHEN the portfolio acts on it (R-65 holding period, R-67 hysteresis, R-68 band decomposition). R-107/R-110 froze both score and timing and spent two more on HOW MUCH of the total notional each eligible asset gets (equal-weight vs. correlation-aware risk-parity vs. a continuous blend, 12 configurations across both rounds, equal-weight winning every one). Neither axis is the score. This round, following R-110's own closing recommendation verbatim ("should genuinely reconsider whether R-63's cross-sectional score itself... is the thing worth varying next"), attacks **INFO** — the same constraint R-63 opened — by varying the SCORE for the first time since R-63 wrote it, holding everything else (R-68's ENTRY_ONLY architecture, k=1, hold_days=1, delta_out=0.0, R-63's sizing) frozen.
+
+Conservative branch: George & Hwang (2004), "The 52-Week High and Momentum Investing," *Journal of Finance* 59(5) — rank by nearness to a trailing high rather than by trailing-return magnitude; a monthly-rebalanced US-equity result, chosen for being the most direct, single-mechanism substitution of the existing multi-horizon structure. Novel branch: Da, Gurun & Warachka (2014), "Frog in the Pan," *Review of Financial Studies* 27(7) — weight the existing magnitude term by a path-consistency factor (smooth trends count more than jumpy ones of the same cumulative size), directly extended to crypto by Kim (2025/26 working paper, SSRN #6889877) on a sample window overlapping this project's own almost exactly, with the effect reported strongest outside the largest-cap coins — precisely this project's U6 panel. Blitz, Huij & Martens (2011) residual momentum was considered and explicitly passed over (would need a per-asset rolling factor-model regression against a crypto "market" proxy this project has no validated construction for) — named in `r111_shared.py` so a future round does not re-discover why.
+
+Not a duplicate of R-63/65/67/68 (score frozen throughout), R-107/R-110 (score frozen, weighting varied), or any single-asset SIZE-axis round (no cross-section formed). Grepped the ledger for George/Hwang, Da/Gurun/Warachka, Blitz/Huij/Martens and Kim — zero prior hits.
+
+**What was done.** Operator-committed shared pre-registration and BOTH score formulas in `experiments/r111_shared.py` (not editable by either branch): `conservative_score` (52-week-high proximity, same 20/40/80-day horizons and per-horizon averaging as the old score) and `novel_score` (path-consistency-weighted magnitude, via a causal per-day lookup mirroring R-107's own `build_cov_lookup` pattern — a day's consistency value is built only from days strictly before it). Both pass `check_causality`'s truncation probe. `build_targets_from_score` reimplements R-68's `band_selection`/`_size` to accept an injected score matrix instead of R-63's hardcoded one, cross-checked to reproduce R-68's own published output to full float precision (`check_band_selection_matches_r68`, err=0.0) when fed the old score at the old frozen parameters.
+
+**Pre-dispatch bug found and fixed before either branch's decisive battery ran** (the ROUTINE-permitted "fix a bug" case, not a re-selection): `conservative_score` is bounded above by 0 by construction (a rolling max can't be smaller than the current close; pooled W_TRAIN mean measured at -0.203), so R-68's `delta_out=0.0` convention ("hold while score > 0") collapsed it to permanently flat — zero trades over the whole W_TRAIN window, confirmed directly before the fix. Fixed by `recenter_score()`: both new scores are recentered by their own pooled W_TRAIN mean before `delta_in`/`delta_out` are applied, a measured (not fitted) offset, applied uniformly to both new scores (the novel score's own offset, +0.043, is a near-no-op) and never to the old score's own already-published construction.
+
+**Threshold transfer, zero new fitted parameters.** `delta_in`/`buffer` are not re-swept for the new scores (which would inflate the trials count against a result this axis has never once cleared and reopen a selection this round is not scoped to run). Instead they are transferred as R-68's own selected multiple of the old score's W_TRAIN sigma (delta_in: 0.3486 sigma; buffer: 0.2179 sigma, both from R-68's/R-65's own already-published raw numbers against `SIGMA_SCORE_W_TRAIN=0.2295`), re-expressed on each new score's own measured W_TRAIN sigma. One frozen configuration per branch; a 0.5x/1.0x/1.5x neighbourhood was still measured and reported (plateau check, not a re-selection — the 1.0x point is decisive, frozen before the neighbours were computed).
+
+Two agents ran the branches in parallel, each on a disjoint file (`experiments/r111_conservative_52w_high.py`, `experiments/r111_novel_path_consistency.py`), against the inherited D1/D2/D3/D5/scramble battery (imported unmodified from `r63_shared.py`/`r65_shared.py`/`r68_shared.py`) and the further-work bar `(d1 or d2) and d3 and d5 and scramble_survived` (R-107/R-110's own four-clause form, no M1' — this round changes neither entry nor exit timing). **Configurations evaluated: 31 (conservative) + 25 (novel) = 56 total**, each branch's own `config_count()` delta.
+
+**Result.**
+
+*F1 (rank-agreement vs. the old score, W_TRAIN, pooled Spearman, both independently reconfirmed by their own branch to 3-4 decimals against the operator's pre-measurement).* Conservative: rho=0.5884, argmax (top-ranked-asset) agreement=43.8% — genuinely different ranking. Novel: rho=0.9708, argmax agreement=92.5% — close to a rescaled copy of the incumbent.
+
+*Conservative (52-week-high proximity).* D1 (W_FULL6/U6/0.10% vs. VOLMATCH_HOLD, matched=True): growth_diff **-0.693 [-3.56, +2.00]** — FAIL. D2: dd_diff **-3.41 [-18.6, +28.0]** — FAIL. D5 (SPOT_FREE): gross_growth_diff **-0.109**, below the +0.342 bar and itself negative — FAIL, and a stronger statement than "fees killed it": the score doesn't beat its risk-matched benchmark even before any cost. D3 (W_VAL/U8, directional): growth_diff +0.134 > 0 and dd_diff -7.84 < 0 — PASS. Scramble: candidate -0.693 exceeds the scrambled 90th percentile (-1.448) — survived, but this is weak evidence given D1/D5 both fail outright (losing less than a fully-scrambled cross-section is not the same as having exploitable value). Neighbourhood (0.5x/1.0x/1.5x growth_diff: -1.340/-0.693/-0.136) is monotonic and flat, every interval containing zero — not a peak. Turnover: **0.252 rebalances/day vs. R-68's own published 0.102/day, ~2.5x higher** — confirms the round's own pre-registered failure mode F2 exactly: because the score saturates at 0 on every simultaneous new high, several U6 assets cluster near their own local highs at once and the band churns membership *faster* than the old, unbounded score, buying nothing for the extra turnover.
+
+*Novel (path-consistency).* D1: growth_diff **+1.123 [-1.94, +4.19]** — interval crosses zero, FAIL. D2: dd_diff **-18.98 [-31.5, +18.0]** — interval crosses zero, FAIL. D5 (SPOT_FREE): gross_growth_diff **+1.311**, comfortably above the +0.342 bar — PASS. D3: growth_diff +0.556 > 0, dd_diff -8.95 < 0 — PASS. Scramble: candidate +1.123 clears the scrambled 90th percentile (+0.078) — survived. Neighbourhood (0.5x/1.0x/1.5x growth_diff: +1.031/+1.123/+1.025) is a genuine plateau, all three points within 0.10 of each other — consistent with F3: a threshold that rarely disagrees with the old score about which asset crosses it moves almost nothing when shifted. Turnover: 0.117 rebalances/day vs. R-68's 0.102/day — close, mildly higher, the inertness failure mode (F3) rather than the churn failure mode (F2) that hit the conservative branch specifically. Both correctness gates (`check_causality`, `check_band_selection_matches_r68`) passed clean on both branches; no lookahead or comparison-matching anomaly found by either branch or by the operator's own pre-dispatch validation.
+
+Neither branch's further-work bar cleared: conservative fails on `(d1 or d2)` AND `d5`; novel fails on `(d1 or d2)` alone (d3/d5/scramble all pass). **W_HOLD was not read by either branch.**
+
+**Verdict.** NEGATIVE, both branches, for two materially different and individually informative reasons — not the same failure twice. The conservative score fails because the literature's own mechanism (a bounded, ceiling-saturating nearness statistic) behaves structurally differently from the unbounded moving-average-deviation score this whole axis was built on: it does not merely carry less signal, it actively *increases* the cost this axis has spent five rounds (R-65/67/68) fighting to reduce, and it is directionally negative gross of fees, not merely insignificant. The novel score fails because Da/Gurun/Warachka's daily-sign-count statistic, at an 80-day window on a genuinely thin (6-8 asset) panel with roughly one effective daily observation per bar-day, is too coarse to meaningfully reweight a score it is multiplying rather than replacing — it produces almost exactly the old score's own ranking (rho=0.971) and therefore inherits the old score's own wide uncertainty rather than sharpening it, exactly the outcome named failure mode F3 predicted before either branch ran. **This closes the SCORE axis as the third and, on current evidence, final untouched dimension of R-63's own three-part construction (score, timing, allocation weighting) — all three are now NEGATIVE across every configuration tried on this panel: timing (5 rounds, R-65/67/68), weighting (2 rounds, 12 configs, R-107/110), score (this round, 2 constructions, 56 configs).** An independent operator re-run of both branches' correctness gates (`check_causality`, `check_band_selection_matches_r68`) reproduced both PASS results exactly; the F1 rank-agreement figures matched the operator's own pre-measurement to 3-4 decimals in both branches, which is itself a form of reproduction since it was computed independently by each agent from the committed score functions.
+
+**Holdout counter: +0** (unchanged from R-110's ~679) — neither branch's further-work bar cleared, so W_HOLD was never read by either. **Decision rule did not move**: both further-work bars and all decision thresholds (D1/D2/D3/D5, scramble) were frozen in `r111_shared.py` before either branch computed a single decisive number; the one correction made (`recenter_score`) was applied before any decisive cell was read, on the grounds ROUTINE step 3 explicitly permits ("fix a bug"), and is disclosed in full above rather than folded in silently. **Next step:** the multi-asset cross-sectional line opened by R-63 (score, timing, allocation weighting) is now exhausted across all three dimensions this project's own framework can vary without new data. What remains, per R-110's own closing list plus this round's addition: B-28's breadth clause (genuinely less-correlated instruments or a lower-frequency bar series — both blocked on data this project cannot fetch or simulate), or a session should treat the multi-asset axis as closed on this panel and return to a genuinely different mechanism search, on either the single-asset axis (INFO: 15 attempts closed; SIZE: 26 attempts closed; ERR: 6 attempts across 3 notions closed; regime-timing: 9 mechanisms closed) or B-06 (forward paper trading, the only standing zero-cost item, already running unattended).
+
 ### R-110 · 08-24 · NEGATIVE (both branches) — resolving R-107's own two named-but-untested follow-ons (a milder rank cap, a continuous equal-weight/risk-parity blend): both fail, and the mild cap fails *harder* than the k=6 cell R-107 already rejected
 
 **Direction.** R-107 built the multi-asset registration path (closing B-32)
@@ -11603,6 +11633,38 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-24 after R-111.** Off-backlog (the ranked list holds only
+B-06, per R-110's own close), acting directly on R-110's own closing
+recommendation rather than inventing a fresh direction: a two-branch round
+varying R-63's cross-sectional SCORE for the first time since R-63 wrote
+it (52-week-high proximity, conservative; path-consistency-weighted
+magnitude, novel), holding R-68's ENTRY_ONLY timing and R-107/R-110's
+equal-weight allocation frozen. **Both NEGATIVE**, for two different
+reasons: the conservative score is directionally harmful (D1/D2/D5 all
+fail, D5 gross itself negative) and *increases* churn 2.5x over R-68's own
+published rate, exactly as its own pre-registered failure mode predicted;
+the novel score is too close to a rescaled copy of the incumbent
+(Spearman rho=0.971 against the old score) to move its own wide
+uncertainty, exactly as its own pre-registered failure mode predicted.
+**This closes the third and last untouched dimension of R-63's own
+three-part construction** (score: this round, 2 constructions, 56
+configs; timing: R-65/67/68, 5 rounds; allocation weighting: R-107/R-110,
+2 rounds, 12 configs) — every dimension this project's own framework can
+vary on this panel without new data has now returned NEGATIVE. **The
+ranked backlog remains empty of anything but B-06** (forward
+paper-trading, already running unattended, per R-78's own costing: 18.9
+years to never at the comparison it records, an argument for continuing
+to run it rather than a queued answer). A future session preferring a
+fresh mechanism search now has: the single-asset axis's own closed list
+(15 INFO-axis attempts, 26+ SIZE-axis attempts, six ERR-axis attempts
+across three notions of uncertainty, nine regime-timing mechanisms); the
+multi-asset axis's own closed list (five timing rounds, two
+allocation-weighting rounds, this round's two score constructions — nine
+rounds total, all NEGATIVE); or B-28's breadth clause (genuinely
+less-correlated instruments, or a lower-frequency bar series — both
+blocked on data this project cannot fetch or simulate, unchanged since
+R-63/R-65 last touched it).
+
 **Re-ranked 08-24 after R-110, which also corrects a standing bookkeeping
 error rather than only adding a new result.** R-110 worked the multi-asset
 allocation-weighting sub-axis R-107 opened directly, per the backlog-first
@@ -13626,6 +13688,14 @@ Rules that the format exists to enforce:
 Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
+
+- **08-24 · ~679** — R-111: **+0** on top of R-110's ~679 (unchanged), both
+  branches. Conservative (`experiments/r111_conservative_52w_high.py`)
+  failed `(d1 or d2)` and `d5` on W_FULL6/U6 before any holdout-authorizing
+  bar was reached. Novel (`experiments/r111_novel_path_consistency.py`)
+  cleared d3/d5/scramble but failed `(d1 or d2)` on the same cell. Neither
+  branch's files import or read `W_HOLD`/`OOS_START` (confirmed in each
+  branch's own report and by the operator's review of both scripts).
 
 - **08-24 · ~679** — R-110: **+0** on top of R-109's ~679 (unchanged), both
   branches. Conservative (`experiments/r110_conservative_mild_cap.py`) ran
