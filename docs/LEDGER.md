@@ -315,6 +315,238 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-110 · 08-24 · NEGATIVE (both branches) — resolving R-107's own two named-but-untested follow-ons (a milder rank cap, a continuous equal-weight/risk-parity blend): both fail, and the mild cap fails *harder* than the k=6 cell R-107 already rejected
+
+**Direction.** R-107 built the multi-asset registration path (closing B-32)
+and, in the same round, tested replacing R-63's 1/m equal-weight split
+(across its own cross-sectional top-k eligible set) with a causal
+equal-risk-contribution (ERC) risk-parity solve — a hard, all-or-nothing
+substitution. It confirmed the mechanism's own literature-predicted effect
+(realized diversification, DR², rises exactly as Baltas (2015),
+"Trend-Following, Risk-Parity and the Influence of Correlations," and
+Bruder & Roncalli (2012), "Managing Risk Exposures Using the Risk
+Budgeting Approach," SSRN, predict) but rejected it end to end: giving ERC
+room to operate required widening the eligibility cap `k` from R-63's
+frozen 1 to 6, which diffused the basket enough to gut the trend score's
+own selectivity (D1 −2.859 [−4.18,−1.62], D5 gross retention only +0.061
+against the axis's prior +0.68 to +2.02). R-107 selected its one (k, λ)
+cell by W_VAL growth across a {2,3,4,6}×{0,0.5,1} grid and ran the full
+decisive battery ONLY on the winner (k=6); it never read the battery at
+the milder caps individually, and it never varied the allocation rule
+itself away from the boolean equal-weight-vs-ERC choice. Its own closing
+line named both gaps directly, verbatim: "does a milder rank cap (k=2 or
+k=3, where the falsification margin was smaller but the signal's own
+selectivity survives more intact) or a smoothed/soft risk-parity blend
+(rather than a hard top-k eligibility gate feeding a hard risk-parity
+solve) resolve the disclosed tension — untested, and not assumed
+promising given the falsification margin was already thin at every k
+tried." This round works both, as its two branches. **Conservative**
+reads R-107's own unmodified pure-ERC construction (`alpha=1` in this
+round's notation) at k=2 and k=3 through the FULL decisive battery each,
+not merely by W_VAL growth. **Novel** builds a genuinely new mechanism —
+a continuous convex blend `w = (1-alpha)*w_eq + alpha*w_rp`, `alpha` in
+[0,1] — motivated by **DeMiguel, V., Garlappi, L., & Uppal, R. (2009),
+"Optimal Versus Naive Diversification: How Inefficient is the 1/N
+Portfolio Strategy?", Review of Financial Studies 22(5), 1915–1953**: the
+canonical finding that no optimized weighting scheme consistently beats
+naive 1/N out of sample because estimation error offsets the theoretical
+gain, and that shrinking an optimized weight toward 1/N (their own
+robustness check) recovers some benefit while bounding that cost —
+directly on point for R-107's own diagnosed failure mode ("giving the
+estimator room to operate is what destroyed the candidate"). Maillard,
+Roncalli & Teiletche (2010), *JPM* 36(4), 60–70, is reused unmodified for
+the ERC solver itself (both branches, inherited from R-107). **Attacks**
+the methodology/ERR-adjacent gap for the conservative branch (does
+R-107's own infrastructure, read more completely, change the verdict) and
+INFO/COST (the panel-breadth axis) for the novel branch, matching R-107's
+own classification of its two branches. **Not a duplicate of**: R-107
+conservative (pure infrastructure, no mechanism change, untouched here);
+R-107 novel (tested alpha=1 at k∈{2,3,4,6}, SELECTED one cell by W_VAL
+growth, ran the battery only on that winner — this round's conservative
+branch reads k=2/k=3 through their OWN battery rather than through a
+single growth-maximizing selection, and this round's novel branch varies
+`alpha` itself, which R-107 never computed in any form since k=1 forces
+its two endpoints to coincide); R-63/65/67/68/72 (timing/eligibility
+axis, untouched by either R-107 or this round); any single-asset
+SIZE/ERR-axis round (this operates on the 8-instrument panel via R-63's
+score, not `kelly_regime_v4`'s vote).
+
+Two structural failure modes were named before any branch ran, in
+`experiments/r110_shared.py`'s frozen docstring: **(F2, conservative)**
+fixing "gutted selectivity" does not by itself manufacture an edge if
+R-63's underlying signal was already the binding constraint at low k, not
+the allocator; **(F3, novel)** for a fixed k, a partial alpha is a point
+on the line segment between that k's own equal-weight and full-ERC
+portfolios — if that segment is monotonic, an interior alpha can never
+beat both endpoints simultaneously, watched for directly by requiring
+each branch to report whether any interior alpha beats BOTH its own
+endpoints, not merely one.
+
+**What was done.** Operator-authored, read-only shared module
+`experiments/r110_shared.py` (frozen before either branch was dispatched;
+neither branch edited it): `build_targets(aligned, k, lam, alpha)`
+generalizes R-107's construction so `alpha=0` reduces EXACTLY to R-63's
+equal-weight and `alpha=1` reduces EXACTLY to R-107's pure-ERC — both
+verified as bit-identical bar-for-bar identities before dispatch (and
+independently re-verified by both branches' own pre-flight sanity gates).
+Two parallel dispatched-agent branches, disjoint files, neither committed
+by the branch — the operator merged and committed once both verdicts were
+in, after independently reproducing one falsification-test cell from each
+branch's own report (conservative k=3/λ=1.0: mean DR² 1.2705 vs 1.2617,
+reproduced bit-for-bit live; novel's selected-cell CSV row cross-checked
+byte-for-byte against its own report).
+
+*Conservative* (`experiments/r110_conservative_mild_cap.py`): for k in
+{2, 3}, swept λ∈{0, 0.5, 1.0} at alpha=1.0 (R-107's exact construction) on
+W_TRAIN/W_VAL/U8, selected the W_VAL-growth-best λ per k (a shallow,
+monotone plateau at k=3; k=2's three λ cells are exactly tied — ERC over
+precisely 2 assets reduces to inverse-volatility weighting regardless of
+correlation, so λ, which only reshapes the *off-diagonal* shrinkage
+target, cannot move the k=2 weight split at all, confirmed as
+mathematically expected rather than a bug). Ran R-107's own falsification
+test fresh at each selected (k, λ) — not inherited from R-107's k=6 cell —
+then the full D1–D5 + 10-seed scramble decisive battery for both k
+independently (both cleared falsification, so both proceeded).
+
+*Novel* (`experiments/r110_novel_blend.py`): swept `alpha`∈{0, 0.25, 0.5,
+0.75, 1.0} at k∈{3, 6} (λ fixed at 1.0, R-107's own selected shrinkage
+intensity, to isolate alpha as the one new free parameter, this round's
+disclosed departure from re-sweeping λ jointly) — 10 cells on W_TRAIN and
+W_VAL each. Pre-registered F3 check computed explicitly per k before
+selection. Selected the single best (k, alpha) cell by W_VAL growth,
+ran the fresh falsification test at that cell, decisive battery gated on
+its outcome.
+
+One bug found and fixed, disclosed per ROUTINE.md's bug-fix allowance,
+before either branch's report was read by the operator: the novel
+branch's own `write_csv` call (via a helper transitively imported from
+`r107_novel_risk_parity.py`) called `.mkdir()` on that module's own
+`OUT_DIR` (`reports/r107_risk_parity`) rather than `r110_shared.OUT_DIR`
+(`reports/r110_blend`), crashing on a from-scratch worktree with no prior
+R-107 output directory; fixed in the novel branch's own file only
+(`OUT_DIR.mkdir(...)` at the top of its `main()`), no shared file touched,
+no computation changed. Both branches independently found `r110_shared.py`
+untracked in their fresh git worktrees (a known property of this
+project's parallel-dispatch mechanics, not a defect) and copied it in
+byte-identical, confirmed by the operator via `diff` against the frozen
+original before merging either branch's files.
+
+**Configurations evaluated**: conservative 128, novel 120 — **248 total**,
+each branch's own `config_count()` delta in its own from-scratch process
+(the operator's own verification re-runs, one falsification-test cell per
+branch, are reproductions of already-reported numbers, not new trials,
+and are not counted, matching this project's standing convention for
+operator spot-checks).
+
+**Result.**
+
+*Conservative.* Falsification (DR², W_TRAIN, fresh at each cell):
+k=2/λ=1.0 mean DR² 1.1918 vs equal-weight 1.1823 (**PASSED**, margin
++0.0095); k=3/λ=1.0 mean DR² 1.2705 vs 1.2617 (**PASSED**, margin
++0.0088) — both thin, consistent with R-107's own warning, but both real,
+so both proceeded to the decisive battery. **Both batteries FAIL on
+every clause, and worse than R-107's own already-rejected k=6 cell:**
+
+| k | D1 growth (95% CI) | D2 dd (95% CI) | D3 | D4 | D5 gross | scramble (real vs p90) | further_work |
+|---|---|---|---|---|---|---|---|
+| 2 | −8.8563 [−11.8242,−5.9396] | +28.50 [+7.73,+51.82] | FAIL (−0.8395) | FAIL ($0 vs $1,453.94) | −0.9752 | −8.8563 vs −7.4109, NOT survived | **False** |
+| 3 | −8.1245 [−10.3123,−6.0335] | +36.49 [+13.03,+58.93] | FAIL (−0.9276) | FAIL (~$1 vs $1,453.94) | −1.2774 | −8.1245 vs −6.9255, NOT survived | **False** |
+| R-107's k=6 (context, already published) | −2.859 [−4.18,−1.62] | +41.28 [+14.6,+59.9] | FAIL | FAIL | +0.061 | weak survive | **False** |
+
+Both mild caps land WORSE on D1 than the wide cap R-107 already rejected
+— the milder cap did not buy back selectivity in a way that helped; a
+thinner eligible basket appears to make the ERC solve's own concentration
+risk bite harder (both k=2 and k=3 candidates end the full-history run
+near total loss, $0–$1 from a $1,000 start, against EW_HOLD's $1,454),
+not softer. Both fail the scramble control outright — worse than the
+90th percentile of ten randomly-permuted-weight controls, the sharpest
+possible "this is not signal" signature this project's toolkit produces.
+
+*Novel.* Full 10-cell (k, alpha) × {W_TRAIN, W_VAL} grid: **every cell in
+both windows is negative vs VOLMATCH_HOLD, and growth_diff is
+monotonically WORSE as alpha rises from 0 to 1, at both k=2 and k=3, on
+both windows, with zero exceptions** (W_VAL k=2: alpha 0.00→−0.7078,
+0.25→−0.7432, 0.50→−0.7845, 0.75→−0.8137, 1.00→−0.8395; k=3: alpha
+0.00→−0.7774 … 1.00→−0.9276 [−1.8597,−0.0029]). Equal-weight (alpha=0) is
+the single best point in the entire grid. **F3, pre-registered: False at
+both k** — no interior alpha ever beats both its own k's endpoints,
+because there is no interior optimum to find: the segment is monotonic,
+and the winning endpoint is equal-weight, meaning ERC is strictly
+dominated across the whole segment at every k tried. Selected cell:
+k=2, alpha=0.00 (W_VAL growth −0.7078). Falsification test at the
+selected cell: mean DR² blend 1.1823 vs equal-weight 1.1823 —
+bit-identical, because at alpha=0.00 the blend construction reduces
+exactly to equal-weight, so the two series are literally the same
+series. **FAILED** by the pre-registered strict-inequality rule (a direct,
+mechanical consequence of the grid result, not an independent finding).
+Per the frozen decision rule the run stopped there: no `decisive_battery`
+call was made, `further_work` was never computed, W_FULL6 and W_HOLD were
+never read (independently confirmed by the operator: no `decisive_battery`
+or `W_FULL6` string appears anywhere in the branch's own execution log).
+
+**Verdict.** **NEGATIVE, both branches**, and this closes both of R-107's
+own named open questions with a materially informative answer, not a
+shrug: the mild-cap route does not "resolve the disclosed tension," it
+sharpens it — a thinner eligible basket under ERC is not gentler, it
+concentrates harder and both k=2 and k=3 land closer to total loss than
+R-107's own already-rejected k=6 cell on every measured axis. And the
+blend route finds nothing to blend: DeMiguel et al.'s own "shrink toward
+1/N" mechanism exists to recover value lost to estimation error when the
+optimized endpoint is sometimes better and sometimes worse than naive —
+here the naive endpoint is unconditionally the best point on the entire
+tested segment, at both k values, on both windows, so there is no
+partial-credit region for a blend to find; the ERC endpoint itself, not
+merely "too much of it," is what R-63's cross-sectional signal cannot
+tolerate. **One-line lesson: this axis's problem was never how HARD the
+risk-parity substitution was applied (hard cap vs. soft blend, wide cap
+vs. narrow cap) — every dial tried across R-107 and this round moves the
+same direction, away from equal-weight, and equal-weight has now won
+every comparison on this signal at every setting tried (k∈{1,2,3,4,6},
+λ∈{0,0.5,1}, alpha∈{0,0.25,0.5,0.75,1}).** A future session on this
+specific sub-axis would need a reason to expect equal-weight is not
+simply the right answer for this score, not another way to dial toward
+risk-parity more gently. **Holdout counter: +0** on top of R-108's ~679
+(R-109 also +0, unchanged) — neither branch's code imports or reads
+`W_HOLD`/`OOS_START` (grep-confirmed on both branches' own files by the
+operator), both branches' own execution logs show no `W_HOLD` read, and
+the operator's own independent verification runs were restricted to
+`W_TRAIN`/inner-train falsification cells only; see the bullet added
+below in [Holdout consultations to date](#holdout-consultations-to-date).
+Neither branch's decision rule moved after seeing any number; the one
+correction made (the novel branch's own `OUT_DIR.mkdir` fix) was a
+directory-creation bug found and fixed before either report was read,
+changing no computation, per ROUTINE.md's bug-fix allowance. **Next
+step:** the multi-asset allocation-weighting sub-axis (equal-weight vs.
+any risk-parity/blend variant, now 12 total configurations across R-107
+and this round) is closed pending a reason to doubt equal-weight itself;
+a future session on the multi-asset axis should either work the
+still-untouched TIMING/eligibility dimension at a different score
+construction, or return to the single-asset axis's own closed list.
+**Housekeeping correction, found while writing this entry, not a new
+result:** R-104 through R-109's re-rankings each state "B-42... OPEN" /
+"the only ranked, unblocked backlog item," but **R-92 (08-21) already
+closed B-42, NEGATIVE**, verbatim in its own verdict line ("B-42 is now
+CLOSED, NEGATIVE") — R-93 through R-103's own re-rankings correctly
+reflect this (all ten cite B-32, not B-42, as the sole open item). The
+same error, independently, affects **B-40**: R-108's own direction
+section describes it as "OPEN since R-89," but **R-91 (08-21) already
+closed B-40, NEGATIVE**, verbatim ("B-40 is now CLOSED, NEGATIVE") —
+R-108's own work is NOT a duplicate (a narrower, pre-specified sub-claim
+test genuinely distinct from R-91's broader four-state construction, and
+its own result stands as valid, freshly-measured evidence), only its
+framing of B-40's prior status was inaccurate. Both errors appear to
+originate from the section D backlog table rows for B-40 and B-42, never
+flipped from `OPEN` after their respective closing verdicts, which at
+least seven subsequent rounds' re-rankings inherited instead of the
+narrative log in section B. Corrected in this entry's re-ranking below
+and in both table rows; nothing is re-tested by this correction, only
+the written record, matching R-72's own precedent for this exact kind of
+stale-row fix (B-37, section D). **The ranked backlog therefore holds
+neither B-40 nor B-42 — both were already closed before this round, one
+of them twice over — leaving only the multi-asset axis's now-narrower
+open frontier and the standing B-06 recommendation** — see the
+re-ranking below.
+
 ### R-109 · 08-24 · NEGATIVE (both branches) — a sixth ERR-axis attempt, the first on DISTRIBUTIONAL NOVELTY rather than significance or disagreement: a Mahalanobis-distance brake (conservative) fails B1/B4/B5, and a k-nearest-neighbour novelty brake (novel) is the FIRST of six ERR-axis attempts to clear B1 on both markets, but fails B4 (ETH) on a spot sign inversion
 
 **Operational note, disclosed up front.** This round was dispatched as "R-107"
@@ -11371,6 +11603,47 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-24 after R-110, which also corrects a standing bookkeeping
+error rather than only adding a new result.** R-110 worked the multi-asset
+allocation-weighting sub-axis R-107 opened directly, per the backlog-first
+rule, resolving both of R-107's own named-but-untested follow-ons: a
+milder rank cap (k=2, k=3, read through R-107's own full decisive battery
+rather than a single W_VAL-growth selection) and a continuous
+equal-weight/risk-parity blend (`alpha` in [0,1], DeMiguel-Garlappi-Uppal
+2009). **Both NEGATIVE, decisively** — the mild caps land *worse* on
+every clause than R-107's own already-rejected k=6 cell, and the blend's
+own pre-registered F3 check found equal-weight (alpha=0) strictly
+dominant across the whole tested segment at every k, so there is no
+partial-credit region between equal-weight and risk-parity for a blend
+to find. This closes the allocation-weighting question on this specific
+score/panel: 12 total configurations across R-107 and R-110
+(k∈{1,2,3,4,6}, λ∈{0,0.5,1}, alpha∈{0,0.25,0.5,0.75,1}) and equal-weight
+has now won every one of them. **Separately, while writing this entry,
+two stale backlog rows were found and corrected**: R-104 through R-109's
+re-rankings (this section, six consecutive rounds) state B-42 as the
+sole open, ranked backlog item, but **R-92 (08-21) already closed B-42,
+NEGATIVE**; R-108 independently describes B-40 as "OPEN since R-89," but
+**R-91 (08-21) already closed B-40, NEGATIVE** (R-108's own work is not
+invalidated — its narrower sub-claim test is a genuinely non-duplicate,
+validly-measured result — only its framing of B-40's prior status was
+wrong). Both errors trace to backlog table rows never flipped from
+`OPEN` after their respective closing verdicts in section B; both rows
+are corrected in place in this section, nothing is re-tested. **The
+ranked backlog is therefore, as of R-110, empty of anything but the
+standing zero-cost recommendation, B-06** (forward paper trading — see
+R-78's own costing of it: 18.9 years to never at the comparison it was
+recording, an argument for starting it rather than a queued answer). A
+future session preferring a fresh mechanism search has: the single-asset
+axis's own closed list (15 INFO-axis attempts, 26+ SIZE-axis attempts,
+six ERR-axis attempts across three notions of uncertainty, nine
+regime-timing mechanisms, all closed); the multi-asset axis's own closed
+list (five timing/eligibility rounds on R-63's original score, R-63/65/
+67/68/72; the allocation-weighting question this round closes); or should
+genuinely reconsider whether R-63's cross-sectional score itself — not
+its timing, not its allocation weighting, both now exhausted — is the
+thing worth varying next on the multi-asset panel, since nothing on
+either previously-untouched dimension has moved the verdict.
+
 **Re-ranked 08-24 after R-109.** An off-backlog, literature-prompted
 two-branch round (dispatched under R-107's backlog state — the ranked list
 held only B-32, pure infrastructure — and renumbered twice, first to R-108
@@ -13258,7 +13531,7 @@ which only forward paper trading can supply.
 | ~~B-31~~ | ~~Attack the **long/flat gate**, which R-65 identified as where the remaining turnover lives once buffering has done its work. R-63's frozen rule holds only positive-scoring assets and stands flat otherwise, so every zero-crossing of the incumbent's score forces an exit — a channel R-65's conservative branch measured as **invariant at 0.386/day across all 20 cells of a holding-period grid** while voluntary swaps fell 16-fold. Candidate fixes: a hysteresis band around zero (enter above +δ, exit below −δ), a continuous rather than binary positivity weight, or letting the partial-adjustment recursion carry the position through a crossing instead of resetting it~~ | COST | **DONE → R-67, ANSWERED** | Filed by R-65. **The mechanism was real and R-67 broke it; the round failed anyway.** Two of the three fixes this row names were run — asymmetric hysteresis on the eligibility test (conservative) and the partial-adjustment recursion (novel). Forced exits fall **242 → 8 events** on W_TRAIN (0.3781 → 0.0125/day, a 30× cut) with the voluntary-swap channel **invariant at 0.117–0.122/day** at every δ, so the fix reaches exactly and only the channel this row named — **the floor was a threshold artifact, not score noise (F2 refuted)**. Turnover reaches 0.102/day (conservative) and 0.336/day (novel), both **below the 0.641/day break-even this row quotes**, and the conservative arm becomes the first on this axis to pass the 0.40% fee tier. The predicted price — holding a declining asset longer — **was not paid**: drawdown improved at every step on both arms. Both still fail `(D1 or D2)`: +1.093 [−2.019, +4.106] and +1.246 [−1.795, +4.325]. This row's own honest prior was half right: the gate mattered for the discrete-selection family (0.900 → 0.102/day) and the smoothed arm did reach a low rate without a gate fix — but the smoothed arm also **failed D4**, which the gate-fixed discrete arm passed. Reopens only as **B-34** (extend the grids; run the symmetric deadband as a matched arm) and **B-35** (measure whether the exit was informative at all). |
 | ~~B-40~~ | ~~**State-dependence of the horizon** — the third of the three axes Levine & Pedersen (2016) leave open on a single instrument, and the one R-89 did not take. Goulding, Harvey & Mazzoleni (2023), "Momentum turning points", *Journal of Financial Economics* 149, 378–406, define four states from the intersection of a slow and a fast signal (Bull = both trailing returns ≥0; Correction = slow ≥0, fast <0; Bear = both <0; Rebound = slow <0, fast ≥0) and re-set the slow/fast blend weight after observing a break. Rare among this project's candidate sources in that the headline result is a **single time series** (the US market index), not a panel. Test the sharpest sub-claim first, before building anything: is BTC's conditional mean return in the Bear state (80d<0 AND 7d<0) significantly negative on 2017–2022, and does the sign hold after?~~ | SIZE, N≈3 | **DONE → R-108, SUB-CLAIM NEGATIVE** | Filed by R-89 with a pre-emptive honest magnitude warning ("approximately zero... a cheap null to document, not a promotion candidate"). R-108 ran the exact sub-claim named here (`experiments/r108_bear_state_conditional_mean.py`, pre-registered in commit `14378e2` before any number was read). Bear-state mean forward daily log return on 2017-2022: **−15.02 bps/day** with a 95% stationary block-bootstrap CI of **[−43.49, +17.28] bps/day** — the sign is negative as the mechanism predicts and the magnitude is exactly the "approximately zero" the row filing predicted, but the CI contains zero decisively (upper bound sits +0.32 daily-return-standard-deviation units above zero). Only the Bull state clears the noise floor on this window (+44.35 [+7.49, +72.78] bps/day). The pre-registered secondary holdout sign-check was contingent on primary passing and was not spent (+0 holdout consultations). Sub-claim closes NEGATIVE; building the full four-state dynamic-blend variant on this ceiling would be arguing against a signal whose 2017-2022 CI is [−0.43, +0.17] percent per day. |
 | ~~B-41~~ | ~~**Path-dependent exit** — a trailing ATR ratchet with a principled re-arm, replacing "hold until the anchors flip". Sepp & Lucic (2026), arXiv:2607.19497, formalise the "American" trend system; Han, Zhou & Zhu (SSRN 2407199) find a fixed stop cuts momentum's worst month roughly in half; Hsieh (2023), arXiv:2303.02613, supplies the restart-mechanism concept~~ | COST, SIZE | **DONE → R-90, ANSWERED (NEGATIVE, both branches)** | Filed by R-89. Tried both ways named in the original filing: a literal fixed-percentage stop with instant restart (conservative — the exact naive case Hsieh's paper motivates a fix for) and an ATR-scaled stop with a reclaim-gated, cooldown-confirmed restart (novel — Hsieh's stated concept, not his unseen exact formula). Both confirm, rather than merely fail to refute, the main risk named in this row before any code: the conservative branch's own finalist has an 80% whipsaw rate on its inner-train stop-outs with a negative point estimate on that same cell; the novel branch's stricter restart drops the whipsaw rate to 0% of *events* only by collapsing to near-zero exposure instead (0.00–0.30 of v4's), reproducing Hsieh's own named failure mode (permanent de-risking) rather than curing it, and separately whipsaws on **100%** of the re-entries it does allow — mechanically near-guaranteed once a reclaim gate shares its own inequality with the whipsaw definition, a reusable finding for any future round pairing the two. Not reopened; a materially looser reclaim condition (a fractional retracement rather than the exact exit price) is a different, untested question. |
-| **B-42** | **Derive the anchor span instead of searching it.** Sepp & Lucic (2026), arXiv:2607.19497, give a closed-form Sharpe for a trend system under any causal linear process plus a net-Sharpe-under-proportional-cost correction; Grebenkov & Serror (2014), *Physica A* 394, 288–303, give the closed-form P&L distribution for an EMA trend system; Valeyre (2025), arXiv:2504.10914, fits that Sharpe formula to 70 futures at **R² = 0.98**, recovering λ = 1/180 ± 17 days and an optimal η ≈ 1/112 business days. Fit BTC's own return autocorrelation on 2017–2022, plug into the closed form, and compare the derived span against v4's shipped 20/40/80 | N≈3, COST | **OPEN** | Filed by R-89. Not a duplicate of R-06/R-07 (empirical ladder sweeps), R-40 (bagging the ladder) or R-45 (walk-forward re-estimation / minimax reselection): all four *search* for a span in backtest space; this derives one from a fitted generative model of the instrument and produces a falsifiable point prediction rather than a distribution over spans. Two named ways it ends cheaply, both of which are still results: BTC's daily ACF is small and noisy, so the implied span may be unstable across subsamples; and Sepp & Lucic's own theory says an **interior** cost-optimal span exists only under ARFIMA long-memory dynamics — if BTC fits short-memory AR(1), the answer is "as slow as you can stand", which is a one-line conclusion rather than an edge. Also worth pricing against their reported **≈37–41bps span-invariant break-even**, against this project's 20bps spot round trip. |
+| **B-42** | **Derive the anchor span instead of searching it.** Sepp & Lucic (2026), arXiv:2607.19497, give a closed-form Sharpe for a trend system under any causal linear process plus a net-Sharpe-under-proportional-cost correction; Grebenkov & Serror (2014), *Physica A* 394, 288–303, give the closed-form P&L distribution for an EMA trend system; Valeyre (2025), arXiv:2504.10914, fits that Sharpe formula to 70 futures at **R² = 0.98**, recovering λ = 1/180 ± 17 days and an optimal η ≈ 1/112 business days. Fit BTC's own return autocorrelation on 2017–2022, plug into the closed form, and compare the derived span against v4's shipped 20/40/80 | N≈3, COST | **DONE → R-92, CLOSED NEGATIVE** (row left showing `OPEN` after R-92's verdict — a stale-row error that propagated into six later rounds' re-rankings, R-104-R-109; corrected by R-110 as pure housekeeping, nothing re-tested) | Filed by R-89. Not a duplicate of R-06/R-07 (empirical ladder sweeps), R-40 (bagging the ladder) or R-45 (walk-forward re-estimation / minimax reselection): all four *search* for a span in backtest space; this derives one from a fitted generative model of the instrument and produces a falsifiable point prediction rather than a distribution over spans. Two named ways it ends cheaply, both of which are still results: BTC's daily ACF is small and noisy, so the implied span may be unstable across subsamples; and Sepp & Lucic's own theory says an **interior** cost-optimal span exists only under ARFIMA long-memory dynamics — if BTC fits short-memory AR(1), the answer is "as slow as you can stand", which is a one-line conclusion rather than an edge. Also worth pricing against their reported **≈37–41bps span-invariant break-even**, against this project's 20bps spot round trip. |
 | ~~B-32~~ | ~~Multi-asset strategy **registration**, so that a bar-by-bar cross-asset allocator can enter the comparison table at all~~ | ERR (methodology gap) | **DONE → R-107, ANSWERED** | Filed by R-65, promoted from B-17's deferred half. A native `MultiAssetStrategy` engine (`src/tradebot/multi_engine.py`/`multi_strategy.py`), a separate registry auto-discovered from `src/tradebot/multi_strategies/`, and additive wiring into `tradebot run`/`scripts/inference.py`/`tests/test_evidence.py` now exist, tested (8 new tests, 516 total passing) and reproduce R-68's own already-published numbers to full float precision as the correctness check. `xsmom_entry_band` (R-68's `ENTRY_ONLY, δ=0.080`) is registered as B-32's first candidate, `further_work=False` — the same NEGATIVE verdict R-68 already reached, unchanged by registration, explicitly labeled in the README as not a promotion claim. Zero touches to the single-asset registry/strategy/strategies path. A same-round novel attempt to find a *promotable* candidate for the new path (correlation-aware risk-parity weighting) also failed — see R-107 in section B — so the path exists and works but nothing on it clears the bar yet. |
 | **B-28** | Reopen "more instruments" only against a universe whose **breadth** — not whose asset count — clears the bar R-63 measured: mean pairwise daily-return correlation materially below 0.634, or a Grinold equal-correlation breadth materially above 1.47, or a holding period long enough that the 2.86 leader-changes-per-day that cost the novel arm 8.02 log units stops being the binding cost. R-63 established that the cross-sectional signal here is real and merely unaffordable, so the axis is closed for this data rather than on principle | INFO, N≈3 | **HALF-CLOSED → R-65**; breadth clause still blocked on data this repo does not have | Filed by R-63. **Its holding-period clause is answered: R-65 ran it and the value/cost curves cross** — the affordable window is turnover 0.06–0.33/day, holding 1.4–5 days, and at a derived trading rate the same signal costs 0.43 log units instead of 8.02 while its frictionless edge rises. Still NEGATIVE on the interval. The **breadth** clause is untouched and remains blocked. Not actionable from inside a session today: the eight committed instruments are the universe, and R-63 measured them at 1.47 effective bets. Reopening needs either genuinely less-correlated instruments (a different asset class, which this project cannot fetch or simulate) or a lower-frequency bar series that would cut the leader-change rate — note that this project's entire dataset is 5-minute bars, so the second is a data-acquisition task, not a strategy task. Recorded so the idea is not re-tried blind on the same eight assets, which is exactly what section C exists to prevent. |
 | ~~B-01~~ | ~~E-process regime detection with unified Kelly sizing~~ | ERR, N≈3 | **DONE → R-28**, qualified by R-31 | NEGATIVE on the promotion bar. It read as the strongest risk result in the project — 0 of 40 windows deeper than the incumbent — until B-11 compared the two at equal risk and found that number was about exposure, not about the gate. (R-26's null round listed this as untried; R-28 is the round that actually ran it.) |
@@ -13353,6 +13626,16 @@ Rules that the format exists to enforce:
 Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
+
+- **08-24 · ~679** — R-110: **+0** on top of R-109's ~679 (unchanged), both
+  branches. Conservative (`experiments/r110_conservative_mild_cap.py`) ran
+  its full decisive battery on W_FULL6/W_VAL/U6/U8 only, both k=2 and k=3
+  failing every clause before any holdout-authorizing bar was reached.
+  Novel (`experiments/r110_novel_blend.py`) stopped at its own
+  pre-registered falsification gate on W_TRAIN — `decisive_battery` was
+  never called, confirmed by the operator via the branch's own execution
+  log. Neither branch's files import or read `W_HOLD`/`OOS_START`
+  (grep-confirmed by the operator on both).
 
 - **08-24 · ~679** — R-109: **+0** on top of R-108's ~679 (unchanged), both
   branches. Conservative (`experiments/r109_conservative_mahalanobis_brake.py`)
