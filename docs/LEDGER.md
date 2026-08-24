@@ -315,6 +315,174 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-118 · 08-24 · NEGATIVE (both branches) — synthetic-path robust calibration of v4's own free parameters, closing R-45's own named follow-on
+
+**Direction.** Off-backlog (the ranked backlog has held only B-06 since
+R-110; this is a methodology follow-on, exactly the kind Step 0 calls for
+when the backlog is empty). One sentence: does selecting
+`kelly_regime_v4`'s own already-swept free parameters (anchor-ladder base,
+`target_vol`, `max_leverage`) by a robust criterion measured across MANY
+SYNTHETIC alternative price paths — rather than R-45's three real
+calendar folds — find a configuration that generalises past R-45's own
+diagnosed ceiling? **Constraint attacked: N≈3**, via the SELECTION
+PROCEDURE, exactly as R-45 attacked it, not via a new trading signal; both
+branches leave `kelly_regime_v4`'s `frac * scale` mechanism (R-62)
+completely unchanged. **Direct precedent and reason this round exists:**
+R-45 (08-19) minimax-selected across three calendar-purged folds, beat
+naive point-estimate selection on its own terms, but still lost to v4 on
+the pre-2020 BTC control — diagnosed cause, quoted in R-45's own entry:
+"the three purged folds are all drawn from 2017–2022, so robustness
+across them cannot buy robustness against the 2016–2019 BTC-control
+period, which none of the folds ever sampled." That sentence names an
+untried resampling unit; this round supplies two. **Not a duplicate of:**
+R-45 (real calendar folds vs synthetic paths — this round never scores a
+config on a real sub-interval during selection, only at the frozen Step-4
+falsification, once per branch); R-40 (bags real-data ladder points into
+one traded ensemble — neither branch here ever blends signals, each
+selects and trades ONE triple); R-06/R-07/R-37 (the original single-path
+point-estimate searches this round and R-45 are both trying to improve
+on); `scripts/inference.py`'s own bootstrap (resamples REAL, already-
+realized history to describe uncertainty about an already-frozen
+strategy — reporting, never selection); `tradebot.data.generate_synthetic_pair`
+(ships as a fixed-constant fallback data source, never fit to real data
+or used for calibration before this round). Full citations (Politis &
+Romano 1994 stationary bootstrap; Merton 1976 jump-diffusion; Hamilton
+1989 regime-switching, reused for simulation rather than the detection
+role R-01 rejected it for; two 2024–2025 synthetic-data-for-backtesting
+papers found via WebSearch) are in the pre-registration itself.
+
+**What was done.** Shared, read-only, operator-authored pre-registration
+and control machinery: `experiments/r118_shared.py` (frozen before either
+branch was dispatched) — the pre-registered 12-point grid (ladder bases
+20/26/32 × `target_vol` 0.45/0.55 × `max_leverage` 2.0/2.5, coarsened from
+R-45's 54-point grid for the added draw cost, disclosed in the module
+docstring), `build_kelly()` (verified by self-test to reproduce
+`kelly_regime_v4` bit-for-bit at its own defaults — this caught and fixed
+a real bug pre-dispatch: `KellyRegimeV3` does not override `warmup` for a
+non-default anchor ladder, so every grid point except base=25 would have
+warmed up on the wrong number of days), `robust_score()` (CVaR-25%: mean
+of the worst quarter of a config's synthetic draws — identical for both
+branches so a difference in outcome reflects the path generator, not the
+selection rule), `select_config()` (generic sweep loop, branches supply
+only the path generator), and the frozen `evaluate_candidate()` (real-data
+Step 4: inner-validation 2021–2022 both markets with paired bootstrap
+vs shipped v4, the 0.40% fee tier, and the pre-2020 BTC-Bitfinex-control/
+ETH-Bitfinex falsification pair R-17/R-28/.../R-45 already established —
+called exactly once per branch, on the one config each branch's selection
+returned). Two parallel unregistered branches, each on disjoint files,
+neither editing the shared module: `experiments/r118_conservative_bootstrap_calibration.py`
+(stationary block bootstrap of the real 420,768-bar 2017–2020 frame,
+`tradebot.inference.stationary_bootstrap_indices` reused for calibration
+rather than inference for the first time — real OHLCV rows carried
+verbatim in resampled blocks, each block multiplicatively rescaled for
+continuous splicing) and `experiments/r118_novel_regimeswitch_calibration.py`
+(a 3-state Markov-switching jump-diffusion model — realized-volatility-
+tertile labelling, per-regime drift/vol, an empirical transition matrix,
+AR(1) clustered-vol multiplier, threshold-fit jump component — fit via
+method-of-moments to the same real training window, reusing the
+generative SHAPE of `tradebot.data.generate_synthetic_pair` but genuinely
+fit rather than hand-set, and used for calibration for the first time).
+**Pre-registered falsification test** (frozen before any synthetic number
+existed): the same bar R-45 used — the selected config must not visibly
+underperform v4 on the BTC control (Δsharpe > −0.05, Δprofit > −2.0pp) and
+must be at least comparable on ETH, through the identical pipeline.
+**24 configurations evaluated** (12 per branch — the 40 synthetic draws
+per config are the estimator's own machinery, not separately counted, the
+same convention R-40/R-45 used), 960 synthetic-path backtests total (480
+per branch, ~33–34 min wall time apiece), plus one real-data
+`evaluate_candidate` call per branch. Both branches independently timed
+their first backtests before committing to the full sweep and used the
+full pre-registered `N_DRAWS=40` unreduced. Holdout: **not touched by
+either branch** — every function that reads real BTC restricts to
+`INNER_VAL_END=2022-12-31` or the whole-file pre-2020 Bitfinex pair;
+verified by grep of both branch files for any 2023+ date literal (none
+found) and by re-reading the fitting/path-generation code paths, which
+reference only `load_inner_train_btc()`.
+
+**Result.** **Conservative:** selection landed on `(20, 0.55, 2.5)` —
+identical to v4's own shipped `(20, 0.55, 2.0)` except `max_leverage`
+2.0→2.5; the whole 12-point table clustered within a few hundredths of a
+Sharpe of each other, all near v4's own point (robust CVaR scores +0.11 to
++0.25, base=20 dominating base=26/32 at every vol/leverage pair — the
+selection reproduced R-06/R-07's own plateau, not a different
+neighbourhood). Falsification technically **PASSED** (BTC control
+Δsharpe +0.004/−0.029, Δprofit +8.3pp/+38.9pp; ETH Δsharpe/Δprofit exactly
+0.000/0.0pp both markets) — but the branch's own report flagged, and the
+operator independently confirmed, that this PASS carries little weight:
+ETH's realized signal never exceeds the shared 2.0 leverage cap, so
+candidate and control trade byte-identical target arrays on ETH — the
+only asset where they diverge at all is BTC. **B1 FAILED** (inner-val
+Δsharpe +0.00/−0.01, neither market clears the noise floor or excludes
+zero) and **B5 FAILED** (0.40% fee tier flips both markets' Sharpe
+negative, same as v4 itself). **Novel:** selection landed on `(20, 0.55,
+2.0)` — bit-for-bit v4's own shipped default, so falsification is an exact
+identity (Δsharpe/Δprofit = 0.000/0.0pp on all four BTC-control/ETH
+cells) and **B1/B5 FAILED** identically to v4's own narrow-window
+weakness. The informative diagnostic: on the fitted model's own synthetic
+paths, the ENTIRE grid scored NEGATIVE mean Sharpe (−0.22 to −0.25,
+robust CVaR −0.70 to −0.79, every point within a razor-thin band of every
+other, `max_leverage` completely inert since it never binds on any
+synthetic draw) — sharply unlike the conservative branch's block-bootstrap
+paths, which scored strongly positive (+0.96 to +1.10) on the IDENTICAL
+grid. Read precisely (branch's own diagnosis, independently checked):
+the winner is not a genuine preference for v4's point so much as a
+degenerate tie the CVaR criterion could not discriminate inside — the
+fitted 3-state model's own high-vol regime (−65%/yr annualised drift,
+143%/yr vol) and jump component (4σ threshold, 0.53% of bars) generate
+synthetic environments considerably more adverse to the whole v4-family
+grid than 2017–2020 BTC itself ever was, plausibly an over-calibration of
+tail severity in a 3-state/method-of-moments fit rather than a property of
+real regime risk. Both mechanisms are fit to or built from the same real
+2017–2020 window; that they disagree this starkly on how
+`kelly_regime_v4`-style strategies "should" perform on a training-
+consistent synthetic scenario is itself a finding about model risk in the
+fitted approach, not just noise — a resampling method that preserves the
+window's own realized path structure (conservative) and a parametric
+model that only preserves its estimated moments, and can overshoot them
+badly in the tails (novel), are not interchangeable, even when built from
+identical training data. Neither
+branch's disagreement moved the SELECTED configuration away from
+(a near-copy of) v4's own point estimate, which is the round's actual
+result: independent of which synthetic-generation mechanism was used, the
+robust-selection criterion re-discovered the pooled optimum rather than
+finding a materially different, better-generalising configuration.
+Operator independently re-read both branches' fitting/path-generation
+code for causality (confirmed: neither references any bar ≥2021-01-01
+except through the one frozen `evaluate_candidate` call) and reproduced
+the reported bug-fix (`build_kelly` + `KellyRegimeV3`'s inherited warmup)
+by hand before either branch was dispatched.
+
+**Verdict.** **NEGATIVE** (both branches). Matches this round's own
+pre-registered expected outcome for the conservative branch almost
+exactly (real-but-bounded robustness gain, no material escape from R-45's
+ceiling) and for the novel branch in an even more literal form than
+predicted (the fitted model's own draws didn't just fail to escape the
+ceiling — they collapsed onto the identical point v4 already ships,
+rather than merely landing near it). **This closes the "can a
+synthetic-augmented resampling unit escape R-45's calendar-fold ceiling"
+question two ways at once**: neither reshuffling blocks of the realized
+window nor simulating from a model fit to that window's own moments moved
+selection to a materially different, more-BTC-control-robust
+configuration than the one R-06/R-07's original single-path grid search
+already found. One-line lesson: when a training window's own point
+estimate already sits on a wide, flat plateau (R-06/R-07's own finding,
+never in dispute), no resampling or low-order generative method fit
+*to that one window* has anywhere to move the selection TO — the plateau
+itself is the ceiling, not the selection procedure's blind spot to it.
+Holdout counter: **unchanged** (neither branch touched `OOS_START`+ data,
+so no consultation to log). Decision rule did not move — the pre-
+registered falsification bar (R-45's own) was applied exactly as written,
+before either branch's synthetic-path numbers existed. Next step: this
+project's own N≈3-attacking toolkit is now three-for-three negative
+(calendar folds, block bootstrap, fitted Monte Carlo) using data internal
+to the single training window; the only two remaining escape routes this
+ledger has ever named for N≈3 are read from a genuinely different window
+(ETH, the six-asset panel — both already closed per the standing
+diagnosis) or forward evidence (B-06, already running unattended). The
+ranked backlog remains empty of anything but B-06.
+
+---
+
 ### R-117 · 08-24 · NEGATIVE (both branches) — a Donchian-channel breakout ensemble (Zarattini, Pagani & Barbon 2025), a tenth regime-timing mechanism (conservative) and a SIZE-axis substitution of a structurally new detector family into v4's own vote slot (novel): the tenth mechanism to fail the Step-A detection-lag gate, and the first SIZE-axis substitution to be real-but-unanimously-worse rather than inert
 
 **Direction.** Off-backlog (still only B-06, unchanged since R-110; the
@@ -12285,6 +12453,53 @@ trip.
 ---
 
 ## D. Backlog (ranked)
+
+**Re-ranked 08-24 after R-118.** Off-backlog (still only B-06, unchanged
+since R-110), a two-branch methodology round closed R-45's own named
+follow-on: does selecting `kelly_regime_v4`'s free parameters (ladder
+base, `target_vol`, `max_leverage`) by a robust criterion measured across
+many SYNTHETIC price paths, rather than R-45's three real calendar folds,
+escape the ceiling R-45 diagnosed (robustness across folds of one
+realized window cannot buy robustness against a period the window never
+sampled)? **Both branches NEGATIVE, and both landed on (a near-copy of)
+v4's own shipped default rather than a materially different
+configuration** — conservative (stationary block bootstrap of real
+inner-train bars) selected `(20,0.55,2.5)`, one `max_leverage` step from
+v4's own `(20,0.55,2.0)`; novel (a 3-state Markov-switching jump-diffusion
+model fit via method-of-moments to the same window) selected `(20,0.55,
+2.0)` bit-for-bit. **This closes the N≈3 axis's third distinct
+resampling/generative attempt, all three negative**: real calendar folds
+(R-45), synthetic block-bootstrap resampling of the realized window
+(R-118 conservative), and Monte Carlo from a model fit to the realized
+window's own moments (R-118 novel) — none moved parameter selection away
+from the single-path point estimate R-06/R-07 already found by grid
+search, because none can manufacture exposure to a regime TYPE the one
+2017–2020 training window never contained, whether resampled or
+parametrically re-simulated. The two synthetic mechanisms disagreed
+sharply with each other on how the whole v4-family grid "should" perform
+on a training-consistent scenario (block-bootstrap: strongly positive
+mean Sharpe across the grid; fitted Monte Carlo: uniformly negative,
+plausibly an over-calibrated tail in the fitted high-vol/jump parameters)
+— a live caveat for any future round that leans on a fitted generative
+model for anything beyond this one's calibration-selection use. **The
+ranked backlog remains empty of anything but B-06.** A future session
+preferring a fresh mechanism search now has: the single-asset axis's own
+closed lists (17 INFO-axis attempts, 27+ SIZE-axis attempts, ERR across
+five notions of uncertainty, ten regime-timing mechanisms, two
+structurally-new-detector-family SIZE substitutions, and now three
+distinct N≈3-attacking selection procedures — calendar folds, block
+bootstrap, fitted Monte Carlo — all closed); the multi-asset panel's own
+closed list (eleven rounds, all NEGATIVE, plus R-116's cross-asset-
+feedback construction); or B-28's breadth clause (blocked on data this
+project cannot fetch or simulate). Absent a new idea clearing Step-0 on
+one of these, the accumulating evidence across every axis this project's
+own framework can construct from its committed data continues to point
+the same direction: `kelly_regime_v4` is close to efficient with respect
+to the information, error control and parameter-selection procedure
+available from its own training window alone — the two remaining
+untried levers for N≈3 are data from a genuinely different window (ETH,
+the six-asset panel — both already closed) or forward evidence (B-06,
+already running unattended).
 
 **Re-ranked 08-24 after R-117.** Off-backlog (still only B-06, unchanged
 since R-110), a two-branch round tried a Donchian-channel range-breakout
