@@ -382,10 +382,26 @@ def _car_batch(t: np.ndarray, cs: np.ndarray, event_dates_ns: np.ndarray,
 
 def car_for_event(ar: pd.Series, event_date, pre: int = WINDOW_PRE_DAYS,
                   post: int = WINDOW_POST_DAYS) -> float:
-    """Cumulative abnormal return in `[event_date - pre, event_date + post]`."""
+    """Cumulative abnormal return in `[event_date - pre, event_date + post]`.
+
+    R-144's independent skeptic found this passed the window's already-
+    offset `lo` bound (event - pre) into `_car_batch`, which applies its
+    own `-pre`/`+post` offsets on top -- doubling the pre-offset and
+    silently shifting the window to `[event - 2*pre, event + post - pre]`
+    (e.g. `[ev-10, ev+15]` instead of `[ev-5, ev+20]` at the default
+    pre=5/post=20). `caar_statistic` was never affected (it builds its own
+    `ns` array of raw event timestamps and calls `_car_batch` directly,
+    the same pattern used here now), so no p-value in this project's
+    history used this buggy path -- `car_for_event` is a per-event
+    diagnostic never called by any promotion-relevant statistic before
+    R-144's novel branch used it for a reporting table. Fixed by passing
+    the raw event timestamp, matching `caar_statistic`'s own convention.
+    """
     t, cs = _prefix_sum(ar)
-    lo, hi = _window_bounds(ar.index, event_date, pre, post)
-    val = _car_batch(t, cs, np.array([lo.value], dtype=np.int64), pre, post)[0]
+    ts = pd.Timestamp(event_date)
+    if ts.tzinfo is None and ar.index.tz is not None:
+        ts = ts.tz_localize(ar.index.tz)
+    val = _car_batch(t, cs, np.array([ts.value], dtype=np.int64), pre, post)[0]
     return float(val) if np.isfinite(val) else float("nan")
 
 
