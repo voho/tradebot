@@ -256,10 +256,31 @@ def _run(strategy, df, market, start=None, end=None, label=""):
 
 
 def load_btc_extended_train() -> pd.DataFrame:
-    """BTC 2014-01-01 -> INNER_VAL_END, spot (forced: no BTC perpetual
-    futures existed before 2017; R-143 guardrail 2). Holdout-safe."""
+    """BTC 2013-01-01 -> INNER_VAL_END, spot (forced: no BTC perpetual
+    futures existed before 2017; R-143 guardrail 2). Holdout-safe.
+
+    Deliberately NOT pre-sliced to `BTC_EXTENDED_START` (2014-01-01):
+    `kelly_regime_v4.warmup = 80 days` (~23,050 5m bars), and
+    `tradebot.window.run_period` can only build a real warmup prefix from
+    bars already present in the frame it is given (see its own docstring:
+    "bars before `start` warm the strategy... when there is not enough
+    history before `start`... the run is still correct, just cold"). A
+    frame pre-sliced to start exactly at `BTC_EXTENDED_START` hands
+    `run_period` zero pre-`start` bars, forcing a cold start that leaves
+    the strategy flat for its first ~80 days -- verified directly to
+    coincide exactly with the new Mt. Gox episode window (2014-02-02 to
+    2014-02-27): equity is pinned at the starting balance throughout. This
+    is the same trap R-143's own `load_extended_btc_spot` avoided by
+    returning the FULL joined frame and always letting `run_period` slice
+    it; this helper follows that precedent by returning the full frame
+    here too and leaving the `BTC_EXTENDED_START` slicing to `run_period`
+    itself (via the `start=` arg every caller already passes to
+    `candidate_and_matched_daily_logret_on`), so the strategy warms on
+    real (if Mt.-Gox-era-thin, per R-143's own disclosed caveat) 2013
+    history exactly as R-143's own drawdown-gap test did.
+    """
     full = load_extended_btc_spot()
-    train = full.loc[BTC_EXTENDED_START:INNER_VAL_END].copy()
+    train = full.loc[:INNER_VAL_END].copy()
     _assert_no_holdout(train)
     return train
 
