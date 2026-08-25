@@ -315,6 +315,197 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-137 · 08-25 · METHOD (diagnostic, both branches) — REFUTED: R-127's own named follow-on, does ETH-idiosyncratic-event excision generalize past the one construction it tested, tried on the other constructions plus a random-day placebo control R-127 itself never ran; a causal, hindsight-free CUSUM detector independently corroborates the null (near-zero overlap with the hand-picked events) but surfaces one reproducible, un-named structural break (2022-07-18) three independent reloads agree on
+
+**Direction.** Per R-136's own re-ranking, the ranked backlog held nothing
+but **B-06** and "R-127's own named follow-on (does idiosyncratic-event
+excision generalize past the one construction it tested)" — the only
+unclosed, unblocked, genuinely non-duplicate lead this project's own Step-0
+diligence has found across ~136 prior rounds. One sentence: R-127 found
+that excising ~30 ETH-idiosyncratic structural-event days (Terra/Luna, The
+Merge) narrowed `champions_council`'s R-126-novel CVaR-reallocation's
+BTC/ETH `d_sharpe` inversion gap by 60–78% without flipping its sign; this
+round asks whether that finding generalizes to the other constructions R-127
+itself named as showing the same signature, and adds a random-day-exclusion
+placebo control R-127 never ran. **Attacks N≈3** (does a handful of
+ETH-idiosyncratic days explain regime-composition differences behind the
+six-fold BTC-pass/ETH-invert pattern) and **ERR** (an excision method never
+checked against the null hypothesis that removing *any* comparably-sized
+set of days would do the same thing is a gap in error control, independent
+of which specific days are chosen). Citations: Page (1954, *Biometrika*
+41(1-2), "Continuous inspection schemes") and Hawkins & Olwell (1998) for
+the novel branch's CUSUM changepoint construction; recent financial CUSUM
+changepoint applications (e.g. IEEE Access 2022's unsupervised CUSUM-based
+approach) surveyed by WebSearch before the branch was designed; Boehmer,
+Musumeci & Poulsen (1991, *J. Financial Economics*) and the broader
+event-study outlier-robustness literature (also WebSearch-surveyed)
+motivating the placebo-control addition. **Not a duplicate of** R-127
+(tested exactly one construction, no placebo control, no causal/algorithmic
+event detector) or of R-109/R-113/R-115-conservative/R-125-conservative/
+R-126-conservative themselves (each measured its own BTC/ETH gap and
+reported pass/fail; none excised a day from its own series afterward). Full
+argument, citations and decision rule live in the operator-authored, frozen
+`experiments/r137_shared.py` module docstring, written and committed before
+either branch was dispatched.
+
+**What was done.** `experiments/r137_shared.py` (operator-authored, frozen
+before either branch script existed): generic excision/placebo/scoring
+utilities (`align_daily`, `gap_sharpe` — candidate-minus-baseline annualized
+Sharpe on CALENDAR-DAILY returns, matching `tradebot.inference`'s own
+convention and R-126/R-127's own bootstrap machinery — `excise_and_regap`,
+`random_day_placebo`, `placebo_pvalue`, `classify_movement`, `round_verdict`),
+re-exporting R-127's own frozen constants (`TERRA_LUNA_WINDOW`,
+`THE_MERGE_WINDOW`, `CORR_WINDOW_DAYS`, `LOW_CORR_THRESHOLD`,
+`low_correlation_days`) verbatim rather than re-deriving them. Pre-registered
+decision rule: per-construction **GENERALIZES** requires material narrowing
+(≥40% relative, or ≥0.2 raw — this project's own noise floor) with no sign
+flip AND the real excision beating a 1,000-draw random-day placebo control
+at α=0.05; **SIGN_FLIP** reported separately (still not promotable, since
+excising known-bad calendar days from an already-completed backtest is not a
+live, causally-deployable rule); round-level **CONFIRMED** needs ≥3 of the
+in-scope constructions to hit GENERALIZES/SIGN_FLIP, **REFUTED** needs ≤1.
+No excision result of any kind was pre-registered as promotable by design —
+matching R-127's own scoping — the deliverable is a documented finding about
+the BTC/ETH-inversion pattern's origin.
+
+A separate, non-frozen module, `experiments/r137_loaders.py`, was built and
+run (standalone, no excision code) **before either excision branch was
+dispatched**, and its output forced a pre-code, non-performance scope
+narrowing, added as an addendum to the frozen module (allowed under
+`ROUTINE.md`'s "may only tighten, never loosen" rule for post-freeze
+additions): **R-109-novel's ETH cell predates `INNER_VAL` entirely**
+(Bitfinex 2016-03-09→2019-12-31, `compare()`'s own `eth_replication` slice
+uses the whole passed frame, never a date-restricted one) — it contains
+neither named 2022 event window at all, and its daily-resampled gap
+sign-flips against its own published bar-level number (+0.0021 vs. −0.009,
+near-zero and resampling-unstable). **R-109-novel was excluded from both
+branches**, reported once with the reason rather than run through a vacuous
+excision. `IN_SCOPE` narrowed to four: R-113 (basket-level — no isolated
+per-asset ETH cell exists; excises the same days from the panel's own
+8-asset equity curve instead, using a BTC/ETH correlation filter computed
+independently of the panel's own composition), R-115-conservative (ETH
+window is Coinbase's full 2019–2022 non-holdout range, a superset of
+`INNER_VAL`, not a date-restricted slice — disclosed, not silently
+corrected), R-125-conservative (genuinely `INNER_VAL`-restricted, but
+B1-level not B4-level — BTC itself never cleared B1, so this is a
+shape-reproduction, excluded from the majority count per the frozen rule,
+reported alongside the other three), and R-126-conservative (genuinely
+`INNER_VAL`-restricted, the cleanest B4-level case). The loaders also
+surfaced, and disclosed rather than silently absorbed, a second discrepancy:
+every construction's own historically-published `d_sharpe` is bar-level
+(5-minute) `tradebot.metrics.sharpe_ratio`, while this round's `gap_sharpe`
+is deliberately daily-resampled to match the bootstrap/placebo machinery —
+the two conventions land within 1% of each other for R-113/R-125-conservative
+but diverge 12.12%/3.04% for R-115-conservative/R-126-conservative
+(root-caused, not a wiring bug: recomputing each with its own native
+bar-level metric reproduces the published number to the printed digit).
+
+**CONSERVATIVE** (`experiments/r137_conservative_fixed_battery_generalization.py`):
+mechanically re-applies R-127's own already-frozen fixed battery — named
+events, the low-correlation filter, their union, all imported verbatim, no
+new constant chosen after seeing any number — to the four in-scope
+constructions, each with its own 1,000-draw random-day placebo control.
+Confirmed, before running anything else, that both named-event windows fall
+inside R-113's own one-year `W_VAL=2022` window. **NOVEL**
+(`experiments/r137_novel_causal_cusum_excision.py`): a strictly causal,
+trailing-90-day two-sided CUSUM changepoint detector (Page 1954; textbook
+multipliers `k=0.5σ`, `h=5σ`, none fit to this data) on the daily
+BTC/ETH spread, flagging "ETH-idiosyncratic shock days" using only
+information at or before the day being labeled — verified with a synthetic
+mean-shift unit test (2 of 3 flags landed in the injected block; a pure-noise
+control false-alarmed once in 290 at-risk days) and an explicit
+causal-truncation self-check (flagged days identical whether the series is
+truncated after the fact or not). Same excision/placebo/scoring machinery as
+the conservative branch, applied to the CUSUM-flagged set instead of the
+fixed battery. **Configs evaluated: 21 total** — conservative 12 (4
+constructions × 3 excision variants, each scored + placebo-tested);
+novel 4 (4 constructions × 1 detector, scored + placebo-tested) plus 5
+loader self-checks (informational reproduction reads, not strategy configs)
+counted separately per this project's own convention of disclosing
+diagnostic reads without conflating them with evaluated configs. No bar at
+or after `OOS_START = 2023-01-01` was read by any branch; every construction's
+own loader already restricts to its native pre-holdout window.
+
+**Result.** **Conservative — REFUTED on all three excision variants.** Every
+one of the 4×3 = 12 (construction × variant) cells classified NOT_GENERALIZE;
+no cell anywhere hit GENERALIZES or SIGN_FLIP, so all three round-level
+verdicts (named, low-correlation, union) are REFUTED (0/3 in-scope hits,
+R-125-conservative excluded from the count per the frozen rule). R-113's
+low-correlation filter was a genuine no-op (its 11 flagged days, computed on
+`INNER_VAL`'s own 2021–2022 window, all fall outside R-113's own
+one-year `W_VAL=2022` — a disclosed structural consequence of that
+construction's narrower native window, not a bug). Two cells came close:
+R-125-conservative and R-126-conservative's union variant narrowed the gap
+materially by the noise-floor criterion (−0.1056→−0.0580 and
+−1.4941→−1.1335) but missed the placebo bar by a hair (p=0.052, 0.054 vs.
+α=0.05) — a real, correctly-computed near-miss, independently reproduced by
+the operator from a clean shell (R-126-conservative union: n_excised=49,
+gap_after=−1.1335, p=0.054, bit-identical to the implementing agent's own
+report). **Novel — REFUTED at the round level, one partial exception.** The
+CUSUM detector flags very few days per construction (1–7) and finds **0%
+overlap** with R-127's hand-picked named-event days across all four
+constructions — the causal, hindsight-free version is not finding the same
+structural breaks the fixed battery targets. Three of the four
+constructions (R-113, R-125-conservative, R-126-conservative), independently
+reloaded from different windows/sources, all flag the **same single day,
+2022-07-18** — a real, reproducible structural break in the BTC/ETH spread,
+distinct from both named events, worth naming for a future round but not
+chased further here (this round's own trials budget was fixed before any
+excision result was read). Excising it narrowed R-113's basket-level gap
+materially (−0.6057→−0.2853) and cleared the placebo bar decisively
+(p=0.006, independently reproduced bit-for-bit by the operator from a clean
+shell) — the one construction, of three counted (R-125-conservative
+excluded from the count), to classify GENERALIZES. R-115-conservative's own
+7-day flag set (which includes 2022-07-18 plus six earlier, 2020–2021 days)
+*widened* its gap instead of narrowing it (−0.0998→−0.1078, p=0.995).
+R-125-conservative and R-126-conservative's single-day (2022-07-18-only)
+excisions moved their gaps by amounts too small to clear the noise floor
+(p=0.914, 0.334). **1 of 3 in-scope hits ⇒ round-level REFUTED**
+(`MAJORITY_K=3` not reached; ≤1 hit is the frozen REFUTED threshold either
+way). `pytest tests/test_causality_strict.py` (51 passed) was independently
+re-run by the operator after both branches completed.
+
+**Verdict.** **REFUTED, both branches — R-127's finding does not
+generalize.** The one-line lesson: **a diagnostic finding built from one
+construction's own hand-picked, hindsight-known event days does not survive
+either of two independent generalization attempts** — mechanically
+re-applying the same fixed battery to three further constructions produces
+no cell that clears a placebo control R-127 itself never ran (the closest
+misses failing by 0.002–0.004 of *p*), and building a causal detector with
+no knowledge of which 2022 weeks turned out to matter finds almost no
+overlap with the events R-127 chose and only narrows one of three counted
+constructions' gaps. Read together with R-127's own original result, the
+most defensible summary of what "idiosyncratic-event excision" has actually
+shown across two rounds and six constructions is: it worked, once, on the
+one construction it was invented against, and a fair test of whether that
+was mechanism or multiple-comparisons luck says mostly the latter — with one
+genuinely interesting exception (2022-07-18, agreed on by three independent
+reloads, worth a future round's own dedicated look, though not this round's
+own scope) that a hindsight-driven battery would never have found because
+nobody had a name for it. **This closes R-127's own named follow-on** — the
+last unclosed, unblocked, non-duplicate lead this project's own repeated
+Step-0 diligence had identified since R-110. **Holdout counter: +0** on top
+of R-136's ~698 (unchanged); running program-level total remains **~698** —
+neither branch, nor the loaders module, nor either of the operator's
+independent re-verifications, ever read a bar dated 2023-01-01 or later.
+**Decision rule did not move**: frozen in `r137_shared.py` before either
+branch was dispatched, applied exactly as written; the one addendum
+(narrowing `IN_SCOPE` to four constructions) was made from the loaders'
+own non-performance output, before any excision number existed, and only
+tightens the test (a fifth, structurally inapplicable construction would
+otherwise have diluted the majority count with a vacuous cell). **Next
+step:** per this round's own re-ranking below, the ranked backlog is now
+empty of every lead this project's Step-0 diligence has surfaced since
+R-110 except **B-06** (forward paper-trading, already running unattended,
+per R-78's own costing, 18.9-year median horizon). A future session has,
+undocumented and unscoped by any prior round: 2022-07-18 itself (what
+actually happened that day, and whether it is a genuine one-off structural
+break or an artifact of this round's own detector parameters, never swept
+here since they were fixed before any real-data output existed); or a
+genuinely new instrument class / data channel this project cannot currently
+fetch or simulate without proxying, which is the only kind of direction
+R-136's own re-ranking left open.
+
 ### R-136 · 08-25 · NEGATIVE (both branches) — a-priori HAR-structured vol-estimator substitution on `kelly_regime_v4`'s SCALE axis (pure realized-vol blend, and the same blend augmented with DVOL implied vol) reproduces R-08's forecast-quality inversion on the modern conditional-targeting architecture
 
 **Direction.** Targets the current leader, `kelly_regime_v4` ($66.8K spot /
@@ -14244,6 +14435,48 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-25 after R-137.** R-127's own named follow-on — does
+ETH-idiosyncratic-event excision generalize past the one construction it
+tested (R-126-novel) to the other constructions showing the same
+BTC-pass/ETH-invert signature — is now closed, **REFUTED on both branches**.
+Mechanically re-applying R-127's own fixed battery (named events,
+low-correlation filter, their union) to the three cleanly-comparable
+in-scope constructions (R-113, R-115-conservative, R-126-conservative;
+R-125-conservative included but excluded from the majority count, being
+B1-level not B4-level) clears zero cells against a random-day placebo
+control R-127 itself never ran — the closest misses failing by 0.002–0.004
+of *p*. A causal, hindsight-free CUSUM detector built specifically to avoid
+the "R-127 knew Terra/Luna and the Merge mattered before choosing them"
+critique finds near-zero (0%) overlap with those named events and only
+narrows one of three counted constructions' gaps past the same placebo bar.
+**This was the last unclosed, unblocked, non-duplicate lead this project's
+own repeated Step-0 diligence had surfaced since R-110** — every
+re-ranking from R-126 through R-136 named it as the one thing left besides
+B-06, and it is now tried and closed. **The ranked backlog is empty of
+everything except B-06** (forward paper-trading, already running
+unattended, per R-78's own costing, 18.9-year median first-exclusion
+horizon) for the first time since this project's backlog concept existed.
+One genuinely new, small, unscoped-by-any-prior-round thread did surface
+from this round's own diagnostic work, named here so a future session does
+not have to rediscover it blind: **2022-07-18**, a single calendar day that
+three independently-reloaded, differently-windowed causal CUSUM runs (on
+R-113's basket, R-125-conservative's and R-126-conservative's ETH cells)
+all flagged as a structural break in the BTC/ETH spread, unrelated to
+either Terra/Luna or the Merge, whose excision alone cleared the placebo
+bar decisively on the one construction with the least dilution (R-113,
+p=0.006). This round did not investigate what happened on that date or
+whether the flag generalizes past detector parameters fixed before any
+real-data output existed (`CUSUM_TRAIL_DAYS=90`, `k=0.5σ`, `h=5σ`, all
+textbook defaults, never swept) — a future session preferring to continue
+this line rather than open a fresh mechanism search has that concretely,
+though it is a small, single-day, three-of-four-constructions lead, not
+comparable in weight to what B-06 already represents. Absent that or a
+genuinely new instrument class / data channel this project cannot currently
+fetch or simulate without proxying (R-136's own re-ranking already named
+this as the only other kind of direction left), **B-06 is now, plainly,
+the only standing item** — the state eleven consecutive re-rankings (R-110
+through R-136) have been approaching without quite reaching it.
+
 **Re-ranked 08-25 after R-136.** An a-priori HAR-structured vol-estimator
 substitution on `kelly_regime_v4`'s SCALE axis (pure realized-vol blend,
 conservative; the same blend plus DVOL implied vol, novel) is NEGATIVE on
@@ -17215,6 +17448,15 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-25 · ~698** — R-137: **+0** on top of R-136's ~698 (unchanged), both
+  branches (conservative fixed-battery generalization, novel causal CUSUM
+  excision) plus the operator's own independent bit-for-bit re-verification
+  of the R-113/novel and R-126-conservative/union cells. Every construction's
+  own loader (`r137_loaders.py`) restricts to its native pre-holdout window;
+  `_assert_no_holdout`-style checks cover every reload either branch
+  performed itself. Max timestamp read across all loaders and both branches:
+  `2022-12-31 23:55:00+00:00` (R-115-conservative's Coinbase ETH, the widest
+  window in scope).
 - **08-25 · ~698** — R-136: **+0** on top of R-135's ~698 (unchanged), both
   branches plus the operator's own independent re-verification of the
   decisive futures_5x/inner_val cell. Clause (b) of the pre-registered
