@@ -315,6 +315,8 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+IN PROGRESS: R-145 — dispatching the frozen `experiments/r145_shared.py` pre-registration (funding-aware spot/futures venue routing for `kelly_regime_v4`'s own target, COST axis): conservative (fixed-threshold split) and novel (funding-adaptive split) branches now running.
+
 ### R-144 · 08-25 · NEGATIVE (novel, decisive) / METHOD, fragile (conservative) — does the N~3 edge-concentration claim survive more BTC episodes, and does it replicate on ETH's own native calendar instead of BTC's borrowed one?
 
 **Direction.** Backlog held only B-06 (ROUTINE.md step 0: invent off-backlog
