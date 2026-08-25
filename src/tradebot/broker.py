@@ -26,6 +26,15 @@ from dataclasses import dataclass, field
 
 from tradebot.orders import Fill, Order, Side
 
+# Default for MarketSpec.deadband below: same-sign target adjustments
+# smaller than this fraction of max notional are ignored, so strategies may
+# re-emit their target every bar without racking up rebalancing churn.
+# Closes and flips always execute. Kept as a module constant (rather than
+# only a dataclass default) because a few experiment scripts patch it
+# directly via `tradebot.broker.REBALANCE_DEADBAND` to vary the default for
+# every MarketSpec at once.
+REBALANCE_DEADBAND = 0.05
+
 
 @dataclass(frozen=True)
 class MarketSpec:
@@ -39,6 +48,23 @@ class MarketSpec:
     min_notional: float = 5.0  # exchange-style minimum order size (USD)
     #: perpetual futures settle funding every 8h; spot never does
     pays_funding: bool = False
+    #: same-sign target adjustments below this fraction of max notional are
+    #: ignored -- see REBALANCE_DEADBAND above. A MarketSpec field, not only
+    #: a hard-coded constant, so a branch studying a size-shrinking
+    #: mechanism can set it to a venue-realistic value instead of the flat
+    #: 5% default and report both settings -- B-43 (R-134). Added because a
+    #: mechanism whose action is to shrink re-targets was otherwise silently
+    #: rounded to "fires at full size or not at all" by an un-configurable
+    #: floor (measured: 61-83% of one such mechanism's orders absorbed vs
+    #: 4.5% for the unthrottled incumbent, R-133). R-134 re-tested that
+    #: already-closed mechanism through this field at a venue-realistic
+    #: value and found the fix does not change its verdict (still fails its
+    #: own decision rule on both markets); a separate, earlier round (R-72)
+    #: found lowering this threshold does not help kelly_regime_v4's own
+    #: economics either (point estimate worse, both bootstrap intervals
+    #: contained zero) -- this field does not change either strategy's
+    #: default numbers, only what a future round can configure.
+    deadband: float = REBALANCE_DEADBAND
 
     @staticmethod
     def spot(fee_rate: float = 0.001) -> "MarketSpec":
@@ -53,12 +79,6 @@ class MarketSpec:
             allow_short=True,
             pays_funding=True,
         )
-
-
-# Same-sign target adjustments smaller than this fraction of max notional
-# are ignored, so strategies may re-emit their target every bar without
-# racking up rebalancing churn. Closes and flips always execute.
-REBALANCE_DEADBAND = 0.05
 
 
 @dataclass
@@ -232,7 +252,7 @@ class PaperBroker:
         delta = desired - self.pos
         max_notional = self.equity(price) * self.market.leverage
         if target != 0.0 and self.pos != 0.0 and max_notional > 0:
-            if abs(delta) * price < REBALANCE_DEADBAND * max_notional:
+            if abs(delta) * price < self.market.deadband * max_notional:
                 return fills  # ignore tiny same-sign adjustments
         fill = self._transact(ts, delta, price)
         if fill:

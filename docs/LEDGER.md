@@ -315,6 +315,130 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-134 · 08-25 · METHOD (fix adopted) — closes B-43: `broker.REBALANCE_DEADBAND` made a per-market `MarketSpec` field; re-testing R-133's own closed `NovelTurnoverThrottle` through the corrected broker does not reverse its verdict
+
+**Direction.** Closes **B-43** (filed by R-133): `broker.REBALANCE_DEADBAND
+= 0.05` was a hard-coded module global, not a per-market or
+per-mechanism parameter, read unconditionally inside
+`PaperBroker._execute_target`. Any mechanism whose action is to *shrink* a
+re-target gets rounded to "fires at full size" or "silently dropped" by
+this floor in a proportion that scales with the mechanism's own
+parameter — R-130's skeptic measured 96.8% absorption for a
+`hedge_experts` wrapper, R-133 measured 61-83% for its own throttle
+branch against 4.5% for unthrottled `kelly_regime_v4`. Attacks **COST**
+by way of methodology, identical framing to B-30 (R-64/R-72), which is
+explicitly not a duplicate — B-30 characterized the same floor for a
+different question (spot/futures fill-through parity) and tested one
+fixed-scaling correction, REJECTED for changing `kelly_regime_v4`'s own
+numbers. This round asks a different question: does the floor's
+coarseness explain why an already-closed SIZE-shrinking mechanism
+(`NovelTurnoverThrottle`, R-131/R-133) read as inert/negative. Not a
+duplicate of B-29 (R-66, a different line of `_execute_target` — the
+snap-to-flat destination) either.
+
+**What was done.** Frozen pre-registration: `experiments/r134_shared.py`.
+Two branches, both BTC-only, strictly inner-train/inner-validation
+(`_assert_no_holdout` on every load), disjoint files, neither committing:
+CONSERVATIVE (`r134_conservative_market_deadband.py`) made the deadband a
+per-`MarketSpec` field via a broker subclass; NOVEL
+(`r134_novel_accumulate_release.py`) replaced the hard drop with an
+accumulate-and-release rule (suppressed same-sign deltas banked, released
+in full once the recomputed gap crosses the threshold; sign flips and
+closes-to-flat always execute immediately, never banked). Decision rule
+for ADOPTING a fix into `src/tradebot/broker.py` (pre-registered, not a
+strategy-promotion bar): F1 backward compatibility at the current default
+(±0.2 Sharpe noise floor, R-20) on `kelly_regime_v4` and `hedge_experts`,
+both markets, both inner splits; F2 full `pytest` green; F3 a measurable
+fill-through change at a venue-realistic deadband
+(`DEADBAND_REALISTIC = 0.001`, derived from `MarketSpec.min_notional=$5`
+at $1,000 futures-5x equity). Falsification test, chosen before any
+number was read: does correcting the confound reverse R-133's own frozen
+`NovelTurnoverThrottle` NEGATIVE verdict — does it now clear B1 (paired
+bootstrap vs frozen `kelly_regime_v4`, inner-validation, `total_log_return`,
+both markets) under either fix at `DEADBAND_REALISTIC`? **Configs
+evaluated: 78** (36 conservative + 42 novel, each counted individually via
+a shared cross-branch counter in `r134_shared.py`, plus an independent
+skeptic audit that re-derived the decisive cells and stress-tested the
+equivalence claim over 200 randomized `_execute_target` trials rather than
+re-running full backtests).
+
+**Result.** F1: **PASS, both branches** — bit-identical fills, equity
+curves, Sharpe and drawdown on all 8 (strategy x market x split) cells at
+the default deadband (independently re-verified by the skeptic on one
+cell). F2: **PASS, both branches** — 516/516 `pytest`, 51/51
+`tests/test_causality_strict.py`. F3: **PASS, both branches** — absorption
+for `NovelTurnoverThrottle` at inner-train moved from 43.5%->78.5% (spot)
+and 23.9%->87.4% (futures_5x) fill-through, baseline->realistic deadband.
+**Falsification test: NO on both markets, both branches, independently
+confirmed by the skeptic to 5 decimal places** — at `DEADBAND_REALISTIC`,
+spot `paired_diff=+0.01554 [-0.06756, +0.10537]` (not significant),
+futures_5x `paired_diff=-0.05197 [-0.20123, +0.09814]` (not significant);
+Sharpe moved only +0.03 (spot) / +0.12 (futures_5x) between baseline and
+realistic deadband, both inside the noise floor, and the full
+`DEADBAND_GRID` sweep (0.0-0.05) clears B1 at no point on either market —
+a plateau result, not a boundary artifact. **`NovelTurnoverThrottle`'s
+NEGATIVE verdict from R-131/R-133 was NOT a broker-floor artifact; it
+stands, confirmed rather than reopened.**
+
+**Unplanned methodological finding, independently verified.** The novel
+branch's pre-registration text anticipated the accumulate-release fix
+could not be bit-identical to hard-drop "by construction." It found the
+opposite for the only causally-sound implementation (recompute the banked
+gap as `desired - pos` each bar; never sum it, which would double-count a
+bar's mere re-statement of an unchanged target): because `pos` freezes
+while a delta is banked, `desired - pos` at any later bar already equals
+the hard-drop broker's own full pending gap, so the two policies are
+mathematically identical, decision for decision, at any shared threshold.
+**The skeptic independently confirmed this is correct, not a coincidence
+of the cells tested**: read the implementation line by line, could not
+construct a divergent case (sign flips, magnitude changes while banked,
+crossing through zero, liquidation interaction all tried), and ran a
+200-trial randomized stress test of `_execute_target` against stock
+`PaperBroker` at matched thresholds — zero mismatches in fills, position
+or cash. An economically-INCOHERENT reading of the same pre-registration
+text (summing rather than recomputing the bank) would NOT be equivalent —
+it would let the accumulator grow from mere bar-over-bar re-statement of
+an unchanged target and could release a move larger than the strategy's
+own current target ever asked for — and was correctly not built by either
+branch. Bug hunt (full-series fits in `NovelTurnoverThrottle.prepare()`,
+an `i+1`-style peek in either broker override, cross-run state leak in the
+accumulator across the `DEADBAND_GRID` sweep): **nothing found**, all
+rolling/EWM operations causal by construction, fresh broker instance per
+`run_period` call.
+
+**Verdict.** **METHOD — fix adopted.** Per the pre-registered decision
+rule, both fixes cleared F1-F3, so the operator selected between them:
+the conservative fix (`MarketSpec.deadband`, default unchanged at 0.05)
+was adopted into `src/tradebot/broker.py` — simpler, zero new persistent
+state, and proven behaviorally equivalent to the novel fix at any shared
+threshold, so the novel fix's added complexity buys nothing further.
+Applied as: `REBALANCE_DEADBAND` moved above the `MarketSpec` class
+definition (single source of truth for the default) and `MarketSpec`
+gained a `deadband: float = REBALANCE_DEADBAND` field; `_execute_target`
+reads `self.market.deadband` instead of the module global.
+`multi_engine.py`'s mirrored `TOTAL_NOTIONAL_DEADBAND` was found, on
+inspection, to already be a function parameter rather than a hard-coded
+global (`multi_engine.py:132`) — the multi-asset engine did not have this
+confound and needed no change. Full `pytest` (516 passed) reran clean
+against the real `src/tradebot/broker.py` edit, not only the branches'
+experiment-file simulations of it. No registered strategy's numbers
+change (deadband default unchanged); no `tradebot run` / `inference.py`
+regeneration needed. **Holdout counter: +0** on top of R-132's ~698
+(unchanged) — this round's decisive cell (B1 on inner-validation) never
+clears the SIZE/ERR/COST family's own standing holdout-access gate, by
+design (F1-F3 and the falsification test are all inner-train/
+inner-validation only; B3/B4/B5 were never attempted, matching the
+pre-registration's own scope). Decision rule did not move after any
+number was read. **Lesson**: an evaluability defect and a mechanism's own
+merit are separable questions, and this round is the first time this
+project has closed one without reopening the other — the honest outcome
+named in B-43's own filing ("a documented ceiling on what a size-acting
+mechanism can be shown to do here") is exactly what happened, plus the
+capability is now real for the next mechanism that needs it. **Next
+step**: none filed — B-43 is closed. A future SIZE-shrinking COST-axis
+round (there is currently no unfitted candidate on the backlog) should use
+`MarketSpec(deadband=...)` directly rather than re-deriving this fix.
+
 ### R-132 · 08-25 · NEGATIVE (both branches) — `hedge_experts`'s own EXPERT COMPOSITION axis, never varied before: one MVRV vote added (conservative) and a momentum-horizon-collapse-plus-two-new-experts restructure (novel); the novel branch's apparent partial B1 pass is reclassified as a turnover-reduction artifact by independent skeptic audit, the same failure mode R-130 already closed on this object
 
 **Direction.** R-128, R-129 and R-130 all varied `hedge_experts`'s
@@ -13865,6 +13989,34 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-25 after R-134.** The one `NEXT`, open, unblocked item —
+**B-43** (`broker.REBALANCE_DEADBAND` evaluability) — is now closed: the
+fix (a `MarketSpec.deadband` field) is adopted into
+`src/tradebot/broker.py`, and re-testing R-133's own closed
+`NovelTurnoverThrottle` through the corrected broker does not reverse its
+NEGATIVE verdict on either market. **The ranked backlog is once again
+empty of anything but B-06** (forward paper-trading, already running
+unattended, per R-78's own costing) — exactly the state R-131's and
+R-133's own re-rankings described before B-43 was filed. A future session
+has: `hedge_experts`'s own EXPERT COMPOSITION axis (R-130's named next
+step; R-132 tried it twice — one additive vote, one structural restructure
+— both NEGATIVE, but R-132's own text is explicit the axis is "not
+exhaustively closed by two constructions," and its own recommendation is
+to change the *evaluation window* before trying a third panel variant on
+this object, since `hedge_experts`'s own baseline is itself losing money
+over the standard inner-validation split); R-127's own named follow-on
+(does idiosyncratic-event excision generalize past the one construction it
+tested); the single-asset axis's own fully closed lists on
+`kelly_regime_v4` (19+ INFO, 28+ SIZE, ERR across 5 notions of
+uncertainty, 11 regime-timing mechanisms, 4 N≈3 procedures, 5 COST-model
+families); `champions_council`'s own allocation mechanism (closed,
+R-126); the multi-asset panel's own closed list (eleven rounds); or B-28's
+breadth clause (blocked on data this project cannot fetch or simulate).
+**A newly-usable capability for any of the above**: a SIZE-shrinking
+mechanism can now be evaluated at a venue-realistic deadband via
+`MarketSpec(deadband=...)` directly, without a broker-subclass workaround,
+if a future round on `hedge_experts` or elsewhere needs it.
+
 **Re-ranked 08-25 after R-132.** `hedge_experts`'s own EXPERT COMPOSITION —
 named as untouched by R-130, R-131 and (independently) R-133's own
 re-ranking — has now been tried: one additive construction (append an MVRV
@@ -16645,7 +16797,7 @@ which only forward paper trading can supply.
 
 | ID | item | attacks | status | note |
 |---|---|---|---|---|
-| **B-43** | **Make size-acting cost mechanisms evaluable: address `broker.REBALANCE_DEADBAND`.** The broker drops any same-sign adjustment worth less than 5% of max notional (`src/tradebot/broker.py:235`, mirrored in `multi_engine.py:51`). Any mechanism whose action is to *shrink* a re-target therefore shrinks its own orders through that floor, and what gets measured is a blend of the mechanism and the floor in a proportion that moves with the mechanism's own parameter. Two candidate resolutions, and choosing between them is most of the work: make the floor a `MarketSpec` field so a branch can set it to the venue's actual minimum order size and report both settings, or replace the hard drop with an accumulate-and-release rule so suppressed intent is carried rather than discarded. Either way the deliverable is a *measured* before/after on an already-closed mechanism, not a new strategy | COST | **NEXT (open, unblocked)** | Filed by R-133. Measured on two different objects: R-130's skeptic found the floor absorbing 96.8% of a `hedge_experts` wrapper's 138,616 `order_target` calls; R-133 measured 4.5% absorption for `kelly_regime_v4` itself against 61% for its throttled branch at the frozen corridor and 83% at the tightest — the confound is not a constant offset that cancels in a comparison, it scales with how hard the mechanism pushes. Cheap: no new data, no fitted parameter, one constant and its two call sites, and it inherits any closed round's battery for the before/after. Its own named failure mode, to be checked first: the floor may be doing real work — it is what stops v4 paying fees on 5-minute noise — in which case the honest output is a documented ceiling on what a size-acting mechanism can be shown to do here, and R-133's section C row becomes final rather than provisional. Note this is a DIFFERENT item from B-29 (closed by R-66), which was about a snap-to-flat *destination* on the single-asset rebalance rule; R-130's entry refers to the deadband as "R-66/B-29" and that attribution is loose — the deadband itself has never had a backlog item until now |
+| ~~B-43~~ | ~~Make size-acting cost mechanisms evaluable: address `broker.REBALANCE_DEADBAND`.~~ | COST | **DONE → R-134, FIX ADOPTED** | Filed by R-133. `MarketSpec` gained a `deadband` field (`src/tradebot/broker.py`, default unchanged at 0.05 — the accumulate-and-release alternative was proven behaviorally equivalent at any shared threshold and not adopted, since it adds persistent state for no further capability). Re-testing R-133's own `NovelTurnoverThrottle` through the corrected broker at a venue-realistic deadband does **not** reverse its NEGATIVE verdict on either market (B1 fails the full `DEADBAND_GRID`, both branches, independently confirmed by a skeptic) — the evaluability defect was real (absorption 43.5%→78.5% spot, 23.9%→87.4% futures_5x, baseline→realistic) but this mechanism's own rejection was not an artifact of it. `multi_engine.py`'s mirrored constant turned out to already be a function parameter, not a hard-coded global — no change needed there. |
 | ~~B-38~~ | ~~Pre-register and record a **risk-matched** forward comparison instead of the raw one B-06 has been recording: pair `kelly_regime_v4` against a passive long carrying v4's own mean notional (R-33's matched benchmark, per-window matched, not a fully-invested hold), so the paired daily difference stops carrying ~0.6-0.7 of BTC's own move as common-mode variance. Decide in advance what horizon would make it worth continuing~~ | N≈3, ERR | **DONE → R-83, ANSWERED (NOT VIABLE AS SPECIFIED)** | Filed by R-78, costed by its own addendum (`experiments/r78_matched_arm_sizing.py`: −54.8%/−64.5% noise, horizon 7.1→6.2y train / 808.8→42.1y validation). R-83 ran the pre-registered round for real: a deployable rolling causal match (90-day EWM of v4's own realized exposure) reproduces the noise reduction (55–60%, operator-verified) and beats a frozen mean-notional match on notional-transfer (27.0% vs. 42.5% train→val gap) but not on volatility-transfer (29.6% vs. 14.6%). On the pre-registered decisive cell (inner-validation, 0.40% live fee) the real anytime-valid horizon fires on only **1.0%** of bootstrap paths within 25 years, and every path that resolves resolves **against** the strategy — R-78's own headline finding, now confirmed on a risk-matched pair. Not reopened; a narrower thread (match on realized volatility directly rather than mean notional) is named but not filed as a new item. |
 | **B-39** | Carry R-78's `level_resync_order()` fix into `bot.py` / `live_bot.py`, which still gate on the same edge-triggered `abs(target[i] − target[i−1]) > 1e-9` and therefore lose every target change that lands between two invocations for anyone running them slower than the bar interval | methodology (not one of the four constraints) | **DONE → R-81 session, CLOSED** | Filed by R-78, which fixed the identical defect in `scripts/paper_trade.py` only, because those two files were not that round's to change (the same scoping R-71 used when it fixed the inception half). The measurement transfers unchanged: exactly `1/k` of a strategy's target changes survive a 1-in-`k` decision grid, so a live account polled every 15 minutes acts on ~1/3 of them and one polled hourly on ~1/12. **Fixed**: `tradebot.bot.raw_desired_target()` reads the strategy's current stance directly from `prepare()` (level-triggered, schedule-immune, the same fix `level_resync_order()` applied), used whenever `compute_signal` emits nothing; falls back to the pre-existing edge-triggered `orders` for the ~5 strategies with no `target` column. `live_bot.py` calls `bot.py`'s `step()` directly, so it inherits the fix with no separate change. 6 new tests (`tests/test_bot.py`), full suite green. |
 | ~~B-36~~ | ~~Formalize a Ledoit & Wolf (2008)-style **paired difference test** between a candidate arm and the frozen arm it's meant to improve on, as a reusable function in `tradebot.inference` rather than a one-off script, and apply it retroactively to every surviving (`further_work`-clearing or near-clearing) arm on the COST axis before a fifth mechanism round is run~~ | ERR (methodology gap) | **DONE → R-70** | Filed by R-68. Built as TWO independent standard-error estimators (Parzen-kernel HAC per the literal paper, and a stationary-bootstrap studentization matching this project's own convention) rather than one, since a single estimator cannot say whether disagreement on a near-zero cell is real. Applied to R-68's own published pair plus two never-before-tested ones (ENTRY_ONLY, novel derived threshold): `r68_entry_only_0.080`/W_VAL is significant by all three methods (growth-percentile, HAC-Sharpe, bootstrap-Sharpe) — the sharpest number this axis has produced — while D1 against the matched hold still fails for that arm, unchanged. Two cells split 2-1 across the two new methods, reported rather than adjudicated. Not reopened; the two functions and 15 tests are the permanent product. |
@@ -16755,6 +16907,17 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-25 · ~698** — R-134: **+0** on top of R-132's ~698 (unchanged), both
+  branches plus the skeptic audit. B-43's own decisive cell (B1 on
+  inner-validation, `NovelTurnoverThrottle` re-tested through the corrected
+  broker) never cleared the SIZE/ERR/COST family's standing holdout-access
+  gate — not significant on either market at `DEADBAND_REALISTIC` or
+  anywhere on the `DEADBAND_GRID` sweep — and B3/B4/B5 were never attempted
+  by design (an infrastructure-adoption round, not a strategy-promotion
+  attempt). Max timestamp read by either branch or the skeptic's own
+  re-derivations: `2022-12-31 23:55:00+00:00`. `pytest`: 516 passed;
+  `tests/test_causality_strict.py`: 51 passed, both before and after the
+  real `src/tradebot/broker.py` edit was applied.
 - **08-25 · ~698** — R-132: **+0** on top of R-131's ~698 (unchanged), both
   branches plus the skeptic audit of the novel branch. Conservative failed
   B1 outright (4/4 cells non-significant/negative); novel's apparent
