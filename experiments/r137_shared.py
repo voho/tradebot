@@ -145,6 +145,60 @@ BTC-pass/ETH-invert pattern's origin, exactly as R-127 scoped itself:
 No bar at or after `OOS_START = 2023-01-01` is read by either branch --
 every construction's own ETH series here is already restricted to
 `INNER_VAL` by its own harness.
+
+---
+
+**ADDENDUM, written after `experiments/r137_loaders.py` was built and run,
+before any excision was applied to any of the five series -- an allowed
+post-freeze addition per `ROUTINE.md` ("they may tighten the bar... never
+loosen it"): a scope narrowing discovered from the data itself, not from
+any performance number.**
+
+Building the five constructions' loaders (`experiments/r137_loaders.py`,
+run standalone, no excision code involved) surfaced two facts that were not
+visible from the ledger text alone:
+
+1. **R-109-novel's own ETH cell is not calendar-matched to `INNER_VAL` at
+   all.** Its `compare()` call passes `start=None, end=None`, scoring the
+   ENTIRE Bitfinex ETH file (2016-03-09..2019-12-31) -- a window that ends
+   more than a year before `INNER_VAL_START` and therefore contains neither
+   `TERRA_LUNA_WINDOW` nor `THE_MERGE_WINDOW` at all (those dates simply do
+   not exist in the series). Excising them would be vacuous by
+   construction, not a null result.
+2. **Recomputed on daily returns (the statistic this round's whole
+   bootstrap/placebo apparatus requires), R-109-novel's own gap does not
+   just move in magnitude, it flips sign** (published bar-level d_sharpe
+   -0.009 vs. this round's own daily-resampled gap_sharpe +0.0021) -- a
+   near-zero, resampling-unstable number, the weakest of the six citations
+   this signature was ever built from.
+
+**R-109-novel is therefore EXCLUDED from the in-scope set for both
+branches**, reported once here with the reason rather than run through
+excision and reported as a misleading "NOT_GENERALIZE." `IN_SCOPE =
+["R-113", "R-115-conservative", "R-125-conservative", "R-126-conservative"]`,
+four constructions, not five. `MAJORITY_K = 3` (of 4) and the `<=1 ->
+REFUTED` / `==2 -> MIXED` thresholds in `round_verdict` below need no
+change for `n=4` and are used as originally written.
+
+**A second, separate discrepancy, disclosed but NOT scope-narrowing**:
+every construction's own historically-published `d_sharpe` (the number in
+`docs/LEDGER.md`) is `tradebot.metrics.sharpe_ratio` on PER-BAR (5-minute)
+returns; this round's `gap_sharpe` (below) is deliberately DAILY-resampled,
+matching R-126/R-127's own `tradebot.inference.annualized_sharpe` /
+`paired_bootstrap` convention -- the one this whole round's bootstrap and
+placebo-control machinery requires (block-bootstrapping 5m bars would
+treat ~100,000 highly autocorrelated intraday observations as independent
+trials, understating every interval). For R-125-conservative and R-113 the
+two statistics land within 1% and 0% of each other; for R-115-conservative
+and R-126-conservative they diverge by 12.12% and 3.04% respectively
+(`experiments/r137_loaders.py`'s own run, both root-caused to the bar-vs-
+day resampling difference, not a wiring bug -- independently confirmed by
+recomputing each with the CONSTRUCTION'S OWN native bar-level metric and
+matching the published number to the printed digit). This round reports
+and reasons about the DAILY number throughout, since it is the one
+internally consistent with the placebo control every verdict below depends
+on, and flags every case where that differs materially from the historical
+headline number, rather than treating the two as interchangeable.
 """
 
 from __future__ import annotations
@@ -181,7 +235,16 @@ MATERIALITY_REL = 0.40     # relative-narrowing bar (R-127 measured 60-78%)
 PLACEBO_ALPHA = 0.05       # placebo control significance level
 N_PLACEBO_DRAWS = 1000
 PLACEBO_SEED = 137
-MAJORITY_K = 3              # of 5 constructions, for a round-level CONFIRMED
+MAJORITY_K = 3              # of the 4 in-scope constructions, for a round-level CONFIRMED
+
+# R-109-novel excluded per this module's own addendum above: its ETH cell
+# predates INNER_VAL entirely (no overlap with either named 2022 event
+# window) and its daily-resampled gap sign-flips vs. its published
+# bar-level number. Reported once, not run through excision.
+IN_SCOPE = ["R-113", "R-115-conservative", "R-125-conservative", "R-126-conservative"]
+EXCLUDED = {"R-109-novel": "ETH cell predates INNER_VAL (2016-2019 Bitfinex); "
+                           "no overlap with TERRA_LUNA_WINDOW/THE_MERGE_WINDOW; "
+                           "daily-resampled gap sign-flips vs. its own published number."}
 
 
 def align_daily(candidate: pd.Series, baseline: pd.Series) -> tuple[pd.Series, pd.Series]:
@@ -286,6 +349,7 @@ __all__ = [
     "THE_MERGE_WINDOW", "TERRA_LUNA_WINDOW", "excise_days", "low_correlation_days",
     "rolling_btc_eth_daily_corr", "total_log_return", "annualized_sharpe",
     "NOISE_FLOOR", "MATERIALITY_REL", "PLACEBO_ALPHA", "N_PLACEBO_DRAWS",
-    "PLACEBO_SEED", "MAJORITY_K", "align_daily", "gap_sharpe", "excise_and_regap",
-    "random_day_placebo", "placebo_pvalue", "classify_movement", "round_verdict",
+    "PLACEBO_SEED", "MAJORITY_K", "IN_SCOPE", "EXCLUDED", "align_daily", "gap_sharpe",
+    "excise_and_regap", "random_day_placebo", "placebo_pvalue", "classify_movement",
+    "round_verdict",
 ]
