@@ -315,25 +315,140 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
-### R-142 · 08-25 · IN PROGRESS — Deribit front-vs-next-quarter futures term-structure SLOPE (distinct from R-120's own single-maturity level/momentum): conservative INFO-axis confirming vote (Step-A six-episode gate) and novel two-sided SIZE-axis exposure dampener (kappa grid, 0.40% fee falsification)
+### R-142 · 08-25 · NEGATIVE (both branches) — Deribit front-vs-next-quarter futures term-structure SLOPE, distinct from R-120's own single-maturity level/momentum: conservative INFO-axis confirming vote fails the six-episode Step-A gate 0/4, novel two-sided SIZE-axis dampener escalates sharply on BTC spot in-sample but fails the plateau check, ETH sign-replication (5/6 cells), and the 0.40% holdout fee tier
 
-**Status stub**, written before either branch computed a gate/backtest
-number, per docs/ROUTINE.md step 0's coordination convention. Frozen
-pre-registration: `experiments/r142_shared.py` (shared infrastructure,
-written by the operator), `experiments/r142_conservative_slope_vote.py`
-and `experiments/r142_novel_slope_dampener.py` (mechanism, decision rule,
-falsification test, frozen before any implementation). This round also
-re-fetched `data/btcusd_deribit_quarterly_5m.csv.gz` and
-`data/ethusd_deribit_quarterly_5m.csv.gz` (unmodified
-`scripts/fetch_deribit_quarterly_futures.py`, extended `--last-expiry` to
-2026-12-31) because R-120's own fetch stopped at 2023-03-31, three months
-into the holdout — verified byte-identical to the original file on every
-overlapping contract before replacing it, and now covers the holdout
-(OOS_START=2023-01-01) at 100% on both BTC and ETH per direct measurement,
-closing a coverage gap that would otherwise have made this round's own
-novel branch unevaluable past Q1 2023 (the same defect R-135 found for
-`hedge_experts`'s DVOL/positioning experts). Full write-up replaces this
-stub once both branches report.
+**Direction.** Off-backlog (the ranked list has held only B-06 since
+R-110; R-141's own re-ranking closed the regime-timing-mechanism axis at
+eight structurally distinct bases). This round's own Step-0 diligence (an
+`Agent` dispatch reading the full ledger's standing diagnosis, section C's
+ruled-out table, all 141 section-B titles, and the `experiments/`
+directory, plus a live literature search) found one thread R-120 had not
+tested: R-120 (08-24, NEGATIVE, ruled out) tested the Deribit front-quarter
+calendar basis's own LEVEL and MOMENTUM, a single-maturity statistic, and
+its own text asserted a simultaneous multi-maturity curve "needs...data
+this project does not have" — checked directly and found FALSE: the two
+nearest quarterlies are simultaneously listed and traded for roughly six
+months at every roll (verified empirically on real timestamps before any
+code was written). The curve's own SLOPE (front-minus-next annualized
+basis) is therefore a genuinely constructible, non-duplicate statistic —
+Bianchi, Fan, Miffre & Zhang (2023, J. Banking & Finance, arXiv 2308.00383)
+show slope is a separately profitable, uncorrelated factor from level in
+commodity futures curves, the direct citation for why this is not a
+re-parameterization of R-120's own result. **Constraint attacked:**
+INFO (conservative: a genuinely new, second-instrument-derived statistic
+this project's OHLCV alone cannot express) and SIZE (novel: a continuous
+dampener using a data channel no prior SIZE-axis attempt has used). **Not
+a duplicate of:** R-120 (single-maturity, ruled out); R-41/`kelly_regime_
+v9_basis_lead` (spot-vs-perpetual basis); R-73 (DVOL); R-81 (positioning);
+R-63/R-76 (cross-coin, not cross-maturity); R-141 (LPPLS dampener — the
+novel branch here is deliberately two-sided and not equality-mean-matched,
+specifically to avoid R-141's proven kappa=0 degeneracy). **Named failure
+mode (pre-registered):** conservative — fewer than 3 of 4 usable BTC
+episodes show the signal leading the anchor's own down-flip, matching
+this ledger's 19-signal INFO-axis base rate; novel — a real BTC effect
+that inverts sign on ETH or requires an unmatched exposure change, this
+ledger's single most common SIZE/INFO failure mode.
+
+**What was done.** `experiments/r142_shared.py` (shared, read-only:
+causal front/next-quarter selector `dual_quarter_slope`, `slope_zscore`,
+anchor-vote duplication, `confirming_vote_frac`, the six-episode stress
+table, block-bootstrap null, causal truncation probe, frozen
+`NOVEL_KAPPA_GRID=(0.0,0.10,0.20,0.30)`), `experiments/
+r142_conservative_slope_vote.py` and `experiments/
+r142_novel_slope_dampener.py` (mechanism, decision rule, falsification
+test, all frozen and committed before either branch computed a number).
+**Infrastructure this round required, done before any gate/backtest
+number:** `data/btcusd_deribit_quarterly_5m.csv.gz` and the ETH
+equivalent, as fetched for R-120, stopped at 2023-03-31 — three months
+into the holdout — which would have made the novel branch's own holdout
+consultation unevaluable past Q1 2023, the same coverage-ceiling defect
+R-135 found for `hedge_experts`'s DVOL/positioning experts. Re-ran
+`scripts/fetch_deribit_quarterly_futures.py` unmodified (same
+`--first-expiry`, `--last-expiry` extended to 2026-12-31); the extended
+file reproduces the original byte-for-byte on every overlapping contract
+(verified directly, `DataFrame.equals` on the shared-contract subset,
+before replacing it). Slope coverage (both contracts simultaneously
+listed) measured directly against `dual_quarter_slope`: BTC 79.5% of all
+bars / **100% of the holdout** (continuously non-NaN from 2018-12-21);
+ETH 85.0% / **100% of the holdout** (from 2020-04-24) — giving the same
+usable-episode subset R-120 already froze (BTC 4/6: COVID, 2021-11 top,
+Terra/Luna, FTX; ETH 3/6). Two implementing agents ran the frozen
+pre-registration independently on disjoint files; the operator
+independently re-ran the novel branch's own script in full after the
+implementing agent stopped mid-execution the first time, reproducing its
+numbers exactly. **Configurations evaluated: 56** (conservative: 4 episode
+cells; novel: 52 — 8 `kelly_regime_v4` reference + 32 kappa-grid candidate
+cells for B1/B3/B4/B5, plus 12 conditional Step-4 holdout cells at the
+0.40% fee tier). `pytest -q`: 516 passed (run twice this round, once after
+the data-file swap and once after both implementations existed).
+
+**Result.**
+*Conservative* — Step-A gate, BTC, 4 usable episodes, bidirectional
+`|slope_z|>=1.5` vs a 1000-draw block-bootstrap null: COVID lead −3.30d
+(null p90 −2.69d, FAIL), 2021-11 top −5.11d (null −0.45d, FAIL),
+Terra/Luna −17.00d (null −10.95d, FAIL), FTX +0.37d (null +1.02d, FAIL).
+**0 of 4 pass** (bar is >=3). Per the frozen rule, stopped immediately:
+no confirming-vote strategy built, ETH untouched, holdout untouched (max
+timestamp read 2022-12-31 23:55 UTC). **Disclosed diagnostic, does not
+change the verdict:** `slope_z` correlates **−0.9963** with R-120's own
+`basis_z` over 420,887 jointly-valid bars — on this dataset's quarterly
+roll cycle, front/next days-to-expiry sit a near-fixed ~90 days apart, and
+the shared `365.25/dte` annualization convention makes the front leg
+dominate both statistics with opposite sign, so SLOPE is empirically close
+to a rescaled negative of LEVEL here, not the independent factor the
+citation trail predicted in commodities — both branches fail for related
+underlying reasons, worth flagging for any future curve-shape attempt on
+this instrument/annualization convention.
+*Novel* — Step 0 (identity-recovery at both the array and backtest level,
+non-degeneracy — `mean(scale_novel)` moves slightly *up* with kappa
+(0.776763→0.782536), the opposite of R-141's forced-collapse signature —
+causal truncation probe on the full pipeline) all **PASS**. B1/B3
+(inner-validation `d_sharpe` by kappa, BTC spot / BTC futures / ETH spot /
+ETH futures): BTC spot **+0.22 → +1.25 → +2.33** (escalating, not flat —
+fails the plateau requirement outright), BTC futures +0.02 → +0.06 →
++0.82 (milder), ETH spot −0.00 → **−0.26 → −0.63** (inverts), ETH futures
++0.09 → −0.19 → −0.31 (inverts from k=0.20). **B4: 1 of 6 (kappa, market)
+cells replicate sign on ETH** — the project's classic BTC-pass/ETH-invert
+pattern. **B5:** realized-vol divergence from v4 stays under the
+pre-registered 15% flag in every cell (max +9.5%), so the BTC-spot swing
+is a real timing effect, not a disguised exposure change — checked
+directly against R-21's "too good is a bug report first" standard (not
+liquidated, `target` finite and correctly leverage-clamped, risk-matched),
+confirming a genuine but narrow, non-generalizing in-sample effect rather
+than a lookahead or accounting bug. A looser, pre-registered per-market
+Sharpe-OR-drawdown screen (deliberately coarser than B4's own sign check,
+so as not to under-spend the holdout on a candidate that might still pass
+the actual falsification test) triggered the **conditional Step 4**: three
+(market, kappa) pairs cleared it, so the holdout (0.40% taker fee tier,
+BTC and ETH) was read once. **Result: 0 of 4 (market, kappa) combinations
+beat `kelly_regime_v4` on both assets** — BTC futures/kappa=0.10 alone
+beat v4 (+1.0649 vs +1.0042), every other cell failed, and ETH holdout
+performance actively collapses (down to **−2.9343** Sharpe on spot at
+kappa=0.20, vs v4's +0.5961) — the same escalate-on-a-few-episodes
+fragility from Section 3, now landing on the holdout's own idiosyncratic
+ETH episodes with the wrong sign.
+
+**Verdict.** **NEGATIVE, both branches.** One-line lesson: a genuinely
+new, non-duplicate data channel (the futures term-structure slope) does
+not, by itself, escape this project's two most repeated failure modes —
+the INFO-axis six-episode detection-lag gate (0/4, now 20/20 INFO-axis
+Step-A gates failed by the implementing agent's own count) and the
+SIZE-axis BTC-pass/ETH-invert pattern (5/6 cells) — and a construction
+built specifically to avoid one known trap (R-141's equality-mean-matched
+degeneracy) cleanly avoided it only to land in the more common empirical
+one instead. **Holdout counter: +1** on top of R-141's ~698, giving
+**~699** (novel branch's conditional Step 4: 12 cells — 4 `kelly_regime_v4`
+reference + 8 candidate, both markets that cleared the screen, both
+assets, both flagged kappas, 0.40% fee tier; see the bullet added below in
+[Holdout consultations to date](#holdout-consultations-to-date)). Decision
+rule did not move after seeing any number on either branch — both stops
+(conservative at Step A, novel at the conditional Step 4) are the frozen
+rules' own outcomes. **Next step:** this closes the term-structure-slope
+thread (both LEVEL/MOMENTUM via R-120 and SLOPE via this round) on Deribit
+quarterly futures; a future session should not re-try a curve-shape
+statistic on this exact instrument/annualization convention expecting a
+different result, given the disclosed −0.996 slope/level correlation
+found this round. The backlog remains empty of anything but B-06.
 
 ---
 
@@ -14968,6 +15083,48 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-25 after R-142.** A Deribit front-vs-next-quarter futures
+term-structure SLOPE — the one thread this round's own Step-0 diligence
+found that R-120 had not tested (R-120's own text asserted a simultaneous
+multi-maturity curve "needs data this project does not have," checked
+directly and found false: the two nearest quarterlies trade simultaneously
+for ~6 months at every roll) — is **NEGATIVE on both branches**: as an
+INFO-axis confirming vote it scores 0/4 on the standard six-episode gate
+(the same bar 19 prior INFO signals have failed), and as a SIZE-axis
+two-sided dampener (built specifically to avoid R-141's proven equality-
+mean-matching degeneracy, and it does — `mean(scale_novel)` moves the
+opposite direction from R-141's collapse signature) it produces a real,
+sharply escalating BTC-spot in-sample effect (`d_sharpe` +0.22→+1.25→+2.33
+across the kappa grid) that fails the plateau check, inverts sign on ETH
+in 5 of 6 cells, and fails the 0.40% fee tier on a now-fully-covered
+holdout (0 of 4 candidate combinations beat `kelly_regime_v4` on both
+assets; ETH holdout Sharpe falls as low as −2.93). **The backlog remains
+empty of anything but B-06.** This round also required real infrastructure
+work before either branch could run: R-120's own Deribit quarterly-futures
+fetch stopped at 2023-03-31, three months into the holdout, which would
+have made this round's own novel branch unevaluable past Q1 2023 (the same
+coverage-ceiling defect R-135 found for `hedge_experts`'s DVOL/positioning
+experts) — re-running the existing fetch script with an extended
+`--last-expiry` closed this gap, and now gives 100% holdout coverage on
+both BTC and ETH for any future round on this data channel. **This closes
+the term-structure axis at two structurally distinct statistics on the
+same instrument** (single-maturity level/momentum via R-120, cross-maturity
+slope via this round), both against the same INFO-axis gate that has now
+failed 20 times running, plus a first SIZE-axis attempt at this data
+channel — a future session should not re-try a curve-shape statistic on
+Deribit's quarterly futures under this project's own `365.25/dte`
+annualization convention expecting a different result, given this round's
+own disclosed finding that SLOPE and LEVEL correlate at −0.996 here (the
+front leg's short days-to-expiry dominates both statistics' annualization
+with opposite sign, so they are not the independent factors the
+commodities literature predicts on this specific instrument). No new,
+non-duplicate, unblocked thread is named by this round; a future session
+otherwise has the same fully-closed lists R-141's own re-ranking
+described (single-asset axis: 19+ INFO, 28+ SIZE, ERR across 7 notions,
+8 regime-timing mechanisms, 4 N≈3 procedures, 5 COST-model families;
+`hedge_experts` EXPERT COMPOSITION, `champions_council` allocation, and
+the multi-asset panel, all closed) — **B-06 is the only standing item.**
+
 **Re-ranked 08-25 after R-141.** The Log-Periodic Power Law Singularity
 model (Sornette et al.'s finite-time-singularity bubble/crash framework)
 is **NEGATIVE on both branches**: as an eighth regime-timing mechanism
@@ -18083,6 +18240,19 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-25 · ~699** — R-142: **+1** on top of R-141's ~698, novel branch
+  only (conservative stopped at Step A, holdout untouched, max timestamp
+  read 2022-12-31 23:55 UTC). The novel branch's own conditional Step 4
+  (a pre-registered, deliberately-looser-than-B4 per-market Sharpe-OR-
+  drawdown screen cleared for 3 of 8 (market, kappa) pairs) triggered one
+  holdout read: 12 cells (4 `kelly_regime_v4` reference + 8 candidate,
+  both markets that cleared the screen, both assets, both flagged kappas)
+  at the 0.40% taker fee tier, `start=2023-01-01`. Result: 0 of 4
+  (market, kappa) combinations beat `kelly_regime_v4` on both BTC and ETH;
+  the operator independently re-ran the novel branch's own script in full
+  and reproduced every printed number exactly. `pytest
+  tests/test_causality_strict.py`: 51 passed; full `pytest -q`: 516
+  passed (run twice this round).
 - **08-25 · ~698** — R-141: **+0** on top of R-140's ~698 (unchanged),
   both branches (conservative six-episode LPPLS detection-lag gate,
   novel LPPLS SIZE-axis dampener). Conservative's pre-registered stop
