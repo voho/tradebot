@@ -315,6 +315,157 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-125 · 08-25 · NEGATIVE (both branches) — the risk MEASURE inside `kelly_regime_v4`'s `scale` (standard deviation, never varied across 27+ prior SIZE-axis rounds) replaced with Conditional Value-at-Risk: a like-for-like substitution (conservative) and a vote-conditional empirical-Kelly fraction capped by a CVaR budget (novel), both fail on BTC before ETH is even reached
+
+**Direction.** Off-backlog — the ranked list has held nothing but B-06 since
+R-110, reconfirmed by R-124's own re-ranking ("the ranked backlog remains
+empty of anything but B-06... `kelly_regime_v4` is close to efficient with
+respect to the information, error control and parameter-selection procedure
+available to this project"). Per `docs/ROUTINE.md`'s own instruction
+("invent a new direction only when the backlog is empty, fully blocked, or
+stale"), this round did real literature diligence (WebSearch, this session)
+before choosing a direction, specifically looking for something that could
+not be read as a variant of an already-closed axis: 19 INFO-axis attempts,
+27+ SIZE-axis attempts, ERR closed across five notions of uncertainty
+(sampling significance, specification/model disagreement, distributional
+novelty across four of its own sub-axes, temporal duration dependence),
+eleven regime-timing mechanisms, two detector-family SIZE substitutions,
+four N≈3 calibration procedures, and the multi-asset panel's own eleven-round
+closed list. Two literature leads were checked and rejected before this one:
+a CVaR-framework paper pairing put options with trend-following (Tail Risk
+Management with Puts and Trend Following, arXiv:2607.00883, 2026) requires
+options premium/repricing data this project does not have and the routine
+explicitly forbids proxying out of price; a Bitcoin power-law valuation
+paper (Baquero & Menezes, "Bitcoin's Power Law: Weak Structure, Strong
+Forecasts", arXiv:2605.21316, 2026) was judged too close to the already-
+closed valuation INFO sub-axis (R-74's MVRV, both level and rate-of-change,
+NEGATIVE) to be a clean non-duplicate.
+
+One sentence: does swapping the ONE thing every SIZE-axis round to date has
+left untouched — the risk measure `scale` targets, always realized standard
+deviation via `target_vol / realized_vol` (or v3/v4's extremes-only latch
+cousin of it) — for Conditional Value-at-Risk (Rockafellar & Uryasev 2000,
+*Journal of Risk* 2(3), 21–41), the coherent, asymmetric, tail-focused risk
+measure built specifically because variance penalizes upside and downside
+symmetrically while CVaR does not, move `kelly_regime_v4`'s edge? **Attacks
+SIZE** — this project's own standing diagnosis credits SIZE ("decide how
+much to hold") as the one thing that has actually worked, and this is the
+first attempt at varying WHAT STATISTIC of the return distribution that
+decision targets, rather than its magnitude (R-06, R-07, R-40, R-45),
+per-asset calibration (R-59) or timing (R-60), or replacing the vote instead
+(R-105 novel, R-117 novel). Full non-duplicate argument, citations
+(Rockafellar & Uryasev 2000; Artzner, Delbaen, Eber & Heath 1999, coherent
+risk measures, *Mathematical Finance* 9(3), 203–228), and the named
+failure mode written **before any code ran** live in the operator-authored,
+frozen `experiments/r125_shared.py`'s own module docstring.
+
+**What was done.** `experiments/r125_shared.py` (operator-authored, frozen
+before either branch was dispatched as independent agents): causal daily-
+resampled rolling CVaR (`annualized_cvar` — a per-bar rolling-quantile over
+a 25,920-bar window was measured intractable at this dataset's size and
+replaced with a once-per-calendar-day estimate, forward-filled onto the 5m
+grid, mirroring how v4 itself already approximates annualization by
+sqrt-time), a Step-0 non-degeneracy gate (R² vs `kelly_regime_v4`'s own
+target, KILL if > 0.98), exposure-matched calibration
+(`calibrate_target_cvar`, matching mean(scale) to v4's own mean(scale) on
+inner-train, per R-33's exposure-matching discipline), and the shared B1
+(paired-bootstrap BTC signal)/B3 (plateau)/B4 (ETH falsification, pre-
+registered)/B5 (0.40% fee tier) battery reused from the SIZE/ERR family's
+own convention (R-109 through R-124), via `tradebot.inference.paired_bootstrap`.
+`experiments/r125_conservative_cvar_scale.py` (like-for-like substitution:
+`scale = min(target_cvar/realized_cvar, max_leverage)` in place of
+`min(target_vol/realized_vol, max_leverage)`, everything else — vote,
+anchors, deadband, hysteresis — byte-identical to v4) and
+`experiments/r125_novel_cvar_kelly.py` (a genuinely different derivation:
+once per day, solve `argmax_f mean(log(1+f·R))` over the trailing daily
+simple-return sample sliced by which of v4's 4 discrete vote states held
+historically — a dependency-free golden-section search, since the sandbox
+has no scipy — with a documented ≥30-sample pooled-fallback for sparse
+conditional states, then cap `f* = min(f_kelly, budget/realized_cvar)`;
+`frac` never multiplies anything directly, it only selects which historical
+sample the optimizer conditions on) were each built by an independent agent
+from the frozen shared module and independently re-executed from a clean
+shell by the operator (bit-for-bit reproduction of every printed statistic
+in both files, including the causal-truncation probes, Step-0 R², and every
+B1/B3/B4/B5 number). **Decision rule, pre-registered verbatim from the
+SIZE/ERR family (R-109...R-124), unchanged:** PROMOTE-candidate only if the
+causal-truncation probe AND B1 (both markets) AND B3 (plateau majority) AND
+B4 (full, both markets) AND B5 all pass; B2 (drawdown) is diagnostic only.
+**Falsification test, pre-registered:** B4 — does the branch's `d_sharpe`
+sign replicate on ETH? Same test this SIZE/ERR programme has used since
+R-59. **Configs evaluated: 34 total** (conservative 16 = 1 Step-0 + 2 B1 +
+10 B3 + 1 B4 + 2 B5; novel 18 = 1 Step-0 + 2 B1 + 12 B3 + 1 B4 + 2 B5).
+
+**Result.** Both causal-truncation probes passed; both Step-0 gates passed
+(conservative R²=0.669, novel R²=−0.121 — both genuinely different
+constructions, not rescaled copies of v4); both branches' own printed
+max-timestamp lines read `2022-12-31 23:55:00+00:00`, never touching
+`OOS_START`. **Conservative:** B1 FAILED both markets (BTC spot
+`d_sharpe=+0.144` [boot −0.132,+0.396], futures `+0.011`
+[−0.272,+0.373] — neither clears the ±0.2 noise floor, neither bootstrap CI
+excludes zero). B3 passed only marginally (6/10 grid cells same-signed, a
+genuine window-length dependency — 90/120/180-day windows positive,
+30/60-day negative — not a flat plateau). B4 FAILED (ETH spot
+`d_sharpe=−0.106` [−0.338,+0.164], sign-inverted vs BTC, worse drawdown
+too: 40.75% vs v4's 33.19%). B5 passed (no sign flip at 0.40%: spot
++0.174, futures +0.098). **Novel:** B1 FAILED both markets, decisively
+and in the wrong direction (BTC spot `d_sharpe=−0.069`, futures `−0.121`,
+both negative — the construction underperforms v4, not merely fails to
+beat its noise floor). B3 FAILED outright: **0 of 12** grid cells
+(3 windows × 2 sample thresholds × 2 markets) positive. B4 "passed" the
+letter of the sign-replication test (ETH spot `d_sharpe=−0.078`,
+same sign as BTC) but hollow — both assets lose to v4 in the same
+direction, which is not a validated edge generalizing, it is the same
+failure occurring twice. B5 FAILED (sign flips to positive at the 0.40%
+tier on both markets, though the reversal sits entirely inside noise on
+both sides). `NOVEL_SAMPLE_COUNTS`, the pre-registered named risk,
+resolved concretely: transitional vote states (1/3, 2/3) fell back to the
+pooled distribution more often than the bear/bull states as predicted
+(8.9–10.3% vs 3.8–6.0% over the full inner period), but by
+inner-validation alone — governing the headline B1 numbers — accumulated
+history (2017–2020 as effective warmup) drove every state's fallback rate
+to 0–3.1% with median conditional samples of 45–196, well above the
+30-observation floor; the mechanism's own named failure mode did not bind
+on the decisive cells. **Skeptic reproduction:** the operator independently
+re-ran both branch files from a clean shell; every printed statistic in
+both (bind/calibration values, R², d_sharpe, bootstrap bounds, sample
+counts, verdicts) matched the implementing agents' own reports to the
+printed digit.
+
+**Verdict.** **NEGATIVE, both branches. Decision rule did not move** —
+frozen in `experiments/r125_shared.py` before either branch read a single
+inner-validation number, applied exactly as written. Neither branch
+qualified for a holdout read (conservative failed B1 and B4; novel failed
+B1, B3 and B5) — the SIZE/ERR family's standing convention of gating
+holdout access behind the full battery held here too. **The one-line
+lesson: CVaR and realized standard deviation are evidently correlated
+enough on this 5-minute BTC/ETH data that swapping the risk measure
+`scale` targets changes little on its own (conservative, a near-neutral
+BTC signal that still inverts on ETH — the identical shape the ERR-axis
+novelty-brake family has produced six consecutive times, now reproduced on
+the SIZE axis's one previously-untested dimension) and changes it for the
+worse once folded into a from-scratch optimization (novel, which
+underperforms v4 robustly across its own parameter plateau rather than
+merely failing to beat it) — this project's existing linear vote-scaled
+volatility target is not leaving a tail-risk-shaped inefficiency on the
+table for a coherent risk measure to recover.** This closes the SIZE
+axis's risk-measure dimension as a fresh line of attack: RATE (calendar
+ladder: R-06, R-07), MAGNITUDE (frontier sweep: original tuning),
+INPUT/calibration (per-asset: R-59; robust Monte Carlo selection: R-118,
+R-119), TIMING (R-60), DETECTOR FAMILY (R-105 novel, R-117 novel), and now
+the underlying RISK MEASURE — every dimension this project's own framework
+can vary on `scale` specifically has been tried at least once, none
+promoted. **Holdout counter: +0** on top of R-124's ~698 (unchanged);
+running program-level total remains ~698. **Next step:** per this round's
+own Step-0 diligence, no further axis of variation on `kelly_regime_v4`
+itself clears Step-1's non-duplicate filter without real strain; a future
+session preferring a fresh mechanism search should look outside this
+project's already-exhausted single-strategy and multi-asset-panel spaces
+entirely (a genuinely new instrument class this project can fetch and
+simulate without proxying, or B-28's breadth clause if new low-correlation
+data becomes available) rather than a further variant of `kelly_regime_v4`'s
+own vote/scale construction.
+
 ### R-124 · 08-25 · NEGATIVE (both branches) — Fixed-Window Fractional Differentiation (Lopez de Prado 2018) as a SIZE-axis vote-input substitution (conservative) and an eleventh regime-timing detector (novel): the first attempt on a third, orthogonal axis of variation (INPUT REPRESENTATION, not detector family or lookback), closed decisively in both roles by two different, mutually illuminating failure modes
 
 **Direction.** Off-backlog (still only B-06, unchanged since R-110; the ranked
@@ -13166,6 +13317,48 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-25 after R-125.** Off-backlog (still only B-06, unchanged
+since R-110), a two-branch round asked whether the ONE dimension of
+`kelly_regime_v4`'s SIZE machinery never varied across 27+ prior SIZE-axis
+rounds — the risk measure `scale` targets, always realized standard
+deviation — could be replaced with Conditional Value-at-Risk (Rockafellar &
+Uryasev 2000). **Both branches NEGATIVE, and unusually cleanly so: neither
+even reached the ETH falsification test as the decisive clause.** The
+conservative branch (a like-for-like `target_cvar/realized_cvar`
+substitution in v4's exact architecture) reproduced the identical
+BTC-near-neutral/ETH-inverts shape the ERR-axis novelty-brake family has
+now shown six consecutive times, on a construction from a completely
+different axis (SIZE, not ERR) — the strongest evidence yet that this
+BTC-passes/ETH-fails signature is a property of the underlying data
+relationship between the two assets rather than of any one mechanism
+family. The novel branch (a vote-conditional empirical-Kelly fraction,
+solved by direct optimization rather than a ratio, capped by a CVaR
+budget) failed more fundamentally: it underperforms v4 on BTC itself,
+robustly, across its own full parameter plateau (0 of 12 grid cells
+positive) — the risk was not that CVaR's tail focus failed to help, but
+that this round's income-maximizing optimization, given the same
+information v4's simpler linear rule already uses, could not match it.
+**Literature diligence this round also ruled out two other candidate
+directions before choosing this one** — a CVaR/put-options tail-hedging
+framework (blocked: requires options data this project does not have and
+would need to proxy) and a Bitcoin power-law valuation signal (judged too
+close to R-74's already-closed MVRV valuation finding to be a clean
+non-duplicate) — both recorded in this round's own ledger entry so they are
+not re-discovered blind. **The ranked backlog remains empty of anything but
+B-06** (forward paper-trading, already running unattended, per R-78's own
+costing). A future session preferring a fresh mechanism search now has: the
+single-asset axis's own fully closed lists (19 INFO-axis attempts, 28+
+SIZE-axis attempts — magnitude, calibration, timing, detector family, and
+now risk measure, all tried — ERR across five notions of uncertainty,
+eleven regime-timing mechanisms, four N≈3-attacking selection procedures);
+the multi-asset panel's own closed list (eleven rounds, all NEGATIVE); or
+B-28's breadth clause (blocked on data this project cannot fetch or
+simulate). Absent a new idea clearing Step-0 on one of these — and this
+round's own diligence found none that cleared it without real strain — the
+accumulating evidence continues to point the same direction:
+`kelly_regime_v4` is close to efficient with respect to the information,
+error control and parameter-selection procedure available to this project.
+
 **Re-ranked 08-25 after R-124.** Off-backlog (still only B-06, unchanged
 since R-110), a two-branch round tried Fixed-Window Fractional
 Differentiation (Lopez de Prado 2018) as a third, orthogonal axis of
@@ -15772,6 +15965,14 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-25 · ~698** — R-125: **+0** on top of R-124's ~698 (unchanged), both
+  branches. Conservative failed B1 and B4; novel failed B1, B3 and B5 —
+  neither qualified for holdout access under the SIZE/ERR family's standing
+  gate. Both branches' own printed max-timestamp lines read `2022-12-31
+  23:55:00+00:00`; the operator's independent re-run from a clean shell
+  reproduced both branches' full printed output, including every Step-0/
+  B1-B5 statistic and the novel branch's `NOVEL_SAMPLE_COUNTS`, to the
+  printed digit.
 - **08-25 · ~698** — R-124: **+0** on top of R-123's ~698 (unchanged), both
   branches. Conservative failed B1 (and so never needed B4/B5 to gate a
   holdout read); novel's Step-A gate never reaches `OOS_START` by
