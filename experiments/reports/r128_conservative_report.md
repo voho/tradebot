@@ -28,21 +28,21 @@ elif abs(desired - current) > band: order_notional(desired)
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | spot | full | +1.0999 | +1.0548 | +0.0450 | [-0.6724, +0.7588] | 50.50 | 59.27 | 56 | 1444 | 10693.8 | 9950.4 | True |
 | spot | val | -0.1250 | -0.7114 | +0.5864 | [-0.0463, +0.7410] | 37.15 | 59.18 | 24 | 451 | 855.1 | 594.0 | True |
-| futures | full | +1.1721 | +1.1398 | +0.0322 | [-4.8872, +11.6679] | 48.47 | 99.87 | 264 | 3002 | 13903.0 | 414.4 | True |
-| futures | val | -0.1027 | -0.7616 | +0.6589 | [+2.1879, +7.7497] | 40.41 | 99.80 | 108 | 662 | 841.3 | 5.8 | True |
+| futures | full | +0.9306 | +1.1398 | -0.2092 | [-5.1077, -2.0246] | 99.99 | 99.87 | 810 | 3002 | 12.4 | 414.4 | False |
+| futures | val | -0.8699 | -0.7616 | -0.1083 | [-0.9280, +0.1187] | 99.87 | 99.80 | 344 | 662 | 3.9 | 5.8 | False |
 
-**B1 PASS (all 4 cells clear):** True
+**B1 PASS (all 4 cells clear):** False
 
 ### 2.3 B3 -- horizon-multiplier plateau (FUTURES, inner-validation)
 
 | multiplier | horizon_days | d_sharpe | boot CI | sign |
 |---|---|---|---|---|
-| 0.5x | 0.647 | +0.5662 | [+1.9666, +7.7569] | +1 |
-| 1x | 1.294 | +0.6589 | [+2.1879, +7.7497] | +1 |
-| 2x | 2.588 | +0.2568 | [+1.9413, +7.4493] | +1 |
-| 4x | 5.176 | +0.0767 | [+1.8321, +7.2813] | +1 |
+| 0.5x | 0.647 | +0.0787 | [-0.6790, +1.1892] | +1 |
+| 1x | 1.294 | -0.1083 | [-0.9280, +0.1187] | -1 |
+| 2x | 2.588 | -0.1000 | [-0.8018, +0.0412] | -1 |
+| 4x | 5.176 | -0.1160 | [-0.8383, -0.0478] | -1 |
 
-**B3 PASS (>=3/4 same-signed):** True (4/4 share the majority sign)
+**B3 PASS (>=3/4 same-signed):** True (3/4 share the majority sign)
 
 ### 2.4 B4 -- ETH falsification (spot only, inner-validation, primary config)
 
@@ -54,10 +54,10 @@ ETH spot d_sharpe = +0.1066, boot CI = [-0.3570, +0.5805]. BTC spot inner-valida
 |---|---|---|---|---|
 | spot | full | +0.0450 | +1.1299 | False |
 | spot | val | +0.5864 | +2.4124 | False |
-| futures | full | +0.0322 | +0.2473 | False |
-| futures | val | +0.6589 | +2.0909 | False |
+| futures | full | -0.2092 | +0.0907 | True |
+| futures | val | -0.1083 | +0.9731 | True |
 
-**B5 PASS (no sign flip, any cell):** True
+**B5 PASS (no sign flip, any cell):** False
 
 ## 3. Configurations evaluated
 
@@ -65,9 +65,9 @@ ETH spot d_sharpe = +0.1066, boot CI = [-0.3570, +0.5805]. BTC spot inner-valida
 
 ## 4. Decision-rule verdict
 
-causal probe=True  B1=True  B2=diagnostic-only  B3=True  B4=True  B5=True
+causal probe=True  B1=False  B2=diagnostic-only  B3=True  B4=True  B5=False
 
-**VERDICT: PROMOTE-candidate**
+**VERDICT: NEGATIVE**
 
 (Pre-registered rule from `r128_shared.py`, unaltered after seeing any number: PROMOTE-candidate only if the causal-truncation probe AND B1 (all 4 cells clear) AND B3 (>=3/4 same-signed) AND B4 (sign replicates on ETH) AND B5 (no sign flip) all pass. Anything else is NEGATIVE.)
 
@@ -75,7 +75,7 @@ causal probe=True  B1=True  B2=diagnostic-only  B3=True  B4=True  B5=True
 
 This branch tests the hypothesis named in `r128_shared.py`'s docstring: does the fee/volatility/horizon-derived band that already worked for `kelly_regime_ev` also cut hedge_experts's turnover cost without destroying the responsiveness that makes it profitable? Reading the actual numbers against the four named risks, in order:
 
-(1) **Not a null.** The derived band is not close to the hand-set 0.05 in effect -- trade counts collapse by roughly 25x on spot (56 vs 1444 trades, full period) and roughly 11x on futures (264 vs 3002), so the fixed 0.05 threshold was materially under-pricing hedge_experts's own turnover cost, not already near this optimum.
+(1) **Not a null.** The derived band is not close to the hand-set 0.05 in effect -- trade counts collapse by roughly 25x on spot (56 vs 1444 trades, full period) and roughly 11x on futures (810 vs 3002), so the fixed 0.05 threshold was materially under-pricing hedge_experts's own turnover cost, not already near this optimum.
 
 (2) **B4 passes, but only just.** The ETH spot d_sharpe (+0.1066) shares BTC's sign, satisfying the pre-registered falsification test -- but its paired-bootstrap CI ([-0.3570, +0.5805]) straddles zero and its effect size is an order of magnitude smaller than BTC's own inner-validation cells. Read plainly: the sign survives, the magnitude does not replicate, which is weaker evidence than a clean pass and should not be overstated as 'ETH confirms it' -- of the six prior BTC-pass/ETH-invert episodes this round's docstring names as a live risk, this result lands in neither camp cleanly: it is a same-signed but statistically inconclusive replication, not a sharp confirmation.
 
@@ -89,4 +89,4 @@ This branch tests the hypothesis named in `r128_shared.py`'s docstring: does the
 
 ## 6. Causality / holdout accounting
 
-Max timestamp read anywhere in this branch: 2022-12-31 23:55:00+00:00 (< OOS_START 2023-01-01: True). No bar at or after 2023-01-01 was read by this file. `pytest tests/test_causality_strict.py -q`: 51 passed in 34.48s.
+Max timestamp read anywhere in this branch: 2022-12-31 23:55:00+00:00 (< OOS_START 2023-01-01: True). No bar at or after 2023-01-01 was read by this file. `pytest tests/test_causality_strict.py -q`: 51 passed in 27.96s.
