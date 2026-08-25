@@ -315,6 +315,182 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-140 · 08-25 · NEGATIVE (both branches) — a Synthetic Control Method test of v4's own edge-concentration claim: a classical in-space placebo test appears to CONFIRM at p=0.00077 on both markets, but the effect does not survive a same-scale, within-object conformal residual-permutation test on the identical fit (BTC pooled p=0.314, ETH p=0.272) — the two branches' disagreement is traced to a scale-mismatch confound in the classical construction, not a genuine effect
+
+**Direction.** Off-backlog (the ranked list has held only B-06 since R-137/
+R-138/R-139's own re-rankings; this session's own Step-0 diligence pass —
+reading the standing diagnosis, the full backlog, and a compressed
+one-line summary of all 139 prior rounds' headers — confirmed no ranked,
+unblocked item exists and generated three candidate directions before
+settling on this one, discarding: (a) ERR-axis "model/specification
+uncertainty across the vote's own anchor choices" as a verbatim duplicate
+of R-105, and (b) a live "ensemble of the six already-built regime
+detectors" SIZE/regime-timing construction as a near-duplicate of R-106's
+cross-model-class disagreement brake). Attacks **N approx 3** — a second,
+methodologically distinct small-N causal-inference tool applied to this
+project's own headline claim that `kelly_regime_v4`'s edge over a
+risk-matched hold concentrates in a handful of dated stress episodes
+(L-01/R-62; most recently tested by R-138's Nguyen-Wolf permutation test,
+which found the claim significant on BTC but not ETH-replicating).
+Literature (WebSearch, this session, before either branch was written):
+Abadie, Diamond & Hainmueller (2010, *JASA* 105(490)) for the foundational
+Synthetic Control Method and its in-space placebo inference; Cattaneo,
+Feng, Titiunik et al., "Inference with Few Treated Units" (arXiv:2504.19841,
+2025), the fresh survey that named this project's own situation and
+motivated the round; Chernozhukov, Wuthrich & Zhu (2021, *JASA* 116(536),
+arXiv:1712.09089) for the novel branch's structurally different conformal/
+residual-permutation inference route on the same point estimate. **Not a
+duplicate of:** R-101 (delete-one-episode jackknife, no donor pool, feeds a
+sizing multiplier not a hypothesis test), R-104/R-105/R-106 (ERR-axis
+sampling significance, within-family anchor-ladder disagreement, and
+cross-model-class detector disagreement — none constructs a donor-weighted
+counterfactual PRICE/RETURN path from other instruments), R-116 (a summary
+breadth/correlation statistic used as a live SIZE input, not a fitted
+convex weighting used as an ex-post inference tool), R-118/R-119/R-122
+(MODEL-BASED simulated price paths for parameter calibration, not
+DATA-DRIVEN donor combinations for inference on realized episodes), R-138
+(the same target claim, a structurally different tool — permutation of
+event dates needing no donor pool, vs. this round's donor-weighted
+counterfactual needing no calendar permutation), R-57/R-63 (cross-sectional
+panel breadth used to build a new trading signal; this round never trades
+the donor pool). Grep-confirmed: zero prior mentions of "synthetic control"
+or "Abadie" anywhere in this file before this round.
+
+**What was done.** `experiments/r140_shared.py` (operator-authored,
+frozen, read-only infrastructure, committed and pushed before either
+branch was dispatched — commit `46e18f1`): donor-panel loading (the same
+6-instrument Coinbase panel R-57/R-63/R-106/R-113/R-116 use), a
+projected-gradient-descent simplex-constrained SCM weight solver (no
+scipy dependency; Duchi et al. 2008's simplex projection), the pre-fit
+RMSPE validity diagnostic, the event-gap statistic (MacKinlay 1997's
+window convention, reused verbatim from `r138_shared.py`), and the frozen
+three-way decision rule (INVALID / VALID-CONFIRMS / VALID-DOES-NOT-CONFIRM).
+**Target series, fixed before any branch ran:** `kelly_regime_v4`'s daily
+EXCESS log-return over its own realized-volatility-matched constant-
+exposure hold (`cand - matched`, reusing `r138_shared.py`'s own
+`candidate_and_matched_daily_logret`/`solve_matched_c` — the identical
+"abnormal return" object R-138's permutation test used), NOT raw v4 P&L
+and not raw asset price — chosen specifically because an operator smoke
+test, before either branch was dispatched, found that leaving the
+risk-matched hold itself IN the donor pool alongside raw v4 P&L as the
+target caused the SCM fit to degenerate (weight collapsed to 1.0 on the
+matched-hold donor, testing nothing). **A disclosed, load-bearing data
+constraint found this session:** the donor panel's committed CSVs start
+2020-01-01 (verified: every donor file's first row is `1577836800000` ms),
+so only 4 of the 6 `STRESS_EPISODES` (2020-03 COVID onward) can receive a
+donor-weighted counterfactual at all; the two 2018 episodes are excluded
+by data availability, not choice, shrinking N from 6 to 4. Conservative
+branch (`r140_conservative_scm_placebo.py`): Abadie's own in-space
+cross-sectional placebo test — refit each of the 6 donors as if it were
+the treated unit, rank the real gap within that placebo distribution, pool
+across the 4 episodes via mean absolute gap against the exact 6^4=1296-
+combination permutation null. Novel branch (`r140_novel_scm_conformal.py`):
+Chernozhukov-Wuthrich-Zhu's conformal route — one fixed fit per episode,
+block-circular-rotation of the residual PATH (block length from each
+cell's own ACF, landed at 2 throughout), pooled via Fisher's (1932)
+combined-probability test (chosen over Stouffer's Z because the per-episode
+gaps vary in sign, ruling out Stouffer's common-sign assumption). **112 +
+12 = 124 configurations evaluated** (conservative: 112 SCM weight-fits
+across 2 markets x 4 episodes x 14 fits/cell, the 14 including a
+self-cross-check verified bit-identical on all 8 cells; novel: 12 cells —
+4 BTC + 4 ETH + 4 BCH-as-placebo sanity-check episodes, one frozen
+procedure throughout, no sweep). Both branches ran in isolated git
+worktrees, touched no file but their own, and did not commit; the operator
+copied both files into the working tree and independently re-ran the
+conservative branch's script end-to-end, reproducing every reported number
+bit-for-bit (`rmspe_ratio`, `event_gap`, and the pooled p=0.000771 on both
+markets, verified directly, not merely re-quoted).
+
+**Result.** **Step-A (both branches, both markets): 0/4 episodes fail
+`RMSPE_GATE=2.0`** (BTC: 1.01/1.69/1.58/1.94; ETH: 0.97/1.75/1.63/2.00 for
+COVID/2021-11-top/Terra-Luna/FTX) — the donor panel, despite its own
+measured 0.634 mean pairwise correlation (R-63), CAN approximate v4's
+pre-event excess-return path well enough to license a post-event reading;
+this is itself informative (SCM is a mechanically valid tool on this data,
+contrary to the round's own most-likely-named failure mode). **Conservative
+branch: VALID & CONFIRMS.** Pooled |gap| stat beats all 1296 permutation
+combinations on both BTC (p=0.000771) and ETH (p=0.000771, same sign),
+clearing both `BTC_P_GATE=0.10` and `ETH_P_GATE=0.20` by a wide margin —
+at the exact resolution floor of the test (0 of 1296 combinations
+exceeded the real statistic on either market). **Novel branch: VALID &
+DOES NOT CONFIRM.** The identical fitted counterfactuals, read via
+within-object residual-path permutation instead of cross-sectional donor
+relabeling, give BTC pooled p=0.314 and ETH pooled p=0.272 — neither
+clears its gate. Per-episode conformal p-values are heterogeneous rather
+than uniformly null: COVID and Terra/Luna sit at p=0.10-0.16 on both
+markets (suggestive, not significant at N=4), while 2021-11-top and FTX
+show p=0.74-0.80 (flatly null) on both markets — the same two "sudden
+crash-and-recover" episodes L-01's own narrative names, versus the two
+slower-moving or single-cascade transitions, a pattern that did not
+clear the pre-registered pooled gate but is worth naming rather than
+flattening into "no signal anywhere." The novel branch's own placebo
+sanity check (BCH-as-target, identical machinery) found 0/4 spurious
+rejections and every real p-value closer to significance than every
+placebo p-value — ruling out a trivially-broken, always-significant test.
+
+**Why the branches disagree, diagnosed by the operator before writing this
+verdict (not left as an unexplained split):** the conservative branch's
+own report explicitly flagged, unprompted, that its target (v4's excess
+return, a leveraged/regime-timed strategy path) and its placebo units
+(raw single-asset-vs-single-asset return gaps) are structurally different-
+scale objects. The operator verified this directly: the real target's gap
+at COVID/Terra-Luna (+0.717/+0.535) exceeds the LARGEST placebo gap ever
+observed anywhere in the entire study (+0.332, XTZ at FTX) by more than
+2x, while at 2021-11-top/FTX the real gaps (+0.045/-0.031) sit well inside
+the normal placebo range — i.e. the real target does not uniformly beat
+its placebos (which a pure scale artifact affecting every cell equally
+would predict), but it beats them precisely at the two episodes where a
+levered, regime-timed strategy would be expected to swing hardest, using
+a placebo reference class (raw single-asset pairs) that never gets to
+swing that hard regardless of whether anything eventful is happening. A
+placebo distribution drawn from a structurally narrower reference class
+than the treated unit's own natural class will make the treated unit look
+"extreme" too easily, independent of any real episode effect — precisely
+the failure mode the novel branch's SAME-OBJECT, same-scale residual-path
+permutation is immune to by construction, and precisely why it is the
+more trustworthy of the two readings here. Read together: **the honest
+verdict is NEGATIVE — SCM does not add confirming evidence to the standing
+edge-concentration claim** — but the reusable methodological lesson
+(in-space cross-sectional placebo tests are not valid when the treated
+unit and the donor pool are not naturally exchangeable in variance, only
+in identity; prefer a same-object residual-permutation construction
+whenever they are not) is worth more to future work here than either
+p-value alone, and is consistent with, not contradicting, R-138's own
+finding that this claim's statistical support is fragile once a rigorous
+small-N tool is pointed at it.
+
+**Verdict.** **NEGATIVE.** SCM does not confirm the edge-concentration
+claim once the more trustworthy of its two available inference routes is
+used; the apparent confirmation from the classical in-space placebo
+construction is best explained as a scale-mismatch artifact between a
+leveraged strategy's excess-return path and a raw single-asset donor
+pool, not a real effect, and this project should not add this SCM result
+as supporting evidence for the standing diagnosis. One-line lesson: a
+donor-weighted counterfactual can be a mechanically valid tool on this
+data (Step-A passed everywhere, contrary to this round's own most-likely-
+named risk) and still produce a spurious "significant" reading if the
+inference route built on top of it compares the treated unit against a
+placebo reference class of different natural scale — always prefer a
+same-object, same-scale permutation over a cross-sectional one when donors
+and target are not exchangeable in variance. **Holdout counter: +0**
+(unchanged from R-139's ~698) — both branches' own loaders truncate to
+`INNER_VAL_END=2022-12-31` and assert the max touched timestamp is before
+`OOS_START`; both reported `max bar touched: 2022-12-31 00:00:00+00:00`;
+the operator's own independent re-run of the conservative branch confirmed
+the same bound. Neither pre-registered decision rule moved after seeing
+any number. `pytest -q`: 516 passed (both branches reported this
+independently; operator re-ran the baseline once more from a clean shell
+before dispatching either branch, also 516 passed). **Next step:** a
+future session wanting to pursue the "COVID/Terra-Luna show more signal
+than 2021-11-top/FTX even under the rigorous test" thread this round
+surfaced but did not chase (N=4 pooled is too small to resolve it on its
+own) would need either more donor-covered episodes (blocked: this
+project's own committed donor panel starts 2020-01-01 and cannot be
+extended without fetching new data) or a within-episode-type stratification
+pre-registered before any further number is read — untried, not assumed
+promising. The backlog otherwise remains as R-139 left it: empty of
+anything but **B-06**.
+
 ### R-139 · 08-25 · NEGATIVE (both branches, stopped at Step-A) — a causal CUSUM changepoint detector (Page 1954), fixed-constant and 36-cell-swept, is a sixth structurally distinct regime-detector to fail the six-episode detection-lag gate that already closed HMM/BOCPD/Kalman LLT/CSD/transfer entropy at 0-2/6
 
 **Direction.** Off-backlog (the ranked list has held only B-06 since R-137/R-138's own re-ranking). One sentence: does a causal CUSUM changepoint detector (Page 1954, "Continuous inspection schemes," *Biometrika* 41(1/2); Hawkins & Olwell 1998) serve as a regime-timing input to `kelly_regime_v4`, measured the same way R-82 (BOCPD), R-83 (Kalman LLT), R-85 (critical slowing down) and R-86 (transfer entropy) measured their own candidates — against a fixed detection-lag gate on six dated, publicly-known historical BTC regime transitions, requiring the detector to react at least as fast as v4's own 20/40/80-day anchor-crossing heuristic on >= 4 of 6 episodes before any Step-B implementation is even attempted. Constraint attacked: **INFO**, in R-82's own narrow sense — no new external data channel, a structurally different *estimator* (sequential statistical-process-control theory, no generative probabilistic model at all) applied to the same committed OHLCV close series v4 already reads. Secondary: closes the one concretely-named, still-open thread from R-137's and R-138's own re-rankings — "sweeping the CUSUM detector's own textbook parameters ... still small, still not comparable in weight to B-06" — by making that sweep the novel branch's entire pre-registered content. **Not a duplicate of:** R-01 (HMM), R-82 (BOCPD), R-83 (Kalman LLT), R-85 (CSD), R-86 (transfer entropy) — same gate, and CUSUM had never been run against it; R-137 / R-138 (both used the identical CUSUM machinery, but only as an event set feeding a permutation test on a different question — does the project's own edge-concentration claim replicate on ETH, and is 2022-07-18 a real break — never as a v4 input tested against the detection-lag gate, and neither swept the detector's own parameters against real data).
@@ -14566,6 +14742,30 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-25 after R-140.** A Synthetic Control Method test of v4's
+own edge-concentration claim is **NEGATIVE**: a classical in-space placebo
+construction appears to confirm at p=0.00077 on both BTC and ETH, but the
+operator traced this to a scale-mismatch artifact (a leveraged strategy's
+excess-return path judged against a placebo class of raw single-asset
+gaps that never swings as hard, real effect or not) and the round's own
+same-scale conformal residual-permutation branch — immune to that
+artifact by construction — found no significant effect on either market
+(BTC p=0.314, ETH p=0.272), consistent with R-138's own finding that this
+claim's statistical support is fragile under rigorous small-N tooling.
+**The backlog remains empty of anything but B-06.** This round's own
+Step-0 diligence generated and discarded two other candidate directions
+as duplicates (R-105's anchor-specification-uncertainty axis; R-106's
+cross-model-class detector-disagreement axis) before settling on SCM,
+which had never been applied here (grep-confirmed) and is grounded in a
+2025 survey on exactly this project's own small-N situation — worth
+recording as a search process future sessions can skip repeating. No new,
+non-duplicate, unblocked thread is named by this round; the "does signal
+concentrate more in violent crash-and-recover episodes than in slower
+transitions" nuance R-140's novel branch surfaced (COVID/Terra-Luna nearer
+significance than 2021-11-top/FTX, even in the trustworthy reading) is
+named as untried, not promising, and blocked on N=4's own resolution
+without new donor data this project cannot fetch.
+
 **Re-ranked 08-25 after R-139.** A causal CUSUM changepoint detector, run
 both at R-137/R-138's own fixed textbook constants and swept across a
 pre-registered 36-cell grid, is **NEGATIVE on both branches, stopped at
@@ -17633,6 +17833,13 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-25 · ~698** — R-140: **+0** on top of R-139's ~698 (unchanged), both
+  branches (conservative Abadie in-space placebo SCM test, novel
+  Chernozhukov-Wuthrich-Zhu conformal residual-permutation SCM test).
+  Both branches' loaders truncate to `INNER_VAL_END=2022-12-31` and assert
+  the max touched timestamp precedes `OOS_START`; both reported max bar
+  touched `2022-12-31 00:00:00+00:00`, and the operator's own independent
+  re-run of the conservative branch confirmed the same bound.
 - **08-25 · ~698** — R-139: **+0** on top of R-138's ~698 (unchanged), both
   branches (conservative fixed-constant CUSUM detection-lag gate, novel
   36-cell CUSUM parameter sweep against the same gate). Both branches'
