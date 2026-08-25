@@ -315,6 +315,28 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-142 · 08-25 · IN PROGRESS — Deribit front-vs-next-quarter futures term-structure SLOPE (distinct from R-120's own single-maturity level/momentum): conservative INFO-axis confirming vote (Step-A six-episode gate) and novel two-sided SIZE-axis exposure dampener (kappa grid, 0.40% fee falsification)
+
+**Status stub**, written before either branch computed a gate/backtest
+number, per docs/ROUTINE.md step 0's coordination convention. Frozen
+pre-registration: `experiments/r142_shared.py` (shared infrastructure,
+written by the operator), `experiments/r142_conservative_slope_vote.py`
+and `experiments/r142_novel_slope_dampener.py` (mechanism, decision rule,
+falsification test, frozen before any implementation). This round also
+re-fetched `data/btcusd_deribit_quarterly_5m.csv.gz` and
+`data/ethusd_deribit_quarterly_5m.csv.gz` (unmodified
+`scripts/fetch_deribit_quarterly_futures.py`, extended `--last-expiry` to
+2026-12-31) because R-120's own fetch stopped at 2023-03-31, three months
+into the holdout — verified byte-identical to the original file on every
+overlapping contract before replacing it, and now covers the holdout
+(OOS_START=2023-01-01) at 100% on both BTC and ETH per direct measurement,
+closing a coverage gap that would otherwise have made this round's own
+novel branch unevaluable past Q1 2023 (the same defect R-135 found for
+`hedge_experts`'s DVOL/positioning experts). Full write-up replaces this
+stub once both branches report.
+
+---
+
 ### R-141 · 08-25 · NEGATIVE (both branches) — the Log-Periodic Power Law Singularity (LPPLS) bubble/crash model, an eighth structurally distinct regime-timing mechanism (conservative, six-episode gate: 0/6, the worst score of any of the eight) and the first LPPLS-derived continuous SIZE-axis dampener (novel: provably degenerate at Step-0, R²=1.000000 — an equality-matched, upper-bounded-at-1 dampener is mathematically forced to kappa=0)
 
 **Direction.** Off-backlog (the ranked list has held only B-06 since
