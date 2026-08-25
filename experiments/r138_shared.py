@@ -335,7 +335,17 @@ def candidate_and_matched_daily_logret(df: pd.DataFrame, market: MarketSpec,
 
 # ----------------------------------------------------------------------
 # CAAR statistic and Nguyen-Wolf (2026) permutation test.
+#
+# Implemented over a prefix-sum of `ar` plus `np.searchsorted`, rather than
+# repeated `pandas.Series.loc` boolean masking, so that `N_PERM = 20000`
+# draws (and the `N_CALIBRATION_TRIALS x N_PERM` draws C1 needs) run in
+# seconds rather than hours. This is a performance choice only -- the
+# statistic and the permutation procedure it computes are unchanged from
+# the mechanism described above and in the module docstring.
 # ----------------------------------------------------------------------
+
+_NS_PER_DAY = np.int64(86_400_000_000_000)
+
 
 def _window_bounds(ar_index: pd.DatetimeIndex, event_date, pre: int, post: int):
     ts = pd.Timestamp(event_date)
@@ -346,22 +356,49 @@ def _window_bounds(ar_index: pd.DatetimeIndex, event_date, pre: int, post: int):
     return lo, hi
 
 
+def _prefix_sum(ar: pd.Series) -> tuple[np.ndarray, np.ndarray]:
+    """`(t, cs)`: sorted int64-ns timestamps and a length-(n+1) cumulative
+    sum with `cs[0] = 0`, so the sum of `ar` over half-open index range
+    `[i, j)` is `cs[j] - cs[i]`."""
+    t = ar.index.values.astype("datetime64[ns]").astype(np.int64)
+    order = np.argsort(t)
+    t = t[order]
+    vals = ar.to_numpy(dtype=float)[order]
+    cs = np.concatenate([[0.0], np.cumsum(vals)])
+    return t, cs
+
+
+def _car_batch(t: np.ndarray, cs: np.ndarray, event_dates_ns: np.ndarray,
+               pre: int, post: int) -> np.ndarray:
+    """Vectorized CAR over an array of event dates (any shape), inclusive
+    of both window edges -- matches the semantics `car_for_event` used."""
+    lo = event_dates_ns - np.int64(pre) * _NS_PER_DAY
+    hi = event_dates_ns + np.int64(post) * _NS_PER_DAY
+    left = np.searchsorted(t, lo, side="left")
+    right = np.searchsorted(t, hi, side="right")
+    car = cs[right] - cs[left]
+    return np.where(right > left, car, np.nan)
+
+
 def car_for_event(ar: pd.Series, event_date, pre: int = WINDOW_PRE_DAYS,
                   post: int = WINDOW_POST_DAYS) -> float:
     """Cumulative abnormal return in `[event_date - pre, event_date + post]`."""
+    t, cs = _prefix_sum(ar)
     lo, hi = _window_bounds(ar.index, event_date, pre, post)
-    window = ar.loc[(ar.index >= lo) & (ar.index <= hi)]
-    if len(window) == 0:
-        return float("nan")
-    return float(window.sum())
+    val = _car_batch(t, cs, np.array([lo.value], dtype=np.int64), pre, post)[0]
+    return float(val) if np.isfinite(val) else float("nan")
 
 
 def caar_statistic(ar: pd.Series, event_dates, pre: int = WINDOW_PRE_DAYS,
                    post: int = WINDOW_POST_DAYS) -> float:
     """Cumulative AVERAGE abnormal return across `event_dates`."""
-    cars = [car_for_event(ar, d, pre, post) for d in event_dates]
-    cars = [c for c in cars if np.isfinite(c)]
-    if not cars:
+    t, cs = _prefix_sum(ar)
+    ns = np.array([pd.Timestamp(d).tz_localize(ar.index.tz).value
+                   if pd.Timestamp(d).tzinfo is None and ar.index.tz is not None
+                   else pd.Timestamp(d).value for d in event_dates], dtype=np.int64)
+    cars = _car_batch(t, cs, ns, pre, post)
+    cars = cars[np.isfinite(cars)]
+    if len(cars) == 0:
         return float("nan")
     return float(np.mean(cars))
 
@@ -402,11 +439,14 @@ def permutation_test(ar: pd.Series, event_dates, *, pre: int = WINDOW_PRE_DAYS,
     if len(pool) < n_events:
         return {"observed": observed, "pvalue": float("nan"), "n_perm": 0,
                 "n_exceed": 0, "pool_size": len(pool)}
+    t, cs = _prefix_sum(ar)
+    pool_ns = pool.values.astype("datetime64[ns]").astype(np.int64)
     draws = np.empty(n_perm, dtype=float)
-    pool_arr = pool.to_numpy()
     for i in range(n_perm):
-        sample = rng.choice(pool_arr, size=n_events, replace=False)
-        draws[i] = caar_statistic(ar, sample, pre, post)
+        sample_ns = rng.choice(pool_ns, size=n_events, replace=False)
+        cars = _car_batch(t, cs, sample_ns, pre, post)
+        cars = cars[np.isfinite(cars)]
+        draws[i] = float(np.mean(cars)) if len(cars) else float("nan")
     draws = draws[np.isfinite(draws)]
     n_exceed = int(np.sum(np.abs(draws) >= abs(observed)))
     pvalue = (1.0 + n_exceed) / (1.0 + len(draws))
