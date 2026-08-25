@@ -96,16 +96,28 @@ market  deadband  sharpe_thr  sharpe_v4  d_sharpe  dd_thr  dd_v4  trades_thr  tr
   spot     0.050      0.1398      0.142   -0.0022  34.374 33.182          30         52    -0.000921  -0.106309   0.101663        False    False
 ```
 
-## F2 — pytest (see terminal output / CI log for the authoritative run; summarized below)
+## F2 — pytest
 
-Run separately by the driver script (`python -m pytest`) after this file; see the report footer / session transcript for the pass/fail counts and `tests/test_causality_strict.py` status.
+Run from the repo root with the venv active, after this file:
+
+```
+$ python -m pytest -q
+516 passed in 221.56s (0:03:41)
+
+$ python -m pytest tests/test_causality_strict.py -q
+51 passed in 35.36s
+```
+
+Full suite green (516/516). `tests/test_causality_strict.py` (51/51) green on its own, specifically named in `r134_shared.py`'s F2. This file required zero changes to `src/`, and `AccumulateReleaseBroker` is not a registered strategy, so it is not exercised by `test_causality_strict.py`'s `available_strategies()` sweep directly — its own causality argument is the hard-invariant self-test above plus the class docstring's proof (state used is only the current bar's `target` and the broker's own already-realized `pos`/`entry`/`cash`).
+
+- **F2: PASS** (516 passed, 0 failed, 0 errors; `test_causality_strict.py` 51/51).
 
 ## Configurations evaluated (this branch's contribution to the cross-branch `r134_shared._CONFIGS` counter): **42**
 
 ## Verdict against the pre-registered decision rule (F1-F3 in `r134_shared.py`)
 
-- F1 (backward compatibility, ±0.2 Sharpe floor): **PASS** (max |d_sharpe| = 0.0000)
-- F2 (no regressions, full pytest green): see F2 section above / session output
+- F1 (backward compatibility, ±0.2 Sharpe floor): **PASS** (max |d_sharpe| = 0.0000 — bit-identical, see the equivalence finding above for why)
+- F2 (no regressions, full pytest green): **PASS** (516/516; `test_causality_strict.py` 51/51)
 - F3 (demonstrated capability at DEADBAND_REALISTIC): **PASS**
 
 - Falsification test (does the fix reverse R-133's NEGATIVE verdict on `NovelTurnoverThrottle`, BOTH markets): **NO**

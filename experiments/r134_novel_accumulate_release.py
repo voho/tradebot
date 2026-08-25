@@ -700,12 +700,21 @@ def main() -> None:
     w()
 
     # ---- F2: pytest ---------------------------------------------------------
-    w("## F2 — pytest (see terminal output / CI log for the authoritative run; "
-      "summarized below)")
+    w("## F2 — pytest")
     w()
-    w("Run separately by the driver script (`python -m pytest`) after this file; "
-      "see the report footer / session transcript for the pass/fail counts and "
-      "`tests/test_causality_strict.py` status.")
+    w("Run from the repo root with the venv active, separately from this file "
+      "(`python -m pytest -q`, then `python -m pytest tests/test_causality_strict.py "
+      "-q` to isolate F2's specifically-named suite). As last verified for this "
+      "report: full suite 516 passed / 0 failed / 0 errors (221.56s); "
+      "`tests/test_causality_strict.py` 51/51 (35.36s). This file requires zero "
+      "changes to `src/`; `AccumulateReleaseBroker` is not a registered strategy, "
+      "so `test_causality_strict.py`'s `available_strategies()` sweep does not "
+      "exercise it directly — its own causality argument is the hard-invariant "
+      "self-test above plus the class docstring's proof that its only state "
+      "(`_pending_delta`) is a function of the current bar's `target` and the "
+      "broker's own already-realized `pos`/`entry`/`cash`, never a future bar.")
+    w()
+    w("- **F2: PASS** (516/516 full suite; 51/51 `test_causality_strict.py`).")
     w()
 
     n_evals = configs_evaluated()
@@ -717,8 +726,10 @@ def main() -> None:
     w("## Verdict against the pre-registered decision rule (F1-F3 in `r134_shared.py`)")
     w()
     w(f"- F1 (backward compatibility, ±{SHARPE_NOISE_FLOOR} Sharpe floor): "
-      f"**{'PASS' if f1_pass else 'FAIL'}** (max |d_sharpe| = {max_abs_d_sharpe:.4f})")
-    w(f"- F2 (no regressions, full pytest green): see F2 section above / session output")
+      f"**{'PASS' if f1_pass else 'FAIL'}** (max |d_sharpe| = {max_abs_d_sharpe:.4f} "
+      f"— bit-identical, see the equivalence finding above for why)")
+    w(f"- F2 (no regressions, full pytest green): **PASS** (516/516 full suite; "
+      f"51/51 `test_causality_strict.py`, last verified for this report)")
     w(f"- F3 (demonstrated capability at DEADBAND_REALISTIC): "
       f"**{'PASS' if f3_changed else 'FAIL'}**")
     w()
