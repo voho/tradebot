@@ -18,7 +18,33 @@ list of things that do not work.
 
 ## Step 0 — Load the memory
 
-Read, in this order:
+**First, before the memory: is a round already in flight?** Sessions can end
+between freezing a pre-registration and reporting on it, and what they leave
+behind is invisible to every other step here — the ledger has no section for
+it, so it reads as if nothing happened. Check for it:
+
+```bash
+ls experiments/*_shared.py | tail -3        # newest frozen pre-registrations
+grep -c "R-<nn>" docs/LEDGER.md             # is that round recorded in section B?
+git log --oneline -5                        # a "WIP"/"dispatched" commit is the tell
+```
+
+An `r<nn>_shared.py` with no matching section B entry is an **undispatched
+frozen pre-registration, and executing it outranks both the backlog and any
+new idea.** Its thresholds, splits, decision rule and named failure modes were
+fixed by an agent that had seen no number from it, which is the strongest form
+of pre-registration this project can produce and cannot be recreated once
+today's session has looked at the data. Execute it verbatim, and say in the
+entry that you did. R-131 is the worked example: the previous session froze
+both branches and ended; running the frozen plan produced a cleaner result
+than a fresh direction would have, because nothing in it could be adjusted
+after the fact.
+
+Additions *after* the freeze are allowed in exactly one direction — they may
+tighten the bar (an extra ablation, an extra cell, a control), never loosen
+it — and must be declared as additions in the entry.
+
+Then read, in this order:
 
 1. `README.md` — the comparison table and the four standing warnings
    (fees, funding, that the table's ordering is mostly noise, and that
@@ -438,6 +464,23 @@ multiplier**, not a free speedup, and it has to be paid for:
   This is the same move R-33 made on risk-matching and R-57 made on
   cross-asset scope, applied to the research plan instead of a result, and
   it is cheap: R-78 cost one session and read zero holdout.
+- **Match risk in the *controls* too, not only the benchmark.** R-33's rule is
+  written about benchmarks, and R-131 found the same trap one level down: its
+  ablation controls scored a higher Sharpe than the live branch, and every one
+  of them sat **99.5–100% in market against the incumbent's 55.6%**. An
+  ablation that changes the exposure has not isolated the mechanism, it has
+  replaced it — and because an ablation is supposed to *weaken* a claim, an
+  unmatched one fails silently in the direction of a false negative. Report
+  time-in-market and realized volatility for every arm, control arms included.
+- **Read a metric's definition before dividing by it.** `Metrics.num_trades`
+  counts round-trip **episodes** (`build_trades` groups fills); turnover is
+  `len(result.fills)`. R-131 wrote a whole results section on the wrong one and
+  concluded a mechanism "freezes the strategy — 1 trade in two years" when it
+  was in fact filling 240–352 times and merely never fully exiting. The two
+  numbers differ by 300x on exactly the mechanisms a COST-axis round studies.
+  Carry both units in the table so they cannot be confused, and be suspicious
+  of any turnover ratio that looks too good: a mechanism that reduces trading
+  by 99% has usually changed what "a trade" means.
 - **Nothing is deleted.** Registered negative results stay registered.
 - **The table's futures column is an upper bound** until funding is
   charged. Never quote it without that caveat.
