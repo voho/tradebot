@@ -315,6 +315,155 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-136 · 08-25 · NEGATIVE (both branches) — a-priori HAR-structured vol-estimator substitution on `kelly_regime_v4`'s SCALE axis (pure realized-vol blend, and the same blend augmented with DVOL implied vol) reproduces R-08's forecast-quality inversion on the modern conditional-targeting architecture
+
+**Direction.** Targets the current leader, `kelly_regime_v4` ($66.8K spot /
+$156.2K futures_5x), directly, rather than an off-backlog object — the
+ranked backlog remains empty of anything but B-06 (forward paper trading,
+already running unattended) per R-135's own re-ranking, and the single-asset
+axis's closed lists (19+ INFO, 28+ SIZE, ERR across 5 uncertainty notions, 11
+regime-timing mechanisms, 4 N≈3 procedures, 5 COST-model families) cover the
+VOTE and the vol-TARGETING architecture exhaustively but never the raw vol
+ESTIMATOR feeding it. Substitutes the single fast EWM(8-day) realized-vol
+series that drives both `full = target_vol / vol` (breakout-state sizing)
+and `ratio = vol / slow` (the regime-state machine itself) with an a-priori,
+non-fitted, equal-weight blend of daily/weekly/monthly realized-vol
+components (Corsi 2009, HAR structure — already this project's own citation
+for v4's anchor ladder, applied here to the vol axis for the first time), in
+two constructions: realized-vol components only (conservative), and the same
+blend plus a fourth component, Deribit's causally-aligned DVOL implied-vol
+index (novel; Busch, Christensen & Nielsen 2011, HAR-RV-IV). **Attacks
+SIZE** (both branches) **and INFO** (novel only, in the R-132-established
+sense of feeding an external channel into a structurally different
+application point than any prior INFO-axis attempt — here the vol estimator,
+never before touched by DVOL/positioning/MVRV/stablecoin/on-chain work, all
+of which used the vote/gate slot). **The prior, stated before any code ran**:
+R-08 (08-15) found a genuinely better vol forecast made the OLD
+continuous-targeting mechanism WORSE ($52K vs $115K, sign-inverting) because
+BTC's inverse leverage effect (Baur & Dimpfl 2018) makes high-vol states the
+highest-forward-Sharpe ones; `kelly_regime_v3`/`v4`'s whole reason to exist
+is CONDITIONAL (extremes-only, hysteresis-latched) targeting's resistance to
+exactly that failure mode (Bongaerts, Kang & van Dijk 2020). Whether that
+resistance survives a materially different (multi-timescale, possibly
+IV-augmented) forecast — not merely a "better" one in R-08's single-component
+sense — was this round's actual, named-in-advance question, with R-08's
+inversion reproducing on the modern architecture as the explicitly stated
+modal expectation. **Not a duplicate of**: R-08 (pre-v3/v4's continuous-
+targeting mechanism, since removed, and a single-component not HAR-structured
+forecast — this round's own module docstring states R-08's finding as the
+prior under test on the *current* architecture); R-09 (range estimators —
+intrabar H/L/O/C vs multi-timescale combination, an orthogonal question);
+R-73/R-81/R-135 (DVOL/positioning as directional votes/gates/panel members on
+a different object or slot — here DVOL is a LEVEL inside the vol estimator,
+never touching the vote); R-62/R-87 (confirm `scale` is the correct,
+already-identified place to test a vol-forecast change without touching the
+vote that carries v4's replication signature).
+
+**What was done.** Frozen pre-registration: `experiments/r136_shared.py`,
+committed to `main` one commit ahead of either branch's results, including a
+shared `HARVolMixin` (a verbatim copy of `KellyRegimeV3.prepare()` with only
+the `vol = ...` line replaced by `self._vol_series(df, r)`, so any measured
+difference is attributable to the estimator alone) and shared HAR-component
+helpers used bit-for-bit by both branches. Splits, gates (B1 three periods ×
+two markets, B3 plateau over a 5-window-set neighbourhood, B4 ETH sign
+replication, B5 0.40% fee tier, B6 mandatory risk-match/exposure-by-vol-
+quartile, and B7 mandatory novel-only DVOL-coverage-artifact check) and the
+promotion decision rule were frozen before either branch ran. CONSERVATIVE
+(`r136_conservative_har_rv_scale.py`): equal-weight mean of 1/5/22-day
+realized-vol components, no new data. NOVEL
+(`r136_novel_har_iv_scale.py`): the same three components plus causally-
+aligned DVOL (already annualized-vol-fraction units, confirmed empirically —
+raw index mean 60.2 against this project's own `target_vol=0.55` default),
+falling back to the three-way mean pre-2021-03-24 (DVOL's coverage start),
+never fit or backfilled. Both branches dispatched as independent subagents
+on disjoint files, neither committing (the operator committed WIP
+checkpoints of each branch's file as they completed, per this project's own
+established practice on R-135). **61 configs evaluated** (conservative 28:
+2 truncation-probe + 12 B1 + 6 B3 + 4 B4 + 4 B5; novel 33, self-counted by
+its own script), plus 3 backtests from the operator's own independent
+re-verification of the decisive cell. `pytest`/`test_causality_strict.py`
+were not re-run (neither construction is `@register`ed; both branches ran
+their own causal-truncation probes on their own subclasses instead, per
+this project's `experiments/`-only convention).
+
+**Result.** Both branches pass the causal-truncation probe, B3 (plateau —
+conservative 3/5, novel 4/5 window-set variants agree in sign with the
+frozen (1,5,22) candidate) and B5 (no sign flip at 0.40% fee on either
+branch). **QLIKE (Patton 2011), descriptive**: conservative's `har_rv_vol`
+is a genuinely better one-day-ahead forecast than baseline's EWM(8-day) on
+both splits (~7% lower QLIKE, both inner-train and inner-val — closely
+matching R-08's own ~8% figure); novel's `har_iv_vol` also beats baseline,
+but — the round's most notable side finding — **does NOT beat the
+conservative construction**: in the one window DVOL could add value
+(2021-03-24 onward), `har_rv_vol` alone scores a *better* QLIKE (0.06415)
+than `har_iv_vol` (0.06879), i.e. adding DVOL makes the one-day-ahead vol
+forecast worse, not better, undercutting the Busch-Christensen-Nielsen
+mechanism motivating the branch at its root. **B1 (candidate vs frozen v4,
+paired bootstrap on `total_log_return`)**: both branches show a small,
+non-significant positive on spot (conservative full_inner **+0.02** [-0.26,
+0.27]; novel **+0.03** [-0.27, 0.28]) but a **negative on futures_5x on both
+decisive periods** (conservative full_inner **-0.12** [-0.58, 0.33], inner_val
+**-0.17** [-0.39, 0.02]; novel full_inner **-0.08** [-0.54, 0.36], inner_val
+**-0.17** [-0.40, 0.00]) — no CI on either branch excludes zero, but clause
+(b)'s conjunctive "both markets positive" requirement fails outright on
+futures for both. **The operator independently re-verified the decisive
+futures_5x/inner_val cell**: reproduced conservative at point **-0.166**
+(reported -0.17) and novel at point **-0.172** (reported -0.17), both within
+rounding of the branches' own figures. **B4 (ETH, spot, inner_val)**:
+conservative REPLICATES (BTC +0.01, ETH +0.08 [-0.07, 0.30]); novel FAILS
+(BTC ≈flat/negative, ETH **+0.14** [0.01, 0.30], significant and positive —
+not the project's usual BTC-pass/ETH-invert signature, but a failure to
+replicate regardless). **B6 (mandatory risk-match)**: time-in-market matched
+to ≤0.1pp on every cell for both branches; conservative's high-vol-quartile
+exposure is marginally *higher* than baseline's (0.244 vs 0.239, +0.005),
+consistent with (not contradicting) a genuine, if partial, reproduction of
+R-08's mechanism rather than a pure de-leveraging artifact; novel's q4
+exposure ratio candidate/baseline is 1.025, similarly non-artifactual — in
+both cases there is no clean net win for B6 to explain away. **B7
+(novel-only, mandatory)**: the coverage-artifact check passes as
+pre-registered — novel equals the local RV-only construction exactly
+(diff=0.00) in the pre-DVOL sub-window by construction, and any advantage
+over RV-only is concentrated in the DVOL-covered sub-window (spot +0.039
+[-0.07, 0.16], futures +0.10 [-0.05, 0.29]) — but neither CI excludes zero,
+and both novel and RV-only *lose* money in absolute terms there (final ≈
+$780-795 from $1,000): the "advantage" is a smaller loss, not a real gain.
+Bug hunts on both branches: clean (no lookahead in either `HARVolMixin`
+override or either branch's HAR-component causal shift; two reported
+"failures" in each branch's own automated bug-hunt tooling were verified
+false positives from the checkers' own string-matching heuristics, not real
+defects, on manual inspection by each implementing agent). **No holdout
+was consulted** (+0, ~698) — clause (b) failed before either branch reached
+a holdout decision, per the pre-registered rule.
+
+**Verdict.** **NEGATIVE, both branches.** Per the pre-registered decision
+rule: conservative passes (a)(c)(d)(e)(f), fails (b); novel passes
+(a)(c)(e)(f)(g), fails (b) and (d) — any single failure is NEGATIVE. **The
+reusable finding**: R-08's forecast-quality inversion — a genuinely better
+vol forecast still de-levers into BTC's high-vol/high-forward-Sharpe states
+enough to lose, because the asset-class fact driving it (the inverse
+leverage effect) does not care which mechanism computes the forecast — is
+not specific to the pre-v3/v4 continuous-targeting architecture R-08 itself
+tested; it reproduces, on the leveraged instrument specifically, under the
+CONDITIONAL (hysteresis-latched, extremes-only) targeting `v3`/`v4` were
+built to resist it. This closes the "vol-estimator substitution" sub-branch
+on the current architecture by name, extending R-08 rather than merely
+repeating it. **A secondary, literature-relevant finding**: DVOL, blended
+a-priori into a HAR-structured forecast, makes the one-day-ahead QLIKE
+*worse* rather than better in the one window it could matter (2021-03-24
+onward) — the opposite of the Busch-Christensen-Nielsen HAR-RV-IV
+mechanism's own claim, on this instrument and this construction. **Holdout
+counter: +0** on top of R-135's ~698 (unchanged) — bullet added to
+[Holdout consultations to date](#holdout-consultations-to-date). Decision
+rule did not move after any number was read (frozen before either branch's
+code ran, applied verbatim). **Next step**: this closes the vol-ESTIMATOR
+axis specifically (as distinct from the vol-TARGETING architecture, already
+closed 28+ times, and the vote, closed 19+ times) — a future session
+targeting `kelly_regime_v4` further would need a genuinely different slot,
+which the single-asset axis's own exhaustive closed lists suggest may not
+exist; absent a new idea clearing Step-0, return to `hedge_experts`'s EXPERT
+COMPOSITION axis (closed alongside R-132/R-135 per the stated data-coverage
+ceiling), R-127's own named follow-on, or B-06.
+
 ### R-135 · 08-25 · NEGATIVE (both branches) — a third `hedge_experts` EXPERT COMPOSITION construction (derivatives-positioning + implied-vol votes), with R-132's own turnover-matched control promoted to a mandatory pre-registered gate, reproduces R-132's turnover-reduction-in-a-losing-regime artifact a third time
 
 **Direction.** The ranked backlog is empty of anything but B-06 (forward
@@ -14089,10 +14238,39 @@ trip.
 | Replacing v4's constant no-trade half-width with the asymptotic literature's own width profile, `band(f) = deadband · f**p` (Janeček & Shreve 2004; Gerhold, Guasoni, Muhle-Karbe & Schachermayer 2014), so the band vanishes where the target vanishes | 96 configurations, zero fitted parameters selected on returns (`p` is a mechanism index with a literal theoretical value 2/3 and an identity point p=0 ≡ v4 bit-for-bit; `f_ref=1.0` is structural). Passes causality including a structural assertion that the target is exactly 0.0 on all 136,434 zero-desired bars at every p>0. **Fails five gates independently**: D1 not established, **D2 fails at 12 of 13 cells** (the advantage *shrinks* as the fee quadruples — this is a tracking-quality change, not a cost mechanism), **D3 −0.1885 [−0.400, −0.021]** on ETH-A and negative at every p>0 (operator-reproduced at −0.189), **D4** turnover rises (the band is narrower than v4's on 92–99% of bars, the pre-registered confound), **D5** non-monotone with a reproducible dip at p=0.5 on all four BTC cells. The theoretical exponent is invisible in the data: p=1/6 and p=1 are indistinguishable from p=2/3 everywhere, and the whole Sharpe spread across the grid is 0.020–0.049 against a ±0.2 noise floor. **Its real product is an isolation probe** — at p=0.01 the width change is off (band ≈0.0993 at f=0.5) while snap-to-flat is fully on, and it already carries **70% of the ETH-A loss** (−0.1324) at *lower* fees than v4, while on BTC it is a literal no-op. Do not re-try a width-profile-in-f rule on this family; and note that theory does not license the snap it delivers, since the "band vanishes at zero target" result requires a *constant* target and a signal-driven one keeps a positive width floor (Muhle-Karbe, Reppen & Soner 2017 sect. 5.2; de Lataillade & Chaouki 2020 sect. 6). | R-66 (novel) |
 | MVRV ratio Z-score (expanding-window since inception, the classic MVRV-Z-Score construction), euphoria-extreme-only, fed into `kelly_regime_v4` via R-55's validated confirming-vote formula (`frac=(anchor_sum+weight·vote)/(3+weight)`) | 10 configurations (9-cell `thresh_hi×weight` grid + `weight=0` identity check, exact). Identity check reproduces v4 bit-for-bit (operator-reproduced). Fails on inner-validation decisively: v4 control Sharpe 0.14 spot/0.25 futures; all 9 non-identity cells worse on both markets (spot 0.00–0.13, futures −0.09–0.18), monotonically degrading with weight (operator-reproduced, exact match). Exposure-artifact check genuinely **passes** (R²=0.9173, not the >0.99 flat-rescale artifact) — but a **new architecture-level failure mode** explains why it still loses: because the euphoria vote reads "calm" ~88–97% of the time, the confirming-vote formula's dominant state is an affine, always-on **partial floor under exposure** rather than a pure brake, so the position essentially never returns to flat even when v4's own anchors are fully bearish — the 2022 bear is exactly where this costs the most. ETH falsification fails on spot (systematic gap, not noise) though passes on futures. Plateau is genuine (uniform failure across the whole grid). Do not re-try a euphoria-only MVRV-level confirming vote on this family; and more generally, do not assume R²<0.95 alone certifies a confirming-vote signal free of this calm-state-floor failure mode without also checking how often the extra vote's *default* state fires. | R-74 (conservative) |
 | MVRV ratio 30-day and 90-day rate-of-change (log-change, z-scored against a trailing 365-day window, sign-flipped so positive = risk-off), lead-time-tested against `kelly_regime_v4`'s own 3-anchor-majority bear-onset flip dates on the 5 real stress episodes available pre-holdout (2018 bear onset, 2020-03 COVID crash, 2021-top/2022-bear transition, 2022-05 Terra/Luna, 2022-11 FTX) | Pre-registered stop rule (proceed to build a strategy only if a majority of matched episodes lead with a positive median offset, for at least one feature) not cleared: `mvrv_roc30_z` 1/4 matched episodes lead (median **−4.0 days**), `mvrv_roc90_z` 0/4 lead (median **−35.0 days**, worse than the shorter window — the opposite of what "give realized cap more time to reprice" would predict if the mechanism were real). Diagnosed and confirmed empirically (BTC MVRV fell 1.375→0.877 in the single day around the 2020-03-12 crash): realized cap is too price-coupled at settlement timescales shorter than dormant-supply turnover to decouple from, and therefore lead, price itself. No strategy was built, no configuration was swept — the lead-time gate itself was the round's whole result, the same discipline R-53/R-54/R-73 used. Operator-reproduced bit-for-bit (episode table, onset dates, medians). Do not re-try MVRV rate-of-change as an early-warning feature without a materially different structural argument for why realized-cap repricing should decouple from price at some other timescale. | R-74 (novel) |
+| Substituting `kelly_regime_v4`'s fast EWM(8-day) vol estimator (drives both breakout-state sizing and the regime-state machine) with an a-priori, non-fitted, equal-weight HAR-structured (Corsi 2009) blend of daily/weekly/monthly realized-vol components — with or without a fourth component, Deribit's causally-aligned DVOL implied-vol index (Busch, Christensen & Nielsen 2011) | 61 configurations across both branches. Both pass causal-truncation, B3 plateau and B5 fee-tier survival; both fail decisively on **futures_5x**, the leveraged instrument, on both `full_inner` and `inner_val` (conservative -0.12/-0.17 `d_log_return`, novel -0.08/-0.17, operator-reproduced at -0.166/-0.172 on the decisive inner_val cell) despite the conservative branch's HAR-RV forecast being a genuinely ~7%-better one-day-ahead QLIKE forecast than baseline — the same forecast-quality-inversion mechanism R-08 found on the pre-v3/v4 continuous-targeting architecture reproduces on the modern conditional (hysteresis-latched) one, extending rather than merely repeating R-08. B6 risk-match rules out a pure exposure-artifact explanation (time-in-market matched to ≤0.1pp; high-vol-quartile exposure deltas small and directionally consistent with the theorized mechanism, not a rescaling confound). Novel additionally fails B4 (ETH sign does not replicate) and — its own most notable side finding — adding DVOL makes the HAR blend's QLIKE *worse*, not better, in the one window (post-2021-03-24) it could matter, the opposite of the citation's own claim; B7's mandatory coverage-artifact check nonetheless passes (any novel-vs-RV-only advantage is correctly concentrated in the DVOL-covered window, though neither branch reaches significance there and both lose money in absolute terms). Do not re-try a multi-timescale or implied-vol-augmented substitution for `kelly_regime_v4`'s vol estimator expecting it to clear the leveraged-futures market — the inverse-leverage-effect mechanism binds regardless of forecast quality or construction. | R-136 (both branches) |
 
 ---
 
 ## D. Backlog (ranked)
+
+**Re-ranked 08-25 after R-136.** An a-priori HAR-structured vol-estimator
+substitution on `kelly_regime_v4`'s SCALE axis (pure realized-vol blend,
+conservative; the same blend plus DVOL implied vol, novel) is NEGATIVE on
+both, decisively so on the leveraged futures market: R-08's forecast-quality
+inversion (a genuinely better vol forecast still loses because BTC's
+inverse leverage effect makes high-vol states the highest-Sharpe ones)
+reproduces on the modern conditional-targeting architecture v3/v4 were built
+to resist it, closing the vol-ESTIMATOR sub-axis (as distinct from the
+vol-TARGETING architecture and the vote, both already closed dozens of times
+over) for the first time. **The backlog remains empty of anything but B-06**
+(forward paper-trading, already running unattended, per R-78's own
+costing). This round's own next-step analysis: `kelly_regime_v4`'s three
+internal slots — the vote (`frac`, 19+ INFO-axis and structural attempts),
+the targeting architecture (`scale`, 28+ SIZE-axis attempts), and now the
+raw vol estimator feeding `scale` (this round) — are all closed; a future
+session attacking this object directly would need a slot this project has
+not yet identified, which the exhaustiveness of the existing lists makes
+progressively less likely to exist. A future session otherwise has:
+`hedge_experts`'s EXPERT COMPOSITION axis (closed alongside R-132/R-135 per
+their own stated data-coverage ceiling — DVOL/positioning coverage and a
+non-losing baseline window never coexist in the committed data); R-127's own
+named follow-on (does idiosyncratic-event excision generalize past the one
+construction it tested); `champions_council`'s own allocation mechanism
+(closed, R-126); the multi-asset panel's own closed list (eleven rounds); or
+B-28's breadth clause (blocked on data this project cannot fetch or
+simulate). Absent a new idea clearing Step-0 on one of these, B-06 (forward
+paper trading, already running unattended) is the only standing item.
 
 **Re-ranked 08-25 after R-135.** A third `hedge_experts` EXPERT COMPOSITION
 construction (derivatives-positioning + implied-vol votes, one single-add
@@ -17037,6 +17215,15 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-25 · ~698** — R-136: **+0** on top of R-135's ~698 (unchanged), both
+  branches plus the operator's own independent re-verification of the
+  decisive futures_5x/inner_val cell. Clause (b) of the pre-registered
+  decision rule (both markets positive on `full_inner` AND `inner_val`)
+  failed on futures_5x for both branches before either reached a holdout
+  decision; `r136_shared.py`'s `_assert_no_holdout` guard covers every
+  loader used by both. Max timestamp read: `2022-12-31 23:55:00+00:00`
+  (both branches' own causal-truncation probes and the operator's
+  re-verification).
 - **08-25 · ~698** — R-135: **+0** on top of R-134's ~698 (unchanged), both
   branches. Both failed their pre-registered B1/B6 gates on inner-train and
   inner-validation before either reached a holdout decision; `r135_shared.py`'s
