@@ -1,4 +1,4 @@
-"""R-132 CONSERVATIVE branch — band turnover regularization on `kelly_regime_v4`.
+"""R-133 CONSERVATIVE branch — band turnover regularization on `kelly_regime_v4`.
 
 Mechanism, as frozen in `r131_shared.py` before any code was written: track a
 causal trailing-turnover EWM of v4's own realized rebalances; inside the
@@ -10,7 +10,7 @@ Citation: Khubiev, Semenov, Podlipnova & Khubieva (2025, arXiv:2509.04541),
 "Finance-Grounded Optimization For Algorithmic Trading" — band turnover
 regularization, zero inside an admissible range, biting only above it.
 
-Writes `experiments/reports/r132_conservative_report.md`.
+Writes `experiments/reports/r133_conservative_report.md`.
 """
 
 from __future__ import annotations
@@ -20,8 +20,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-import r132_eval as E
-from r132_mechanisms import ConservativeTurnoverBand
+import r133_eval as E
+from r133_mechanisms import ConservativeTurnoverBand
 from r131_shared import (
     INNER_VAL_END,
     INNER_VAL_START,
@@ -31,7 +31,7 @@ from r131_shared import (
     a2_non_inertness,
 )
 
-OUT = Path(__file__).resolve().parent / "reports" / "r132_conservative_report.md"
+OUT = Path(__file__).resolve().parent / "reports" / "r133_conservative_report.md"
 
 # Plateau grid: the corridor's upper edge as a multiple of v4's own measured
 # natural rate. 3.0 is the frozen primary; the grid is symmetric around it.
@@ -73,7 +73,7 @@ def main() -> None:
         lines.append(s)
         print(s)
 
-    w("# R-132 conservative — turnover-corridor deferral band on `kelly_regime_v4`")
+    w("# R-133 conservative — turnover-corridor deferral band on `kelly_regime_v4`")
     w()
     w(f"Frozen corridor edge: `TURNOVER_UPPER = {PRIMARY_MULT} x "
       f"{V4_NATURAL_TRADES_PER_DAY:.4f} = {TURNOVER_UPPER:.4f}` trades/day, "

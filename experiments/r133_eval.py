@@ -1,4 +1,4 @@
-"""R-132 — the shared evaluation battery for both branches.
+"""R-133 — the shared evaluation battery for both branches.
 
 One place that knows how to run a candidate against `kelly_regime_v4` on a
 named cell, so the conservative and novel branch runners cannot drift apart

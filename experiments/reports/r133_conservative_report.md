@@ -1,4 +1,4 @@
-# R-132 conservative — turnover-corridor deferral band on `kelly_regime_v4`
+# R-133 conservative — turnover-corridor deferral band on `kelly_regime_v4`
 
 Frozen corridor edge: `TURNOVER_UPPER = 3.0 x 0.3030 = 0.9091` trades/day, 30-day causal EWM. Inner-validation = 2021-01-01 → 2022-12-31.
 

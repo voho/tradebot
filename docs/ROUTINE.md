@@ -37,10 +37,12 @@ of pre-registration this project can produce and cannot be recreated once
 today's session has looked at the data. Execute it verbatim, and say in the
 entry that you did.
 
-R-131 and R-132 are the worked example, and they are the reason this check is
+R-131 and R-133 are the worked example, and they are the reason this check is
 step 0's first line rather than a footnote: **both** found the same
 undispatched file on 08-25, both correctly decided to execute it, and neither
-knew the other was doing so until push time. The duplicated compute is the
+knew the other was doing so until push time — and while the second was being
+written up, a *third* session claimed its intended ID for an unrelated
+direction, so it landed as R-133. Two ID collisions in one day. The duplicated compute is the
 cost of not having this check; the accidental independent replication it
 produced — same verdict, same gates, the decisive cell agreeing to three
 decimals across two different implementations — is the compensation, and it is

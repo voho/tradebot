@@ -1,4 +1,4 @@
-"""R-132 skeptic audit — the checks neither branch's own battery would run.
+"""R-133 skeptic audit — the checks neither branch's own battery would run.
 
 Four questions, all decided after both branch reports were written and all
 adversarial in intent:
@@ -30,7 +30,7 @@ adversarial in intent:
    snap-to-flat destination question, closed by R-66). Count intended
    re-targets against realized fills.
 
-Writes `experiments/reports/r132_skeptic_audit_report.md`.
+Writes `experiments/reports/r133_skeptic_audit_report.md`.
 """
 
 from __future__ import annotations
@@ -40,11 +40,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-import r132_eval as E
-from r132_mechanisms import ConservativeTurnoverBand, NovelTurnoverThrottle
+import r133_eval as E
+from r133_mechanisms import ConservativeTurnoverBand, NovelTurnoverThrottle
 from r131_shared import ETA, V4_NATURAL_TRADES_PER_DAY
 
-OUT = Path(__file__).resolve().parent / "reports" / "r132_skeptic_audit_report.md"
+OUT = Path(__file__).resolve().parent / "reports" / "r133_skeptic_audit_report.md"
 
 # lambda values spanning the live branch's own realized mean (3.61 on BTC
 # spot inner-val, 2.06 on ETH) so the control is matched, not strawmanned.
@@ -67,7 +67,7 @@ def main() -> None:
           .to_string(index=False))
         w("```")
 
-    w("# R-132 skeptic audit")
+    w("# R-133 skeptic audit")
     w()
 
     # ---------- 1. constant-lambda ablation --------------------------------

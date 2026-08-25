@@ -1,4 +1,4 @@
-"""R-132 mechanisms — the two frozen branches, implemented verbatim.
+"""R-133 mechanisms — the two frozen branches, implemented verbatim.
 
 Both wrap `kelly_regime_v4`'s own `prepare()` latch loop and change only
 WHETHER / HOW MUCH the latched position moves, conditioned on the strategy's
@@ -9,7 +9,7 @@ The trailing-turnover EWM must be computed ONLINE inside the loop, not
 precomputed: the throttle changes which bars fire a rebalance, so the EWM is
 a function of the throttle's own decisions. The recursion below reproduces
 `pandas.Series.ewm(span=..., adjust=True).mean()` exactly (verified in
-`_selftest`), so the census in `r132_stepA_turnover_census.py` and the live
+`_selftest`), so the census in `r133_stepA_turnover_census.py` and the live
 throttle read the same scale.
 
 Causality: every quantity at bar `i` is a function of events at bars `<= i`
@@ -163,7 +163,7 @@ class ConservativeTurnoverBand(_ThrottledV4):
     and so does any move larger than `override_mult * upper`.
     """
 
-    name = "r132_conservative_turnover_band"
+    name = "r133_conservative_turnover_band"
 
     def __init__(self, *, override_mult: float = OVERRIDE_MULT, **kwargs) -> None:
         super().__init__(**kwargs)
@@ -203,7 +203,7 @@ class ConservativeTurnoverBand(_ThrottledV4):
 class NovelTurnoverThrottle(_ThrottledV4):
     """v4 whose rebalance size is shrunk by a self-regulating shadow price on turnover."""
 
-    name = "r132_novel_turnover_throttle"
+    name = "r133_novel_turnover_throttle"
 
     def __init__(self, *, eta: float = ETA, lam_max: float = LAMBDA_MAX,
                  lam_const: float | None = None, **kwargs) -> None:

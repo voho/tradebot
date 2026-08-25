@@ -1,4 +1,4 @@
-"""R-132 Step A — the census the pre-registration's A2 gate needs, run FIRST.
+"""R-133 Step A — the census the pre-registration's A2 gate needs, run FIRST.
 
 Before either branch is written, measure the object the whole round throttles:
 `kelly_regime_v4`'s own realized rebalance-event rate, and the causal trailing

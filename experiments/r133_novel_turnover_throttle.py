@@ -1,4 +1,4 @@
-"""R-132 NOVEL branch — online dual-ascent shadow price on turnover.
+"""R-133 NOVEL branch — online dual-ascent shadow price on turnover.
 
 Mechanism, as frozen in `r131_shared.py` before any code was written: maintain
 a causal shadow price `lambda_t` on turnover, updated every bar by projected
@@ -14,7 +14,7 @@ Optimization" — turnover-penalized trading as resource-constrained control.
 This branch is the causal, online, dual-variable analogue rather than a
 closed-form solve.
 
-Writes `experiments/reports/r132_novel_report.md`.
+Writes `experiments/reports/r133_novel_report.md`.
 """
 
 from __future__ import annotations
@@ -24,8 +24,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-import r132_eval as E
-from r132_mechanisms import NovelTurnoverThrottle
+import r133_eval as E
+from r133_mechanisms import NovelTurnoverThrottle
 from r131_shared import (
     ETA,
     INNER_VAL_END,
@@ -37,7 +37,7 @@ from r131_shared import (
     a2_non_inertness,
 )
 
-OUT = Path(__file__).resolve().parent / "reports" / "r132_novel_report.md"
+OUT = Path(__file__).resolve().parent / "reports" / "r133_novel_report.md"
 
 MULTS = [2.0, 2.5, 3.0, 3.5, 4.0]
 ETAS = [0.25, 0.5, 1.0]
@@ -89,7 +89,7 @@ def main() -> None:
           .to_string(index=False))
         w("```")
 
-    w("# R-132 novel — online dual-ascent turnover throttle on `kelly_regime_v4`")
+    w("# R-133 novel — online dual-ascent turnover throttle on `kelly_regime_v4`")
     w()
     w(f"Frozen: `TURNOVER_UPPER = {TURNOVER_UPPER:.4f}` trades/day (30-day causal "
       f"EWM), `ETA = {ETA}`, `LAMBDA_MAX = {LAMBDA_MAX}`. Inner-validation = "
