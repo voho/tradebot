@@ -315,6 +315,162 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-132 · 08-25 · NEGATIVE (both branches) — `hedge_experts`'s own EXPERT COMPOSITION axis, never varied before: one MVRV vote added (conservative) and a momentum-horizon-collapse-plus-two-new-experts restructure (novel); the novel branch's apparent partial B1 pass is reclassified as a turnover-reduction artifact by independent skeptic audit, the same failure mode R-130 already closed on this object
+
+**Direction.** R-128, R-129 and R-130 all varied `hedge_experts`'s
+re-target/cost rule (WHERE and HOW a no-trade band or weight-update
+penalty applies) around a completely fixed ten-expert panel. This round
+holds the re-target rule (`hysteresis=0.05`) fixed and is the first to
+vary the panel itself — the EXPERT COMPOSITION axis both R-130's and
+R-131's own closing lines named as untouched. Literature: Freund &
+Schapire (1997, JCSS 55(1)) — `hedge_experts`'s own citation, a regret
+bound stated over the whole expert set and largely insensitive to any one
+other expert's quality; Kalnishkan & Vyugin (2008, J. Comput. Syst. Sci.
+74(8), "The Weak Aggregating Algorithm and weak mixability") — a
+mixture-of-experts guarantee that holds regardless of any one expert's
+individual quality, the theoretical basis for asking whether an
+already-failed-standalone signal is nonetheless safe (or useful) to add
+as one more vote; Grinold (1989, JPM 15(3), "The Fundamental Law of
+Active Management," `IR=IC*sqrt(BR)`) — already used by this project's
+own R-63 to price the multi-asset panel's diversification, applied here
+by the novel branch to the expert panel itself. **Attacks INFO**, but
+structurally differently than the 19+ prior INFO-axis attempts against
+`kelly_regime_v4`: those all evaluated an external signal as a standalone
+directional bet or a veto/confirming-vote GATE; this is the first to test
+the same already-tried information sources as ADDITIONAL VOTING MEMBERS
+inside a regret-minimizing (Hedge) combinator, where the combinator's own
+online down-weighting — not a hand-built threshold — decides how much to
+trust a weak signal. **Not a duplicate of:** R-74 (MVRV as a standalone
+confirming-vote gate on `kelly_regime_v4`, NEGATIVE — here MVRV is one
+Hedge-weighted vote among eleven, never gating anything, on a different
+object); R-54/R-55/R-58 (stablecoin supply as a standalone hard-veto /
+confirming-vote / persistence-filtered gate on `kelly_regime_v4`, all
+NEGATIVE — same distinction); R-128/R-129/R-130 (hold the panel fixed,
+vary the re-target/cost rule — this round is the mirror image); R-113
+(ERR-axis novelty brakes on the six-asset panel — different object,
+different axis).
+
+**What was done.** Two agents worked disjoint files against a common
+frozen pre-registration (`experiments/r132_shared.py`: splits
+`INNER_TRAIN_START=2017-01-01`/`INNER_VAL_END=2022-12-31`,
+`OOS_START=2023-01-01` never read, baseline = unmodified `hedge_experts`,
+gates A2/B1/B3/B4/B5 and the decision rule frozen before either branch
+ran) — CONSERVATIVE (`experiments/r132_conservative_mvrv_expert.py`:
+`ConservativeMVRVExpert(HedgeExperts)`, overrides only `_experts()` to
+append one 11th column, an MVRV log-ratio z-score against a 1-year
+trailing window (`W=365`, chosen a priori per Mahmudov & Puell 2018's
+annual-scale valuation cycles) mapped through `-tanh(z/2.0)`, causally
+aligned via `tradebot.data.align_mvrv_causal`) and NOVEL
+(`experiments/r132_novel_diversified_panel.py`: `NovelDiversifiedPanel`,
+collapses the four momentum horizons `(12,72,288,2016)` to the two most
+mutually-independent, `(12,2016)`, and fills the two freed slots with an
+MVRV vote and a stablecoin-supply-growth vote reusing R-54's own
+`growth_14d`/365-day-z-score construction verbatim; an
+`HorizonsOnlyPanel` ablation — the horizon collapse alone, no new
+experts — was also built and run to separate the two structural
+changes' contributions). Falsification test (pre-registered): B4, does
+`d_sharpe`'s sign vs. `hedge_experts` (inner-validation) replicate on
+ETH spot (`load_coinbase_eth_spot`)? Decision rule (pre-registered,
+matching R-128–R-130's own convention): PROMOTE-candidate only if the
+causal-truncation probe AND A2 (non-inertness) AND B1 (both markets,
+full-inner AND inner-validation) AND B3 (plateau) AND B4 (ETH sign) AND
+B5 (0.40% fee, no flip) all pass. An independent skeptic
+(`experiments/r132_skeptic_novel_check.py`) then audited the novel
+branch's apparent partial pass. **Configs evaluated: 95** across the
+round (conservative 33: 2 causal-probe + 1 A2 + 8 B1 + 16 B3 + 2 B4 + 4
+B5; novel 30: 4 causal-probe + 12 B1 [baseline/full-novel/ablation × 4
+cells] + 8 B3 + 2 B4 + 4 B5; skeptic 32 new: 2 baseline census + 26
+hysteresis-grid search [13 values × 2 markets] + 4 turnover-matched
+control B1 cells — plus 6 further reproductions of already-frozen
+cells [2 primary decisive, 4 ablation], not counted again as new trials
+since they confirm rather than search).
+
+**Result.** *Conservative:* causal probe PASS; A2 PASS (new expert's
+weight exceeds 2x-uniform share on 30.1% of inner-val bars, not inert);
+**B1 FAILS all 4/4 cells** (SPOT full-inner d_sharpe −0.043 [−0.107,
++0.020]; SPOT inner-val −0.116 [−0.298, +0.088]; FUTURES full-inner
+−0.045 [−0.153, +0.067]; FUTURES inner-val −0.109 [−0.328, +0.143] — no
+cell reaches significance in either direction); B3 a genuine plateau of
+no benefit (7/8 cells non-positive); B4 ETH spot −0.008 [−0.141, +0.152],
+the *same* null/negative sign as BTC (no BTC-pass/ETH-invert signature —
+this construction is consistently unhelpful on both assets); B5 no sign
+flip (already negative). Reading A2 (real, non-trivial weight) against
+uniform B1 failure points to named failure mode #2 (FLOOR DRAG) rather
+than #1 (inertness) or #3 (BTC/ETH inversion): the vote is not wrong
+enough for the weight update to purge it to the floor, but it is not
+right enough to help either — it just sits there as a small persistent
+drag on both assets. *Novel:* causal probe PASS (confirmed independently
+by the skeptic with a full-vs-2022-truncated MVRV re-derivation, max abs
+diff 0.0 — the expanding-window z-score genuinely never leaks a future
+row); A2 PASS on both new experts individually (MVRV 29.9%, stablecoin
+41.7% of bars above 2x-uniform); the correlation/breadth diagnostic is
+real (`BR_eff` 7.33 → 15.77, mean |off-diag corr| 0.275 → 0.160 — breadth
+genuinely rose); B1 on the full construction was directionally positive
+on 4/4 cells but only SPOT full-inner reached significance (+0.138
+[+0.026, +0.264]), and that one significant cell sits *below* this
+project's own ±0.2 Sharpe noise floor while the one cell that clears the
+floor (SPOT inner-val, +0.353) is not significant; B3 an 8/8-cell sign
+plateau; B4 ETH spot +0.195 [−0.070, +0.474], sign replicates (not
+significant); B5 SPOT_HIGH_FEE significant positive (+1.135) but
+FUTURES_HIGH_FEE's point estimate flips sign (−0.161, CI still contains
+zero) — a disclosed, non-significant flip. The branch's own report
+flagged the risk that decided the round: `hedge_experts` LOSES money over
+2021–2022 inner-validation (Sharpe −0.71 spot/−0.76 futures), the
+candidate trades less in that window, and R-130 already found on this
+same object that any turnover reduction inside that specific losing
+regime can look like a spurious improvement. **The skeptic audit
+confirmed exactly that.** A turnover-matched control — unmodified
+`HedgeExperts`, zero horizon collapse, zero new experts, `hysteresis`
+raised until its trade count approximated the novel candidate's (402 vs.
+291 spot; 609 vs. 621 futures, a conservative match biased against
+finding an artifact) — MATCHED OR EXCEEDED the novel candidate on the
+identical B1 cells: SPOT full-inner +0.153 [+0.067, +0.241] (significant,
+essentially equal to the candidate's own +0.138) and FUTURES full-inner
++0.184 [+0.028, +0.351] (significant, where the candidate's own futures
+cell was NOT). The one cell the novel branch's entire B1 case rests on is
+reproduced by a zero-information control that only trades less. The
+ablation-of-new-experts split (most of the gain came from the two new
+experts, not the horizon collapse, on 3 of 4 cells) reproduced
+independently to the same figures, and the branch's own decisive numbers
+(SPOT full-inner +0.1375, ETH B4 +0.1946) reproduced bit-for-bit from a
+clean shell — the mechanism attribution *within* the candidate is
+accurate, it just doesn't rescue the result once a zero-information,
+turnover-only control matches it.
+
+**Verdict.** **NEGATIVE, both branches.** Per the frozen decision rule,
+conservative fails outright on B1 (4/4); novel's apparent partial pass
+does not survive independent skeptic review and is reclassified as a
+**turnover-reduction-in-a-losing-regime artifact** (Gârleanu-Pedersen-
+style — any turnover cut inside `hedge_experts`'s own bad 2021–2022
+window mechanically improves measured Sharpe, independent of whether the
+reduction comes from genuinely informative new experts or from an
+arbitrarily raised hysteresis on the unchanged original panel) — the
+identical failure mode R-130's own skeptic audit already closed on this
+object. One-line lesson: **a Hedge-style combinator's regret bound
+protects against an adversarial worst case, not against a benchmark that
+is itself losing money in the evaluation window; in that regime, breadth
+can rise and non-inertness can hold while the entire measured gain is
+still just "traded less."** Neither branch's decision rule ever cleared
+the standing holdout-access gate (conservative failed B1 outright; novel
+failed B1 once skeptic-audited), so no holdout consultation was
+authorized or taken. **Holdout counter: +0**, running program-level total
+stays **~698** (R-133's figure, unchanged) — bullet added below in
+[Holdout consultations to date](#holdout-consultations-to-date). Decision
+rule did not move (frozen before either branch ran, never revisited after
+seeing results). **Next step:** the EXPERT COMPOSITION axis is not fully
+closed by one round — this tested one additive and one structural
+construction, both landing on the same turnover-artifact failure mode;
+a future attempt on this object should either (a) evaluate on a
+window/benchmark where `hedge_experts`'s own baseline is not itself
+losing money, so a turnover reduction cannot pass by construction, or (b)
+adopt R-130's skeptic method (a zero-information turnover-matched
+control) as a MANDATORY fifth gate for any future `hedge_experts` round
+claiming a partial pass, rather than a discretionary audit — this is now
+the second round in a row on this object where it was the only check
+that caught the artifact. Absent that, the backlog remains empty of
+anything but B-06, and the single-asset/multi-asset/`champions_council`/
+`hedge_experts` re-target-axis lists are all closed as R-131 left them.
+
 ### R-133 · 08-25 · NEGATIVE (both branches) — an accidental but fully independent second execution of R-131's frozen pre-registration: same file, same decision rule, different implementation, same verdict, and the conservative branch's decisive cell agrees to three decimals (−0.028 vs −0.0284); four findings R-131 did not measure, chief among them that neither throttle actually reduces turnover — deferral postpones an order and shrinking splits it, so the tightest novel corridor trades 12.5% MORE than the strategy it throttles
 
 **Direction.** This round did not choose a direction: it executed the same
@@ -13709,6 +13865,43 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-25 after R-132.** `hedge_experts`'s own EXPERT COMPOSITION —
+named as untouched by R-130, R-131 and (independently) R-133's own
+re-ranking — has now been tried: one additive construction (append an MVRV
+valuation vote) and one structural construction (collapse four correlated
+momentum horizons to two, add MVRV + stablecoin-supply-growth votes).
+**Both NEGATIVE.** The conservative branch failed cleanly (B1 0/4). The
+novel branch is this round's real finding: it produced an apparent partial
+B1 pass — genuinely raised the panel's own effective breadth (Grinold
+`BR_eff` 7.33→15.77), gave both new experts real non-trivial Hedge weight
+(A2 pass on both), and replicated its sign on ETH (B4) — that an
+independent skeptic then reproduced bit-for-bit and reclassified as a
+**turnover-reduction-in-a-losing-regime artifact**: a zero-information,
+turnover-matched control (the unmodified ten-expert panel with `hysteresis`
+raised, no new experts, no horizon change) matched or exceeded the novel
+candidate's only significant cells. **This is the second round in a row on
+`hedge_experts` (after R-130) where exactly this control caught a partial
+pass a full falsification battery (A2/B1/B3/B4/B5) did not** — worth
+promoting from a discretionary skeptic check to a mandatory sixth gate for
+any future round on this object claiming a partial pass, named explicitly
+as this round's own next step. **The EXPERT COMPOSITION axis is not
+exhaustively closed by two constructions**, but both landed on the same
+failure mode, and a third attempt on this object should change the
+*evaluation window* (one where `hedge_experts`'s own baseline is not itself
+losing money) before trying a third panel variant, or it will likely
+reproduce the same artifact a third time. **No holdout was consulted**
+(+0, ~698). **The backlog is unchanged otherwise from R-133's own
+re-ranking below**: B-43 (`broker.REBALANCE_DEADBAND`, measured on two
+objects now) remains the one `NEXT`, open, unblocked item — genuinely
+finishable in one session, no new data or fitted parameter required. A
+future session otherwise has: R-127's own named follow-on (idiosyncratic-
+event excision generalization); the single-asset axis's own fully closed
+lists on `kelly_regime_v4` (19+ INFO, 28+ SIZE, ERR across 5 notions of
+uncertainty, 11 regime-timing mechanisms, 4 N≈3 procedures, 5 COST-model
+families); `champions_council`'s own allocation mechanism (closed,
+R-126); the multi-asset panel's own closed list (eleven rounds); or B-28's
+breadth clause (blocked on data this project cannot fetch or simulate).
+
 **Re-ranked 08-25 after R-133.** R-133 is not a new direction: it is an accidental but fully independent second execution of the same frozen pre-registration R-131 ran, found undispatched in `experiments/r131_shared.py` by two sessions on the same day, neither aware of the other, and discovered only at push time. Both reached **NEGATIVE on both branches**, by every gate, with the conservative branch's decisive cell agreeing to three decimals (−0.0284 / −0.028) across two substantially different implementations — the strongest reproduction evidence this project has produced, and it exists only because the pre-registration was frozen in a file rather than in a session. **What R-133 adds beyond confirming R-131** is the mechanical reason the family fails, which is stronger than "the corridor barely binds": **throttling an order the strategy has already decided to make does not reduce turnover at all.** Deferral *postpones* — ~5000 interventions buy a 17% fill-count cut and the moves reappear a few bars later — and shrinking *splits*, so at the tightest corridor the throttle trades **12.5% more** than the un-throttled incumbent, never fully exits (30 round-trip episodes against v4's 52), raises time in market from 55.6% to 75.8% and adds up to 6.1pp of drawdown. A COST-axis attack on this object has to change the DECISION, not the order that follows it. **Three secondary findings, all methodological and all now written into `ROUTINE.md`:** (a) `Metrics.num_trades` counts round-trip *episodes*, not orders — dividing by it made the ablation controls read as "1 trade, the strategy freezes" when they were filling 240–352 times and merely never exiting, a ~300x error on exactly the quantity a COST round studies; (b) R-33's risk-matching rule applies to **ablation controls**, not only benchmarks, and there it fails silently toward a *false negative* — every constant-`λ` control beat the live branch on Sharpe while sitting 99.5–100% in market against v4's 55.6%; (c) a session should check for an **undispatched frozen pre-registration before step 0's memory load** and execute it ahead of the backlog, which is exactly what both of today's sessions needed and neither had. **No holdout was consulted** (+0, ~698). **The backlog is no longer empty of anything but B-06:** this round files **B-43** (`broker.REBALANCE_DEADBAND`) as `NEXT`, open and unblocked — the floor absorbs 4.5% of `kelly_regime_v4`'s own intended re-targets against 61–83% of its throttled branch's, a confound proportional to the mechanism's own parameter and now measured on a second object after R-130's `hedge_experts` finding, and it is the kind of item the routine says is actually finishable in one session (infrastructure, no new data, no fitted parameter). A future session otherwise has: `hedge_experts`'s own **expert composition**, still never varied by any two-branch round (R-130's named next step, untouched by R-131 or R-133); R-127's own named follow-on (does idiosyncratic-event excision generalize past the one construction it tested, now to a further BTC-pass/ETH-invert case in each of R-131 and R-133's conservative branches); the single-asset axis's own fully closed lists on `kelly_regime_v4` (19+ INFO, 28+ SIZE, ERR across 5 notions of uncertainty, 11 regime-timing mechanisms, 4 N≈3 procedures, and now 5 COST-model families); `champions_council`'s own allocation mechanism (closed, R-126); the multi-asset panel's own closed list (eleven rounds); or B-28's breadth clause (blocked on data this project cannot fetch or simulate).
 
 **Re-ranked 08-25 after R-131.** Off-backlog (still only B-06, unchanged
@@ -16562,6 +16755,20 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-25 · ~698** — R-132: **+0** on top of R-131's ~698 (unchanged), both
+  branches plus the skeptic audit of the novel branch. Conservative failed
+  B1 outright (4/4 cells non-significant/negative); novel's apparent
+  partial B1 pass (1/4 cells significant) did not clear the standing
+  holdout-access gate on its own and was then reclassified as a
+  turnover-reduction-in-a-losing-regime artifact by an independent
+  zero-information turnover-matched control, so no consultation was ever
+  authorized. Every loader routes through `r132_shared._assert_no_holdout`;
+  max timestamp read by either branch or the skeptic's own re-derivations:
+  `2022-12-31 23:55:00+00:00`. `pytest tests/test_causality_strict.py`: 51
+  passed. The novel branch's MVRV expanding-window z-score was additionally
+  checked for a full-series-fit lookahead the standard truncation probe can
+  miss (full series vs. series truncated at 2022-12-31: max abs diff 0.0)
+  and found genuinely causal.
 - **08-25 · ~698** — R-133: **+0** on top of R-131's ~698 (unchanged), both
   branches and the skeptic audit. R-133 is an independent second execution of
   R-131's own frozen pre-registration (the collision was found at push time),
