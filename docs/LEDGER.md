@@ -315,7 +315,150 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
-IN PROGRESS: R-144 — N~3 permutation test (Nguyen & Wolf 2026), conservative branch re-running R-138's machinery on R-143's 9-episode BTC calendar, novel branch building ETH's own native protocol-event calendar (Beacon Chain genesis, EIP-1559, The Merge) instead of borrowing BTC's dates. Dispatched off-backlog per ROUTINE.md step 0 (backlog empty but B-06); full write-up to follow.
+### R-144 · 08-25 · NEGATIVE (novel, decisive) / METHOD, fragile (conservative) — does the N~3 edge-concentration claim survive more BTC episodes, and does it replicate on ETH's own native calendar instead of BTC's borrowed one?
+
+**Direction.** Backlog held only B-06 (ROUTINE.md step 0: invent off-backlog
+only when empty/blocked/stale — true since R-110). A literature pass this
+round (WebSearch across 2023–2026 quantitative-crypto/microstructure work,
+cross-checked against the ~98-row "C. Ruled out" table and R-134→R-143's own
+re-rankings) found every recent refinement to this project's closed axes
+(conformal-interval Kelly scaling, a leave-two-out synthetic-control placebo
+fix) lands in a slot R-62/R-87 already showed carries none of
+`kelly_regime_v4`'s signature, or fixes a failure mode R-140 did not actually
+diagnose. The two candidates that survived Step 1 were R-143's own two named
+unranked leads: (1) re-run R-138's Nguyen & Wolf (2026) permutation test on
+R-143's newly-extended 9-episode BTC calendar instead of a new statistic on
+the same six; (2) — extended beyond what R-143 named — give ETH its own
+native event calendar for the first time in this project's history, rather
+than continuing to test ETH exclusively at BTC's borrowed dates. **Attacks
+N~3** (this project's only route past ~3 regime events is more data, more
+breadth, or forward evidence — R-143 added BTC episodes, this round adds
+BTC episodes again on a bug-fixed series, and independently gives ETH its
+first non-borrowed calendar). **Not a duplicate of** R-138 (original 6-event
+BTC permutation test, 2017–2022 futures — this round changes both the event
+count and, forced by pre-2017 futures unavailability, the era+market), R-140
+(Synthetic Control Method, a different statistic on the same-style calendar),
+R-143 (extended the BTC data and re-ran the matched-exposure DRAWDOWN
+property and the detection-LAG gate on it — never ran a significance test on
+the extended calendar; this round is R-143's own named next-step, executed),
+R-127/R-137 (informal, bespoke ETH-idiosyncratic-event *excision* to clean a
+BTC-anchored comparison — never built an ETH-native calendar as the *primary*
+test object, and neither used the peer-reviewed Nguyen-Wolf construction).
+Citations: Nguyen & Wolf (2026), *Empirical Economics* 70 (the reused
+machinery); Gandal, Hamrick, Moore & Oberman (2018), *J. Monetary Economics*
+95, 86-96 (2013 Mt.-Gox-era manipulation risk, per R-143); contemporaneous
+reporting (CoinDesk, Ethereum Foundation) for the three ETH-native dates,
+verified by this round's own WebSearch: Beacon Chain genesis (2020-12-01),
+EIP-1559/"London" hard fork (2021-08-05, block 12,965,000), The Merge
+(2022-09-15) — none a BTC-correlated crash or hack, deliberately, to test
+the claim on events exogenous to price but genuinely ETH-specific.
+
+**What was done.** Frozen shared pre-registration `experiments/r144_shared.py`
+(read in full before either branch ran), two disjoint branches:
+`r144_conservative_ninepisode_permutation.py` (BTC, forced to **spot**
+since no BTC perpetual futures existed before 2017 — R-143's own guardrail
+— 2014→2022, using R-143's already-fetched pre-2017 file) and
+`r144_novel_eth_native_calendar.py` (ETH, 5x futures per R-138's own
+convention, 2019-03→2022). Both reuse R-138's `permutation_test`/
+`caar_statistic`/`empirical_type1_rate` unedited (`N_PERM=20000`,
+`ALPHA=0.05`, `CALIBRATION_BAND=(0.02,0.09)`). Decision rule frozen before
+either branch ran: **C1** (Type-I calibration in-band) **AND C2** (two-sided
+p<0.05 and the observed statistic beaten by more than 2 of 20,000 permutation
+draws). The conservative branch's ceiling was stated *before any number was
+seen*: it structurally cannot resolve ETH replication (none of the three new
+pre-2017 dates fall inside ETH's 2019-03-14+ history) — that is the novel
+branch's job. **Configs evaluated:** 2 backtest configurations (BTC extended
+spot, ETH futures) plus 5 (event-set, statistic) evaluations (BTC: 9-episode
+CAAR/permutation, 6-episode-on-the-new-series CAAR/permutation, C1 at n=9,
+C1 at n=6; ETH: 3-episode CAAR/permutation, C1 at n=3) — a fixed hypothesis
+battery, no parameter sweep. No bar at or after `OOS_START=2023-01-01` was
+read by either branch; this round tests an already-fixed historical claim on
+an already-shipped, already-frozen strategy, not a new strategy, so (mirroring
+R-138/R-140's own convention) there is no separate Step-4 holdout stage.
+
+**Two bugs found and fixed mid-round, before any promotion decision, per
+ROUTINE.md's "fixing a bug is fine" allowance — disclosed in full:**
+(1) The operator's own `load_btc_extended_train()` originally pre-sliced the
+BTC frame to start exactly at `BTC_EXTENDED_START` (2014-01-01), leaving
+`run_period` zero pre-`start` bars to warm `kelly_regime_v4`'s 80-day anchors
+on. Verified directly: the strategy's equity was pinned exactly flat through
+the *entire* new Mt. Gox episode window (2014-02-02→02-27) — an artifact,
+not real behavior, contaminating exactly the episode this round adds. Fixed
+by returning the full unsliced 2013–2022 frame (R-143's own pattern);
+re-running the unmodified conservative script changed the numbers only
+slightly (9-episode p: 0.0138→0.0162; 6-episode p: 0.0439→0.0401) and did not
+flip either verdict. (2) This round's independent skeptic (dispatched after
+the conservative branch reported a surviving C1+C2 pass, per ROUTINE.md's
+parallelism rules) found `r138_shared.car_for_event` passed an
+already-offset window bound into `_car_batch`, which applies its own
+offset again — silently shifting the per-event diagnostic window to
+`[event-10, event+15]` instead of the documented `[event-5, event+20]`.
+`caar_statistic`/`permutation_test` (used by every p-value in this project's
+history, including R-138's own) build raw timestamps and were never
+affected — this only corrupted the novel branch's per-event reporting table,
+never any promotion-relevant statistic. Fixed; re-running the novel branch
+left its verdict unchanged (still p=0.96) and corrected the per-event story
+from "driven almost entirely by one date" to a more accurate "mixed signs
+across all three, roughly cancelling."
+
+**Result.**
+
+| branch | event set | n | obs CAAR | p-value | n_exceed/n_perm | C1 rate (band) | C1 | C2 | verdict |
+|---|---|---|---|---|---|---|---|---|---|
+| conservative (BTC spot) | 9-episode PRIMARY | 9 | +0.0666 | 0.0162 | 324/20000 | 0.070 (0.02–0.09) | PASS | PASS | PROMOTABLE, BTC-only |
+| conservative (BTC spot) | 6-episode diagnostic, new series | 6 | +0.0675 | 0.0401 | 802/20000 | 0.045 (0.02–0.09) | PASS | PASS | PROMOTABLE, BTC-only |
+| novel (ETH futures) | 3-episode ETH-native | 3 | +0.0019 | 0.9618 | 19235/20000 | 0.060 (0.02–0.09) | PASS | FAIL | NEGATIVE |
+
+**Skeptic re-derivation (dispatched after the conservative branch reported
+≥1 evaluated configuration, per the parallelism rules):** reproduced the
+conservative branch's numbers bit-for-bit via an independently-written
+script, confirmed the warmup fix was real and correctly applied, confirmed
+no lookahead into `kelly_regime_v4` itself (the vol-matched hold's `c` is
+computed from the candidate's own equity and fed only to the *control* arm,
+exactly R-138's own unedited convention — a full-series scalar shifts the
+observed statistic and every null draw by the same amount, so it cannot
+manufacture significance), and confirmed the null-construction excludes real
+event windows and draws independently of the observed statistic. It also
+surfaced the finding that qualifies the headline most: **the 9-episode
+result is carried almost entirely by one already-known episode.**
+Leave-one-out: dropping 2018-01-17 alone flips the 9-episode p-value to
+**0.109** (fails C2); every other single-episode drop leaves it significant
+(0.004–0.036). The three *new* pre-2017 episodes, tested alone, are **not**
+significant on their own merit (p=0.117), and the 9-episode CAAR (+0.0666)
+is *lower* than the 6-episode CAAR (+0.0675) — the 0.040→0.016 tightening is
+null-variance reduction from a larger n, not new corroborating evidence from
+the added episodes. C1 at n=9 (0.070) sits ~40% over the nominal 0.05,
+thinning the effective margin below what 0.0162 suggests (a naive rescale
+puts it near 0.023 — still <0.05, but closer to the line). R-143's own
+disclosed Bitstamp-hack-window data caveat (frozen, zero-volume bars
+2015-01-06–08) was not re-disclosed by this round's write-up; its direction
+is dilutive, not inflationary, so it does not change the verdict.
+
+**Verdict.** **NEGATIVE, decisively, on the round's actual research
+question** — giving ETH its own native, non-borrowed calendar for the first
+time in this project's history does not rescue the edge-concentration claim
+(p=0.96); the "wrong calendar" hypothesis for R-138's ETH failure is closed.
+**METHOD, and fragile, on the BTC-only side** — significance persists across
+an era+market extension and a real warmup bug fix, but the skeptic's audit
+shows it rests on one already-known episode (2018-01-17) rather than
+distributed support across the "handful" L-01's diagnosis describes, and the
+three added episodes contribute resolution, not evidence. Neither branch
+produces a strategy code change (mirrors R-138/R-140's own framing); no
+reusable infrastructure is proposed for `tradebot/inference.py` given the
+fragility just found. **One-line lesson:** this project's N~3
+edge-concentration claim has now failed to generalize past BTC under two
+structurally different escape-hatch tests (borrowed dates, R-138; native
+dates, R-144) and, even confined to BTC, does not accumulate independent
+support as more episodes are added — it leans on the same one event R-138
+already had. **Holdout counter: +0** (no bar at or after `OOS_START` was
+read by either branch; this round evaluates an already-fixed historical
+claim on the training period only). **Next step:** this project's N~3
+test battery (permutation R-138/R-144, Synthetic Control R-140, jackknife
+R-101, bootstrap/PSR R-104) is now close to exhausted against the episode
+data this project can construct without new forward time — a future session
+should not treat "another borrowed-or-native calendar variant, or another
+significance procedure, on the same claim" as a promising use of a session
+absent genuinely new episode data, which requires B-06's own forward clock.
 
 ### R-143 · 08-25 · SETTLED (conservative) / METHOD (novel) — the backward holdout: BTC 2014-2016, a genuinely new out-of-sample era, plus a 3-episode extension of the six-episode detection-lag gate
 
@@ -15340,6 +15483,37 @@ trip.
 ---
 
 ## D. Backlog (ranked)
+
+**Re-ranked 08-25 after R-144.** The N~3 edge-concentration claim was tested
+under two structurally different extensions this round, both **against**
+it: R-143's newly-extended 9-episode BTC calendar, re-run through R-138's
+Nguyen-Wolf permutation machinery (after a real warmup bug — found and
+fixed this round — that had contaminated exactly the new Mt. Gox episode),
+still clears the pre-registered BTC-only bar (p=0.016), but an independent
+skeptic's leave-one-out audit found that significance rests on a single
+already-known episode (2018-01-17; dropping it alone gives p=0.109) rather
+than on the three newly-added episodes, which are not significant on their
+own (p=0.117) and do not raise the pooled CAAR. And giving ETH its own
+native, non-borrowed event calendar for the first time in this project's
+history (Beacon Chain genesis, EIP-1559, The Merge) — rather than continuing
+to test ETH only at BTC's borrowed dates — closes the "wrong calendar"
+explanation for R-138's ETH non-replication decisively (p=0.96). **Verdict:
+NEGATIVE (novel, decisive) / METHOD, fragile (conservative).** Two bugs were
+found and fixed mid-round (a zero-warmup artifact in the BTC loader; a
+doubled window-offset in a per-event diagnostic never used by any
+promotion-relevant statistic) — disclosed in full in R-144's own section,
+neither changed either branch's verdict. **This project's N~3 test battery
+(permutation R-138/R-144, Synthetic Control R-140, jackknife R-101,
+bootstrap/PSR R-104) is now close to exhausted against the episode data
+this project can construct without new forward time.** No new,
+non-duplicate, unblocked thread is named by this round — a future session
+should not treat another calendar variant or significance procedure on the
+same claim as promising absent genuinely new episode data (which requires
+B-06's own forward clock). **B-06 remains the only ranked, unblocked
+backlog item**, joined by R-143's own two low-confidence unranked leads
+(now narrower: lead (1), "re-run a statistic on more N," has been tried and
+found to add resolution, not evidence; lead (2), kind-stratification, is
+still blocked on data scarcity).
 
 **Re-ranked 08-25 after R-143.** The first round to vary the dataset's
 *era* rather than its asset or statistic: BTC history now extends back to
