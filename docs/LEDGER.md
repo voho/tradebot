@@ -315,6 +315,262 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-143 · 08-25 · SETTLED (conservative) / METHOD (novel) — the backward holdout: BTC 2014-2016, a genuinely new out-of-sample era, plus a 3-episode extension of the six-episode detection-lag gate
+
+**Direction.** Off-backlog (the ranked list has held only B-06 since
+R-110, and R-138 through R-142's own re-rankings all concluded the
+backlog was empty of anything else). A dedicated Step-0 diligence dispatch
+this round (reading the full standing diagnosis, section C's ruled-out
+table, all 142 section-B titles, and a live literature search) surfaced
+the one axis no prior round had varied: **the era**. Every one of this
+project's 142 rounds has held the dataset's start fixed at 2017-01-01 — a
+default `scripts/build_bitstamp_dataset.py` documents as chosen "for git
+file-size reasons," not a research one. Bitstamp's own public
+`/api/v2/ohlc/` endpoint serves the identical venue and schema back to
+2013, verified reachable this session even though the GitHub bulk-history
+mirror the existing script clones is proxy-blocked here. **Constraint
+attacked: N≈3**, for the first time directly — four prior N≈3 rounds
+(R-101, R-104, R-138, R-140) are all *procedures* re-applied to the same
+fixed ~3-6 dated episodes; this round adds events instead of
+re-analyzing the ones already on hand. **Not a duplicate of:** R-57
+(asset-space external validity, matched-exposure drawdown property
+inverts 6/6 on other instruments — this is time-space, never tested);
+R-17/R-47 (ETH replication, same era); R-127/R-137 (ETH-idiosyncrasy
+excision, sidestepped here by staying BTC-only); R-45/R-118/R-119
+(parameter reselection on the same data — this round refits nothing);
+R-138/R-140 (better statistics on the same six events — this round is a
+disjoint calendar, not a new statistic on the old one). Citations:
+Linnainmaa & Roberts (2018, *RFS* 31(7)) — pre-sample replication tests,
+most anomalies vanish; Baltussen, Swinkels & van Vliet (2021, *JFE*
+142(3)) — the same move over 217 years, most premiums survive, cited
+alongside Linnainmaa & Roberts deliberately so the test is two-sided, not
+built to confirm; Arnott, Harvey & Markowitz (2019, *JFDS* 1(1)) — true
+out-of-sample means data never touched during development; Gandal,
+Hamrick, Moore & Oberman (2018, *JME* 95) — Mt. Gox trading-bot price
+manipulation through late 2013, the reason 2013 is disclosed-sensitivity
+only and 2012 is excluded outright (7.4% real-bar coverage, unusable). A
+second candidate, Deribit options implied-vol *skew* (structurally
+distinct from the DVOL level/VRP R-73/R-18/R-136 already closed), was
+checked and found **not fetchable**: the public API's trade endpoint
+carries `iv` for roughly the trailing day only, and the instruments
+endpoint lists only currently-live expiries — there is no historical
+option chain behind it. Recorded here so a future session does not
+re-spend a round rediscovering that.
+
+**What was done.** Shared, frozen pre-registration:
+`experiments/r143_shared.py` (written and pushed before either branch ran
+or had seen a single result number from the new data). New data:
+`scripts/fetch_bitstamp_early.py` fetches Bitstamp's public OHLC endpoint
+directly, `data/btcusd_spot_5m_pre2017.csv.gz` (2013-01-01 → 2017-01-01,
+420,768 bars), `load_extended_btc_spot()` concatenates it gap-free with
+the canonical file at the exact join timestamp
+(1483228800000ms = 2017-01-01T00:00Z). Measured coverage (non-zero-volume
+bar rate): 2013 84.2% (thin, disclosed-sensitivity only, consistent with
+Gandal et al.'s manipulation-era warning), 2014 98.2%, 2015 96.3%, 2016
+96.9%. One real venue outage inside the primary window: Bitstamp's own
+2015-01-05→09 hack/trading-halt, 1,294 bars (107.8h) frozen at $276.80,
+verified as genuine venue data (no reindex/ffill in the fetch script), not
+a fill artifact.
+
+Frozen guardrails (full text in `r143_shared.py`'s docstring): primary
+window 2014-01-01→2016-12-31, spot only (no BTC perpetual existed before
+2017, so futures/funding cannot be charged on this era); zero refit —
+`kelly_regime_v4` runs via `get_strategy()` with its shipped, already-
+registered parameters, nothing swept or tuned against the new data;
+primary statistic is matched-exposure max drawdown (R-20/R-33's own
+lesson that this is the one property that has actually replicated, not
+Sharpe, which R-78's measured 3.0%/day noise makes unresolvable on a
+1,096-day window); exposure matched *inside* each of six pre-registered
+~180-day sub-windows via `ConstantExposureHold` on the mean-notional axis
+(R-33's preferred construction); time-in-market and realized vol reported
+for every arm (R-131's lesson); new episodes for the novel branch must be
+independently, publicly news-dated, never selected from a price extremum
+or detector output (the same discipline the existing six-episode calendar
+was built to).
+
+**Conservative branch** (`experiments/r143_conservative_backward_holdout.py`):
+the pre-registered decisive check — matched-exposure drawdown gap in each
+of the six sub-windows — plus the full 3-year window, the disclosed 2013
+sensitivity window, a `buy_and_hold` reference, and a 0.40% taker fee-tier
+re-run. **Configs evaluated: 1** (zero refit, zero sweep — the one frozen
+configuration run across 6 sub-windows + 2 full-window variants + 1 fee
+tier = 9 backtests of the same unmodified strategy, not 9 configurations).
+
+**Novel branch** (`experiments/r143_novel_extended_gate.py`): three new,
+externally news-dated episodes — Mt. Gox trading-halt announcement
+(2014-02-07, CoinDesk/Bitcoin Wiki; classified slow build-up, a 3-week
+staged deterioration opening a year-long bear), the Bitstamp hack
+(2015-01-05, CNBC/TechCrunch; sudden shock), the Bitfinex hack
+(2016-08-02, Wikipedia/CoinDesk; sudden shock) — added to
+`r100_shared.STRESS_EPISODES`, then the existing Step-A six-episode
+detection-lag gate machinery (R-82's `bocpd_daily_causal_signals`, R-139's
+`cusum_daily_causal_signals`, both reused verbatim, not reimplemented) run
+against the extended nine-episode calendar. **Configs evaluated: 0 new
+detector parameterizations** — both detectors run at their own
+already-registered, already-closed constants (BOCPD's single
+configuration; CUSUM's fixed constants plus a re-run, not a re-fit, of
+R-139's own already-pre-registered 36-cell grid) against episodes neither
+detector's parameters were ever chosen against.
+
+**Independent skeptic** (dispatched per this project's own
+"surviving-claim" rule) independently re-derived the conservative branch's
+sub-window table from `matched_drawdown_gap()` directly (max abs
+difference from the branch's own numbers: 0.000e+00), re-ran the novel
+branch's script end to end, ran an independent full-series-fit-lookahead
+sweep of every `.mean()/.std()/.quantile()`-style call in the touched
+files, re-verified v4's causality on the new pre-2017 bars specifically
+(truncation probes at six points including inside the frozen-price
+stretch — bit-identical for all rows ≤ i in every case), and audited the
+git history to confirm `r143_shared.py`'s thresholds provably predate any
+result (`git diff` between the freeze commit and the conservative
+branch's completion commit is empty).
+
+**Result — conservative.** Sub-window matched-exposure drawdown gap
+(v4 DD − matched-hold DD; negative = v4 draws down less):
+
+| sub-window | v4 DD | hold DD | gap | v4 final | hold final | v4 TiM | v4 vol / hold vol |
+|---|---|---|---|---|---|---|---|
+| 2014-01→06 | 18.6% | 16.8% | **+1.8pp** | $1,074 | $991 | 58.8% | 29.9% / 25.8% |
+| 2014-07→12 | 17.8% | 9.4% | **+8.4pp** | $892 | $927 | 35.6% | 18.9% / 11.2% |
+| 2015-01→06 | 14.7% | 16.9% | −2.2pp | $1,017 | $975 | 54.9% | 25.1% / 27.4% |
+| 2015-07→12 | 12.5% | 24.4% | −11.9pp | $1,612 | $1,344 | 82.6% | 43.2% / 47.6% |
+| 2016-01→06 | 14.7% | 17.4% | −2.6pp | $1,303 | $1,271 | 84.4% | 40.3% / 39.0% |
+| 2016-07→12 | 9.2% | 21.1% | −11.9pp | $1,460 | $1,317 | 83.5% | 37.0% / 37.2% |
+
+`gap ≥ 0` in **exactly 2 of 6** windows; frozen kill condition is `≥ 3 of
+6`. **2 < 3 — the property SURVIVES**, independently reproduced to
+0.000e+00. Full 3-year window: v4 $3,453/DD 25.6%/Sharpe 1.40 vs matched
+hold $1,354/DD 44.6%/Sharpe 0.46 (gap −19.0pp); unmatched `buy_and_hold`
+$1,306/DD 84.2% for the same window (v4 beats it on both return and
+drawdown). At the 0.40% taker tier the full-window gap holds (−15.0pp)
+and the sub-window count is unchanged (2 of 6) — **but thinly**: the two
+narrowest surviving margins (2015H1 −2.2pp, 2016H1 −2.6pp) shrink to
+−0.4pp and −0.9pp, close enough that a modestly higher real-world spot fee
+plausibly flips the count to 4-of-6 and kills the property. Disclosed 2013
+sensitivity **disagrees** (gap +1.0pp) but per guardrail 1 does not move
+the primary verdict; the skeptic and the branch agree this window is weak
+evidence in either direction — v4 starts cold (warmup has no 2012 data to
+draw on) and the mean-notional match is far off on the vol axis (37% vs
+52%) in a year Gandal et al. document as manipulated.
+
+The skeptic additionally flagged, and this entry adopts the caveat: the
+two losing sub-windows are also the two where v4 is *not* risk-matched to
+its hold on a vol basis (v4 carries 1.2-1.7x the hold's realized vol
+there, against being at-or-below it in all four winning windows) —
+matching-axis-dependent, exactly R-33's own documented instability, not
+grounds to re-score, but the 2-of-6 count should be read as "survives on
+the mean-notional axis, thinly, with the losses concentrated where that
+axis is furthest from matching risk" rather than as a clean, axis-robust
+win.
+
+**Result — novel.** Canonical six-episode control (unchanged file)
+reproduces published numbers exactly: anchor vote 5/6, BOCPD 2/6, CUSUM
+fixed 2/6, CUSUM 36-cell best 3/6 (R-82, R-139). Extended nine-episode
+calendar: anchor vote 6/9 (**1/3 on the new episodes**, down from 5/6),
+BOCPD 4/9 (**2/3 on new**, up from 2/6), CUSUM fixed 4/9 (**2/3 on new**).
+By episode kind across the extended calendar: slow build-up **2/2** for
+every detector; sudden shock stays poor, **2/7** for BOCPD/CUSUM.
+Re-running the detectors on the extended *series* changed zero verdicts on
+the original six episodes — the shift is attributable entirely to the new
+episodes, not to four extra years of detector state. Across R-139's full
+36-cell CUSUM grid (re-run unchanged, not re-fit): 15.3% cell-average pass
+rate on the original six vs 38.0% on the new three — a ratio holding
+across the whole grid, not one lucky cell; this number was not in the
+novel branch's own report and was derived independently by the skeptic.
+
+The skeptic's re-run confirms every reported number exactly but attaches
+five caveats this entry adopts in full, because they change what the
+finding should be believed to show:
+
+1. **BOCPD and CUSUM are not two independent witnesses here** — 94 of
+   BOCPD's 145 firing days coincide with a CUSUM firing day (97/145 within
+   ±1 day), which is why the canonical control's leads and null medians
+   are numerically identical between the two. "Two detectors both double"
+   is closer to ~1.3 independent observations.
+2. **The kind-not-era read rests on one new episode** (Mt. Gox is the only
+   new slow build-up, joining the single pre-existing one, 2018). Under a
+   random-assignment null, P(both slow-build-ups land among the passes) ≈
+   0.167 — suggestive, not significant at n=1. Era and kind are perfectly
+   confounded in this sample (the only pre-2017 slow episode is also the
+   only slow episode overall).
+3. **Two of the four new-episode passes are not detections of the named
+   event.** CUSUM's Mt. Gox pass fires 2013-12-19 (50 days before the news
+   onset, inside the disclosed-sensitivity 2013 year); its Bitfinex pass
+   fires 2016-06-22 (41 days early). Both are the same "already-bearish
+   going into the window" confound R-73/R-81/R-83 flagged in other
+   rounds, inherited from R-82's gate design rather than introduced here.
+4. **Guardrail 7's exclusion rule was applied inconsistently**: the
+   2013-12-05 PBoC-ban candidate was excluded for falling in the
+   manipulation-contaminated 2013 window, but Mt. Gox's own ±60d window
+   also opens 2013-12-09, and CUSUM's "pass" on it is driven by a firing
+   inside that same excluded year.
+5. **The anchor-vote arm's 5/6→1/3 is not commensurable with the
+   detectors' pass rates** — its lead is identically 0 by construction, so
+   it measures whether a block-shifted copy of v4's own vote beats the
+   real one, not "does v4 react like a detector." It is a finding about
+   the gate's own null-comparison, correctly scoped in the code, but
+   should not be read as "v4 fails where BOCPD/CUSUM succeed."
+
+Net reading: the extended-calendar result is real and reproducible
+arithmetic, and it is genuinely suggestive that this project's
+eight-detector, twenty-INFO-signal wall of closures is better described as
+"nothing beats v4 on sudden liquidation shocks" than as "nothing beats
+v4" — but at n=3 new episodes, with two of the four passes traceable to a
+pre-existing-bearish-window confound and the two detectors not
+independent, this is a hypothesis worth carrying forward, not a
+demonstrated mechanism.
+
+**Falsification tests, both pre-registered and both as-frozen.**
+Conservative: NOT triggered (2 < 3) — survives. Novel: the extended
+calendar DID change a verdict (both closed detectors' new-episode pass
+rate roughly doubles vs the original six, non-uniformly by episode kind)
+— the pre-registered falsification question ("does the extended calendar
+change any detector's verdict") resolves YES, reported per the frozen
+guardrail as a finding about the gate's own generalization, not folded
+into either detector's score.
+
+**Holdout.** Neither branch reads the standard `OOS_START=2023-01-01`
+holdout — this round's whole point is a *disjoint*, backward holdout, so
+the program's forward-holdout counter is unaffected. Max timestamp read
+by either branch: 2022-12-31 23:55 UTC (novel branch's causality probes on
+the extended series; the conservative branch never reads past
+2016-12-31). `pytest tests/test_causality_strict.py`: 51 passed (branch
+runs and skeptic re-run, twice). Full `pytest -q`: 516 passed.
+
+**Verdict.** **Conservative: SETTLED.** The matched-exposure drawdown
+property — this project's one property that has actually replicated
+(R-20/R-33) — survives its first out-of-sample-in-*time* test, on BTC
+history 142 prior rounds never used, with zero refit. The margin is real
+but not comfortable (2 of 6, thinning further under a realistic fee), and
+the two failures coincide with the two sub-windows where the benchmark
+match is furthest from risk-matched. Lesson: R-57's asset-space inversion
+does not have a time-space twin, at least not yet and not on this thin a
+slice — the property that survived six years of asset-space and
+cross-instrument attacks also survives its first trip backward in time.
+**Novel: METHOD.** The six-episode Step-A gate's own composition — five
+of six original episodes are sudden shocks — is a real contributor to why
+eight structurally distinct detector mechanisms all failed it, corroborating
+R-85's own stated diagnosis, though the supporting evidence here is
+thinner than the headline pass-rate-doubling number suggests once
+detector non-independence and the single-new-slow-episode confound are
+accounted for. **Holdout counter: +0, running total ~699** (unchanged —
+see the new bullet in
+[Holdout consultations to date](#holdout-consultations-to-date)). Decision
+rule did not move after any result was seen (git history confirms
+`r143_shared.py` predates every number in this entry). **Next step:**
+(a) this project now has a second, disjoint dataset extension — a future
+N≈3 round could re-run R-138's permutation test or R-140's Synthetic
+Control Method on the combined nine-episode calendar instead of the
+original six, genuinely increasing N rather than re-analyzing it; (b) a
+stratified version of the Step-A gate (score sudden and slow episodes
+separately) is a legitimate, non-duplicate methodology thread, but is
+blocked on the scarcity of independently-documented slow-build-up crypto
+bear episodes — this round found exactly one addable (Mt. Gox), and a
+single new data point cannot itself validate a stratification scheme;
+(c) `scripts/fetch_bitstamp_early.py` and the pre-2017 data file are now
+permanent project infrastructure — any future round needing more of this
+era's history does not need to re-fetch it.
+
 ### R-142 · 08-25 · NEGATIVE (both branches) — Deribit front-vs-next-quarter futures term-structure SLOPE, distinct from R-120's own single-maturity level/momentum: conservative INFO-axis confirming vote fails the six-episode Step-A gate 0/4, novel two-sided SIZE-axis dampener escalates sharply on BTC spot in-sample but fails the plateau check, ETH sign-replication (5/6 cells), and the 0.40% holdout fee tier
 
 **Direction.** Off-backlog (the ranked list has held only B-06 since
@@ -15083,6 +15339,37 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-25 after R-143.** The first round to vary the dataset's
+*era* rather than its asset or statistic: BTC history now extends back to
+2013-01-01 (`data/btcusd_spot_5m_pre2017.csv.gz`, fetched directly from
+Bitstamp's public API this round). Two results, **SETTLED (conservative) /
+METHOD (novel)**: `kelly_regime_v4`'s matched-exposure drawdown property
+(R-20/R-33, this project's one property that has actually replicated)
+survives, zero-refit, on 2014-2016 — a genuinely new out-of-sample era —
+though thinly (2 of 6 pre-registered sub-windows fail, margins shrink
+further at a realistic fee); and extending the standing six-episode
+Step-A detection-lag gate with three new, independently news-dated
+pre-2017 episodes roughly doubles two closed detectors' pass rate on the
+new episodes specifically, consistent with R-85's own diagnosis that the
+gate's sudden-shock skew (not detector quality) is why eight detector
+mechanisms have failed it — though an independent skeptic found the
+supporting evidence thinner than the headline (BOCPD/CUSUM are ~65%
+correlated in firing days, not independent; the "kind not era" read rests
+on a single new slow-build-up episode; two of the four new passes fire
+weeks before the named event, the same pre-existing-bearish-window
+confound flagged in other rounds). **The backlog otherwise remains what
+R-138 through R-142 already found: empty of ranked, unblocked items but
+B-06.** This round adds two *unranked, low-confidence* leads rather than
+promoting anything to `NEXT`: (1) the now-nine-episode combined calendar
+lets a future round re-run R-138's permutation test or R-140's Synthetic
+Control Method with genuinely more N instead of a new statistic on the
+same six; (2) a kind-stratified version of the Step-A gate is a legitimate
+methodology thread but is blocked on data scarcity — this round found
+exactly one addable slow-build-up episode, and n=1 cannot itself validate
+a stratification scheme. Neither is promoted to `NEXT`; both are named so
+a future session does not have to rediscover them. **B-06 remains the
+only ranked, unblocked backlog item.**
+
 **Re-ranked 08-25 after R-142.** A Deribit front-vs-next-quarter futures
 term-structure SLOPE — the one thread this round's own Step-0 diligence
 found that R-120 had not tested (R-120's own text asserted a simultaneous
@@ -18240,6 +18527,14 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-25 · ~699** — R-143: **+0** on top of R-142's ~699 (unchanged),
+  both branches. This round used a *disjoint, backward* holdout (BTC
+  2014-2016, never previously in this project's dataset) instead of the
+  standard forward `OOS_START=2023-01-01` split, so it adds no consultation
+  to the program's existing forward-holdout tally. Max timestamp read by
+  either branch or the skeptic re-run: 2022-12-31 23:55 UTC. `pytest
+  tests/test_causality_strict.py`: 51 passed (run three times this round —
+  both branches and the skeptic); full `pytest -q`: 516 passed.
 - **08-25 · ~699** — R-142: **+1** on top of R-141's ~698, novel branch
   only (conservative stopped at Step A, holdout untouched, max timestamp
   read 2022-12-31 23:55 UTC). The novel branch's own conditional Step 4
