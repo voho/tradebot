@@ -315,6 +315,24 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-126 · 08-25 · NEGATIVE (both branches) — `champions_council`'s own between-strategy capital allocation (Hedge/multiplicative weights, never varied since its L-08 registration) replaced with Equal Risk Contribution (conservative) and a CVaR-budgeted convex reallocation (novel): the first round to vary a *portfolio-of-strategies* object rather than one strategy's internal vote/scale, and the sixth distinct construction to pass cleanly on BTC and invert on ETH
+
+**Direction.** Off-backlog — the ranked list has held nothing but B-06 since R-110, reconfirmed by R-125's own re-ranking ("`kelly_regime_v4` is close to efficient with respect to the information, error control and parameter-selection procedure available to this project"). Per `docs/ROUTINE.md`'s own instruction ("invent a new direction only when the backlog is empty, fully blocked, or stale"), this round's own Step-0 diligence — a data-file audit (`data/*.csv.gz` columns, looking for any unused field in the committed `perp_metrics`/on-chain/macro files), a `docs/LEDGER.md` grep for every candidate signal or mechanism (SOPR, NUPL, exchange flow, whale ratio, meta-labeling, conformal prediction, Markowitz/Black-Litterman, gradient-boosted meta-labels), and a WebSearch literature pass — confirmed every axis *internal to* `kelly_regime_v4` and the multi-asset panel is closed: 19 INFO-axis attempts, 27+ SIZE-axis attempts (including R-125's own risk-measure substitution, the same session immediately prior to this one), ERR closed across five notions of uncertainty, eleven regime-timing mechanisms, four N≈3 calibration procedures, eleven multi-asset-panel rounds. Rather than force a 20th INFO signal or a 28th internal SIZE variant, this round picked a genuinely different OBJECT: `champions_council` (L-08, 08-14), a Hedge/multiplicative-weights (Freund & Schapire 1997, JCSS; Arora, Hazan & Kale 2012) portfolio across four already-profitable strategies (`kelly_regime`, `hedge_experts`, `replicator_book`, `universal_kelly`) plus buy-and-hold and flat. Grep-confirmed against `docs/LEDGER.md`: no round since its registration has ever varied its allocation mechanism — the only two other mentions of `champions_council` are R-29's blanket 25-strategy holdout sweep and a walk-forward comparison in `scripts/experiment.py`, neither of which touches its Hedge weights.
+
+One sentence: does replacing `champions_council`'s regret-minimizing Hedge allocation across its 6 members with a risk-budgeted allocation that targets the members' *joint risk* directly — Equal Risk Contribution (Maillard, Roncalli & Teiletche 2010, *J. Portfolio Management* 36(4), 60-70) for the conservative branch, a CVaR-budgeted convex reallocation (Rockafellar & Uryasev 2000, *J. Risk* 2(3), 21-41) for the novel branch — beat the incumbent Hedge blend? **Attacks SIZE** — how much capital to allocate, applied for the first time at the *between-strategy portfolio* level rather than inside one strategy's own vote/scale, the axis this project's standing diagnosis credits as "what actually worked." Non-duplicate of R-107 (the same Maillard-Roncalli-Teiletche paper, applied to a panel of six *assets* — BCH/LTC/ETC/DASH/LINK/XTZ — not to `champions_council`'s four-strategy-plus-two-benchmark member set) and of R-125 (CVaR substituted into `kelly_regime_v4`'s own internal `scale`, a scalar leverage multiplier, not a simplex-constrained cross-strategy weight vector solved by convex optimization). Full non-duplicate argument, citations, and the named failure mode — all 6 members are directionally long-biased against the same BTC/ETH price series, so if their daily payoffs are highly cross-correlated both branches risk converging back toward Hedge's own path, or lacking enough effective independent bets to fit a stable weight vector at all — live in the operator-authored, frozen `experiments/r126_shared.py` module docstring, written before either branch was dispatched as an independent agent.
+
+**What was done.** `experiments/r126_shared.py` (operator-authored, frozen before either branch was dispatched): a byte-identical reproduction of `champions_council`'s own 6-member signal matrix (`member_signal_matrix`) and a shared, fully causal daily payoff matrix per member (`member_daily_payoffs`, `a[i-1]*r[i]` resampled to one row per UTC calendar day, the "daily not 5m-bar" convention `tradebot.inference` uses throughout), a Step-0 non-degeneracy gate (R² vs `champions_council`'s own target, KILL if > 0.98), and a shared downstream weight-to-position construction (`weights_to_target`) reusing `champions_council`'s own vol-target/deadband tail unchanged — so only the weight-vector construction differs between each candidate and the Hedge baseline. `experiments/r126_conservative_erc_council.py` (inverse-trailing-volatility ERC special case, `REBALANCE_DAYS=30`/`LOOKBACK_DAYS=90` primary, each member's std floored at 5% of the positive-std median to handle the always-zero-variance `flat` member) and `experiments/r126_novel_cvar_council.py` (Rockafellar-Uryasev CVaR-budget LP solved via dependency-free projected subgradient descent on `(w, zeta)`, Duchi et al. 2008 simplex projection, a Lagrange-multiplier bisection enforcing a trailing cross-member-median return floor, `CVAR_ALPHA=0.05`/`LOOKBACK_DAYS=90` primary) were each built by an independent agent from the frozen shared module. **Decision rule, pre-registered verbatim from the SIZE/ERR family's own convention (R-109...R-125):** PROMOTE-candidate only if the causal-truncation probe AND B1 (both markets) AND B3 (plateau majority) AND B4 (full, both markets) AND B5 all pass; B2 (drawdown) is diagnostic only. **Falsification test, pre-registered:** B4 — does the branch's `d_sharpe` sign (candidate vs `champions_council`, inner-validation) replicate on ETH? The identical test this whole research programme has used since R-59. **Configs evaluated: 31 total** (conservative 18 = 1 Step-0 + 2 B1 + 12 B3 + 1 B4 + 2 B5; novel 13 = 1 Step-0/primary fit + 2 B1 + 6 B3 + 2 B4 + 2 B5).
+
+**Result.** Both causal-truncation probes passed (conservative: weight-schedule and target bit-identical before a 400,000-bar truncation cut, 1,386 days / 399,424 bars checked; novel: same construction, both PASS). Both Step-0 gates passed — genuinely different constructions, not rescaled copies of `champions_council`'s Hedge blend (conservative R²=−0.915, novel R²=0.573, both independently reproduced by the operator from a clean shell). Both branches' own printed max-timestamp lines read `2022-12-31 23:55:00+00:00`, never touching `OOS_START`.
+
+**Conservative (ERC):** B1 FAILED on the conjunctive "both markets" clause — BTC spot cleared the floor decisively (`d_sharpe=+0.716`, drawdown 2.93% vs `champions_council`'s 34.49%) but futures did not (`d_sharpe=+0.092`, bootstrap CI [−0.143,+0.470] straddling zero). B3 passed with an 11/12 same-signed plateau across the `REBALANCE_DAYS`×`LOOKBACK_DAYS` grid. B4 FAILED outright: ETH spot `d_sharpe=−1.450` (bootstrap [−0.887,+0.333]), sign-inverted against BTC's +0.716 — one of the sharpest sign reversals in this project's whole BTC/ETH falsification history. B5 passed (no sign flip at 0.40%, though futures' own edge stays inside the noise floor at both tiers regardless). A disclosed mechanism: because the always-flat member's payoff is identically 0, its floored inverse-vol weight is mechanically one of the *largest* in the panel (tied with `universal_kelly` at 46.4% each by late 2022) — a meaningful share of this portfolio's apparent drawdown discipline is standing aside, not risk-budgeting among active members.
+
+**Novel (CVaR-budgeted):** B1 PASSED both markets (`d_sharpe=+0.388` spot / `+0.537` futures, both clearing the ±0.2 floor; drawdown improved on both). Solver diagnostics: 8 of 71 fitted rebalance points needed a binding return-floor multiplier (`lam>0`), the floor was met within tolerance in 71/71, mean max-weight 0.244 (vs. a uniform 0.167) with entropy at 94% of its maximum — a well-diversified, non-degenerate solution, not a corner-collapse artifact; the pre-registered `lam`-monotonicity check held on all 8 probed windows. B3 passed with a clean 6/6 same-signed plateau (`d_sharpe` +0.24 to +0.45 across the `alpha`×`lookback` grid). B4 FAILED: ETH spot `d_sharpe=−0.530` against BTC's +0.388 — sign-inverted, the identical failure shape as the conservative branch and as five prior ERR-axis novelty-brake rounds (R-109 through R-123) and R-125's own SIZE-axis risk-measure round. B5 passed (no sign flip, moot given B4).
+
+**Skeptic reproduction:** the operator independently re-ran `pytest tests/test_causality_strict.py` (51 passed) and independently rebuilt both branches' primary-configuration Step-0 gates from a clean shell, reusing each branch's own `build_weight_schedule` function against freshly-loaded BTC data — both R² values matched the implementing agents' own reports to the printed digit (conservative −0.915219, novel 0.573490). The conservative branch's full B1/B3/B4/B5 log was independently read end-to-end by the operator (not just the implementing agent's own summary) and every number cross-checked against the agent's final report; no discrepancy found.
+
+**Verdict.** **NEGATIVE, both branches. Decision rule did not move** — frozen in `experiments/r126_shared.py` before either branch read a single inner-validation number, applied exactly as written; both branches stopped before touching the holdout once B1 and/or B4 failed. **The one-line lesson:** this project's Hedge/multiplicative-weights allocation across `champions_council`'s members is not obviously beatable by a risk-budgeted alternative on this data — not because risk-budgeting fails to find a real signal (the novel branch's CVaR construction is real, non-degenerate, and clears every BTC-side gate cleanly) but because whatever it is finding is a BTC-specific artifact rather than a property of risk-budgeted strategy-panel allocation: **this is the sixth distinct construction — across two different axes, and, for the first time, two different objects (`kelly_regime_v4`'s internal signal, and now `champions_council`'s cross-strategy allocation) — to pass cleanly on BTC and invert on ETH**, the strongest evidence yet that this signature belongs to the BTC/ETH training-window relationship itself rather than to any one mechanism family or even any one *object* this project's framework can vary. The conservative branch adds a second, independent lesson: an ERC/inverse-vol allocator with a naive zero-payoff floor mechanically over-weights a `flat`, always-zero-variance member — a real risk with any "inverse volatility" construction applied to a member panel that includes a standing-aside option, worth naming explicitly for any future round on this axis. **Holdout counter: +0** on top of R-125's ~698 (unchanged); running program-level total remains ~698. **This closes the `champions_council`-allocation axis as a fresh SIZE-axis line of attack** — the between-strategy portfolio object, like `kelly_regime_v4`'s own internal vote/scale, now carries a tried-and-failed risk-budgeting attempt. **Next step:** per this round's own diligence, no further axis of variation on either `kelly_regime_v4` or `champions_council` clears Step-1's non-duplicate filter without real strain; a future session should look outside both of this project's now-exhausted single-strategy and portfolio-of-strategies spaces (a genuinely new instrument class this project can fetch and simulate without proxying, or B-28's breadth clause if new low-correlation data becomes available) rather than a further variant of either construction's own internals.
+
 ### R-125 · 08-25 · NEGATIVE (both branches) — the risk MEASURE inside `kelly_regime_v4`'s `scale` (standard deviation, never varied across 27+ prior SIZE-axis rounds) replaced with Conditional Value-at-Risk: a like-for-like substitution (conservative) and a vote-conditional empirical-Kelly fraction capped by a CVaR budget (novel), both fail on BTC before ETH is even reached
 
 **Direction.** Off-backlog — the ranked list has held nothing but B-06 since
@@ -13317,6 +13335,41 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-25 after R-126.** Off-backlog (still only B-06, unchanged since
+R-110), a two-branch round tried a genuinely different OBJECT for the first
+time — not another variant inside `kelly_regime_v4`'s own vote/scale, but
+`champions_council`'s own between-strategy capital allocation, never varied
+since its L-08 registration. Equal Risk Contribution (conservative) and a
+CVaR-budgeted convex reallocation (novel) both replaced `champions_council`'s
+Hedge/multiplicative-weights blend across its 6 members. **Both branches
+NEGATIVE, both failing at B4 (ETH falsification)** — the novel branch cleared
+every other gate cleanly (BTC B1 both markets, 6/6 B3 plateau, real
+non-degenerate solver diagnostics) only to invert sign on ETH (`d_sharpe`
++0.388 BTC spot vs −0.530 ETH spot); the conservative branch failed B1's own
+conjunctive both-markets clause (BTC futures `d_sharpe` +0.092, inside the
+noise floor) as well as B4 (ETH `d_sharpe` −1.450, one of the sharpest sign
+reversals this project has measured). **This is the sixth distinct
+construction — across two different axes and, for the first time, two
+different objects (`kelly_regime_v4`'s internal signal, and now
+`champions_council`'s cross-strategy allocation) — to pass cleanly on BTC and
+invert on ETH**, strengthening R-115's original suspicion that this signature
+belongs to the BTC/ETH training-window relationship itself rather than to any
+one mechanism family. **The ranked backlog remains empty of anything but
+B-06** (forward paper-trading, already running unattended, per R-78's own
+costing). A future session preferring a fresh mechanism search now has: the
+single-asset axis's own fully closed lists (19 INFO-axis attempts, 28+
+SIZE-axis attempts including R-125's risk-measure and this round's
+allocation-mechanism dimensions, ERR closed across five notions of
+uncertainty, eleven regime-timing mechanisms, four N≈3 calibration
+procedures); the multi-asset panel's own closed list (eleven rounds, all
+NEGATIVE); `champions_council`'s own allocation mechanism, now also closed
+(one risk-budgeting family, two branches, 0 promoted); or B-28's breadth
+clause (blocked on data this project cannot fetch or simulate). Absent a new
+idea clearing Step-0 on one of these, the accumulating evidence continues to
+point the same direction: this project's registered strategies are close to
+efficient with respect to the information, error control, parameter-selection
+and now cross-strategy-allocation machinery available to this project.
+
 **Re-ranked 08-25 after R-125.** Off-backlog (still only B-06, unchanged
 since R-110), a two-branch round asked whether the ONE dimension of
 `kelly_regime_v4`'s SIZE machinery never varied across 27+ prior SIZE-axis
@@ -15965,6 +16018,15 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-25 · ~698** — R-126: **+0** on top of R-125's ~698 (unchanged), both
+  branches. Conservative failed B1 (futures leg) and B4; novel failed B4
+  only (passed B1, B3 and B5). Neither qualified for holdout access under
+  the SIZE/ERR family's standing gate. Both branches' own printed
+  max-timestamp lines read `2022-12-31 23:55:00+00:00`; the operator
+  independently reproduced both branches' Step-0 R² from a clean shell
+  (conservative −0.915219, novel 0.573490, matching each branch's own
+  report to the printed digit) and independently re-ran
+  `pytest tests/test_causality_strict.py` (51 passed).
 - **08-25 · ~698** — R-125: **+0** on top of R-124's ~698 (unchanged), both
   branches. Conservative failed B1 and B4; novel failed B1, B3 and B5 —
   neither qualified for holdout access under the SIZE/ERR family's standing
