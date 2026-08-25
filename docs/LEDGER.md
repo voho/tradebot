@@ -315,6 +315,171 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-131 · 08-25 · NEGATIVE (both branches) — constraining `kelly_regime_v4`'s realized trading rate to an admissible turnover CORRIDOR (a rate/resource cost model, not another per-trade EV threshold): a hard defer once trailing turnover exceeds the corridor (conservative) and an online dual-variable throttle that shrinks fills in proportion to a shadow price on turnover (novel); both fail cleanly, and the novel branch's own named risk — the throttle suppressing exactly the trades that carry the edge — is directly confirmed at two of six stress episodes
+
+**Direction.** `kelly_regime_ev` (promoted) gates each rebalance by its OWN
+marginal expected value against a fee/vol/horizon threshold
+(`|df| > 2*fee/(H*sigma^2)`, Constantinides 1986; Davis & Norman 1990). This
+round asks a different question: constrain the strategy's *rolling realized
+turnover rate* to an admissible corridor and intervene only once recent
+trading has been running unusually heavy — a resource constraint on
+multi-bar history, not a per-decision threshold. Cites Khubiev, Semenov,
+Podlipnova & Khubieva (2025/2026, arXiv:2509.04541, "Finance-Grounded
+Optimization For Algorithmic Trading") for band turnover regularization
+(a penalty zero inside an admissible corridor, biting only once exceeded)
+and Boyd, Busseti, Diamond, Kahn, Koh, Nystrup & Speth (2017, *Foundations
+and Trends in Optimization* 3(1), "Multi-Period Trading via Convex
+Optimization") for turnover-penalized trading as a resource-constrained
+control problem — the novel branch is the causal, online, dual-variable
+analogue of that framing rather than a closed-form solve. **Attacks COST**
+(costs that scale with the signal) via a cost-model family this project has
+never tried. **Not a duplicate of:** `kelly_regime_ev`/L-05/L-06 (per-trade
+marginal EV, inert to multi-bar trailing history by construction);
+Gârleanu-Pedersen partial adjustment (R-65/R-67/R-68, a closed-form LQ
+solution at a stationary derived rate, vs. an online history-reactive
+corridor/dual-variable here); Almgren-Chriss adaptive execution urgency
+(R-56/R-77, B-24 — changes HOW one already-decided trade fills, not
+WHETHER/HOW MUCH to rebalance conditioned on trailing history); width-profile
+banding (R-66 — band width is a function of the current target level `f`,
+not of trailing realized turnover, a different state variable entirely);
+`hedge_experts` pre/post-blend banding (R-128/R-129) and R-130's own
+weight-update-level/combinator-wrapping constructions (same session as this
+round, landed first — see process note below) — all four of those
+transplant cost mechanisms onto `hedge_experts`, a different object; this
+round keeps the object (`kelly_regime_v4`) and introduces the turnover-rate
+cost-model family R-129's own closing line named as the open door. Full
+non-duplicate reasoning, both mechanisms, and the named failure modes are
+frozen verbatim in `experiments/r131_shared.py`'s own module docstring,
+written and committed before either branch was implemented.
+
+**Process note, disclosed in full.** This round was independently dispatched
+under the working name "R-130" before a concurrent session's own R-130
+(`hedge_experts`'s Hedge combinator, entry above) landed on `main` mid-round.
+Discovered via a rejected non-fast-forward push; resolved by merging the
+concurrent session's `main` and renaming every file in this round from
+`r130_*` to `r131_*` (`experiments/r131_shared.py`,
+`experiments/r131_conservative_turnover_band.py`,
+`experiments/r131_novel_turnover_throttle.py`) before either implementing
+agent's own work was read as a result. Both implementing agents independently
+flagged the resulting file-content race (the shared pre-registration file
+transiently reverting to the concurrent session's own R-130 content mid-run)
+rather than silently proceeding on the wrong pre-registration or silently
+"fixing" it themselves — exactly the caution this project's own parallel-branch
+rules ask for. The operator independently re-ran both branches' Step-0
+wiring self-test and causal-truncation probe after the rename, from a clean
+shell, and reproduced the conservative branch's probe value bit-for-bit
+(18868.799958) confirming the rename did not alter either branch's frozen
+mechanism.
+
+**What was done.** `experiments/r131_shared.py` (frozen pre-registration,
+splits, market specs, `TURNOVER_UPPER`/`OVERRIDE_MULT`/`ETA`/`LAMBDA_MAX`
+constants, `STRESS_EPISODES`, shared `b1_signal`/`trailing_turnover_ewm`/
+`a2_non_inertness` helpers) written and committed by the operator before
+either branch was dispatched. Decision rule, identical structure to the
+SIZE/ERR/COST family (R-109...R-130): PROMOTE-candidate only if the
+non-inertness gate (A2) AND B1 (both markets) AND B3 (plateau majority) AND
+B4 (ETH, full, both markets) AND B5 (0.40% fee) all pass; B2 (drawdown)
+diagnostic only. **Conservative** (`experiments/r131_conservative_turnover_band.py`):
+a hard defer once trailing turnover reaches `TURNOVER_UPPER`, with an
+override that never blocks a full de-risking exit or a move exceeding
+`OVERRIDE_MULT * TURNOVER_UPPER`. One legitimate step-3 bug found and fixed
+before any inner-validation number was read (disclosed, not selected on):
+the first "pending rebalance" trigger compared live
+`position*close/equity` to `desired` at a 1e-9 tolerance, firing on ~66% of
+*all* bars from ordinary price drift rather than genuine v4 re-target
+decisions; fixed to trigger exactly on v4's own `|target[i]-target[i-1]| >
+1e-9`, with an `owed` flag persisting a deferred move across bars. **Novel**
+(`experiments/r131_novel_turnover_throttle.py`): an online dual-variable
+throttle, `lambda_{t+1} = clip(lambda_t + ETA*(turnover_ewm_t -
+TURNOVER_UPPER), 0, LAMBDA_MAX)`, shrinking each pending rebalance by
+`1/(1+lambda_t)`. **Configurations evaluated: 29 total** (conservative: 1
+causal probe + 1 A2 + 4 B1 + 4 B3 + 1 B4 + 2 B5 = 13; novel: 4 B1 + 8 B3 + 2
+B4 + 2 B5 = 16, reusing the B1 full-inner-spot run for its causal probe/A2
+per its own accounting).
+
+**Result.** *Conservative:* wiring self-test and causal-truncation probe
+PASS (18868.799958, bit-identical, independently reproduced by the
+operator). A2 non-inertness PASS but narrow (607,670 `on_bar` calls, 4,226
+pending, 3,459 deferrals, 0.57% of calls) — and fully inert (0 deferrals) at
+2x/4x the default corridor width. **B1 FAILS all 4 cells** — spot val
+`d_sharpe=-0.0284` [-0.0591,+0.0091], spot full `+0.0040` [-0.0459,+0.0549],
+futures val `+0.0097` [-0.0023,+0.0162], futures full `+0.0072`
+[-0.0000,+0.0365], no cell clears the ±0.2 floor or excludes zero. **B3
+FAILS** — sign flips across the corridor-width sweep (+0.0287 at 0.5x,
+-0.0284 at 1x, exactly 0.0000/0 deferrals at 2x and 4x), majority only 2/4,
+not a plateau. **B4 FAILS** — ETH spot val `d_sharpe=+0.0628` [+0.0073,
++0.0890], significant, but BTC spot val's own sign is negative: a genuine
+inversion. B5 passes trivially (no sign flip on an already-near-zero
+effect). Stress-episode diagnostic: **zero deferrals within ±3 days of any
+of the six `STRESS_EPISODES`** — the named LAG risk did not materialize,
+mostly because the mechanism barely binds anywhere, the same fact that
+explains B1's near-zero effect throughout. *Novel:* causal-truncation probe
+PASS (bit-identical full vs. truncated). A2 PASS and clearly non-inert
+(607,670 bars, `lambda_t` min 0/max 20.0 (saturates at `LAMBDA_MAX`)/mean
+0.596, 22,704 bars (3.74%) with `lambda_t>0.01`). **B1 FAILS all 4 cells,
+and unlike every other round in this project's SIZE/ERR/COST family, all
+four are NEGATIVE, not a BTC-pass/mixed shape** — spot val `-0.2713`
+[-0.4301,+0.0362], futures val `-0.1593` [-0.2635,+0.0411], spot full
+`-0.1801` [-0.7085,-0.0426] (significant), futures full `-0.0901`
+[-0.4316,-0.0080] (significant) — drawdown worse throughout too, not
+merely Sharpe. **B3 FAILS, 0 of 8 sweep cells positive** (eta in
+{0.25,0.5,2,4}x default, both markets) — a genuine plateau, but a plateau
+of failure. **B4 FAILS** — ETH sign does not replicate (spot
+`+0.0290`, futures `+0.0537`, both non-significant, vs. BTC's clean
+negative). B5 passes (no sign flip at 0.40%, on an already-negative
+effect). **The round's own named risk is directly confirmed**: `lambda_t`
+saturates at `LAMBDA_MAX=20.0` exactly at 2 of 6 `STRESS_EPISODES` — the
+2018 bear onset (`lambda_max=20.0`, `lambda_mean=19.657`) and the FTX
+collapse (`lambda_max=9.825`, `lambda_mean=1.966`) — precisely where
+L-01/R-62 locate `kelly_regime_v4`'s own edge; the throttle engages hardest
+exactly when the trades it is throttling carry the strategy's return.
+Both branches: `pytest tests/test_causality_strict.py` — 51 passed,
+unchanged from baseline, both before and after the mid-round rename. The
+operator independently re-ran both branches' Step-0/Step-1 self-tests from
+a clean shell after the rename and reproduced them bit-for-bit.
+
+**Verdict.** **NEGATIVE, both branches. Decision rule did not move** —
+applied exactly as frozen in `experiments/r131_shared.py` before either
+branch was dispatched. **The substantive finding:** a resource/rate
+constraint on trailing realized turnover is a genuinely different cost
+model from every one this project has tried (per-trade EV, closed-form LQ,
+execution urgency, level-dependent band width), and it fails for a reason
+specific to this mechanism family rather than a repeat of a prior failure
+mode: `kelly_regime_v4` already trades so rarely (174 trades/9.6y) that a
+corridor loose enough to avoid indefinitely freezing the strategy barely
+binds at all (conservative: 0.57% of bars, sign-flipping across the width
+sweep), while a throttle reactive enough to bind meaningfully (novel: 3.74%
+of bars, saturating) binds hardest exactly during the sudden-transition
+bursts where the edge concentrates — the same tension named as the failure
+mode before any code ran, now measured on both ends of the tightness
+spectrum rather than assumed. **This closes the turnover-rate/resource-
+constraint COST-model family for `kelly_regime_v4`**, alongside the
+per-trade-EV family (`kelly_regime_ev`, promoted), the closed-form LQ family
+(Gârleanu-Pedersen, R-65/R-67/R-68), the execution-urgency family
+(Almgren-Chriss, R-56/R-77), and the level-dependent-width family (R-66) —
+five structurally distinct COST-axis mechanism families now tried against
+this object. **Holdout counter: +0** on top of R-130's ~698 (unchanged;
+R-130's own entry added no bullet to the Holdout consultations list despite
+stating "no holdout was consulted" — noted here rather than silently
+corrected). Running program-level total remains **~698**; neither branch,
+nor either implementing agent's run, nor the operator's independent re-run,
+ever read a bar dated 2023-01-01 or later (max timestamp `2022-12-31
+23:55:00+00:00` throughout, confirmed by each branch's own causal guard).
+**Next step:** per this round's own diligence and R-130's same-day closure
+of `hedge_experts`'s re-target/cost axis, `kelly_regime_v4`'s own COST axis
+is now closed across five mechanism families and the ranked backlog remains
+empty of anything but **B-06** (forward paper-trading, already running
+unattended, per R-78's own costing). A future session preferring a fresh
+mechanism search has: `hedge_experts`'s own EXPERT COMPOSITION (R-130's own
+named next step, never varied by any round to date); the single-asset
+axis's own fully closed lists on `kelly_regime_v4` (19+ INFO, 28+ SIZE, ERR
+across 5 notions of uncertainty, 11 regime-timing mechanisms, 4 N≈3
+procedures, and now 5 COST-model families); `champions_council`'s own
+allocation mechanism (closed, R-126); the multi-asset panel's own closed
+list (eleven rounds); R-127's own named follow-on (does idiosyncratic-event
+excision generalize past the one construction it tested); or B-28's breadth
+clause (blocked on data this project cannot fetch or simulate).
+
 ### R-130 · 08-25 · NEGATIVE (both branches) — moving `hedge_experts`'s cost mechanism from a downstream no-trade band (R-128, R-129: 4/4 constructions failed) INTO the Hedge combinator itself: a lazy-update L1 weight-shrinkage penalty (conservative, Das/Johnson/Banerjee 2013) and a commission-avoidant online-learning wrapper (novel, Uziel & El-Yaniv 2016); the novel branch's apparent partial pass (BTC+ETH spot significant, futures directionally consistent, no BTC/ETH inversion) does not survive independent skeptic ablation — it is a re-derivation of R-64's already-closed Gârleanu-Pedersen smooth trading rate, riding on the broker deadband R-66/B-29 already found "cannot be evaluated honestly," with a mechanism measurably inert to the reward channel it exists to test
 
 **Direction.** Off-backlog (still only B-06, unchanged since R-110). R-128 and R-129 both bolted a Kelly-quadratic-cost no-trade band (Constantinides 1986; Davis & Norman 1990) onto `hedge_experts`'s OUTPUT — R-128 on the single already-blended signal (fixed and adaptive horizon), R-129 on ten raw pre-blend experts or three bucket sub-blends — four constructions, four application points, 0 promoted, R-129's own closing line naming the untested alternative verbatim: "a future attempt on this object needs a cost model outside the Kelly-quadratic-cost family entirely, not a third application point of the same algebra." This round takes that literally: both branches modify or wrap the Hedge weight-update recursion itself (`logw`/`p` inside `HedgeExperts.prepare()`), which R-128/R-129 both left completely untouched, gating only what happened after `p` was already computed. **Attacks COST** — `hedge_experts` pays fees on every re-target and its own weight recursion updates unconditionally every bar with zero cost-awareness baked into it. Literature (WebSearch, this session, before either branch was written): Das, P., Johnson, N., & Banerjee, A. (2013), "Online Lazy Updates for Portfolio Selection with Transaction Costs," *AAAI* 27(1), 202–208 — a primal-dual proximal/lazy-update mechanism that regularizes the weight-update step itself by the transaction cost it would incur (conservative branch). Uziel, G., & El-Yaniv, R. (2016), "Online Learning of Commission Avoidant Portfolio Ensembles," arXiv:1605.00788 — an ensemble meta-algorithm with a logarithmic regret bound relative to commission-oblivious base algorithms, wrapping (rather than modifying) the base combinator (novel branch). Non-duplicate of R-128/R-129 (different application point: inside vs. after the combinator) and of any single-asset `kelly_regime_v4` SIZE/ERR/INFO round (different object). Failure modes pre-registered before either branch wrote code: (1) for the conservative branch, damping the Hedge weight vector `p` might not propagate to fewer re-targets of the traded signal `x = p @ a` if `p`'s own residual movement still crosses the broker's 5% deadband; (2) for the novel branch, the commission-avoidance meta-layer could collapse into something functionally indistinguishable from a band on the output — the same closed axis in different clothing — which the branch was explicitly asked to check for directly, not merely assert against; (3) the standing six-plus-instance BTC-pass/ETH-invert prior.
@@ -13379,6 +13544,47 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-25 after R-131.** Off-backlog (still only B-06, unchanged
+since R-110), a two-branch round tried a cost-model family never applied to
+`kelly_regime_v4` before: constraining realized TRAILING TURNOVER RATE to an
+admissible corridor (Khubiev et al. 2025/2026 band turnover regularization;
+Boyd et al. 2017 multi-period trading as resource-constrained control),
+rather than gating each trade by its own marginal EV (`kelly_regime_ev`'s
+existing, promoted mechanism). **Both branches NEGATIVE**, and instructively
+so on opposite ends of the same tightness spectrum: the conservative hard
+defer barely binds (0.57% of bars, sign-flipping across a corridor-width
+sweep, fully inert at 2x/4x the default width) while the novel dual-variable
+throttle binds meaningfully (3.74% of bars) but fails uniformly negative on
+all 4 B1 cells and saturates hardest exactly during the 2018 bear onset and
+FTX collapse — the two `STRESS_EPISODES` where `kelly_regime_v4`'s own edge
+concentrates (L-01/R-62), directly confirming the failure mode named before
+either branch was implemented. **This closes a fifth structurally distinct
+COST-axis mechanism family against `kelly_regime_v4`** — per-trade EV
+(`kelly_regime_ev`, promoted), closed-form LQ partial adjustment
+(Gârleanu-Pedersen, R-65/R-67/R-68), execution urgency (Almgren-Chriss,
+R-56/R-77), level-dependent band width (R-66), and now trailing-turnover-rate
+constraint (this round) — alongside R-130's same-day closure of
+`hedge_experts`'s own re-target/cost axis across three families. **A
+process note worth carrying forward**: this round was independently
+dispatched under the working name "R-130" before a concurrent session's own
+R-130 (`hedge_experts`'s Hedge combinator) landed on `main` mid-round;
+resolved by merging and renaming this round's files to `r131_*` before
+either implementing agent's results were read, with both agents
+independently flagging (rather than silently working around or silently
+"fixing") the resulting file-content race — worth naming as a real risk of
+this project's increasingly parallel, multi-session operation, not only a
+one-off. **The ranked backlog remains empty of anything but B-06** (forward
+paper-trading, already running unattended, per R-78's own costing). A future
+session has: `hedge_experts`'s own EXPERT COMPOSITION (R-130's own named next
+step, never varied by any round to date); the single-asset axis's own fully
+closed lists on `kelly_regime_v4` (19+ INFO, 28+ SIZE, ERR across 5 notions
+of uncertainty, 11 regime-timing mechanisms, 4 N≈3 procedures, and now 5 COST
+mechanism families); `champions_council`'s own allocation mechanism (closed,
+R-126); the multi-asset panel's own closed list (eleven rounds); R-127's own
+named follow-on (does idiosyncratic-event excision generalize past the one
+construction it tested); or B-28's breadth clause (blocked on data this
+project cannot fetch or simulate).
+
 **Re-ranked 08-25 after R-130.** Off-backlog (still only B-06, unchanged since R-110), a two-branch round took R-129's own closing recommendation literally: a cost mechanism living INSIDE `hedge_experts`'s Hedge combinator (its weight-update recursion) rather than gated after it, the one application point R-128/R-129's four Kelly-quadratic-cost band constructions never touched. Conservative (Das/Johnson/Banerjee 2013 lazy-update L1 shrinkage on the weight vector itself) REJECTED decisively before ETH was even reached — negative on both markets, both periods, a monotonically-worsening (not merely flat) plateau, and the *first* construction in this six-plus-round family to fail to even produce the usual BTC-pass/ETH-invert shape, replicating its negative sign on ETH instead. Novel (Uziel & El-Yaniv 2016 commission-avoidant online-learning wrapper) initially reported a genuine partial pass — BTC spot and ETH spot both significant, no sign inversion between them, futures directionally consistent though not individually significant — the first candidate on this object in three rounds to clear more than one gate. **An independent skeptic audit (71 further configurations, on top of the two branches' own 24+33) found the claimed learning mechanism measurably inert**: deleting the entire realized-reward channel from its gradient (`r:=0`) reproduces every headline number to within ±0.001, and a constant-weight control with zero learning beats the "learned" candidate in 4 of 7 audited cells. What survives is a Gârleanu-Pedersen-style smooth trading rate under proportional costs — an object R-64 (novel) already closed on `kelly_regime_v4` ("do not re-try... at all") — riding on `broker.REBALANCE_DEADBAND` absorbing 96.8% of its intended re-targets, the exact evaluability defect R-66/B-29 already named. **The substantive finding: `hedge_experts`'s own re-target/cost axis is now closed across three structurally distinct families and every application point this project's framework has tried** — output-level and pre-blend Kelly-quadratic bands (R-128, R-129, 4 constructions), weight-update-level lazy shrinkage (this round), and combinator-wrapping online learning that reduces to a smooth trading rate (this round) — 7 constructions total, 0 promoted, and the smooth-trading-rate closure plus the deadband-evaluability defect both now confirmed on a second object beyond `kelly_regime_v4`. **The methodological finding, arguably the more reusable one**: this project's own skeptic-verification rule ("an independent skeptic re-runs each surviving claim before it is believed") is not a formality — it reversed a genuinely well-documented, multi-gate partial pass into a decisive reject on evidence (a one-line reward-deletion ablation) the primary branch's own pre-registered falsification battery had no gate designed to catch; a future round with a "learned"/adaptive mechanism should ablate its own learning signal to a null/constant control before trusting a passing result, not only run the falsification battery as specified. **No holdout was consulted** (the novel branch's apparent pass was falsified before any pre-registered holdout decision rule was written — the look-once discipline working as intended: better to not spend the consultation than spend it on a candidate that does not survive its own skeptic review). **The ranked backlog remains empty of anything but B-06** (forward paper-trading, already running unattended, per R-78's own costing). A future session has: `hedge_experts`'s own EXPERT COMPOSITION (the ten technical experts themselves), never varied by any two-branch round to date — every round on this object so far (R-125 skipped it for `kelly_regime_v4`'s risk measure, R-126 for `champions_council`'s allocation, R-127 diagnostic, R-128/R-129/R-130 all varied the re-target/cost rule around a fixed expert panel); the single-asset axis's own fully closed lists on `kelly_regime_v4` (19+ INFO, 28+ SIZE, ERR across 5 notions of uncertainty, 11 regime-timing mechanisms, 4 N≈3 procedures); `champions_council`'s own allocation mechanism (closed, R-126); the multi-asset panel's own closed list (eleven rounds); R-127's own named follow-on (does idiosyncratic-event excision generalize past the one construction it tested, to the other five BTC-pass/ETH-invert cases); or B-28's breadth clause (blocked on data this project cannot fetch or simulate).
 
 **Re-ranked 08-25 after R-129.** Off-backlog (still only B-06, unchanged
@@ -16188,6 +16394,18 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-25 · ~698** — R-131: **+0** on top of R-130's ~698 (unchanged; R-130's
+  own entry stated "no holdout was consulted" but added no bullet here — the
+  total is carried forward from R-129 unchanged rather than silently
+  corrected on R-130's behalf), both branches (conservative hard
+  turnover-corridor defer, novel dual-variable turnover throttle). Neither
+  branch's decision rule ever cleared the COST family's standing
+  holdout-access gate (both failed B1, B3 and B4). Max timestamp read by
+  either branch, either implementing agent's run, or the operator's
+  independent re-run of both branches' Step-0/Step-1 self-tests after the
+  mid-round `r130_*`→`r131_*` rename: `2022-12-31 23:55:00+00:00`.
+  `pytest tests/test_causality_strict.py`: 51 passed, both branches, before
+  and after the rename.
 - **08-25 · ~698** — R-129: **+0** on top of R-128's ~698 (unchanged), both
   branches (conservative per-expert bands, novel per-timescale-bucket
   bands). Neither branch's decision rule ever cleared the SIZE/ERR/COST
