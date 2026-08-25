@@ -315,6 +315,182 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-124 · 08-25 · NEGATIVE (both branches) — Fixed-Window Fractional Differentiation (Lopez de Prado 2018) as a SIZE-axis vote-input substitution (conservative) and an eleventh regime-timing detector (novel): the first attempt on a third, orthogonal axis of variation (INPUT REPRESENTATION, not detector family or lookback), closed decisively in both roles by two different, mutually illuminating failure modes
+
+**Direction.** Off-backlog (still only B-06, unchanged since R-110; the ranked
+backlog remains otherwise empty per R-123's own re-ranking). A literature
+search (WebSearch, this round) asked: every prior construction in this ledger
+feeds `kelly_regime_v4`'s vote/detectors either the raw price LEVEL (v4's own
+rolling-mean anchors — non-stationary, full memory) or plain log-RETURNS
+(d=1 — stationary, memory destroyed on every difference) — is there a
+genuinely different point on that same axis? Fixed-Window Fractional
+Differentiation (Lopez de Prado 2018, *Advances in Financial Machine
+Learning*, Wiley, Ch. 5; the operator `(1-L)^d` generalized to fractional `d`
+by Hosking 1981, *Biometrika* 68(1), 165-176) is exactly that: a causal
+Grunwald-Letnikov binomial-weighted filter at a fractional order `0<d<1`,
+chosen as the MINIMUM `d` a causal, in-sample-only stationarity test accepts,
+that keeps a series stationary while retaining materially more memory than a
+first difference discards. Motivated additionally by Chen et al. (2025,
+*Fractal and Fractional* 10(6):379, confirmed via WebSearch), which applies a
+Grunwald-Letnikov fractional-memory operator to BTC/ETH/BNB daily data inside
+an LSTM-N-BEATS forecaster — motivating, not load-bearing: a different
+universe, cadence and downstream model than this project's own; both
+branches below re-measure everything from scratch on this project's own
+data, promotion bar and cost model. Attacks **SIZE** (conservative — a 27th+
+construction, substituting a structurally new INPUT REPRESENTATION into the
+vote's own slot, holding the detector's functional form and `scale` fixed)
+and **regime-timing** (novel — an eleventh structurally distinct formal
+estimator, judged by the identical Step-A six-episode detection-lag gate
+R-82 through R-117 used). **Not a duplicate of:** R-105 (anchor-ladder
+ensemble) / R-117 (Donchian breakout ensemble), which both vary the DETECTOR
+while feeding it v4's own raw-close input — this round holds the detector's
+functional form (a latched band/threshold-crossing vote) fixed and instead
+varies the INPUT SERIES itself, a third axis of variation neither touched
+(confirmed by grep: no prior "fractional diff"/"fracdiff"/"grunwald"/
+"hosking" mention anywhere in this file); R-46/R-61 (Hurst-exponent gating —
+a persistence-exponent GATE on the raw series, not an input transform);
+R-01/R-82/R-83/R-85/R-86/R-96/R-98/R-84/R-60/R-117 (ten regime-timing
+mechanisms, all computed on the raw price series, none a preprocessing
+transform); R-04/R-80 (meta-labeling + triple-barrier — an unrelated
+secondary-classifier/labeling construction, Lopez de Prado's OTHER chapter;
+no classifier or labels anywhere in this round).
+
+**What was done.** Shared, frozen infrastructure: `experiments/r124_shared.py`
+(a causal `causal_ffd(x, d)` FIR filter via FFT convolution, self-tested for
+exact causality by truncation probe; `select_d_causal` sweeps `d` in
+`{0.05..0.95}` on **inner-train only** (2017-2020) via a disclosed,
+simplified ADF-lite OLS regression against a fixed asymptotic 5% critical
+value, choosing the MINIMUM stationary `d` — **FFD_D = 0.85**, window ≈ 50
+bars ≈ 4.2 hours, correlation with the raw log-price level ≈ 0.83; the grid
+diagnostics show every `d` below 0.85 fails to reject a unit root on this
+series, i.e. genuinely calibrated, not asserted). Re-exports the B1-B5
+promotion bar and Step-A gate machinery from the r102→r117 chain unchanged.
+Two parallel branches, each on its own disjoint file, neither committing
+(dispatched as sub-agents; both independently re-run and reproduced
+bit-for-bit by the operator afterward — every printed number, including the
+extreme conservative-branch balances, matched exactly).
+
+**Conservative** (`experiments/r124_conservative_fracdiff_vote.py`): v4's
+exact architecture (three latched anchors → averaged `frac` → `frac *
+v4_scale` (untouched) → `apply_deadband` (untouched)) fed a rolling z-score
+of the frozen FFD series at v4's own 20/40/80-day horizons instead of a
+%-of-level band on raw `close` (a z-score, not v4's percentage band, because
+the FFD series is stationary — a percentage-of-level band is not well-defined
+on a mean-zero series). Step-0 (pre-registered, inner-train only): `Z_BAND`
+swept over `{0.05, 0.10, 0.20}`, kill switches `bind_frac > 1%` and `r_sq <
+0.98` against v4's own vote/path — all three cells qualify cleanly
+(bind_frac 0.48-0.50, r_sq -0.12 to -0.01), grid-centre `Z_BAND=0.10`
+selected as primary per the pre-registered `SELECTION_ORDER`. Promotion bar:
+B1 (inner-val, gating) / B2 (drawdown, diagnostic) / B3 (plateau across the
+two non-primary `Z_BAND` cells, gating) / B4 (ETH falsification, full pass
+required, gating) / B5 (0.40% fee tier, gating) — identical machinery to
+every SIZE-axis round since R-89.
+
+**Novel** (`experiments/r124_novel_fracdiff_regime_gate.py`): a
+"fractional-diff momentum" detector — the FFD series' own 20-day rolling
+mean minus its 80-day rolling mean (v4's own fastest/slowest anchor
+horizons), z-scored by its own 80-day rolling std — with "detection" defined
+as the nearest bar to each episode onset where this z-score crosses down
+through a fixed, pre-registered `THRESH=-1.0` (disclosed context only, never
+substituted: the inner-train 15th-percentile of the same series is -1.346).
+Judged by the unmodified Step-A gate (±60-day episode windows,
+`nearest_transition`/`anchor_majority` for v4's own reaction,
+`block_bootstrap_shifts` block=5d/n=500/seed=12401 for the null, PASS =
+lead≥0 AND lead≥null median, STOP unless ≥4/6 pass).
+
+**Configurations evaluated: 15** (conservative: 3 Step-0 grid + 6 primary
+`compare()` cells + 4 B3 neighbor-grid rows + 2 B5 fee-tier cells) **+ 6**
+(novel: 1 fixed configuration × 6 episode measurements, 0 swept, matching
+R-82/R-117's own "fixed non-swept gate" convention) **= 21 total.** Both
+branches' causal-truncation probes ran first and passed before any headline
+number was trusted.
+
+**Result.** Conservative: Step-0 clean pass on all three cells, causal probe
+PASS. B1 **fails decisively on both markets** — spot d_sharpe=-15.62
+boot[-11.61,-0.87], futures d_sharpe=-14.23 boot[-10.73,-2.35], both
+excluding zero on the LOSING side. B2: drawdown "improves" (+66-67pp) but is
+voided — not risk-matched (exposure/vol ratios up to 1.28x v4's own). B3: all
+4 neighbor cells share the primary's (negative) sign — a genuine plateau of
+badness, not a lucky single point (d_sharpe range -13.0 to -16.4 across the
+whole `Z_BAND` grid on both markets). B4: fails to falsify — ETH replicates
+the same negative sign on both markets (spot -10.12, futures -7.56), so the
+failure is not BTC-specific noise, it is a structural property of the
+construction. B5: no reversal at 0.40% fees (stays negative, in fact worse).
+Root cause, diagnosed and independently confirmed: the candidate's `frac`
+flips ~135 times/day in inner-validation against v4's own ~0.34/day (≈390x
+the churn), blowing through the 10% deadband on nearly every bar — backtest
+balances collapse to $2-5 from a $1,000 start across every slice
+(inner-train, inner-val, ETH) against v4's own $998-$30,344 on the identical
+windows. The named a-priori tension (FFD_D=0.85's own ~4.2-hour memory
+z-scored over a 20-80-DAY window — a two-orders-of-magnitude timescale
+mismatch) is exactly what happened: the z-score's numerator is dominated by
+fast, unsmoothed local noise regardless of how long the smoothing window is,
+so it crosses ±0.10 almost every few bars. Novel: 0 of 6 episodes pass (mean
+true LEAD -19.5 days, i.e. the detector systematically lags). But the
+diagnostic distinguishing failure MODE is the informative result: in **6 of
+6 episodes**, a randomly time-shifted copy of the SAME detector's own
+crossings lands as close to or closer to the true onset than the real,
+correctly-timed detection does (null median LEAD ≥ true LEAD in every
+episode). This is only possible because the detector is a non-specific,
+frequent alarm — 35 down-crossings over the 2,031-day pre-OOS series, one
+every ~58 days, 27.3% of all time spent in the "triggered" state — so its
+correct timing at any one historical onset carries no more information than
+its own base crossing rate would produce by chance. This is qualitatively
+different from the PURE LAG failure all ten predecessors showed (where the
+real detector reliably beat its own null baseline, just arrived late) — the
+pre-registered "over-triggering" failure mode named in advance in
+`r124_shared.py` is exactly what occurred, not the "just another slow
+detector" pattern.
+
+**Verdict.** **NEGATIVE, both branches.** One-line lesson: a third,
+orthogonal axis of variation on this project's vote/detector architecture —
+the INPUT REPRESENTATION itself, as opposed to the detector family (R-117)
+or its lookback (R-105) — is now tried and closed, and it failed in two
+DIFFERENT, mutually illuminating ways rather than the "real but inert"
+pattern that dominates this ledger's ERR axis: the conservative branch
+failed by a diagnosable timescale mismatch (a stationarity-optimal `d`
+produces a fast, short-memory series that is structurally the wrong input
+for a slow multi-week vote, regardless of how long the vote's own smoothing
+window is), and the novel branch failed by a genuinely new signature
+(non-specific over-triggering, not lag) among eleven regime-timing attempts.
+Both diagnoses point the same direction: fractional differentiation's own
+defining property — retain memory while achieving stationarity — does not
+help this project's application, because the `d` its own causal calibration
+selects (0.85, chosen for stationarity alone) is far too close to `d=1`
+(destroy-memory-fast) and its natural timescale (hours) is far too short
+relative to either v4's vote-smoothing horizon (weeks) or the regime-timing
+gate's own event scale (weeks-months); a fixed window at v4's own horizon
+rather than a threshold-truncated one might avoid the conservative branch's
+specific failure, but would not obviously fix the novel branch's
+over-triggering, and no evidence from this round motivates a third attempt
+at this axis without a materially different idea for closing that scale
+gap. **Holdout counter: +0** on top of R-123's ~698 (running total unchanged
+at **~698**) — neither branch, nor the operator's independent bit-for-bit
+reproduction of both, ever read a bar dated 2023-01-01 or later; both
+branches' own `max timestamp read` lines report `2022-12-31 23:55:00+00:00`,
+and the conservative branch's B1 failure meant it never needed to (the
+promotion bar's later gates are diagnostic/robustness checks on the same
+pre-2023 comparison, not a holdout read). Neither pre-registered decision
+rule moved after seeing any number. **Next step:** the ranked backlog
+remains empty of anything but **B-06** (forward paper-trading, already
+running unattended, per R-78's own costing). A future session preferring a
+fresh mechanism search now has, in addition to every prior round's own
+closing list: the INPUT-REPRESENTATION axis (this round) now closed
+alongside detector-family (R-117) and lookback (R-105) as ways to vary v4's
+own vote architecture; regime-timing closed at **11 of 11** structurally
+distinct mechanisms failing the identical Step-A gate; and, newly, a
+distinction this ledger had not previously drawn between two different
+regime-timing failure modes (pure lag vs. non-specific over-triggering) that
+a future mechanism search could use to pre-screen candidates (a detector's
+own crossing-frequency and null-comparison, measured cheaply before running
+the full gate, would have flagged this round's novel branch as
+likely-non-specific before any episode-level number was computed). The
+accumulating evidence across INFO (19)/SIZE (27+)/ERR (5 notions)/
+regime-timing (11)/multi-asset (11) continues to point the same direction
+every recent round has stated: `kelly_regime_v4` is close to efficient with
+respect to the information, error control and parameter-selection procedure
+available to this project.
+
 ### R-123 · 08-24 · NEGATIVE (both branches) — move the ERR-axis distributional-novelty statistic OFF the discount-on-`v4_target` architecture and INTO `frac`/`scale` directly: frac-shrinkage Kelly (conservative) and a joint distributionally-robust multiplier (novel), closing the fourth and last axis of variation R-122 named for this sub-axis
 
 **Direction.** Off-backlog (the ranked list has held only B-06 since R-110).
@@ -12897,6 +13073,8 @@ trip.
 
 | what | why | ref |
 |---|---|---|
+| Fractional-diff momentum (20d-mean minus 80d-mean of a Fixed-Window Fractionally-Differenced `log(close)` at `d=0.85`, z-scored by its own 80d std) as a threshold-crossing (down through `z=-1.0`) eleventh regime-timing detector, judged by the standard six-episode Step-A gate | 0/6 episodes pass (need ≥4/6). Mean true LEAD −19.5 days. The informative part is the FAILURE MODE, not the fail itself: in **6 of 6 episodes** a randomly time-shifted copy of the detector's own crossings (block-bootstrap null, block=5d, n=500) lands as close to, or closer to, the true onset than the real, correctly-timed detection — only possible because the detector fires non-specifically (35 down-crossings over the 2,031-day pre-OOS series, one every ~58 days, 27.3% of all time in the "triggered" state), qualitatively distinct from the pure-lag pattern the ten prior regime-timing mechanisms (HMM, BOCPD, Kalman LLT, CSD, transfer entropy, Hawkes, POT/GPD, vote-latch/volume, CUSUM, Donchian) all showed. Causal-truncation probe passed; operator-reproduced bit-for-bit. Do not re-try a threshold-crossing detector on this exact FFD construction (`d` selected purely for stationarity, ~4.2-hour native memory) expecting it to stop over-triggering — a materially longer natural timescale for the input series itself, not a different threshold on this one, is what the over-triggering diagnosis calls for. | R-124 (novel) |
+| Rolling z-score of the same Fixed-Window Fractionally-Differenced `log(close)` (`d=0.85`) at `kelly_regime_v4`'s own 20/40/80-day horizons, substituted for its raw-`close` percentage band inside its otherwise byte-identical 3-anchor/latch/average/scale/deadband architecture (a SIZE-axis input-representation substitution, `Z_BAND∈{0.05,0.10,0.20}`) | 15 configurations. Step-0 clean pass on all 3 `Z_BAND` cells (bind_frac 0.48–0.50 ≫ 0.01, r_sq −0.12 to −0.01 ≪ 0.98); causal-truncation probe PASS. **B1 fails decisively on both markets** (spot d_sharpe=−15.62 boot[−11.61,−0.87], futures d_sharpe=−14.23 boot[−10.73,−2.35], both excluding zero on the losing side). B3 passes as a genuine plateau of badness (4/4 neighbor cells share the primary's negative sign, d_sharpe range −13.0 to −16.4 across the whole grid). B4 fails to falsify — ETH replicates the same negative sign on both markets, so the failure is structural, not BTC noise. B5: no reversal at 0.40% fees. Root cause: `frac` flips ~135×/day in inner-validation vs. v4's own ~0.34×/day (≈390× the churn), blowing through the 10% deadband almost every bar; backtest balances collapse to $2–5 from a $1,000 start on every slice. Diagnosed and disclosed a priori: `d=0.85`'s own ~4.2-hour memory, z-scored over a 20–80-DAY window, is a two-orders-of-magnitude timescale mismatch — the z-score's numerator stays dominated by fast local noise regardless of the smoothing window's length. Operator-reproduced bit-for-bit. Do not re-try a rolling z-score of this stationarity-selected FFD series at any `Z_BAND` on this architecture expecting the timescale mismatch to resolve — a fixed FFD window chosen to match v4's own vote horizon (weeks), rather than one selected purely for stationarity, is a different, untested question. | R-124 (conservative) |
 | CORAL-pooled kNN distributional-novelty brake (R-109/R-112's own construction, unchanged) with ETH re-sourced from `data/ethusd_coinbase_spot_5m.csv.gz` instead of the Bitfinex series, so the `UNIVERSE_6` reference pool genuinely overlaps ETH's evaluation window (2020–2022) for the first time | 26 configurations. B1 passes (both markets exclude zero, numerically identical to R-112's own BTC-side numbers since BTC's data is unchanged). B3 passes (12/12 grid cells share the primary's sign). **B4 fails, more decisively than R-112's own untested version**: ETH spot ΔSharpe −0.0890 boot[−0.3382,−0.0363] (excludes zero on the losing side), futures −0.0867 boot[−0.5124,+0.0336] — both sign-inverted vs. BTC. B5 passes. Because the pool genuinely engaged this time (R-112's had silently fallen back to the single-asset construction on every ETH bar, a data-coverage artifact this round fixed), this closes R-109's own named follow-on decisively: neither of its two proposed repairs (return-space features, R-112 conservative; a multi-asset reference pool, this row) rescues the B4 ETH falsification. Operator-reproduced bit-for-bit. Do not re-try either of R-109's own named repairs on this kNN novelty-brake construction expecting to close its ETH gap — both are now tested and both fail; a materially different novelty statistic, not a repair of this one's reference distribution, is a different, untested question. | R-115 (conservative) |
 | Retail-vs-top-trader long/short-ratio divergence (`divergence_z = z(sum_toptrader_long_short_ratio) − z(count_long_short_ratio)`, Binance USDS-M metrics feed) as a directional confirming vote on `kelly_regime_v4`, the sixteenth INFO-axis signal | Pre-registered Step-A lead-time gate (identical construction to R-79/R-81/R-84, ±60-day episode windows, 500-draw block-bootstrap null): 1 of 5 matched episodes pass the ≥null-median bar (need a majority, >2.5) — BTC 2021-top LEAD=−3.51d, BTC Terra/Luna LEAD=−19.35d, BTC FTX LEAD=+0.45d (just under its own null median +0.47d), ETH Terra/Luna LEAD=−16.89d, ETH FTX LEAD=+0.48d (the one pass, a same-day coincidence with BTC's own FTX cell rather than a genuine lead). No Step B strategy code was built. `count_long_short_ratio` itself is nearly gap-free (2.35%/5.04% NaN, BTC/ETH) — far cleaner than `sum_toptrader_long_short_ratio`'s documented 37.63%/80.79% gaps (R-81) — but the joint divergence statistic inherits the gappier leg's coverage almost entirely (7.85%–84.78% in-window NaN across episodes). Causal-truncation probe passed; operator-reproduced bit-for-bit. Do not re-try this exact divergence construction expecting it to lead — a materially different pairing of the two ratios, or a genuinely gap-clean joint construction, is a different, untested question. | R-115 (novel) |
 | Grossman & Zhou (1993) drawdown-constrained scale, one fixed drawdown tolerance `α`, replacing `kelly_regime_v4`'s vol-target `scale`: `scale_GZ = max_leverage·clip(1−D_t/α,0,1)`, `α∈{0.15,0.20,0.30,0.40,0.50}` | 33 configuration-cells (5 configs × 2 markets × 3 slices, plus 3 fee-tier cells on the finalist). 0/30 swept cells risk-match. The one α that nominally clears the Sharpe leg (α=0.15, inner-val ΔSharpe +0.245/+0.232) does so by collapsing to `exposure_ratio` 0.11–0.14 and trading once in two years — the R-33 "holding less" artifact, not a sizing edge. Pre-registered ETH falsification FAILS outright: sign flips negative on both markets (−0.917 spot, −0.431 futures) against BTC's positive inner-val numbers — the discrete-time fragility Klass & Nowicki (2005) predict for this exact construction. Operator-reproduced exactly (A2 R² values, ETH sign-flip numbers, fee-tier table). Do not re-try a single fixed-α Grossman-Zhou drawdown scale on this vote/deadband combination expecting a risk-matched edge — every α in this grid either barely binds (reproduces v4) or binds hard enough to manufacture a spurious, unmatched-exposure Sharpe gain that does not replicate on ETH. | R-93 (conservative) |
@@ -12987,6 +13165,49 @@ trip.
 ---
 
 ## D. Backlog (ranked)
+
+**Re-ranked 08-25 after R-124.** Off-backlog (still only B-06, unchanged
+since R-110), a two-branch round tried Fixed-Window Fractional
+Differentiation (Lopez de Prado 2018) as a third, orthogonal axis of
+variation on `kelly_regime_v4`'s own vote/detector architecture — not the
+detector family (R-105, R-117) or its lookback, but the INPUT
+REPRESENTATION itself. **Both branches NEGATIVE.** The conservative branch
+(a rolling z-score of the FFD series, at v4's own 20/40/80-day horizons,
+substituted for its raw-close percentage band) failed decisively and
+diagnosably: the causally-selected `d=0.85` (chosen purely for stationarity)
+leaves a ~4.2-hour-memory series, and z-scoring something that short over a
+20-80-DAY window is a two-orders-of-magnitude timescale mismatch that
+manifests as ~390x v4's own vote churn, collapsing backtest balances to $2-5
+from $1,000 on every slice (B1 fails both markets, ETH replicates the
+failure rather than falsifying it). The novel branch (a fractional-diff
+momentum crossover judged by the standard six-episode Step-A gate) is the
+**eleventh** regime-timing mechanism to fail that gate, but the first to
+fail it by a qualitatively different, more informative mode: not pure lag
+(the ten predecessors' shared signature) but non-specific OVER-TRIGGERING —
+in 6 of 6 episodes a randomly time-shifted copy of the detector's own
+crossings does as well or better than the real, correctly-timed one, because
+the detector fires roughly every 58 days regardless of any historical onset.
+**This closes the input-representation axis alongside detector-family and
+lookback as ways this project's own framework can vary v4's vote
+architecture, and brings regime-timing to 11 of 11 structurally distinct
+mechanisms failing the identical gate.** A reusable methodological finding
+for any future regime-timing attempt: a candidate detector's own
+crossing-frequency and null-comparison can be measured cheaply, before
+running the full six-episode gate, to distinguish "will plausibly just lag"
+from "will plausibly over-trigger" ahead of time. **The ranked backlog
+remains empty of anything but B-06** (forward paper-trading, already running
+unattended, per R-78's own costing). A future session preferring a fresh
+mechanism search now has: the single-asset axis's own fully closed lists (19
+INFO-axis attempts, 27+ SIZE-axis attempts including this round's
+input-representation axis, ERR closed across five notions of uncertainty,
+**eleven** regime-timing mechanisms, two structurally-new-detector-family
+SIZE substitutions, four distinct N≈3-attacking selection procedures); the
+multi-asset panel's own closed list (eleven rounds, all NEGATIVE); or B-28's
+breadth clause (blocked on data this project cannot fetch or simulate).
+Absent a new idea clearing Step-0 on one of these, the accumulating evidence
+continues to point the same direction: `kelly_regime_v4` is close to
+efficient with respect to the information, error control and
+parameter-selection procedure available to this project.
 
 **Re-ranked 08-24 after R-123.** Off-backlog (still only B-06, unchanged
 since R-110), a two-branch round took up R-122's own named next step
@@ -15551,6 +15772,16 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-25 · ~698** — R-124: **+0** on top of R-123's ~698 (unchanged), both
+  branches. Conservative failed B1 (and so never needed B4/B5 to gate a
+  holdout read); novel's Step-A gate never reaches `OOS_START` by
+  construction (all six `STRESS_EPISODES` predate 2023, and the pre-
+  registered stop rule ends the branch at 0/6 episodes passing). Both
+  branches' own printed max-timestamp lines read `2022-12-31
+  23:55:00+00:00`; the operator's independent re-run from the project venv
+  reproduced both branches' full printed output, including every Step-0/B1-
+  B5 statistic and every per-episode LEAD/null-median value, to the printed
+  digit.
 - **08-24 · ~698** — R-123: **+0** on top of R-122's ~698 (unchanged), both
   branches. Neither branch's decision rule ever qualified for holdout access
   (conservative failed B1/B4/B5; novel failed B4) — both branches' only real-
