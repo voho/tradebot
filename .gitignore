@@ -13,6 +13,11 @@ uv.lock
 *.csv
 *.parquet
 !/data/btcusd_spot_5m.csv.gz
+# pre-2017 BTC/USD 5m extension (R-143): Bitstamp public API, 2013-01-01 ->
+# 2017-01-01, fetched directly (the GitHub bulk-history mirror
+# build_bitstamp_dataset.py normally clones is proxy-blocked in some
+# sessions; the API is not). Concatenates cleanly with the file above.
+!/data/btcusd_spot_5m_pre2017.csv.gz
 # real Binance BTCUSDT perp funding, charged as a first-class cost
 !/data/btcusdt_perp_funding_8h.csv.gz
 # Deribit BTC-PERPETUAL funding, 2020-2026; covers the post-2023 gap the
