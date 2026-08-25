@@ -315,11 +315,124 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
-IN PROGRESS: R-138 — Nguyen & Wolf (2026) small-N permutation test for
-event studies, applied to `kelly_regime_v4`'s edge-concentration claim
-around `STRESS_EPISODES` (conservative) and around a causal single-asset
-CUSUM-detected event set (novel). Frozen pre-registration:
-`experiments/r138_shared.py`.
+### R-138 · 08-25 · NEGATIVE (both branches) — a formally-justified small-N permutation test (Nguyen & Wolf 2026) of `kelly_regime_v4`'s own edge-concentration claim; well-calibrated and significant on BTC alone in both event-set constructions, neither survives the pre-registered ETH replication bar
+
+**Direction.** Per R-137's own re-ranking, the ranked backlog held nothing
+but **B-06** (forward paper trading, 18.9-year horizon). This round is a
+genuinely new, non-duplicate methodological attack rather than a
+continuation of any backlog item: this project's headline diagnosis — L-01/
+R-62's "edge concentrates in roughly three sudden regime transitions," the
+project's own **N≈3** constraint — has to date only been asserted
+narratively or checked with ad hoc, bespoke placebo controls (R-127, R-137).
+Nguyen & Wolf (2026, *Empirical Economics* 70; also SSRN 5804142), a
+peer-reviewed permutation test built specifically for average/cumulative
+abnormal returns with as few as two events, supplies the first formally
+justified, non-asymptotic significance test this project has applied to
+that claim. **Attacks N≈3** (primary) and **ERR** (secondary — a sixth,
+structurally distinct notion of statistical uncertainty control, alongside
+e-processes R-28/R-31, conformal prediction R-87, anytime-valid sequential
+testing R-71/R-78/R-83, the stationary block bootstrap, and Wasserstein/DRO
+bounds R-97). **Not a duplicate of** R-45 (model-selection, not a fixed-
+event test), R-118 (calibration of a sizing rule), R-71/R-78/R-83
+(forward-time sequential evidence for B-06, not a retrospective fixed-
+sample test), R-57/R-63 (cross-sectional panel breadth across price paths,
+not events in time), R-101 (a jackknife feeding a sizing multiplier), or
+R-127/R-137 (informal random-day placebos built for the ETH-idiosyncratic-
+event question specifically, never applied to `kelly_regime_v4`'s own
+primary claim, and not the peer-reviewed construction). The citation was
+verified live (web search + fetch of the UZH working-paper PDF) before any
+implementation began, given the paper's 2026 date.
+
+**What was done.** Frozen pre-registration: `experiments/r138_shared.py`
+(committed before any candidate number was read; vectorized for
+performance in a follow-up commit that changed no threshold or mechanism).
+Two independently-implemented branches, both 5x futures (`PRIMARY_MARKET`,
+this project's own headline market for `kelly_regime_v4`), both against a
+volatility-matched constant-exposure hold (`experiments/matched_hold.py`,
+matched once over the full 2017–2022 training period): **CONSERVATIVE**
+(`experiments/r138_conservative_stress_permutation.py`) applies the test
+off the shelf to the six already-frozen `STRESS_EPISODES` (used verbatim,
+unedited since R-82); **NOVEL**
+(`experiments/r138_novel_cusum_permutation.py`) substitutes a causal,
+hindsight-free two-sided CUSUM changepoint detector on BTC's own daily
+log-return mean (Page 1954; Hawkins & Olwell 1998; frozen textbook
+constants `k=0.5σ, h=5σ, trail=90d` — the same values R-137 used for a
+different, cross-asset-spread CUSUM) as the event set. **Pre-registered
+decision rule, verbatim:** promotable only if ALL of C1 (empirical Type-I
+calibration on `[0.02, 0.09]` at nominal α=0.05, `N_CALIBRATION_TRIALS=200`
+× `N_PERM=20000`), C2 (permutation p<0.05 on BTC AND `n_exceed>2`,
+resolution-aware), C3 (ETH replication, p<0.10, same sign, ETH's own C1
+must also pass) all hold; a C1 failure VOIDS that market rather than
+scoring it negative. **Configurations evaluated: 4** total across both
+branches (2 per branch: one `kelly_regime_v4` + vol-matched-hold backtest
+pair on BTC, one on ETH — the permutation/calibration draws are resampling
+of an already-computed series, not separate backtest configurations, per
+this round's own pre-registered convention, matching R-131's).
+
+**Result.**
+- **CONSERVATIVE** (`STRESS_EPISODES`, n=6 BTC / n=4 ETH after dropping the
+  two pre-2019-03 dates ETH's data cannot cover): BTC C1 rate **0.055**
+  (11/200, inside band) → PASS; BTC C2 observed CAAR **+0.0755**, p=
+  **0.0404**, n_exceed=808 → PASS. ETH C1 rate **0.055** → PASS; ETH
+  observed CAAR **+0.0414** (same sign as BTC) but p=**0.245** → **C3
+  FAILS** (needed <0.10). Neither market voided; a clean, scoreable
+  NEGATIVE.
+- **NOVEL** (causal CUSUM, 18 BTC breaks / 11 ETH breaks, own series):
+  BTC C1 rate **0.090** (right at the upper edge of the band) → PASS; BTC
+  C2 observed CAAR **+0.0740**, p=**0.00045**, n_exceed=8 → PASS (far
+  stronger nominal significance than the conservative branch). ETH C1 rate
+  **0.100** → **FAILS** (outside `[0.02, 0.09]`) → ETH **VOIDED**; C3 is
+  therefore not scored even though ETH's own p=0.086 (same sign as BTC)
+  would numerically have cleared the <0.10 bar on its own — the
+  pre-registration's void-don't-score rule is explicit that a market whose
+  own calibration check fails cannot be trusted to report a real p-value,
+  so its nominally-passing number is not counted.
+- Diagnostic (does not gate anything): the CUSUM event set overlaps
+  `STRESS_EPISODES` on only 3 of 6 dates within a ±3-day tolerance (2020-03
+  COVID crash exact, 2022-05 Terra/Luna exact, 2022-11 FTX collapse
+  1-day off); the 2018 bear onset, 2018 bear bottom and 2021-11 top have no
+  CUSUM match — a hindsight-free detector agrees with roughly half the
+  narrative-selected calendar, not all of it.
+- Both branches' driver scripts were read and re-run by the operator
+  (not merely trusted from the implementing agent's own report) as an
+  independent reproduction check; BTC's conservative-branch numbers
+  (CAAR=+0.07553, p=0.0404) matched the operator's own smoke-test run of
+  the shared harness to 5 significant figures before either branch's
+  driver script existed, which is closer to R-133's kind of accidental
+  independent reproduction than this round originally planned for.
+  `pytest` was not re-run (no strategy or framework code changed; only new
+  files under `experiments/`).
+
+**Verdict.** **NEGATIVE, both branches.** The permutation test itself is
+real, well-calibrated on BTC in both constructions, and gives BTC alone a
+result far stronger than this project's usual ±0.2 Sharpe noise floor
+would suggest — but neither branch clears the pre-registered ETH bar: the
+conservative branch fails on significance (p=0.245), the novel branch
+fails because the TEST'S OWN Type-I calibration breaks down on ETH's
+shorter, noisier, CUSUM-detected-N=11 series. That second failure mode is
+itself the more interesting finding: a peer-reviewed small-N permutation
+test is not automatically well-calibrated on every series it is pointed
+at, and checking C1 independently on each market (rather than assuming a
+test validated on BTC transfers to ETH) is what caught it — exactly the
+kind of instrument-honesty check R-97/R-98 established the precedent for.
+Read together with R-33/R-57/R-64/R-127/R-137, this is at least the sixth
+time a BTC-only finding in this ledger has failed to survive ETH
+replication, on a sixth structurally distinct mechanism. **This round
+produces no strategy code change and no `tradebot/inference.py` addition**
+(the decision rule's own stated condition for adding the permutation
+function as reusable infrastructure was not met by either branch). Decision
+rule did not move after any number was read (frozen before either branch's
+code ran, applied verbatim in both). **Holdout counter: +0** on top of
+R-137's ~698 (unchanged); running program-level total remains **~698** —
+neither branch's decision rule was ever satisfied, so Step 4's holdout
+evaluation was correctly never triggered. **Next step:** the six
+structurally distinct ERR/N≈3 mechanisms this project has now tried
+(e-process, conformal, anytime-valid sequential, block bootstrap,
+Wasserstein/DRO, and now permutation) all locate the same BTC-only edge
+without either strengthening the ETH replication case or ruling it out
+further; a future session's own honest next move, absent a new mechanism
+class, is the same one R-136's re-ranking already named — **B-06 remains
+the only standing item.**
 
 ### R-137 · 08-25 · METHOD (diagnostic, both branches) — REFUTED: R-127's own named follow-on, does ETH-idiosyncratic-event excision generalize past the one construction it tested, tried on the other constructions plus a random-day placebo control R-127 itself never ran; a causal, hindsight-free CUSUM detector independently corroborates the null (near-zero overlap with the hand-picked events) but surfaces one reproducible, un-named structural break (2022-07-18) three independent reloads agree on
 
@@ -14441,6 +14554,36 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-25 after R-138.** A formally-justified small-N permutation
+test (Nguyen & Wolf 2026) of this project's own "edge concentrates in ~3
+regime events" diagnosis is **NEGATIVE on both branches** — well-calibrated
+and significant on BTC alone in both the narrative `STRESS_EPISODES`
+construction and a causal CUSUM-detected event set, but neither survives
+the pre-registered ETH replication bar (conservative: p=0.245 vs required
+<0.10; novel: ETH's own Type-I calibration check itself falls outside the
+pre-registered band, voiding that market before its numerically-passing
+p-value can be trusted). **The backlog remains empty of anything but B-06**
+(forward paper-trading, already running unattended, per R-78's own
+costing). This round's own next-step analysis: six structurally distinct
+ERR/N≈3 mechanisms have now been tried against this project's data
+(e-process R-28/R-31, conformal R-87, anytime-valid sequential R-71/R-78/
+R-83, the stationary block bootstrap throughout `tradebot/inference.py`,
+Wasserstein/DRO R-97, and now the permutation test), and every one that
+reaches a BTC-only significant result fails to clear ETH — the same
+pattern R-33/R-57/R-64/R-127/R-137 already established on other axes. A
+future session has: the single remaining unscoped thread named by R-137
+(sweeping the CUSUM detector's own textbook parameters,
+`CUSUM_TRAIL_DAYS=90, k=0.5σ, h=5σ`, around the 2022-07-18 structural
+break — still small, still not comparable in weight to B-06); the
+single-asset axis's own fully closed lists on `kelly_regime_v4` (19+ INFO,
+28+ SIZE, ERR now across 6 notions of uncertainty, 11 regime-timing
+mechanisms, 4 N≈3 procedures, 5 COST-model families); `hedge_experts`'s
+EXPERT COMPOSITION axis (closed, R-132/R-135/R-136); `champions_council`'s
+allocation mechanism (closed, R-126); the multi-asset panel (closed,
+eleven rounds); or B-28's breadth clause (blocked on data this project
+cannot fetch or simulate). Absent a new idea clearing Step-0 on one of
+these, **B-06 is the only standing item.**
+
 **Re-ranked 08-25 after R-137.** R-127's own named follow-on — does
 ETH-idiosyncratic-event excision generalize past the one construction it
 tested (R-126-novel) to the other constructions showing the same
@@ -17454,6 +17597,15 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-25 · ~698** — R-138: **+0** on top of R-137's ~698 (unchanged), both
+  branches (conservative `STRESS_EPISODES` permutation test, novel causal
+  CUSUM permutation test). Both branches' pre-registered decision rule
+  (C1 AND C2 AND C3, evaluated on the training period only) failed before
+  either reached Step 4, so the holdout was never read; `r138_shared.py`'s
+  `_assert_no_holdout` guards every loader either branch used, and the
+  operator's own independent re-run of the conservative branch's driver
+  script read no bar past it either. Max timestamp read: `2022-12-31
+  23:55:00+00:00`.
 - **08-25 · ~698** — R-137: **+0** on top of R-136's ~698 (unchanged), both
   branches (conservative fixed-battery generalization, novel causal CUSUM
   excision) plus the operator's own independent bit-for-bit re-verification
