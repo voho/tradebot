@@ -315,6 +315,8 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+IN PROGRESS: R-144 — N~3 permutation test (Nguyen & Wolf 2026), conservative branch re-running R-138's machinery on R-143's 9-episode BTC calendar, novel branch building ETH's own native protocol-event calendar (Beacon Chain genesis, EIP-1559, The Merge) instead of borrowing BTC's dates. Dispatched off-backlog per ROUTINE.md step 0 (backlog empty but B-06); full write-up to follow.
+
 ### R-143 · 08-25 · SETTLED (conservative) / METHOD (novel) — the backward holdout: BTC 2014-2016, a genuinely new out-of-sample era, plus a 3-episode extension of the six-episode detection-lag gate
 
 **Direction.** Off-backlog (the ranked list has held only B-06 since
