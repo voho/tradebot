@@ -315,6 +315,208 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-141 · 08-25 · NEGATIVE (both branches) — the Log-Periodic Power Law Singularity (LPPLS) bubble/crash model, an eighth structurally distinct regime-timing mechanism (conservative, six-episode gate: 0/6, the worst score of any of the eight) and the first LPPLS-derived continuous SIZE-axis dampener (novel: provably degenerate at Step-0, R²=1.000000 — an equality-matched, upper-bounded-at-1 dampener is mathematically forced to kappa=0)
+
+**Direction.** Off-backlog (the ranked list has held only B-06 since
+R-110, reconfirmed by R-140's own re-ranking). Literature search this
+session (WebSearch: log-periodic power law Bitcoin bubble detection;
+Bitcoin volatility regime detection 2025) surfaced Johansen, Ledoit &
+Sornette (2000, *Int. J. Theoretical and Applied Finance* 3(2):219-255)
+and Filimonov & Sornette (2013, *Physica A* 392(17):3698-3707) — the
+LPPLS finite-time-singularity model of super-exponential price
+acceleration with decorating log-periodic oscillations, fit by nonlinear
+regression to log price itself. Attacks **INFO** (conservative — a
+structurally different ESTIMATOR of "is a regime break imminent" from
+the same committed OHLCV close series `kelly_regime_v4` already reads,
+no new data channel) and **SIZE** (novel — an LPPLS-derived crash-hazard
+signal used as a continuous dampener on `scale`, a source no prior
+SIZE-axis round has used). **Why an eighth regime-timing mechanism is
+not a re-skin of the seven already closed (HMM R-01, BOCPD R-82, Kalman
+LLT R-83, CSD R-85, transfer entropy R-86, Hawkes R-96, CUSUM R-139):**
+all seven are stochastic-process models of the return-generating
+mechanism (a hidden state, a run-length posterior, a filtered latent
+trend, a fluctuation statistic, an information flow, a conditional
+intensity, a sequential test statistic); LPPLS is a deterministic
+functional form fit to the price LEVEL directly, positing no latent
+random process, grounded in critical-phenomena / catastrophe theory
+rather than any of the seven's statistical bases. Grep-confirmed zero
+prior hits in this file for "Sornette", "LPPL", "finite-time
+singularity", "Filimonov", "super-exponential", "crash hazard" and
+"critical time" before this round started. **Not a duplicate of R-74's
+MVRV or R-125's own rejection of a different Bitcoin power-law paper**
+(Baquero & Menezes 2026, arXiv:2605.21316): that paper is a static,
+long-run log-price-vs-log-time valuation scaling law with no fitted
+crash time and no oscillatory component — R-125 correctly judged it too
+close to MVRV to be a clean non-duplicate, but that reasoning does not
+transfer to LPPLS, which is the opposite kind of object (a dynamically
+re-fit, short-horizon finite-time-singularity model whose whole output
+is a near-term critical-time estimate, never a valuation level). Full
+non-duplicate argument, the theory-motivated named failure modes for
+both branches, and both branches' pre-registered decision rules — all
+written before either branch was dispatched as an independent agent —
+live in the operator-authored, frozen `experiments/r141_shared.py`
+module docstring.
+
+**What was done.** `experiments/r141_shared.py` (operator-authored,
+frozen before either branch was dispatched, pushed to `main` as a WIP
+commit before either branch ran, per `docs/ROUTINE.md`'s Step-0
+collision-safety protocol — re-checked against `origin/main` immediately
+before dispatch, no in-flight collision found): the LPPLS engine itself
+(Filimonov & Sornette's linear-in-(A,B,C1,C2) reparametrization, solved
+in closed form per grid cell via `numpy.linalg.lstsq` — no `scipy`
+dependency, none is declared in `pyproject.toml`), a pre-registered grid
+(`M_GRID`=5 pts in [0.1,0.9], `OMEGA_GRID`=4 pts in [6,13],
+`TC_OFFSET_FRACTIONS`=8 pts, `WINDOW_LENGTHS_DAYS`=(90,180,270,365,550),
+weekly recalibration), Sornette et al.'s standard bubble-quality filter
+(B<0, damping condition D=m|B|/(omega·C) >= 1.0), a shared, cached daily
+confidence-indicator computation (`lppls_daily_signals`/
+`lppls_bar_signals`, causally aligned via `tradebot.data.
+align_onchain_causal`, computed ONCE for both branches to share a
+byte-identical signal), the R-82-identical Step-A six-episode
+detection-lag gate adapted to an up-crossing-through-`conf_thresh`
+detector, and the R-125-identical Step-0/B1 SIZE-axis battery (imported,
+not re-derived). `experiments/r141_conservative_lppls_vote.py` (Step-A
+gate, `conf_thresh` swept over {0.4, 0.6, 0.8}) and
+`experiments/r141_novel_lppls_dampener.py` (`scale_novel = scale_v4 *
+max(0.1, 1 - kappa*confidence)`, kappa calibrated by matching
+mean(scale_novel) to mean(scale_v4) on inner-train) were each built by
+an independent agent from the frozen shared module, dispatched in
+parallel, neither editing it, neither committing. **Decision rules,
+pre-registered verbatim in `r141_shared.py` before either branch ran:**
+conservative — PASS Step-A at >=4/6 episodes, identical bar to all
+seven priors, STOP at Step-A (no Step-B, no holdout) if it fails; novel
+— PROMOTE-candidate only if causal-truncation probe AND Step-0
+(R²<=0.98 vs v4) AND B1 (both markets) AND B3 (plateau) AND B4 (ETH
+replicates) AND B5 all pass, the identical SIZE/ERR-family convention
+R-109 through R-136 used. **Falsification tests, pre-registered:**
+conservative — the same block-bootstrap-null Step-A gate every
+predecessor mechanism was tested against; a disclosed, explicitly
+NON-gating secondary diagnostic (the 2-episode "genuine bubble top"
+subset — 2018 bear onset, 2021-11 top — theory-motivated as the only
+episodes LPPLS could plausibly lead, since the other four are
+exogenous/event-driven shocks with no preceding BTC bubble signature).
+Novel — B4, the ETH sign-replication test this SIZE/ERR programme has
+used since R-59. **Configs evaluated: 20 total, both branches**
+(conservative: 3, the `conf_thresh` sweep; novel: 17 = 16-point primary
+`kappa` calibration grid + 1 Step-0 gate; B1/B3/B4/B5 never ran, so
+their pre-declared cell counts are not incurred). The shared LPPLS
+signal's own internal grid search (800 lstsq fits per calibration date
+x 235 BTC dates + 120 ETH dates = 284,000 fits total) is the cost of
+fitting ONE estimator, not 800 candidate strategies, and is not counted
+toward this trials figure — the same convention this project has always
+used for an estimator's own internal computation (BOCPD's message-passing
+recursion, CVaR's rolling-quantile estimation, CUSUM's own detection
+scan were none of them counted either). **Correction, disclosed:** the
+conservative branch's own file comment miscalculated this figure as
+936,000 (800 x 5 x 234); the correct arithmetic is 800 fits already
+covers all 5 window lengths per calibration date, so the total is
+800 x (235+120) = 284,000, not 936,000 — caught by the operator's own
+independent re-derivation before this entry was written, does not affect
+any verdict.
+
+**Result.** **Conservative:** 0/6 at every swept `conf_thresh` (0.4, 0.6,
+0.8) — the worst score of any of the eight regime-timing mechanisms now
+tried against this gate (the seven priors scored 0-2/6). Diagnostic: the
+LPPLS confidence indicator does reach nonzero values in the training
+window (BTC: 238/2191 days with >=1/5 fits qualifying, max 3/5,
+clustered in 2019-04-to-07 and 2020-12-to-2021-06 — sensibly the 2021
+bull run's acceleration phase, well before the actual Nov-2021 top), but
+none of those elevated periods falls within +/-60 days of any of the six
+dated episode onsets, so the gate had no crossing to score at any
+threshold. The genuine-bubble-top diagnostic also scored 0/2 at every
+threshold — the theory-consistent partial-pass hypothesis named in the
+pre-registration did not materialize either. An index-alignment bug in
+the branch's own first draft was caught and disclosed rather than
+silently worked around: feeding the shared module's DAILY-indexed frame
+directly into `step_a_gate` (which reindexes onto a 5-MINUTE bar window)
+drops coverage to 0.35% on the first episode window; the fix
+(`lppls_bar_signals`'s bar-aligned, forward-filled output, matching
+R-139's own precedent) is documented in the file's own module docstring.
+Causal-truncation probe on the branch's own new code path (full grid,
+not the shared module's restricted self-test, checked at a genuinely
+qualifying date, 2019-06-05, n_qualify=2/5): **PASS**, bit-identical
+full-vs-truncated. `pytest tests/test_causality_strict.py -q`: **51
+passed**. Step B never ran; holdout never read (max timestamp touched:
+`2022-12-31 23:55:00+00:00`). **Novel:** the identity-recovery check
+(kappa=0 must reproduce `kelly_regime_v4` exactly) passed bit-for-bit.
+The calibration search then returned **kappa=0.000000** — not a
+near-zero measurement but the exact, provable minimizer: because
+`damp = max(0.1, 1-kappa*confidence) <= 1` for every kappa>=0 in the
+pre-registered grid, `mean(scale_novel)` is non-increasing in kappa
+(confirmed numerically on real BTC inner-train data: gap-from-target
+rises monotonically from 0.000532 at kappa=0 to 0.026959 at kappa=3.0),
+so an EQUALITY mean-matching calibration against a target that kappa=0
+already meets can never select anything else. Step-0 R² vs v4's own
+target: **1.000000** exactly (not merely >0.98) — the calibrated
+candidate is byte-identical to `kelly_regime_v4`. Per the pre-registered
+decision rule, this alone is sufficient for NEGATIVE and the branch
+correctly stopped: B1/B3/B4/B5 were never run at the calibrated
+candidate (a trivially-zero, non-informative result would have followed
+by construction), and were not fabricated at an un-calibrated kappa,
+which would have violated this project's own exposure-matching
+discipline (R-33/R-59/R-125). A disclosed, explicitly non-gating
+supplementary B1 pass at the calibrated (kappa=0) candidate confirmed
+exactly this: `d_sharpe`=0.000000 on both spot and futures, bootstrap
+interval [0,0] on both. Causal-truncation probe (this branch's own code,
+diagnostic kappa=1.0 so the dampener actually multiplies something):
+**PASS**. `pytest tests/test_causality_strict.py -q`: **51 passed**.
+Holdout never read (max timestamp: `2022-12-31 23:55:00+00:00`; ETH was
+never even loaded, since the branch stopped before B4).
+
+**Skeptic reproduction.** The operator independently re-ran both
+branches' driver scripts from a clean shell after each branch reported.
+Conservative: `python experiments/r141_conservative_lppls_vote.py`
+reproduced 0/6 at every threshold and PASS on the causal-truncation
+probe, bit-for-bit matching the implementing agent's own printed
+numbers. Novel: `python experiments/r141_novel_lppls_dampener.py`
+reproduced kappa=0.000000, R²=1.000000, KILL=True and PASS on its own
+causal-truncation probe, again bit-for-bit. The operator also read both
+files' `prepare()`/gate logic end-to-end (not just each agent's own
+summary), specifically checking for a full-series fit or an
+index-alignment leak (this round's own named risk, since the shared
+signal is daily-cadence reindexed onto 5-minute bars) — none found
+beyond the one already self-disclosed and fixed by the conservative
+branch itself.
+
+**Verdict.** **NEGATIVE, both branches. Neither decision rule moved**
+after any real-data number was seen. **The one-line lesson, conservative
+side:** the eighth structurally distinct regime-timing mechanism tried
+against this project's own six-episode gate is also its worst-scoring —
+the LPPLS confidence indicator's few genuinely elevated periods in this
+training window simply never coincide with any of the six dated
+transitions, endogenous-bubble-motivated or not, closing the "is there a
+theoretically-motivated reason some episodes should be more detectable
+than others" question this round itself raised (no, not for LPPLS, on
+this price series). **The one-line lesson, novel side, worth recording
+in section C so it is not re-derived blind:** a pure multiplicative
+dampener bounded above by 1, calibrated by matching its MEAN exposure to
+a reference by EQUALITY, is mathematically degenerate for any downward-
+leaning confidence signal — any future round building a "confidence-
+gated de-risking multiplier" of this exact shape needs either inequality
+matching (allow the calibration to accept a nonzero gap) or a two-sided
+multiplier (bounded on both sides of 1, so it can also lever up in low-
+confidence states) to avoid the identical trap. **Holdout counter: +0**
+on top of R-140's ~698 (unchanged); running program-level total remains
+~698 — neither branch's pre-registered decision rule was ever satisfied
+enough to justify a holdout read. **This closes the regime-timing-
+mechanism axis at eight structurally distinct theoretical bases tried
+(discrete-state switching, Bayesian changepoint, linear filtering,
+dynamical-systems fluctuation, information-theoretic flow, self-exciting
+point process, sequential process control, and now finite-time-
+singularity nonlinear regression), all against the identical six-episode
+gate, all failing at 0-2/6.** **Next step:** per this round's own
+diligence, no new, non-duplicate, unblocked thread is named — the
+single-asset axis's own fully closed lists on `kelly_regime_v4` (19+
+INFO, 28+ SIZE, ERR across 6 notions of uncertainty, now 8 regime-timing
+mechanisms, 4 N≈3 procedures, 5 COST-model families), `hedge_experts`'s
+EXPERT COMPOSITION axis (closed), `champions_council`'s allocation
+mechanism (closed), the multi-asset panel (closed, eleven rounds), and
+R-127's own idiosyncratic-event-excision follow-on (closed, R-137) are
+all exhausted; B-28's breadth clause remains blocked on data this
+project cannot fetch or simulate. Absent a genuinely new idea clearing
+Step-0, **B-06 (forward paper-trading, already running unattended, per
+R-78's own costing) is the only standing item.**
+
 ### R-140 · 08-25 · NEGATIVE (both branches) — a Synthetic Control Method test of v4's own edge-concentration claim: a classical in-space placebo test appears to CONFIRM at p=0.00077 on both markets, but the effect does not survive a same-scale, within-object conformal residual-permutation test on the identical fit (BTC pooled p=0.314, ETH p=0.272) — the two branches' disagreement is traced to a scale-mismatch confound in the classical construction, not a genuine effect
 
 **Direction.** Off-backlog (the ranked list has held only B-06 since R-137/
@@ -14641,6 +14843,8 @@ trip.
 
 | what | why | ref |
 |---|---|---|
+| The Log-Periodic Power Law Singularity (LPPLS) model (Johansen, Ledoit & Sornette 2000; Filimonov & Sornette 2013) as a regime-timing input to `kelly_regime_v4`'s vote, a bubble-confidence indicator (fraction of 5 window-length fits clearing Sornette et al.'s quality filter) swept over `conf_thresh∈{0.4,0.6,0.8}`, against the identical six-episode Step-A detection-lag gate as HMM/BOCPD/Kalman LLT/CSD/transfer entropy/Hawkes/CUSUM | **0/6 at every threshold** — the worst score of any of the now eight regime-timing mechanisms tried against this gate (the seven priors scored 0-2/6). The indicator is non-degenerate (238/2191 BTC training days show >=1/5 qualifying fits, clustered 2019-04-to-07 and 2020-12-to-2021-06) but none of its elevated periods falls within ±60 days of any of the six dated episode onsets, so no crossing was ever available to score. A disclosed, non-gating diagnostic (the 2-episode "genuine bubble top" subset, theory-motivated as the only episodes LPPLS could plausibly lead) also scored 0/2 — the theory-consistent partial pass named in the pre-registration did not materialize. Independently reproduced bit-for-bit by the operator. Do not re-try LPPLS as a v4 regime-timing input on this exact six-episode gate expecting a different result; the formal-statistics-and-now-critical-phenomena well for "detect a known historical regime break faster than v4's own anchors" is exhausted across eight structurally distinct theoretical bases. | R-141 (conservative) |
+| An LPPLS bubble-confidence indicator used as a continuous crash-hazard SIZE-axis dampener on `kelly_regime_v4`'s `scale`, `scale_novel = scale_v4 * max(0.1, 1-kappa*confidence)`, kappa calibrated by matching mean(scale_novel) to mean(scale_v4) on inner-train (the standard exposure-matching discipline) | **Mathematically degenerate, not merely negative on the data**: because `damp<=1` for every kappa>=0, `mean(scale_novel)` is non-increasing in kappa, so an EQUALITY-matching calibration against a target kappa=0 already meets always selects kappa=0 — confirmed both analytically and numerically (gap-from-target rises monotonically from 0.000532 at kappa=0 to 0.026959 at kappa=3.0 on real BTC data). Step-0 R²=1.000000 exactly (not merely >0.98): the calibrated candidate is byte-identical to `kelly_regime_v4`. B1/B3/B4/B5 correctly never ran (would have been trivially zero by construction). Independently reproduced bit-for-bit by the operator. **Do not re-try any one-sided (bounded-only-above-1, or only-below-1) multiplicative dampener under EQUALITY exposure-matching** — the construction is degenerate by construction whenever the reference (kappa=0) already sits at or past the matching target in the dampener's only permitted direction; use inequality matching or a two-sided (both-directions) multiplier instead. | R-141 (novel) |
 | A causal CUSUM changepoint detector (Page 1954; Hawkins & Olwell 1998), on BTC's own daily log-return mean, at R-137/R-138's fixed textbook constants (`trail_days=90, k=0.5σ, h=5σ`), as a single-indicator regime-timing signal on `kelly_regime_v4` | Pre-registered Step-A detection-lag gate, identical six-episode table and >=4/6 bar as R-82 (BOCPD)/R-83 (Kalman LLT)/R-85 (CSD)/R-86 (transfer entropy): **2/6** pass (2018 bear onset, 2018 capitulation; COVID, Terra/Luna and FTX all fail, and the 2021-11 top has no anchor-flip/detection in its own ±60d window). Independently reproduced bit-for-bit by both the dispatched agent and a separate operator re-run. Do not re-try CUSUM at these exact textbook constants as a v4 regime-timing input expecting it to clear this gate. | R-139 (conservative) |
 | The same CUSUM detector, swept over a pre-registered 36-cell grid (`trail_days∈{30,60,90,120} x k_mult∈{0.25,0.5,1.0} x h_mult∈{3,5,7}`), against the identical Step-A gate | Full 36-cell table reported, none suppressed. No cell reaches >=4/6; best cells reach **3/6** (`trail=30,k=0.25,h=5.0` and `trail=30,k=1.0,h=3.0`), sitting at opposite corners of the grid rather than forming a coherent neighbourhood — weak evidence against an undiscovered nearby parameterization clearing the bar. The textbook cell (`90,0.5,5.0`) reproduces the conservative branch's 2/6 exactly, an internal consistency check that passed. `plateau_ok()` was never invoked in earnest (no winner to seed it). Operator independently re-ran three representative cells and matched exactly. Do not re-sweep CUSUM's own `trail_days`/`k`/`h` on this gate expecting a materially different ceiling; six structurally distinct regime-detection theoretical bases (discrete-state switching, Bayesian changepoint, linear filtering, dynamical-systems fluctuation, information-theoretic flow, and now sequential process control) have now each been tried against these six episodes, fixed and swept, and none clears 3/6. | R-139 (novel) |
 | Turnover-**corridor** cost control on an already-decided re-target: a rate/resource constraint on `kelly_regime_v4`'s own trailing realized rebalance rate, in both forms this framework can express — DEFER the pending move while trailing turnover sits above an admissible band (Khubiev, Semenov, Podlipnova & Khubieva 2025, arXiv:2509.04541), or SHRINK it by `1/(1+λ)` under an online dual-ascent shadow price on turnover (the causal analogue of Boyd, Busseti, Diamond, Kahn, Koh, Nystrup & Speth 2017, *Found. Trends Optim.* 3(1)) | Closed by two **independent** executions of the same frozen pre-registration on the same day (R-131 and R-133, neither aware of the other), agreeing on the verdict, on every gate, and on the conservative branch's decisive cell to three decimals (−0.0284 / −0.028). R-131: both branches fail B1/B3/B4; a corridor loose enough not to freeze the strategy barely binds (0.57% of bars), one reactive enough to bind saturates exactly at the regime transitions where the edge lives. R-133 adds the mechanical reason, from 56 backtests over 17 configurations: **throttling an already-decided order does not reduce turnover.** Deferral POSTPONES — ~5000 interventions buy a fill-count ratio of 0.832, the moves executing a few bars later. Shrinking SPLITS — the fill ratio is non-monotone and never far below 1 (0.863–1.125), and at the tightest corridor it is **1.125, i.e. the throttle trades MORE than the strategy it throttles**; partial adjustment never reaches zero, so the position is never fully closed (30 round-trip episodes vs v4's 52), time in market rises 55.6%→75.8% and drawdown worsens on every cell (up to +6.08pp). The size-acting form is additionally unattributable here: `broker.REBALANCE_DEADBAND` absorbs 4.5% of v4's own intended re-targets but 61–83% of the throttled branch's, a confound proportional to the mechanism's own parameter (B-43). Do not re-try a corridor, band, quota or shadow price applied to the rebalance itself; a COST-axis attack on this object has to change the DECISION, not the order that follows it. | R-131, R-133 |
@@ -14741,6 +14945,30 @@ trip.
 ---
 
 ## D. Backlog (ranked)
+
+**Re-ranked 08-25 after R-141.** The Log-Periodic Power Law Singularity
+model (Sornette et al.'s finite-time-singularity bubble/crash framework)
+is **NEGATIVE on both branches**: as an eighth regime-timing mechanism
+it scores 0/6 on the standard six-episode gate (worse than all seven
+priors), and as a first LPPLS-derived SIZE-axis dampener it is
+mathematically degenerate at Step-0 (an equality-matched, one-sided
+multiplier is provably forced to its own no-op point). **The backlog
+remains empty of anything but B-06.** This round's own real-literature
+search (WebSearch, this session) also checked and rejected the "Bitcoin
+power law" valuation paper R-125 had already flagged, and found nothing
+else clearing Step-0 as a non-duplicate. **This closes the
+regime-timing-mechanism axis at eight structurally distinct theoretical
+bases (discrete-state switching, Bayesian changepoint, linear filtering,
+dynamical-systems fluctuation, information-theoretic flow, self-exciting
+point process, sequential process control, finite-time-singularity
+nonlinear regression), all against the identical gate, all failing at
+0-2/6** — a future session should not treat "try a ninth regime-timing
+estimator" as a promising use of a session without a genuinely different
+kind of evidence (a new data channel this project cannot currently fetch
+or simulate without proxying) than the ninth reskin of "does some
+estimator of the same OHLCV series detect these six known dates faster
+than a moving-average anchor." No new, non-duplicate, unblocked thread
+is named by this round.
 
 **Re-ranked 08-25 after R-140.** A Synthetic Control Method test of v4's
 own edge-concentration claim is **NEGATIVE**: a classical in-space placebo
@@ -17833,6 +18061,18 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-25 · ~698** — R-141: **+0** on top of R-140's ~698 (unchanged),
+  both branches (conservative six-episode LPPLS detection-lag gate,
+  novel LPPLS SIZE-axis dampener). Conservative's pre-registered stop
+  rule (>=4/6 episodes) failed at every swept threshold (0/6 throughout);
+  novel's Step-0 non-degeneracy gate killed the candidate before B1 could
+  run. Both branches' loaders (`r141_shared.load_btc_train`/
+  `load_eth_train`, reused from `r125_shared.py`) assert the max touched
+  timestamp precedes `OOS_START`; both reported max bar touched
+  `2022-12-31 23:55:00+00:00`, and the operator's own independent re-run
+  of both branches' driver scripts confirmed the identical bound.
+  `pytest tests/test_causality_strict.py`: 51 passed (both branches,
+  reproduced independently by the operator).
 - **08-25 · ~698** — R-140: **+0** on top of R-139's ~698 (unchanged), both
   branches (conservative Abadie in-space placebo SCM test, novel
   Chernozhukov-Wuthrich-Zhu conformal residual-permutation SCM test).
