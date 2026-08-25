@@ -315,6 +315,12 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+IN PROGRESS: R-138 — Nguyen & Wolf (2026) small-N permutation test for
+event studies, applied to `kelly_regime_v4`'s edge-concentration claim
+around `STRESS_EPISODES` (conservative) and around a causal single-asset
+CUSUM-detected event set (novel). Frozen pre-registration:
+`experiments/r138_shared.py`.
+
 ### R-137 · 08-25 · METHOD (diagnostic, both branches) — REFUTED: R-127's own named follow-on, does ETH-idiosyncratic-event excision generalize past the one construction it tested, tried on the other constructions plus a random-day placebo control R-127 itself never ran; a causal, hindsight-free CUSUM detector independently corroborates the null (near-zero overlap with the hand-picked events) but surfaces one reproducible, un-named structural break (2022-07-18) three independent reloads agree on
 
 **Direction.** Per R-136's own re-ranking, the ranked backlog held nothing
