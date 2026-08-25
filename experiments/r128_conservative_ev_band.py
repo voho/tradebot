@@ -63,6 +63,40 @@ choice, and flagged again in the report's discussion section.
 ``ConservativeEVBand`` is NOT ``@register``ed -- experiments/-only per this
 round's instructions, reached only through this file.
 
+POST-HOC CORRECTION (operator, before any promotion decision was recorded).
+The disclosed consequence two paragraphs above was worse than "a side
+effect": ``blend_x`` is a value ``hedge_experts`` always fed straight to
+``ctx.order_target`` -- i.e. it is already in "fraction of this market's
+max leverage" units, the SAME convention every one of its ten experts is
+built in. The first version of this file instead compared it against
+``current = position*close/equity``, a NOTIONAL-MULTIPLE (ranges to +/-5 on
+5x futures) -- a unit mismatch, invisible on spot (leverage=1, where the
+two conventions coincide by coincidence) but live on futures, where it
+made ``current`` almost always read as far outside ``blend_x``'s own
+[-1,1] range, and then placed the resulting order via ``order_notional``
+(leverage-invariant) rather than the original ``order_target``
+(leverage-scaled) -- the net, uncontrolled effect being that the candidate
+could never actually reach more than roughly 1x equity notional on
+futures, regardless of the market's real 5x cap, while the baseline
+``hedge_experts`` (unmodified, still using ``order_target``) could. That
+is an EXPOSURE-LEVEL difference, not a rebalance-timing one -- precisely
+the R-33 trap this project's own ledger names repeatedly ("holding less
+draws down less; that is arithmetic, not evidence, and it is invisible
+until the benchmark is de-levered to match"). ``_band`` and ``on_bar``
+below are the corrected versions: ``current`` is now expressed in the same
+fraction-of-max-leverage units as ``blend_x`` (``current = position*close /
+(equity*leverage)``), the band is re-derived for that unit system
+(``band = 2*fee/(H*leverage*sigma**2)`` -- identical to the original
+formula on spot, where leverage=1; differs only on leveraged markets), and
+orders are placed via ``ctx.order_target`` again, matching
+``hedge_experts``'s own native convention. SPOT numbers are numerically
+identical before and after this fix (leverage=1 makes the two formulas
+coincide); only FUTURES-market cells needed re-running. The battery
+results and report below are from the CORRECTED version; the first
+(confounded) run's numbers are preserved in this file's git history and in
+the R-128 ledger entry's own discussion, not deleted, per this project's
+"nothing is deleted, annotate in place" convention.
+
 CONFIGURATIONS EVALUATED: 1 (causal-truncation self-test) + 4 (B1: BTC
 spot/futures x full-period/inner-validation) + 4 (B3: horizon multiplier
 sweep 0.5/1/2/4x, FUTURES inner-validation) + 1 (B4: ETH spot,
@@ -179,19 +213,34 @@ class ConservativeEVBand(HedgeExperts):
         df["_ev_vol"] = (sig1 * np.sqrt(shared.BARS_PER_YEAR)).shift(1)
         return df
 
-    def _band(self, fee: float, vol: float) -> float:
-        """Verbatim ``kelly_regime_ev.KellyRegimeEV._band``."""
+    def _band(self, fee: float, vol: float, leverage: float) -> float:
+        """CORRECTED (post-hoc fix, see module docstring addendum below):
+        re-derived for fraction-of-max-leverage units, matching
+        ``hedge_experts``'s own native ``x``/``order_target`` convention.
+        In notional-multiple units the growth given up per unit time is
+        ``(sigma**2/2)*(delta_notional)**2`` and correcting it costs
+        ``fee*|delta_notional|``; substituting ``delta_notional =
+        leverage*delta_f`` (the actual notional-multiple change implied by
+        a fraction-of-max-leverage change of ``delta_f``) gives
+        ``band_f = 2*fee/(H*leverage*sigma**2)`` -- the original
+        ``kelly_regime_ev`` formula divided by one extra factor of
+        ``leverage``. On spot (leverage=1) this is identical to the
+        original formula; it only differs on leveraged markets."""
         horizon_years = self.horizon_days / 365.25
         variance = max(vol, 1e-6) ** 2
-        band = 2.0 * fee / (horizon_years * variance)
+        lev = max(leverage, 1e-9)
+        band = 2.0 * fee / (horizon_years * variance * lev)
         return float(np.clip(band, self.min_band, self.max_band))
 
     def on_bar(self, ctx: Context) -> None:
-        """Verbatim ``kelly_regime_ev.KellyRegimeEV.on_bar`` structure,
-        reading ``blend_x``/``_ev_vol`` in place of v4's ``target``/
-        ``_ev_vol``. Inherits the always-allow-a-full-exit-to-flat clause
-        unchanged (a design choice made by kelly_regime_ev, not fit here --
-        see module docstring)."""
+        """CORRECTED (post-hoc fix -- see module docstring addendum): both
+        ``current`` and ``desired`` are now expressed in the SAME units as
+        ``blend_x`` itself -- fraction of this market's max leverage, the
+        units ``hedge_experts``'s own original ``ctx.order_target(t)`` call
+        already used -- rather than the notional-multiple units the first
+        version of this file mistakenly compared ``blend_x`` against. Trades
+        are placed via the original ``ctx.order_target``, not
+        ``ctx.order_notional``."""
         desired = float(ctx.bar["blend_x"])
         vol = float(ctx.bar["_ev_vol"])
         if not np.isfinite(vol) or vol <= 0:
@@ -199,14 +248,15 @@ class ConservativeEVBand(HedgeExperts):
         equity = ctx.equity
         if equity <= 0:
             return
-        current = ctx.position * ctx.close / equity
+        lev = max(ctx.market.leverage, 1e-9)
+        current = ctx.position * ctx.close / (equity * lev)
 
-        band = self._band(ctx.market.fee_rate, vol)
+        band = self._band(ctx.market.fee_rate, vol, lev)
         if desired == 0.0 and abs(current) > 1e-9:
-            ctx.order_notional(0.0)
+            ctx.order_target(0.0)
             return
         if abs(desired - current) > band:
-            ctx.order_notional(desired)
+            ctx.order_target(desired)
 
 
 # ================================================================== (2)

@@ -83,6 +83,48 @@ of those runs at its fallback floor (``H_MIN_DAYS``) and only becomes a
 genuine estimate partway into the measured window. This is disclosed, not
 hidden, and does not violate causality (the fallback is itself a fixed,
 pre-registered constant, not a peek).
+
+POST-HOC CORRECTION (operator, before any promotion decision was recorded),
+two independent issues found on review:
+
+1. **Unit mismatch, shared with the conservative branch.** ``desired_x``
+   is already in "fraction of this market's max leverage" units (the
+   convention ``hedge_experts``'s own experts and its original
+   ``ctx.order_target`` call use). The first version of this file compared
+   it against ``current = position*close/equity``, a NOTIONAL-MULTIPLE
+   (ranges to +/-5 on 5x futures) -- coincidentally identical to the
+   fraction-of-leverage convention on spot (leverage=1) but not on
+   futures -- and placed orders via ``order_notional`` (leverage-invariant)
+   rather than ``order_target`` (leverage-scaled). Net effect: the
+   candidate could not exceed roughly 1x equity notional on futures
+   regardless of the real 5x cap, while the baseline could -- an
+   EXPOSURE-LEVEL artifact (the R-33 trap this project's ledger names
+   repeatedly), not a rebalance-timing effect. Fixed below: ``current`` is
+   now ``position*close/(equity*leverage)``, ``_band`` gains one extra
+   ``/leverage`` factor (identical to the conservative branch's own
+   correction; algebra in that file's docstring), and orders are placed
+   via ``ctx.order_target`` again.
+2. **``RHO_MAX``/``H_MIN_DAYS`` were mutually inconsistent, discovered
+   independently during this branch's own report-writing.** At
+   ``BARS_PER_DAY=288``, the maximum unclipped ``H_t`` reachable at
+   ``rho=RHO_MAX=0.98`` is ``-1/(288*ln(0.98)) ~= 0.172`` days -- always
+   BELOW the ``H_MIN_DAYS=0.25`` floor, so ``H_t`` was mathematically
+   forced to the floor on every bar, in every configuration tested; the
+   "adaptive" mechanism this branch exists to test never actually varied,
+   and B3's four sweep points were byte-identical for exactly this reason.
+   Fixed below: ``RHO_MAX`` raised to ``0.999`` (``H_t`` at that bound is
+   ``~3.47`` days, inside ``[H_MIN_DAYS, H_MAX_DAYS]`` with room either
+   side) -- a structural choice (comfortably below certainty, not fit to
+   any result) rather than a value swept for best performance.
+
+SPOT numbers are numerically identical before and after fix 1 (leverage=1
+makes the two formulas coincide); fix 2 changes every cell's ``H_t`` path,
+so the WHOLE battery was re-run after both fixes, not only the futures
+cells. The battery results and report below are from the CORRECTED
+version; the first (confounded, degenerate) run's numbers are preserved in
+this file's git history and in the R-128 ledger entry's own discussion,
+not deleted, per this project's "nothing is deleted, annotate in place"
+convention.
 """
 
 from __future__ import annotations
@@ -124,7 +166,7 @@ class HedgeExpertsAdaptiveBand(HedgeExperts):
     warmup = 2500  # == HedgeExperts.warmup, disclosed for B1 fairness (see module docstring)
 
     RHO_MIN = 0.02
-    RHO_MAX = 0.98
+    RHO_MAX = 0.999
     H_MIN_DAYS = 0.25
     H_MAX_DAYS = 10.0
 
@@ -203,16 +245,24 @@ class HedgeExpertsAdaptiveBand(HedgeExperts):
         self._recorded_target = np.zeros(n)
         return df
 
-    def _band(self, fee_rate: float, h_days: float, vol: float) -> float:
-        """Threshold on |Δexposure| below which trading destroys value."""
+    def _band(self, fee_rate: float, h_days: float, vol: float, leverage: float) -> float:
+        """CORRECTED (post-hoc fix, see module docstring addendum): threshold
+        on |delta_exposure| below which trading destroys value, re-derived
+        for fraction-of-max-leverage units (see conservative branch's own
+        addendum for the algebra -- identical extra ``/leverage`` factor)."""
         horizon_years = max(h_days, 1e-9) / 365.25
         variance = max(vol, 1e-6) ** 2
-        band = 2.0 * fee_rate / (horizon_years * variance)
+        lev = max(leverage, 1e-9)
+        band = 2.0 * fee_rate / (horizon_years * variance * lev)
         return float(np.clip(band, self.min_band, self.max_band))
 
     # -------------------------------------------------------------- orders
 
     def on_bar(self, ctx: Context) -> None:
+        """CORRECTED (post-hoc fix -- see module docstring addendum):
+        ``current`` is now expressed in the same fraction-of-max-leverage
+        units as ``desired_x`` itself, and orders are placed via the
+        original ``ctx.order_target``, not ``ctx.order_notional``."""
         i = ctx.i
         prev_recorded = float(self._recorded_target[i - 1]) if i > 0 else 0.0
 
@@ -227,21 +277,21 @@ class HedgeExpertsAdaptiveBand(HedgeExperts):
         if equity <= 0:
             self._recorded_target[i] = prev_recorded
             return
-        current = ctx.position * ctx.close / equity
-
-        band = self._band(ctx.market.fee_rate, h_days, vol)
         lev = max(ctx.market.leverage, 1e-9)
+        current = ctx.position * ctx.close / (equity * lev)
+
+        band = self._band(ctx.market.fee_rate, h_days, vol, lev)
 
         # Inherited from kelly_regime_ev.on_bar (and shared with the
         # conservative branch): always allow a full exit to flat.
         if desired_x == 0.0 and abs(current) > 1e-9:
-            ctx.order_notional(0.0)
+            ctx.order_target(0.0)
             self._recorded_target[i] = 0.0
             return
 
         if abs(desired_x - current) > band:
-            ctx.order_notional(desired_x)
-            self._recorded_target[i] = desired_x / lev
+            ctx.order_target(desired_x)
+            self._recorded_target[i] = desired_x
         else:
             self._recorded_target[i] = prev_recorded
 
@@ -263,6 +313,19 @@ class HedgeExpertsAdaptiveBand(HedgeExperts):
 # below reproduces run_period's own prefix arithmetic so that, since this
 # class's `warmup` (2500) never exceeds the frozen replay wrapper's own
 # warmup (also 2500), the two always align with zero slack.
+#
+# POST-HOC CORRECTION (operator): `_recorded_target[i]` now records
+# `desired_x` directly (not `desired_x / lev`). The `/lev` division in the
+# first version of this file was compensating for `on_bar` placing the
+# live order via `ctx.order_notional` (leverage-invariant) while this
+# replay wrapper always used `ctx.order_target` (leverage-scaled) -- i.e.
+# it was reproducing the SAME exposure cap the live order's own unit bug
+# introduced, not curing it. Now that `on_bar` places its live order via
+# `ctx.order_target(desired_x)` directly (see the class's own
+# POST-HOC CORRECTION note above `_band`/`on_bar`), recording `desired_x`
+# unchanged makes the replay agree with the live backtest's own real
+# fills, both using the same leverage-scaled convention hedge_experts
+# itself uses.
 # ---------------------------------------------------------------------
 
 def _b1_candidate(df_full: pd.DataFrame, market, start: str, end: str,
