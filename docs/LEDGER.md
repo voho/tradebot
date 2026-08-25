@@ -315,6 +315,111 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-135 · 08-25 · NEGATIVE (both branches) — a third `hedge_experts` EXPERT COMPOSITION construction (derivatives-positioning + implied-vol votes), with R-132's own turnover-matched control promoted to a mandatory pre-registered gate, reproduces R-132's turnover-reduction-in-a-losing-regime artifact a third time
+
+**Direction.** The ranked backlog is empty of anything but B-06 (forward
+paper trading, already running unattended, per R-78's own costing) per
+R-134's own re-ranking. Best off-backlog lead: `hedge_experts`'s EXPERT
+COMPOSITION axis, named by R-130 as the one thing no round had varied and
+tried once by R-132 (MVRV valuation + stablecoin-supply-growth votes,
+NEGATIVE via a turnover-reduction-in-a-losing-regime artifact an
+independent skeptic caught post-hoc). R-132's own closing recommendation
+was explicit: a third attempt should either change the evaluation window
+(`hedge_experts`'s own baseline loses money over inner-validation) or make
+the turnover-matched control a mandatory gate. This round does both.
+Attacks **INFO**, in R-132's own structurally distinct sense: two data
+channels never tried as Hedge-panel VOTES before — derivatives-positioning
+("crowding," De Roon, Nijman & Veld 2000, hedging-pressure theory) and an
+implied-volatility variance-risk-premium vote (Bollerslev, Tauchen & Zhou
+2009, DVOL minus trailing realized vol). Not a duplicate of R-132 (different
+data channels; the novel branch's slot-selection is a frozen, inner-train-
+only correlation-based procedure rather than R-132's a-priori horizon rule),
+R-81/R-73 (same data sources, but tried as standalone lead-time-gated
+signals on `kelly_regime_v4`, a different object and mechanism), or
+R-128/R-129/R-130 (this object's re-target/cost-rule axis, panel held
+fixed).
+
+**What was done.** Frozen pre-registration: `experiments/r135_shared.py`,
+committed one commit ahead of either branch's results. Verified before any
+candidate code ran: baseline `hedge_experts` is genuinely profitable on
+inner-train 2017-2020 (Sharpe 1.59 spot / 1.73 futures_5x) and loses badly
+on inner-validation 2021-2022 (Sharpe -0.71 / -0.76, futures down to $5.80
+from $1,000) — so B1 reports THREE periods (`inner_train`, `full_inner`,
+`inner_val`), with `inner_train` and `full_inner` (not `inner_val` alone)
+required for the B1 gate, and B6 (the turnover-matched, information-free
+control from R-130's/R-132's own skeptic construction) is a MANDATORY gate
+on the decisive `inner_train`/`full_inner` cells rather than a discretionary
+post-hoc check. CONSERVATIVE (`r135_conservative_positioning_expert.py`):
+appends one new vote — a contrarian z-scored `count_long_short_ratio` vote
+(deliberately not the `*_toptrader_*` columns, which R-81 already found
+37.6%-missing across 2022) — to the fixed 10-expert panel. NOVEL
+(`r135_novel_breadth_optimized_panel.py`): computes, on inner-train only,
+the existing panel's pairwise position-correlation matrix, drops the two
+experts (`mom_1h`, `rsi_ramp`) with the highest mean-absolute correlation to
+the rest (frozen before any performance number was read, enforced
+programmatically), and fills the two slots with the same positioning vote
+plus a DVOL-minus-realized-vol VRP vote; a `BreadthDropOnlyPanel` ablation
+(drop the same two, add nothing) is mandatory and isolates the drop's own
+contribution. Both branches dispatched as independent subagents on disjoint
+files, neither committing. **184 configs evaluated** (conservative 84,
+novel 100, including B6's own 13-point hysteresis-matching grid per cell).
+`pytest`: 516 passed; `tests/test_causality_strict.py`: 51 passed.
+
+**Result.** Both branches pass the causal-truncation probe, B3 (plateau),
+B4 (ETH sign replicates: conservative +0.31, novel +0.33) and B5 (no sign
+flip at 0.40% fee) — but both fail B1's majority requirement and, decisively,
+the mandatory B6 gate. Conservative: B1 futures_5x/`inner_train`
+`d_sharpe`=-0.0054 (the one non-losing-regime cell that matters most is
+flat-to-negative); B6 fails on 2 of 4 decisive cells (`spot`/`inner_train`
+candidate +0.0025 vs control +0.0192; `futures_5x`/`inner_train` candidate
+-0.0054 vs control +0.1451) — the candidate does not beat a
+zero-information, turnover-matched control on the periods that isolate real
+signal from turnover reduction. Novel: A2 additionally fails outright — the
+VRP vote is provably inert (0.0% of inner-validation bars above 2x-uniform
+weight, against the positioning vote's 81.8%) — and the `BreadthDropOnlyPanel`
+ablation is negative and significant in **all six** B1 cells, meaning the
+breadth-optimized *drop* actively hurts on its own and every apparent gain
+in the full construction comes from the two *adds*; Grinold effective
+breadth *fell* (7.33 -> 4.63), the opposite of the procedure's own intent.
+B1 `inner_train` is non-significant on both markets (-0.0055 spot, -0.0459
+futures_5x — this is also where DVOL/positioning coverage is thinnest, per
+the round's own named failure mode #4), and B6 confirms the same pattern as
+the conservative branch: `inner_train` cells MATCH-OR-TRAIL the
+turnover-matched control on both markets (`futures_5x` control +0.1451 vs
+candidate -0.0459), while only the diluted `full_inner`/`inner_val` cells
+"beat" it. **No holdout was consulted** (+0, ~698) — both branches failed
+their pre-registered gates before either reached a holdout decision.
+
+**Verdict.** **NEGATIVE, both branches.** The reusable finding: R-132's
+turnover-reduction-in-a-losing-regime artifact is not specific to MVRV or
+stablecoin supply, or to an a-priori horizon-collapse selection rule — it
+reproduces with two structurally different data channels (a 5-minute-native
+positioning signal and a daily implied-vol signal) and a data-driven,
+correlation-based slot-selection procedure, a third independent construction
+landing on the same failure mode. **Promoting B6 from a discretionary
+skeptic check to a mandatory pre-registered gate did its job**: both
+candidates would have read as clean B1 passes (4-6 significant positive
+cells apiece) under the R-128-R-130 promotion bar alone, and only the
+mandatory turnover-matched control on the non-losing-regime cells caught
+that the apparent edge does not survive controlling for reduced churn during
+`hedge_experts`'s own losing 2021-2022 stretch. A secondary finding: a
+breadth-maximizing correlation-based slot-selection procedure is not
+self-validating — it lowered realized effective breadth here rather than
+raising it, so "drop the most-correlated experts" is not obviously better
+than R-132's eyeballed a-priori rule and should not be assumed to be without
+checking, exactly as this round did. **This closes three structurally
+distinct EXPERT COMPOSITION constructions on `hedge_experts`** (R-132's
+valuation+macro-flow votes with an a-priori horizon-collapse selection; this
+round's positioning+implied-vol votes with both a single-addition and a
+data-driven breadth-optimized-selection construction) against the same
+mandatory-B6 standard. Next step for a fourth attempt on this axis: either
+evaluate over a window where positioning/DVOL data has full coverage AND the
+baseline is not itself losing (neither exists in the committed data before
+2023, per DVOL's 2021-03-24 start and the baseline's own 2021-2022 losses —
+this may not be a gap a fifth construction can close without new data), or
+treat the axis as closed alongside R-132 and return to B-06 / the
+single-asset axis's fully closed lists.
+
 ### R-134 · 08-25 · METHOD (fix adopted) — closes B-43: `broker.REBALANCE_DEADBAND` made a per-market `MarketSpec` field; re-testing R-133's own closed `NovelTurnoverThrottle` through the corrected broker does not reverse its verdict
 
 **Direction.** Closes **B-43** (filed by R-133): `broker.REBALANCE_DEADBAND
@@ -13989,6 +14094,31 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-25 after R-135.** A third `hedge_experts` EXPERT COMPOSITION
+construction (derivatives-positioning + implied-vol votes, one single-add
+branch and one data-driven breadth-optimized-selection branch) is
+NEGATIVE on both, closing at the same failure mode R-132 found: a
+turnover-reduction-in-a-losing-regime artifact, this time caught by a
+newly-mandatory pre-registered B6 gate rather than a post-hoc skeptic
+check. **The backlog remains empty of anything but B-06** (forward
+paper-trading, already running unattended, per R-78's own costing). This
+round's own next-step analysis: a fourth EXPERT COMPOSITION construction
+would need positioning/implied-vol coverage over a period where
+`hedge_experts`'s own baseline is not losing money, and no such window
+exists in the committed data (DVOL starts 2021-03-24, deep inside the
+2021-2022 losing stretch; `hedge_experts` is only profitable pre-2021,
+before any of R-132's or this round's five new-data-channel experts have
+meaningful coverage) — so a future session should treat this axis as
+**closed alongside R-132** rather than attempt a fourth construction
+blind to that ceiling, and work from the remaining leads instead: R-127's
+own named follow-on (does idiosyncratic-event excision generalize past the
+one construction it tested); the single-asset axis's own fully closed
+lists on `kelly_regime_v4` (19+ INFO, 28+ SIZE, ERR across 5 notions of
+uncertainty, 11 regime-timing mechanisms, 4 N≈3 procedures, 5 COST-model
+families); `champions_council`'s own allocation mechanism (closed,
+R-126); the multi-asset panel's own closed list (eleven rounds); or B-28's
+breadth clause (blocked on data this project cannot fetch or simulate).
+
 **Re-ranked 08-25 after R-134.** The one `NEXT`, open, unblocked item —
 **B-43** (`broker.REBALANCE_DEADBAND` evaluability) — is now closed: the
 fix (a `MarketSpec.deadband` field) is adopted into
@@ -16907,6 +17037,12 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-25 · ~698** — R-135: **+0** on top of R-134's ~698 (unchanged), both
+  branches. Both failed their pre-registered B1/B6 gates on inner-train and
+  inner-validation before either reached a holdout decision; `r135_shared.py`'s
+  `_assert_no_holdout` guards every loader in both branches. Max timestamp
+  read: `2022-12-31 23:55:00+00:00`. `pytest`: 516 passed;
+  `tests/test_causality_strict.py`: 51 passed.
 - **08-25 · ~698** — R-134: **+0** on top of R-132's ~698 (unchanged), both
   branches plus the skeptic audit. B-43's own decisive cell (B1 on
   inner-validation, `NovelTurnoverThrottle` re-tested through the corrected
