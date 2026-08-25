@@ -35,10 +35,21 @@ new idea.** Its thresholds, splits, decision rule and named failure modes were
 fixed by an agent that had seen no number from it, which is the strongest form
 of pre-registration this project can produce and cannot be recreated once
 today's session has looked at the data. Execute it verbatim, and say in the
-entry that you did. R-131 is the worked example: the previous session froze
-both branches and ended; running the frozen plan produced a cleaner result
-than a fresh direction would have, because nothing in it could be adjusted
-after the fact.
+entry that you did.
+
+R-131 and R-132 are the worked example, and they are the reason this check is
+step 0's first line rather than a footnote: **both** found the same
+undispatched file on 08-25, both correctly decided to execute it, and neither
+knew the other was doing so until push time. The duplicated compute is the
+cost of not having this check; the accidental independent replication it
+produced — same verdict, same gates, the decisive cell agreeing to three
+decimals across two different implementations — is the compensation, and it is
+not a substitute for looking first. So: **before executing an in-flight
+pre-registration, announce it in the working branch** (a commit touching
+`docs/LEDGER.md` with a one-line `IN PROGRESS: R-nn <direction>` stub is
+enough) **and re-check `origin/main` before writing the entry.** If another
+session has landed the round meanwhile, record yours as a replication under
+the next ID, say plainly that it is one, and report only what it adds.
 
 Additions *after* the freeze are allowed in exactly one direction — they may
 tighten the bar (an extra ablation, an extra cell, a control), never loosen

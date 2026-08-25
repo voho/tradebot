@@ -1,4 +1,4 @@
-# R-131 novel — online dual-ascent turnover throttle on `kelly_regime_v4`
+# R-132 novel — online dual-ascent turnover throttle on `kelly_regime_v4`
 
 Frozen: `TURNOVER_UPPER = 0.9091` trades/day (30-day causal EWM), `ETA = 0.5`, `LAMBDA_MAX = 20.0`. Inner-validation = 2021-01-01 → 2022-12-31.
 
