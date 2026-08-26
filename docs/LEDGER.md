@@ -17373,6 +17373,75 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-checked 08-27 (fourteenth same-day/next-day session), no round
+dispatched (not an R-numbered entry — zero new configurations
+evaluated).** Tasked independently with the standard brief (take the best
+strategy, propose an improvement vector, do the research, dispatch a
+conservative/novel branch pair, measure, promote the winner), this
+session ran ROUTINE.md Step 0 first: no undispatched frozen
+pre-registration on disk (`experiments/r99_shared.py`-style newest files
+unchanged since R-156; `git fetch origin main` confirmed `origin/main` at
+`5e1953c`, the thirteenth pass's own commit, with a clean working tree —
+no in-flight round to complete). The backlog-table grep found the same
+four live rows the thirteenth pass found: **B-06, B-09, B-17, B-28**
+(B-10 stays struck, closed by R-156).
+
+Rather than re-run any of the eleven regime-timing bases, twenty-one
+SIZE-axis retunes, five-plus ERR-axis (conformal/ACI) variants, or ten
+INFO-signal categories the thirteen prior 08-26/08-27 sessions already
+closed, this session dispatched one research-only sub-agent (18 web
+searches) for a further fresh sweep, explicitly angled at fields adjacent
+to trading this project had not yet mined by name — anytime-valid/e-value
+sequential testing beyond B-06's own tool, robust/trimmed-mean
+estimation, rough volatility / fractional Brownian roughness, Wasserstein
+regime clustering, Hill-estimator tail-index sizing, quantile-regression
+sizing, path-signature portfolio weights, MDL/information-theoretic
+efficiency framing, and double machine learning / causal discovery for
+time series — and fed the full section C table plus all thirteen prior
+same-day closed-topic lists as the duplicate-check corpus. Every hit
+found was either a structural duplicate of an already-closed mechanism
+(anytime-valid e-values ≡ the retired e-process R-31 and B-06's own
+GRO tool; Bayesian Kelly ≡ R-38/R-40/R-93, already named and closed by
+the twelfth pass; robust/trimmed anchor estimation ≡ R-146's median-anchor
+NEGATIVE; momentum-crash vol-timing ≡ R-62's finding that the vol-target
+factor alone carries none of v4's edge; rough volatility / fBm roughness
+≡ the twice-closed Hurst-exponent family; Wasserstein regime clustering ≡
+the discrete-state basis HMM already closes; Hill-estimator sizing ≡
+closed POT/GPD and CDaR rounds; quantile-regression sizing ≡ R-87's
+conformal-quantile dispersion estimator; path-signature portfolio weights
+≡ path-signature regime detection, named and closed by the twelfth pass,
+or reduces price-only to "another indicator," which the standing
+diagnosis says attacks none of the four axes; replicator/evolutionary
+trading ≡ the already-registered, already-NEGATIVE `replicator_book`;
+on-chain SOPR/netflow/LTH-supply ≡ closed for data-availability reasons
+or duplicate of closed MVRV/active-address work), not simulable from 5m
+OHLCV alone per Step 1 Q3 (mean-field-game market-impact execution needs
+a price-impact model this simulator has none of; disposition-effect
+persistence needs wallet-level position data), or not an actionable
+trading mechanism at all (MDL/information-theoretic "efficiency" framing
+had no concrete tradeable construction; double machine learning /
+causal-discovery for time series is a testing methodology, already
+covered in substance by R-138's permutation test and R-140's synthetic
+control, in the same "audits the harness, not a strategy" category the
+ledger already flagged for the Implementation-Risk paper; SPRT is
+theoretical-only and substantively covered by B-06's own anytime-valid
+tool).
+
+**Fourteenth independently-tasked session, fourteenth identical
+conclusion.** No non-duplicate, simulable, actionable direction found —
+forcing a conservative/novel branch pair against a null screening result
+would be exactly the mistake this project's own culture penalizes, so
+none was dispatched. **B-06 remains the only ranked, unblocked backlog
+item and this project's standing recommendation**, unchanged by this
+pass. The honest read stated by the twelfth pass still holds and is now
+better evidenced: at fourteen independently-tasked sessions across two
+days converging on the same conclusion by eight distinct literature
+sweeps angled in different directions each time, this project's
+searchable literature space is exhausted until either new data becomes
+available (order-book, options, an asset class this repo cannot fetch)
+or B-06's forward record accumulates enough rows to say something on its
+own.
+
 **Re-checked 08-27 (thirteenth same-day/next-day session), no round
 dispatched (not an R-numbered entry — zero new configurations
 evaluated).** Tasked independently with the standard brief (take the best
