@@ -16227,6 +16227,65 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-checked 08-26 (fifth pass), no round dispatched (not an R-numbered
+entry — zero configurations evaluated).** A sixth same-day session, tasked
+independently with the same brief as the five preceding 08-26 sessions
+(take the best strategy, propose an improvement vector, dispatch a
+conservative/novel branch pair, measure, promote the winner), ran
+ROUTINE.md Step 0 first (no undispatched frozen pre-registration —
+`r151_shared.py` is still the newest `_shared.py` and already has its
+matching section B entry; `origin/main` and the working branch are
+identical at `c41c889`) and the backlog-table grep second (unchanged live
+set: B-06, B-09, B-10, B-17, B-28, B-45, B-46, B-47 — B-45/46/47 remain
+`HybridBroker` code-precision items with no promotion waiting behind them,
+B-28's breadth clause remains blocked on data this repo cannot fetch, and
+B-09/B-10/B-17 are LOW/already-answered per their own rows). Best
+registered strategy by the README's own ranking is unchanged:
+`kelly_regime_v4` ($66.8K spot / $156.2K futures_5x, though **not**
+distinguishably better than `buy_and_hold` on growth — the table's own
+`≈` — and its drawdown property scoped to BTC/ETH only per R-33/R-57).
+
+Rather than force a conservative/novel *implementation* pair onto a
+direction not yet screened, this session ran its own fresh web literature
+sweep before writing any code, checking two angles distinct in wording
+(if not necessarily in substance) from the four/five prior 08-26 passes:
+
+- **Kelly / regime-switching / crypto position-sizing, August 2026.** The
+  only 2026 arXiv hit on-point is arXiv:2608.01494 "Conformal Kelly:
+  Conformal Prediction Intervals as the Scale in Fractional Kelly Position
+  Sizing" — already found and rejected by R-144 ("carries none of
+  `kelly_regime_v4`'s signature") and re-confirmed closed by the fourth
+  pass. Everything else returned (put-writing VIX/Kelly hybrids, an LLM
+  agentic-trading survey, generic Kelly explainers) is either off-market
+  (index options), off-mechanism (an LLM-agent architecture paper, not a
+  sizing rule), or non-technical content with nothing to test.
+- **Small-sample / effective-sample-size significance for regime change
+  in financial time series, 2026.** Nothing on-point and new: an
+  exponential-smoother effective-sample-size identity (a definitional
+  result, not a test this project lacks), an online-bootstrap trend
+  inference paper (a significance-procedure variant — the exact category
+  R-144's own line warns against re-trying on this claim), and a
+  test-time-adaptation paper for non-stationary series that is a
+  forecasting mechanism ("what happens next"), which the standing
+  diagnosis's one-line summary says loses to fees regardless of its
+  adaptation quality and which attacks none of the four listed
+  constraints — the same failure mode as "another indicator."
+
+Both searches terminate at leads already named and closed in this file
+(R-144, and the fourth pass's own established-literature/cross-disciplinary
+sweeps) rather than opening new ones. No code changed, no strategy
+touched, no configuration evaluated, no sub-agent produced an
+implementable candidate. B-06's recorder was checked directly and is
+healthy (`reports/paper_trading/kelly_regime_v4_bitstamp.csv`, latest row
+2026-08-26T09:35:00Z, on its designed cadence). **B-06 remains the only
+ranked, unblocked backlog item and this project's standing
+recommendation**, unchanged by this pass — the sixth same-day session to
+reach it independently. Per the fourth pass's own line, this is the
+expected outcome of a same-day re-run of this exact brief without new
+forward calendar time or a data source outside this project's stated
+constraints, and this pass adds nothing to that conclusion beyond
+independent confirmation.
+
 **Re-checked 08-26 (fourth pass), no round dispatched (not an R-numbered
 entry — zero configurations evaluated).** A fifth same-day session, tasked
 independently with the same brief as the four preceding 08-26 sessions
