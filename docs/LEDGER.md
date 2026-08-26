@@ -315,6 +315,122 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-153 · 08-26 · NEGATIVE (both branches, replication) — CDaR sizing for `kelly_regime_v4`'s SCALE/CAP axis, independent second implementation of R-152
+
+**Direction.** This round dispatched the identical frozen pre-registration,
+`experiments/r152_shared.py`, to two independent sub-agents (conservative:
+dynamic CDaR-derived leverage cap; novel: CDaR-budgeted exposure) —
+without knowing that a separate session had, in parallel, already
+implemented, evaluated and landed the same round as **R-152** (commit
+`b608207`, "both branches NEGATIVE") while these two agents were still
+running. This is exactly the collision `docs/ROUTINE.md` step 0 documents
+from R-131/R-133: two sessions found the same undispatched/in-flight
+frozen file (the `IN PROGRESS` stub commit `69f06eb`) and both correctly
+executed it, neither aware of the other until push time. Per step 0's
+explicit instruction for this case, this round is recorded as a
+**replication under the next ID, reporting only what it adds** — it is
+not a second attempt at the same question and does not reopen the
+direction R-152 closed.
+
+**What was done.** Two sub-agents, each given the frozen spec fresh (no
+access to R-152's already-landed code or numbers, which did not exist yet
+at dispatch time) and told to own disjoint files, report without
+committing, and never read a bar at/after `OOS_START` unless the
+selection rule passed. Their output files collided on disk with R-152's
+own `experiments/r152_conservative_cdar_cap.py` /
+`r152_novel_cdar_budget.py` (independently written, different content) —
+renamed to `experiments/r153_conservative_cdar_cap.py` /
+`r153_novel_cdar_budget.py` before merging origin/main, so both
+implementations of the same frozen mechanism remain on record side by
+side. **Configs evaluated: conservative 8, novel 4 — 12 total**, at this
+round's own declared per-branch ceiling (this round's dispatch prompt set
+a combined ceiling of 12, slightly tighter than R-152's file-level
+"12 if both branches reach holdout"; both totals are within it).
+
+**Result — an independent second implementation of the same frozen
+mechanism, and it agrees with R-152 on the verdict while disagreeing on
+some of the specifics, which is itself informative.**
+
+*Novel branch (`CdarBudgetKelly`, r153).* B2: r=+0.164 (365d, inner-train,
+vs v4's own realized vol) — not flagged. Selection stage (inner-val,
+futures 5x): control Sharpe 0.251/DD 32.3%/exposure 28.9%; candidate at
+180/365/545d scores Sharpe 0.387/0.442/0.165 with DD 38.1/54.0/58.2% and
+mean exposure 38.3/61.6/72.9% — **fails clause (1), matched exposure**,
+by 32.7pp at the 365d primary window (budget was calibrated to match v4's
+inner-train mean `target` exactly; the match does not hold up on
+2021-22). Clause (3) plateau passes (2/3 windows agree in sign). **NEGATIVE
+at inner-validation; no holdout bar read.** R-152's own novel branch
+failed for a related but distinct reason — decisively on clause (2)
+(Sharpe 0.90-1.13 *below* control at every window, plus worse drawdown)
+and on clause (1) at 2 of 3 windows, not primarily 1 of 3. Both
+independently-built implementations of "replace the vol-target ratio with
+a closed-form CDaR-budget solve" fail to hold a stable exposure/Sharpe
+profile across the 180-545d sweep — the failure is the construction's own
+sensitivity to window length, not an artifact of one calibration choice,
+which is the round's one real addition: this direction does not have a
+rescue hiding in a different calibration target.
+
+*Conservative branch (`ConservativeCDaRCap`, r153).* B2: r=−0.170 (365d) —
+not flagged. Selection stage: all three window lengths pass all three
+clauses (matched exposure to <0.4pp; Sharpe deltas −0.151/−0.077/−0.087,
+inside the ±0.2 floor; 3/3 plateau agreement, all negative) →
+**eligible for holdout** — mechanically, on the same grounds R-152 found
+eligibility, but this implementation's inner-validation Sharpe actually
+diverges materially from control at the short window (180d: 0.100 vs
+control's 0.251, Δ=−0.151), **not** the ~99.6%-bit-identical target path
+R-152's implementation reported. Holdout (365d, selected as the best
+inner-validation Sharpe among the sign-agreeing windows — this round's own
+picking rule, not specified by `r152_shared.py`): candidate $4,789
+(Sharpe 1.358) vs control $4,901 (Sharpe 1.361), Δ=−0.0021 (inside the
+noise floor, opposite sign from R-152's own +0.0053, both indistinguishable
+from zero); neither beats `buy_and_hold` ($15,176). ETH falsification:
+candidate beats control on ETH (Sharpe 0.674 vs 0.500) while trailing it
+on BTC holdout — **sign disagreement, falsification fails** — the same
+qualitative failure R-152 found, but with the BTC/ETH sign relationship
+*reversed* (R-152: BTC positive/ETH negative; here: BTC negative/ETH
+positive). Holdout plateau check: 2 of 3 window lengths agree in sign
+(180d/545d positive, selected 365d slightly negative) — passes the letter
+of the plateau clause while visibly disagreeing with the selected
+window's own sign, a fragility flagged rather than smoothed over.
+**NEGATIVE** (fails to beat buy-and-hold, fails to beat control, fails its
+own ETH falsification test — any one alone is disqualifying).
+
+**What this replication adds, stated plainly.** Two independently
+implemented constructions of the identical frozen mechanism — different
+agents, no shared code beyond the frozen `rolling_cdar` primitive and
+`kelly_regime_v3`/`v4`'s own source, no coordination — land on the same
+overall verdict (NEGATIVE, both branches) while disagreeing on magnitude
+and even on the sign of secondary diagnostics (the conservative branch's
+BTC/ETH sign relationship, whether the inner-validation "plateau" reflects
+near-identical target paths or a real, if noise-floor-sized, divergence).
+That the top-line verdict survives two structurally different
+realizations of the same spec is stronger evidence the direction is
+genuinely closed than either implementation alone would be; that the
+*diagnostics* disagree this much on an ostensibly frozen, deterministic
+construction is a disclosed methodology note for any future round reusing
+`rolling_cdar` or this full/steady CDaR composition — small implementation
+choices (exactly how the reference wealth path, rescale factor, or
+full/steady CDaR-smoothing are wired) move the inner-validation numbers by
+more than the ±0.2 noise floor, so a single implementation's "plateau" or
+"bit-identical" claim should not be over-read without a check like this
+one. Not filed as an open question requiring follow-up — the direction
+itself is closed by R-152 and corroborated here, not reopened.
+
+**Verdict.** **NEGATIVE, both branches — replication of R-152, verdict
+confirmed by a second, independent implementation.** `pytest -q`:
+516 passed (unchanged; no registered strategy touched, R-152/R-153's
+experiment files are not auto-discovered). **Holdout counter: +3** (the
+conservative branch's own holdout comparison — candidate, control,
+`buy_and_hold` — against the ≥2023-01-01 BTC slice; the novel branch read
+none), running program-level total **~705** (R-152's ~702, +3 here) — see
+the bullet added at the top of
+[Holdout consultations to date](#holdout-consultations-to-date). Neither
+branch's decision rule moved after seeing any number. **Next step:** none
+— this is a replication of an already-closed direction, not a new backlog
+item. **B-06 remains the only ranked, unblocked backlog item.**
+
+---
+
 ### R-152 · 08-26 · NEGATIVE (both branches) — CDaR (Chekhlov/Uryasev/Zabarankin 2005) sizing for `kelly_regime_v4`'s SCALE/CAP axis
 
 **Direction.** Conditional Drawdown-at-Risk (Chekhlov, Uryasev & Zabarankin
@@ -20319,6 +20435,20 @@ Rules that the format exists to enforce:
 Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
+
+- **08-26 · ~705** — R-153: **+3** on top of R-152's ~702. An independent
+  second implementation of R-152's frozen conservative branch (dispatched
+  in parallel, unaware R-152 had already landed) also mechanically cleared
+  the selection rule, so its own holdout comparison ran too: candidate,
+  control, and a `buy_and_hold` re-read against the ≥2023-01-01 BTC slice
+  (365-day CDaR window). Result: Δ-Sharpe −0.0021 (opposite sign from
+  R-152's own +0.0053, both indistinguishable from the ±0.2 noise floor)
+  and the ETH falsification test failed again, with the BTC/ETH sign
+  relationship reversed from R-152's own run — NEGATIVE, confirming
+  R-152's verdict rather than adding a new one. The novel branch failed
+  the selection rule outright (+0 from that branch), for a related but
+  distinct reason than R-152's own novel-branch failure (see the R-153
+  entry).
 
 - **08-26 · ~702** — R-152: **+3** on top of R-151's ~699. The conservative
   CDaR-dynamic-cap branch mechanically cleared the frozen selection rule on
