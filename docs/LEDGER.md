@@ -17373,6 +17373,72 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-checked 08-26 (fifteenth same-day/next-day session), no round
+dispatched (not an R-numbered entry — zero new configurations
+evaluated).** Tasked independently with the standard brief (take the best
+strategy, propose an improvement vector, do the research, dispatch a
+conservative/novel branch pair, measure, promote the winner), this
+session ran ROUTINE.md Step 0 first: no undispatched frozen
+pre-registration on disk (newest `experiments/r*_shared.py` unchanged
+since R-156; `git fetch origin main` confirmed `origin/main` at `fbabc82`,
+the fourteenth pass's own merge commit, clean working tree — no in-flight
+round). The backlog-table grep found the same four live rows all
+fourteen prior passes found: **B-06, B-09, B-17, B-28**, none actionable
+(B-06 explicitly "keep it running, stop calling it the plan"; B-09 LOW;
+B-17 deliberately deferred with no strategy needing it; B-28 blocked on
+data this repo cannot fetch).
+
+Rather than repeat the fourteenth pass's broad adjacent-fields sweep,
+this session narrowed deliberately to the one architectural surface R-62
+identifies as where `kelly_regime_v4`'s edge actually lives — the
+3-anchor trend **vote** and its combination/confidence-weighting, not the
+volatility-target scale factor — on the reasoning that a narrower,
+mechanism-specific search might surface something a broad sweep would
+miss. It read `kelly_regime.py`/`v3`/`v4` plus R-40, R-62, R-78, R-80,
+R-82, R-83, R-85, R-89, R-105, R-146 and R-147 in full, then ran targeted
+2024–2026 searches on horizon-combination weighting, confidence-weighted
+trend following, and fresh crypto momentum literature. Four genuinely new
+citations surfaced (Etienne, Ohana, Benhamou et al., Oct 2025,
+arXiv:2510.23150; Kang & Ryu 2026, *Risk Management*,
+10.1057/s41283-026-00234-7; Zarattini, Pagani & Barbon 2025, SSRN
+5209907; Grobys, Kolari, Sandretto, Shahzad & Äijö 2025, *Financial
+Markets and Portfolio Management*) and every one mapped onto ground
+already closed: Etienne et al.'s per-asset Bayesian-optimization horizon
+reweighting is the same mechanism family R-147's Bayesian-model-averaging
+branch closed NEGATIVE, and this project's 2-asset universe is exactly
+the thin-breadth regime R-63 already priced (Grinold breadth 1.47/8);
+Kang & Ryu's "slow signals beat fast because signal speed is an
+endogenous risk-management device" is the anchor-span axis, closed at
+R-06/R-07/R-40/R-45/R-89/R-92 (v4's 20/40/80 ladder already sits in that
+validated plateau); Zarattini et al.'s Donchian-ladder-plus-vol-target
+ensemble is structurally v4's own architecture; Grobys et al.'s
+cross-sectional crypto momentum-crash work is panel territory closed at
+R-63/R-33. A fifth angle — betting-style e-value combinators for
+per-anchor reliability weighting — was judged a likely duplicate of
+R-147's own diagnosis that "real movement away from equal-weight...lands
+in the same place regardless of formalism," on top of R-28/R-31 already
+finding an e-process framing loses on this exact gate.
+
+**Fifteenth independently-tasked session, fifteenth identical
+conclusion, this one from a narrower and different search than the
+fourteen before it.** No non-duplicate, simulable, actionable direction
+found on the vote/confidence-weighting axis either — forcing a
+conservative/novel branch pair against a null screening result would be
+exactly the mistake this project's own culture penalizes, so none was
+dispatched. **B-06 remains the only ranked, unblocked backlog item.**
+Fifteen independently-tasked sessions across two days, nine distinct
+literature-sweep angles, converging on the same conclusion: this
+project's searchable literature space against the *existing*
+`kelly_regime` family is exhausted. The next session tasked with this
+brief should treat that as evidence rather than re-running a tenth sweep
+angle against the same family, and should either (a) wait for B-06's
+forward paper-trading record to accumulate enough rows for its own
+anytime-valid tool to say something, or (b) widen scope past the
+`kelly_regime` lineage entirely to a structurally different mechanism
+family the ledger has not yet tried, since incremental refinements of
+this one are the surface that is exhausted, not necessarily every idea
+this repo could ever hold.
+
 **Re-checked 08-27 (fourteenth same-day/next-day session), no round
 dispatched (not an R-numbered entry — zero new configurations
 evaluated).** Tasked independently with the standard brief (take the best
