@@ -315,6 +315,21 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-150 · 08-26 · IN PROGRESS — `champions_council`'s own top-level SCALE (SIZE axis), never touched since L-08 registration
+
+Frozen pre-registration: `experiments/r150_shared.py`. Direction: replace
+`champions_council`'s plain, continuous `min(target_vol/v, max_leverage)`
+scale (registered 08-14, one day before L-02/R-33 found conditional beats
+continuous) with v4's own conditional-vol-target machinery (conservative,
+third reuse after R-148/R-149) and per-member fractional-Kelly pre-scaling
+before the Hedge blend (novel, second application after R-148's on
+`replicator_book`). Full direction, non-duplicate justification, citations,
+named failure risks and promotion bar (A2/B1/B2/B3/B4/B5/B6) are in that
+file's module docstring — not restated here. Two branch agents dispatched
+in parallel, each owning `experiments/r150_conservative.py` /
+`experiments/r150_novel.py` respectively, neither committing. This stub
+will be replaced by the full R-150 entry once both report.
+
 ### R-149 · 08-26 · NEGATIVE (both branches) — `universal_kelly`'s own exposure-mixture mechanism (SIZE axis), never touched since L-11 registration; conservative branch reproduces the BTC-pass/ETH-invert signature once again
 
 **Direction.** Off-backlog — the ranked list has held nothing but B-06 (and
