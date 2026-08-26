@@ -305,6 +305,7 @@ backlog item.**
 | L-23 | `macd_rsi` | 08-12 | RSI pullback recoveries in the direction of the MACD trend | — | $4.96 | $0.94 | NEGATIVE | Baseline. Combining two classic indicators does not beat either. |
 | L-24 | `attrition_reversion` | 08-12 | Fade deviations from an inventory-shifted fair value; quit when waiting costs exceed the prize (Avellaneda & Stoikov 2008; Maynard Smith 1974) | COST | $4.94 | $0.99 | NEGATIVE | Avellaneda–Stoikov needs an order book. Run on bar-close fills it is a mean-reversion rule paying taker fees on both sides. |
 | L-25 | `rsi_reversion` | 08-12 | Buy RSI < 30, exit on recovery; mirror short on futures | — | $4.85 | $0.77 | NEGATIVE | Baseline. 4,464 trades. |
+| L-26 | `elliott_wave_zigzag` | 08-27 | Mechanical causal ZigZag+Fibonacci Elliott impulse counter, long wave2→wave5 (Frost & Prechter 1978) | — | $5,027 | 💀 $13 | NEGATIVE (R-156) | B-10, filed to convert an unfalsifiable debate into a table row: builds it, and it loses like every other pure predictor. OOS Δ-Sharpe −1.18 [−2.32,−0.14] spot, −1.74 [−2.83,−0.43] futures, both significant in the *losing* direction. |
 
 **Pattern across A:** every entry with `SIZE` in the attacks column is
 profitable; every pure predictor is not. The four `INFO` entries all
@@ -315,15 +316,221 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
-IN PROGRESS: R-156 deterministic Elliott Wave counter (B-10) — the prior
-stub named this direction but froze no shared file and dispatched no
-branch (`experiments/r156_shared.py` did not exist); `experiments/r156_shared.py`
-is now frozen (conservative = literal ZigZag+Fibonacci mechanical counter,
-one fixed config, B-10 as filed; novel = wave-count invalidation run-length
-as a Step-A-gated SIZE-axis regime multiplier on `kelly_regime_v4`, 3x2
-Fibonacci-ablation grid, same six-episode gate R-82/85/96/98/99/139/141/155
-used) before any real-data number was read from it. Conservative and novel
-branches dispatched, execution in progress.
+### R-156 · 08-27 · NEGATIVE (both branches) — deterministic ZigZag+Fibonacci Elliott Wave impulse counter: registered as a standalone directional strategy (conservative, B-10's own brief) and, separately, its rule-invalidation run length as a twelfth structurally distinct regime-timing mechanism against the six-episode Step-A gate (novel), both lose
+
+**Direction.** A prior same-day stub had named this direction ("R-156 ...
+dispatched conservative+novel") but frozen no shared file and dispatched
+no branch (`experiments/r156_shared.py` did not exist, `ls
+experiments/*_shared.py` found nothing newer than R-155's) — Step 0's
+"execute the frozen file verbatim" rule does not apply where nothing was
+frozen, so this round treated the direction as selected-but-undesigned
+and completed the design the prior stub had only named, rather than
+discarding it or inventing a new one. `origin/main` and the working
+branch were reconciled to the same tip (`dbca7d3`) before any file was
+written.
+
+Backlog: **B-10**, "Deterministic Elliott wave counter — LOW — Only as a
+documented negative result, per R-18. ZigZag pivots, mechanical
+impulse/corrective rules, no discretion. About a day, converts an
+unfalsifiable debate into a table row." R-18 (08-16, NOT PURSUED,
+assessment only, no code) found Elliott Wave "not falsifiable as
+practised" — counts get re-labelled after the fact, the exact leak class
+`test_causality_strict.py` exists to catch — and its one quantitative
+component refuted: Batchelor & Ramyar (2005, working paper; "the idea
+that prices retrace to a Fibonacci ratio ... clearly lacks any scientific
+rationale," no significant difference between Fibonacci-ratio frequencies
+in the Dow and frequencies expected at random). A fresh literature check
+this round (WebSearch, 08-26) found no 2024-2026 study overturning that
+finding; the one positive recent result R-18 itself cited (ElliottAgents,
+*Applied Sciences* 14(24) 2024, 14/19 vs 11/19) covers one monotonic
+2022-2024 BTC bull with no walk-forward, not independent evidence the
+ratios carry information.
+
+**Constraint attacked:** CONSERVATIVE attacks nothing structural — an
+expected negative per the standing diagnosis's own summary ("every
+strategy that tries to predict what happens next loses"); its value is
+procedural, exactly B-10's brief, replacing a debate with one falsifiable
+implementation and a table row. NOVEL attacks **INFO** in the identical
+narrow sense every Step-A-gate predecessor used it: not a new data
+channel, but a structurally different ESTIMATOR (a combinatorial
+rule-violation event on ZigZag pivots, rather than probabilistic,
+spectral, information-theoretic, extreme-value or topological) of "did
+the crowd's structure just break," extracted from the same committed BTC
+OHLCV close series `kelly_regime_v4` already uses.
+
+**Not a duplicate of:** R-18 (assessment only, no backtest — this round
+is the implementation R-18 discussed but B-10 later filed as worth
+building as a negative-result table row regardless); R-82/83/85/86/96/98/99/139/141/155
+(nine prior Step-A-gate mechanisms — Markov switching, linear
+state-space, dynamical-systems fluctuation statistics,
+information-theoretic flow, self-exciting point processes, extreme-value
+theory, jump/quadratic-variation decomposition, sequential process
+control, log-periodic bubbles, algebraic topology — a deterministic
+rule-violation counter on ZigZag pivots has never been run against this
+gate, confirmed absent from the ledger by direct grep before this round);
+R-62 (factored v4 into vote x scale; motivates confining this round's
+novel mechanism to a SIZE-axis vote input rather than the scale factor,
+inherited unchanged, same reasoning every Step-A-gate predecessor used).
+
+**What was done.** Operator-authored, frozen, read-only
+`experiments/r156_shared.py`, committed and pushed
+(`9223679`) **before any real-data number was read from it**: a causal
+percentage ZigZag (`causal_zigzag_pivots`, one forward pass, a pivot's
+price is set at its extreme bar but only affects any output at its later
+CONFIRMING bar — verified causal on real data via
+`truncation_causality_probe` before dispatch) feeding Frost & Prechter's
+three hard bull-impulse rules (wave 2 ≤100% retrace of wave 1, optionally
+requiring the canonical [0.382, 0.786] Fibonacci band; wave 4 must not
+re-enter wave 1's territory; wave 3 must not be the shortest of 1/3/5).
+Two branches, disjoint files, dispatched as parallel subagents:
+
+- **Conservative** (`experiments/r156_conservative_elliott_zigzag.py` +
+  registered `src/tradebot/strategies/elliott_wave_zigzag.py`, one fixed
+  configuration — `pct=0.05`, `require_fib_band=True`, no sweep, per
+  B-10's own "no discretion" brief): a standalone long-only strategy,
+  long from a valid wave-2 confirmation to wave-5 completion or
+  invalidation. Registered regardless of outcome — that registration
+  *is* B-10's point, not a promotion reward. Pre-registered promotion
+  bar, frozen before any holdout read: PROMOTE only if (a) beats
+  `buy_and_hold` OOS on final balance, both markets; (b) the gap exceeds
+  the ±0.2 Sharpe noise floor or is a genuine risk-matched drawdown
+  improvement; (c) survives the standard `ethusd_bitfinex_5m.csv.gz`
+  (2016-03→2019-12, pre-2020, zero-holdout-cost per the R-19/R-28
+  convention) falsification without catastrophic underperformance.
+  Anything short of all three is REJECT.
+- **Novel** (`experiments/r156_novel_wavecount_gate.py`): the same
+  engine's `invalidated` events, resampled to daily (matching v4's own
+  20-80-day anchor horizon, the identical disclosed choice every Step-A
+  predecessor made), converted to a days-since-last-invalidation run
+  length and run through R-82's own unmodified Step-A six-episode
+  detection-lag gate machinery (`anchor_majority`, `nearest_transition`,
+  `block_bootstrap_shifts`, `STRESS_EPISODES`, 500-draw null, pass = lead
+  ≥ 0 and beats the null median, gate passes overall at ≥4/6). Grid fixed
+  before any number: `pct ∈ {0.03, 0.05, 0.08} × require_fib_band ∈
+  {True, False}`, 6 cells — the Fibonacci half deliberately tests whether
+  Batchelor & Ramyar's "no scientific rationale" finding extends from
+  retracement PRICE LEVELS to retracement-rule STRUCTURE, on this
+  project's own data. Pre-registered stop rule: <4/6 on the winning cell,
+  or a winner that fails the R-139/R-155-style `plateau_ok` neighbour
+  check, is NEGATIVE — STOP, no Step-B, no holdout, per every one of the
+  ten prior Step-A-gate rounds' own convention.
+
+**Configs evaluated: 7** (1 conservative + 6 novel), this round's trials
+count for deflated Sharpe per ROUTINE.md's parallelism rule.
+
+**Result.**
+
+*Novel (Step-A gate, zero holdout reads — none of the six
+`STRESS_EPISODES` post-date `OOS_START`, and `assert_no_holdout` ran
+clean on every cell; max timestamp read anywhere: `2022-12-31
+23:55:00+00:00`):*
+
+| pct | fib band | n_pass |
+|---|---|---|
+| 0.03 | True | 2/6 |
+| 0.03 | False | 2/6 |
+| 0.05 | True | **3/6 (best)** |
+| 0.05 | False | 0/6 |
+| 0.08 | True | 1/6 |
+| 0.08 | False | 1/6 |
+
+Winning cell (pct=0.05, fib=True) scores 3/6 — below the 4/6 bar; the
+COVID crash (2020-03) fails at every one of the six cells (negative lead
+throughout, the sharpest and most sudden of the six episodes). The
+Fibonacci band never earns its keep — at pct=0.05 it is the entire
+difference between 3/6 and 0/6, but that is the ablation showing the
+*hard* rule alone is worthless there, not the band adding real
+information anywhere else in the grid — consistent with Batchelor &
+Ramyar's finding extending to rule structure. **Independently
+reproduced by the operator from a clean shell**
+(`step_a_gate(pct=p, require_fib_band=f)` for all 6 cells, default
+`n_draws=500`): every `n_pass` matched exactly, winner and `plateau_ok`
+(False) confirmed.
+
+*Conservative (inner-train/inner-validation sanity, no tuning — one
+frozen config, nothing to select between):*
+
+| cell | final | trades | Sharpe | maxDD | time-in-mkt |
+|---|---|---|---|---|---|
+| inner-train spot (→2020-12-31) | $3,791 (+279.1%) | 90 | 0.95 | 43.6% | 27.9% |
+| inner-train futures_5x | $13 (−98.7%, LIQUIDATED) | 5 | −0.06 | 98.9% | 2.1% |
+| inner-val spot (2021-01→2022-12) | $1,158 (+15.8%) | 46 | 0.39 | 39.5% | 26.9% |
+| inner-val futures_5x | $25 (−97.5%, LIQUIDATED) | 34 | 0.34 | 99.6% | 15.0% |
+
+Full pytest (523 tests): green, including `test_causality_strict.py` for
+every registered strategy. Holdout (`start=OOS_START`, frozen bar applied
+after, exactly as written above — **independently reproduced by the
+operator from a clean shell, every figure matched to the dollar**):
+
+| | final | Sharpe | maxDD | TiM |
+|---|---|---|---|---|
+| `elliott_wave_zigzag` spot | $826 (−17.4%) | −0.15 | 29.2% | 21.0% |
+| `buy_and_hold` spot | $3,839 (+283.9%) | 1.03 | 54.0% | 100% |
+| `elliott_wave_zigzag` futures_5x | $6 (−99.4%, LIQUIDATED) | −0.04 | 99.5% | 19.7% |
+| `buy_and_hold` futures_5x | $15,176 (+1417.6%) | 1.44 | 60.3% | 100% |
+
+(a) fails outright on both markets. (b) paired-bootstrap Δ-Sharpe vs hold
+(`scripts/inference.py`): spot **−1.18 [−2.32, −0.14]**, futures **−1.74
+[−2.83, −0.43]** — both clear the ±0.2 noise floor in the *losing*
+direction. Drawdown is not a rescue either: spot's lower max-DD (29.2% vs
+54.0%) is confounded exactly per this project's "match risk before
+comparing" rule (21% vs 100% time-in-market) and its own paired interval,
+**−24.3pp [−34.9, +14.9]**, contains zero; on futures the drawdown is
+significantly *worse* despite only 19.7% time-in-market (**+40.1pp
+[+12.2, +57.6]**). (c) ETH-Bitfinex falsification (342,929 bars,
+2016-03→2019-12, zero holdout cost): spot $2,218 (+121.8%, Sharpe 0.70)
+vs `buy_and_hold` $11,550 (+1055.0%, Sharpe 1.23) — badly underperforms
+but not catastrophically (still more than doubles the account; futures
+liquidates on both the strategy and the benchmark, a leverage/venue
+artifact of that violent series, not specific to this strategy). Same
+qualitative failure mode as BTC (churn misses a monotonic run) — not a
+fluke-of-BTC pattern, which doesn't rescue the verdict since (a) alone is
+already sufficient to reject. Deflated Sharpe (`n_trials=190`
+project-level): none of the four full/holdout × spot/futures cells clear
+0.95 (best DSR-table 0.072, holdout spot). Funding-charged futures
+(`scripts/funding_study.py`'s own 2020-01→2023-12 window — ~12 of its 48
+months fall at or after `OOS_START`, flagged explicitly rather than
+folded silently into the funding-free figures above): $282 funding-free →
+$132 funding-paid (−53.0%) — makes an already-losing futures result
+worse, as expected, not counted against the promotion-bar cells above
+(which are funding-free, matching this project's standard comparison
+convention).
+
+**Verdict.** **NEGATIVE, both branches.** Conservative: **REJECT** against
+the pre-registered bar (criterion (a) alone is decisive; (b) and (c) both
+corroborate rather than contradict) — registered anyway, as
+`elliott_wave_zigzag` (L-26), exactly as B-10 specified: the registration
+was never conditional on winning. Novel: **NEGATIVE at Step-A**, stopped
+before any Step-B or holdout read, per every predecessor's convention —
+the twelfth structurally distinct theoretical basis (after HMM, BOCPD,
+Kalman LLT, CSD, transfer entropy, Hawkes, POT/GPD, jump/QV, CUSUM, LPPLS
+and TDA) to fail this exact six-episode gate, and the Fibonacci-band
+ablation adds a small, specific new finding within that failure: the one
+canonical *quantitative* claim Elliott theory makes (retracement ratios)
+carries no more detection power here than the bare structural rule,
+matching Batchelor & Ramyar's finding for retracement PRICE LEVELS
+extending to retracement-rule STRUCTURE. **Lesson:** an unfalsifiable
+debate, made falsifiable and mechanical exactly as specified, fails
+exactly as every other pure directional predictor in this table has —
+procedural value delivered (B-10 closed, one fewer perennial "but what
+about Elliott Wave" available to relitigate) without needing the result
+to be a win. **Decision rule did not move** on either branch: both stop
+rules were frozen before any real-data number existed (conservative's
+promotion bar in this entry's own "What was done," committed in
+`r156_shared.py`'s docstring before dispatch; novel's ≥4/6-plus-plateau
+rule inherited verbatim from R-82), and both branches stopped exactly
+where their own rule said to. **Holdout counter: +4** (conservative
+branch's four `ev(..., start=OOS_START)` calls — `elliott_wave_zigzag`
+and `buy_and_hold`, spot and futures_5x; novel branch contributes +0, all
+six `STRESS_EPISODES` and the full pre-2023 grid never touch `OOS_START`)
+on top of R-155's ~705, running program-level total **~709**. **Next
+step:** B-10 is closed (struck in the backlog below); the "detect a known
+regime break faster than v4's own anchors" Step-A-gate line is now
+exhausted across twelve independent theoretical bases and, per R-139's
+own closing note repeated at R-141 and R-155, a future session preferring
+to continue it needs a structurally different question (an unknown/undated
+break in real time, which this gate does not test) rather than a
+thirteenth detector on the same six episodes.
 
 ### R-155 · 08-26 · NEGATIVE (both branches, stopped at Step A) — persistent homology (H0, Vietoris-Rips via MST) of a causal Takens-embedded return series, an eleventh structurally distinct regime-timing mechanism, fails the identical six-episode detection-lag gate at 2/6 (conservative, fixed config) and 2/6 (novel, best of a 9-cell embedding-window x embedding-dimension sweep)
 
@@ -16804,7 +17011,7 @@ trip.
 | Higher leverage as a fix for fees | Fees are charged on notional; leverage multiplies cost and return together. Changes the risk profile, not the sign. | R-13 |
 | Sentiment / social media | A lagged function of price — not orthogonal information — and revision-prone. | — |
 | Higher-frequency execution | Turnover is the enemy at every fee tier available. | R-12, R-13 |
-| Elliott waves | Unfalsifiable as practised; its testable kernel already implemented. | R-18 |
+| Elliott waves | Unfalsifiable as practised; its testable kernel already implemented. **⚠ ANNOTATED IN PLACE BY R-156 (nothing deleted): built anyway, per B-10.** A causal ZigZag+Fibonacci mechanical impulse counter, registered as `elliott_wave_zigzag` (L-26): loses to `buy_and_hold` OOS on both markets, Δ-Sharpe significant in the losing direction. Its rule-invalidation run length also fails, as a twelfth structurally distinct mechanism, the same six-episode Step-A regime-detection gate HMM/BOCPD/Kalman-LLT/CSD/transfer-entropy/Hawkes/POT-GPD/jump-QV/CUSUM/LPPLS/TDA all failed (3/6, best cell). Do not re-try a ZigZag/impulse-rule construction on either axis without new evidence. | R-18, R-156 |
 | Market making, AMM/LVR | Plausibly real — the loss-versus-rebalancing decomposition of AMM LP returns (Milionis, Moallemi, Roughgarden & Zhang) is genuinely quantitative — but **not simulable** on bar-close fills with no order book; it would need a queue model first. Ruled out on what can be checked, not on merit. | L-24 |
 | Options / volatility risk premium | ~~Same — no options data, no way to validate here.~~ **⚠ ANNOTATED IN PLACE BY R-73 (nothing deleted): closes on the merits now, not just data availability.** Deribit's DVOL (official 30-day BTC implied-vol index) is reachable and has real history from 2021-03-24. Two independent readings tested: a bounded VRP (IV−RV) brake fails the exposure-artifact check (R²=0.995–0.9995) and the ETH falsification (opposite-signed BTC/ETH pattern) on its ≈21-month pre-holdout window; a lead-time test of DVOL's level/rate-of-change against `kelly_regime_v4`'s own gate finds it lags (medians −2.0 and −9.0 days) on the 3 stress episodes DVOL's short history covers. See R-73. | R-73 |
 | Variance risk premium (DVOL/100 − trailing realized vol) as a bounded, never-increase-only multiplicative brake on `kelly_regime_v4`'s exposure | 10 configurations (9-cell grid + `lam=0` identity check). Causality clean; identity check exact. Fails on VALID (2022-05→2022-12, ≈2 stress episodes): no cell clears the ±0.2 Sharpe floor on either market, and the pre-registered PRIMARY cell is worse than v4 on futures. Exposure-artifact R²=0.9950–0.9995 on all 18 cells — a flat rescale, the fourth independent confirmation of this failure mode (R-34, R-41, R-53-conservative, now this). ETH falsification fails outright and asset-specifically: BTC futures Sharpe worsens under the brake while ETH improves on both markets over the identical window, the same opposite-signed signature that killed R-53/R-54's conservative branches. Do not re-try a never-increase-only bounded-brake architecture on `kelly_regime_v4` regardless of the feeding signal — 4 of 4 attempts on this exact shape have now failed the identical way. | R-73 (conservative) |
@@ -20804,7 +21011,7 @@ which only forward paper trading can supply.
 | ~~B-08~~ | ~~Second bear, second asset, different period (ETH 2020–2026)~~ | N≈3 | **DONE → R-47** | Frozen `kelly_regime_v4`, zero parameters changed, run against the now-committed `ethusd_coinbase_spot_5m.csv.gz` (2019-03-14→2026-08-19). Drawdown/tail protection replicates cleanly on ETH's own 2022 bear (previously untested — independent of the 2018 BTC bear every prior ETH check shared); the return edge does not survive the realistic 0.40% fee tier over the full 2020–2026 window. Confirms L-01/R-17's own standing caveat on genuinely independent evidence for the first time. |
 | **B-09** | Conformal prediction / adaptive conformal by betting (adaptive conformal inference under distribution shift; conformal prediction with change points, NeurIPS 2025; adaptive conformal inference by betting, 2024) | ERR | LOW | Was "mostly subsumed by B-01" — now demoted further by R-28's result: the binding problem is not that trust is miscalibrated but that correctly-calibrated trust is *low*, and conformal would say the same thing more slowly. |
 | ~~B-13~~ | ~~Matched-risk benchmark: `kelly_regime_v4` against a **de-levered** `buy_and_hold` at equal realized volatility~~ | ERR, SIZE | **DONE → R-33** | Answered, and it cost the project its headline. At genuinely equal risk (40 windows, matched inside each window to 0.5%) v4's median drawdown advantage falls from −24.5pp to **−2.9pp** on spot and from −70.7pp to **−5.5pp** on futures; on the holdout five of six frozen cells fail the risk match and the valid one gives −14.18pp [−22.68, +13.48]. R-31's suspicion was right: the −41.1pp is mostly the exposure level. The consolation, and it is a real one, is that the *return* comparison at matched risk goes v4's way everywhere and survives the ETH test that killed R-28 — see **B-14**. Original framing kept below for the record. Opened by R-31, and it points the same knife at this project's own headline. Every drawdown claim here — L-04's "regime-gated sizing cuts drawdown", R-17's ETH replication, R-29's −41.1pp [−54.8, −18.4] — compares a strategy holding roughly half the notional against a **fully-invested** benchmark. R-31 showed that precise mismatch manufactured a mechanism finding for the e-process gate that vanished at equal risk. The experiment is one afternoon: add a constant-exposure hold at scale `c` to `experiments/matched_risk.py`, solve `c` on inner-validation so its realized volatility equals v4's, and re-run the paired bootstrap. Needs no new data, no fetch, and the harness already exists. Pre-register the answer both ways — a hold de-levered to 0.5x is *not* obviously a weaker benchmark, and if the drawdown gap survives it, that is the strongest result this project has ever had. |
-| **B-10** | Deterministic Elliott wave counter | — | LOW | Only as a documented negative result, per R-18. ZigZag pivots, mechanical impulse/corrective rules, no discretion. About a day, converts an unfalsifiable debate into a table row. |
+| ~~B-10~~ | ~~Deterministic Elliott wave counter~~ | — | **DONE → R-156** | Built exactly as specified: registered `elliott_wave_zigzag` (L-26, standalone strategy, NEGATIVE) and, separately, tested its rule-invalidation run length as a twelfth structurally distinct mechanism against the Step-A regime-detection gate (also NEGATIVE, 3/6 best cell). The unfalsifiable debate is closed either way it could have gone. |
 | ~~B-15~~ | ~~Build a real perp price series (Deribit `BTC-PERPETUAL`, 5m OHLCV) alongside the existing spot series~~ | ERR, COST, INFO | **DONE → R-41** | Built: real BTC-PERPETUAL (2018-08-14→) and ETH-PERPETUAL (2019-03-14→) 5m OHLCV, plus a matching Coinbase ETH spot series, all committed. `tradebot.data.load_deribit_perp_price()`/`compute_basis()` give a genuine, non-proxied spot/perp basis for the first time — used as a `kelly_regime_v4` SIZE input in R-41 (both branches NEGATIVE, for reasons unrelated to data quality). Available for B-03's re-run (a real basis-risk term for the funding-harvest carry trade) and for a future SIZE-axis round with a different exploitation, per R-41's own recommendation — a short event-triggered override rather than a continuous ramp, or a replacement rather than a multiplier of v4's exposure. Not wired into `CANONICAL["perp"]`, so no existing comparison-table number changed. |
 | ~~B-16~~ | ~~Dual-asset BTC+ETH diversification of `kelly_regime_v4`, robustified per its own two authors' prescriptions~~ | N≈3, SIZE | **DONE → R-43**, REJECTED on the holdout | The conservative branch's bootstrap held up well enough in-sample to earn one pre-registered holdout read (bear-quartile drawdown-delta, `vol_weighted`, both markets) — it replicated on 5x futures (CI excludes zero) but not on spot (CI contains zero), and the rule required both, so REJECT as written. The novel branch's de-noised mean estimator shrank but did not resolve its own cadence-inconsistency and never earned a holdout read. Nothing here is promotable to the comparison table this round — and even a fully-confirmed result would additionally have needed new multi-asset registration infrastructure this project's `Strategy`/registry framework does not have today (see R-43, and **B-17** below). |
 | **B-17** | Multi-asset strategy registration — the comparison table, `Strategy` base class and `tradebot run` all assume one instrument per registered class; nothing in this project can put a genuinely two-asset (or N-asset) strategy in the README table today, even a fully-promotable one | ERR (methodology gap, not a market-constraint code) | **PARTIAL → R-49** | The "can it be done at all" half is DONE: `src/tradebot/multiasset.py` (adapter/composition design, promoted from a conservative branch, 8 tests) lets an already-independent multi-book strategy be measured as one portfolio result, causality-clean, without touching `engine.py`/`strategy.py`/the 25 existing registrations. Still OPEN: wiring an actual multi-asset strategy into `run.py`'s `run_matrix`, the README table and `test_evidence.py`'s CI requirement — deliberately deferred, since no multi-asset strategy has cleared even inner-validation yet to need it (R-43's dual-asset finding, the only candidate, was REJECTED on the holdout). A parallel novel branch also built a more capable native multi-instrument engine (`experiments/b17_multiasset_native.py`, shared risk budget, genuinely joint decisions) but it stays unpromoted — its first non-trivial run produced a silent equity-accounting bug the causality suite did not catch, and both branches' authors recommend building it for real only once a specific strategy earns that risk. |
@@ -20883,6 +21090,20 @@ Rules that the format exists to enforce:
 Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
+
+- **08-27 · ~709** — R-156: **+4** on top of R-155's ~705 — the
+  conservative branch's four pre-registered `ev(..., start=OOS_START)`
+  calls (`elliott_wave_zigzag` and `buy_and_hold`, spot and futures_5x),
+  independently reproduced by the operator from a clean shell, every
+  figure matched to the dollar. The novel branch contributes **+0**: its
+  Step-A gate runs entirely on the six pre-2023 `STRESS_EPISODES`
+  (`assert_no_holdout` clean on every cell, max timestamp read anywhere
+  `2022-12-31 23:55:00+00:00`) and stopped there (3/6, below the 4/6
+  bar), never reaching a Step-B or holdout read. `funding_study.py`'s own
+  standard 2020-01→2023-12 measurement window is flagged, not silently
+  folded in: about 12 of its 48 months fall at or after `OOS_START`, but
+  it was read only for a documentary funding-cost figure outside the
+  frozen promotion-bar cells, not to inform any decision.
 
 - **08-26 · ~705** — R-155: **+0** on top of R-154's ~705. Both branches
   (persistent-homology/TDA regime detector, an eleventh structurally
