@@ -508,6 +508,60 @@ larger than its many small wins — "oversold" keeps getting more oversold.
 
 ---
 
+## 21. `elliott_wave_zigzag`
+
+**What it is.** A mechanical, causal, no-discretion implementation of
+Elliott Wave theory: **$5,027** on spot (holdout: −17.4%, loses to
+`buy_and_hold`), liquidated on futures_5x. Registered per backlog item
+B-10 specifically to convert a decades-old, "not falsifiable as
+practised" debate (R-18) into one falsifiable table row — it was
+registered whether it won or lost, and it lost, exactly like every other
+pure directional predictor in this table.
+
+**How it works.** A single causal forward pass computes a standard 5%
+percentage ZigZag over 5-minute closes; confirmed swing pivots alternate
+low/high by construction, and each pivot only affects the strategy's
+output from the bar it is *confirmed* on — never backdated to the
+(earlier) bar of its own price extreme. Starting from each confirmed low
+as a candidate wave-0, the strategy tracks P1..P5 and applies Frost &
+Prechter's (1978) three hard rules for a 5-wave bull impulse: wave 2 may
+not fully retrace wave 1 (and, in this literal reading, must retrace into
+the canonical [0.382, 0.786] Fibonacci band); wave 4 may not re-enter
+wave 1's price territory; wave 3 may not be the shortest of waves 1/3/5.
+Any violation invalidates the count and restarts the search from the
+violating pivot. The strategy goes long the bar wave 2 confirms valid
+(anticipating wave 3, canonically the strongest leg) and flattens at wave
+5's completion or at invalidation, whichever comes first. Long-only;
+bear-leg counting and diagonal-triangle exceptions are an explicit,
+disclosed simplification. One frozen configuration (`pct=0.05`,
+`require_fib_band=True`) — no parameter search, per B-10's own "no
+discretion" brief.
+
+**Principles.** Elliott (1938), popularized by Frost & Prechter (1978);
+the ZigZag+rule construction here is the standard mechanical reading
+practitioners use to remove the after-the-fact relabeling that makes
+Elliott counts unfalsifiable "as practised." The one quantitative claim
+the theory makes beyond its structural rules — that retracements cluster
+at Fibonacci ratios — was tested directly against this project's own
+data in R-156's novel branch (a Fibonacci-band ablation on the same
+engine's rule-invalidation signal) and, consistent with Batchelor &
+Ramyar (2005)'s finding that Fibonacci ratios in the Dow are
+indistinguishable from chance, added no detection power over the bare
+structural rule. On the holdout, the strategy's paired Δ-Sharpe against
+`buy_and_hold` is significant in the *losing* direction on both markets
+(spot −1.18 [−2.32, −0.14], futures −1.74 [−2.83, −0.43]); its lower
+spot drawdown is not a risk-matched improvement (21% vs 100%
+time-in-market, and the paired interval on it contains zero). See
+docs/LEDGER.md, R-156, for the full holdout battery, the ETH-Bitfinex
+falsification (survives without a catastrophic, BTC-specific failure —
+still loses, just not by an outlier margin), and the parallel novel
+branch (the same engine's invalidation events, tested as a
+regime-timing input to `kelly_regime_v4` against the project's
+six-episode Step-A gate: 3/6 best cell, the twelfth structurally
+distinct mechanism to fail it).
+
+---
+
 ## Appendix: the variants
 
 Research rounds on the leader produced five registered variants: v2, v3
