@@ -16227,6 +16227,73 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-checked 08-26 (seventh pass), no round dispatched (not an R-numbered
+entry — zero configurations evaluated).** An eighth same-day session, tasked
+independently with the same brief as the seven preceding 08-26 sessions
+(take the best strategy, propose an improvement vector, dispatch a
+conservative/novel branch pair, measure, promote the winner), ran
+ROUTINE.md Step 0 first (no undispatched frozen pre-registration —
+`r151_shared.py` is still the newest `_shared.py` file in `experiments/`
+and already has its matching section B entry at R-151; `origin/main` and
+the working branch are identical, both at the latest automated
+paper-trading commit, `b9991e7`) and the backlog-table grep second
+(unchanged live set: B-06, B-09, B-10, B-17, B-28, B-45, B-46, B-47 — the
+same eight rows the six prior 08-26 passes found, none struck or
+re-ranked in the interim). Best registered strategy by the README's own
+ranking is unchanged: `kelly_regime_v4` ($66.8K spot / $156.2K
+futures_5x, not distinguishably better than `buy_and_hold` on growth,
+drawdown property scoped to BTC/ETH only).
+
+Rather than re-run the categories the seven prior 08-26 sessions already
+swept (established microstructure/behavioral finance, on-chain, DeFi,
+prediction markets, ERR/COST/N≈3 methodology, Kelly/regime-switching
+preprints, liquidation-cascade critical slowing down), this session ran a
+fresh, narrowly-targeted web search for the newest crypto position-sizing
+and volatility-control literature dated after the prior passes' own
+search windows, and checked what it found by name against section C
+rather than trusting a category match:
+
+- **Jones, Matsui & Knottenbelt (2026), "Stablecoins as Dry Powder: A
+  Copula-Based Risk Analysis of Cryptocurrency Markets"** (arXiv:2603.23480,
+  also IEEE-published) — a copula model linking stablecoin **trading
+  volume and upside volatility** (a flow/activity measure, not the supply
+  level R-54/R-55/R-58 tested) to crypto market volatility, reporting a
+  reduced-MSE volatility forecast and lower realized risk when fed into a
+  volatility-*targeting* model's scale factor. Constructed differently
+  enough from the five registered stablecoin-supply variants (R-54/R-55/
+  R-58: mint/burn flow as a directional confirm/veto vote) that it is not
+  an automatic duplicate by name — but it fails the same test R-79's
+  research pass already applied to GARCH/HAR volatility forecasting and
+  closed for the identical reason: R-62 isolated `kelly_regime_v4`'s
+  conditional-volatility *scale* factor alone and found it carries none
+  of the matched-exposure drawdown property that is this project's one
+  surviving finding, so a better forecast of that scale factor — copula-
+  derived or otherwise — improves a quantity independently shown not to
+  carry the edge. Filed here by name so a future session grepping "copula"
+  or "dry powder" specifically, rather than trusting "stablecoin, closed"
+  as a category, does not re-open it without new evidence that R-62's
+  isolation finding has itself been overturned.
+- **"Talyxion: From Speculation to Optimization in Risk"** (arXiv:2511.13239)
+  and the Deep-MKV-TS McKean–Vlasov drawdown-control result surfaced in the
+  same sweep are both off-mechanism for this repo rather than closed
+  on the merits: the former is a general portfolio-risk-optimization
+  framework paper with no crypto-specific, simulable trading rule to
+  extract, and the latter trains a path-dependent generative control model
+  against equity-index futures — the deep-learning-needs-many-instruments
+  problem R-05 already closed this project's door on (one BTC series here
+  against dozens of instruments there).
+
+No code changed, no strategy touched, no configuration evaluated, no
+sub-agent dispatched — screening a direction against the ledger before
+building anything is itself the ROUTINE.md step-1 filter, and this
+direction failed it on citation (2) before any implementation would have
+been justified. B-06's recorder was checked directly and is healthy
+(`reports/paper_trading/kelly_regime_v4_bitstamp.csv`, latest row
+2026-08-26T11:40:00Z, on its designed cadence). **B-06 remains the only
+ranked, unblocked backlog item and this project's standing
+recommendation**, unchanged by this pass — the eighth same-day session to
+reach it independently.
+
 **Re-checked 08-26 (sixth pass), no round dispatched (not an R-numbered
 entry — zero configurations evaluated).** A seventh same-day session, tasked
 independently with the same brief as the six preceding 08-26 sessions
