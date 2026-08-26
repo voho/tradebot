@@ -567,6 +567,23 @@ itself accumulates enough rows to say something, a future session's
 honest default is again a research-only literature pass, not a forced new
 implementation round.
 
+IN PROGRESS: R-156 deterministic Elliott Wave counter (B-10) — an
+independent, concurrently-dispatched session's own round on the same
+backlog item (see the collision note at the top of R-157, immediately
+above, for how the two came to coexist). `experiments/r156_shared.py`
+is frozen (conservative = literal ZigZag+Fibonacci mechanical counter,
+one fixed config, B-10 as filed; novel = wave-count invalidation run-length
+as a Step-A-gated SIZE-axis regime multiplier on `kelly_regime_v4`, 3x2
+Fibonacci-ablation grid, same six-episode gate R-82/85/96/98/99/139/141/155
+used). Conservative branch registered as `elliott_wave_zigzag`; novel
+branch already NEGATIVE (Step-A, 3/6, stopped before holdout). Conservative
+branch's own holdout evaluation against the pre-registered promotion bar
+was still in progress as of this merge — left untouched here; whoever
+completes it should read this file's B-10 backlog row (struck by R-157)
+before writing its own verdict, since B-10 is now closed regardless of
+what this round concludes, and the two are independent replications on
+divergent implementations, not a single measurement.
+
 ### R-155 · 08-26 · NEGATIVE (both branches, stopped at Step A) — persistent homology (H0, Vietoris-Rips via MST) of a causal Takens-embedded return series, an eleventh structurally distinct regime-timing mechanism, fails the identical six-episode detection-lag gate at 2/6 (conservative, fixed config) and 2/6 (novel, best of a 9-cell embedding-window x embedding-dimension sweep)
 
 **Direction.** Step 0 (eleventh same-day 08-26 pass): no undispatched
