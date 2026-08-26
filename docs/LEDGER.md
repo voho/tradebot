@@ -17373,6 +17373,84 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-checked 08-26 (sixteenth same-day/next-day session), no round
+dispatched (not an R-numbered entry — zero new configurations
+evaluated).** Tasked independently with the standard brief (take the best
+strategy, propose an improvement vector, do the research, dispatch a
+conservative/novel branch pair, measure, promote the winner), this
+session ran ROUTINE.md Step 0 first: no undispatched frozen
+pre-registration on disk (newest `experiments/r*_shared.py` unchanged
+since R-156; `git fetch origin main` confirmed `origin/main` at `110ef6b`,
+the fifteenth pass's own commit, clean working tree — no in-flight
+round). The backlog-table grep found the same four live rows all fifteen
+prior passes found: **B-06, B-09, B-17, B-28**, none actionable (B-06
+explicitly "keep it running, stop calling it the plan"; B-09 LOW; B-17
+deliberately deferred with no strategy needing it; B-28 blocked on data
+this repo cannot fetch).
+
+This session dispatched one research-only sub-agent, instructed to read
+the full standing diagnosis, the whole of section C, and section D, then
+search 2024–2026 literature angled specifically at the ERR and N≈3 axes
+(the least-mined relative to INFO, which is close to exhausted, and COST,
+already heavily mined by R-63/65/67) and at genuinely new SIZE-axis
+mechanism families, rather than repeating a fifth or sixth broad
+adjacent-fields sweep. Six candidates surfaced and every one mapped onto
+already-closed ground: **info-gap / robust-satisficing decision theory**
+(Ben-Haim) reduces, for a scalar sizing decision, to an
+uncertainty-derived exposure discount — the same mechanism *shape* as
+eight already-closed formalisms of it (R-104 bootstrap/PSR discount, R-87
+ACI/conformal dispersion, R-105 jackknife and ensemble-disagreement, R-147
+BMA ladder, R-114 hazard-rate regime-age discount, R-138 small-N
+permutation test), all of which either sit inert against BTC's ~55% vote
+hit-rate or invert sign on ETH (B4); **few-treated-units causal
+inference** (Alvarez-Ferman-Wüthrich-style 2025–2026 econometrics,
+arXiv:2506.14998) is the N≈3 problem in its purest form but this project
+already ran two structurally distinct formal small-N tests this year on
+the identical edge-concentration claim (R-138 permutation test,
+significant on BTC alone, failed ETH replication; R-140 synthetic-control
+placebo, appeared to confirm at p=0.0008 but failed a same-scale conformal
+permutation check) and no third design was found that isn't a
+re-parameterization of those two; **hierarchical Bayesian partial
+pooling** across the ~3 independent regime episodes collapses to
+prior-dominated with this little data — the identical failure mode R-87's
+ACI branch already diagnosed; **Hierarchical Risk Parity /
+correlation-clustering allocation** maps onto R-107's closed
+correlation-aware risk-parity reweighting ("giving it room to operate
+gutted the signal's selectivity") and onto R-63's breadth measurement
+(1.47 of 8 effective bets — the diversification gain is already priced
+and capped); **optimal-stopping / free-boundary trading-band
+constructions** (Zervos-Johnson-Alazemi, Dumas 1991) are the same
+theoretical clan as the Constantinides/Davis-Norman no-trade band already
+tried and killed on `hedge_experts` (R-128); a fresh 2026 arXiv crypto
+trend-following paper (2602.11708, "AdaptiveTrend") combines trailing
+stops, rolling-Sharpe asset selection and asymmetric long/short
+allocation, each individually already closed here (R-90, R-111/R-63,
+R-89). A seventh angle — a meta-level multiple-testing correction across
+the whole 157-round search itself, rather than within one strategy's
+parameters — was checked against R-29/R-30, which already wired
+trials-aware correction (bootstrap intervals, deflated Sharpe, purged CV)
+into the comparison table at the program level.
+
+**Sixteenth independently-tasked session, sixteenth identical
+conclusion, this one from an ERR/N≈3-angled search different from all
+fifteen before it.** No non-duplicate, simulable, actionable direction
+found — forcing a conservative/novel branch pair against a null screening
+result would be exactly the mistake this project's own culture penalizes
+(stated verbatim in the fifteenth pass's own entry below), so none was
+dispatched. **B-06 remains the only ranked, unblocked backlog item.**
+Sixteen independently-tasked sessions across three days, ten distinct
+literature-sweep angles, converging on the same conclusion: this
+project's searchable literature space against the *existing*
+`kelly_regime` family, and against every SIZE-axis and ERR-axis
+formalism this session could find a name for, is exhausted. The
+sub-agent's own recommendation, which this session endorses: the two
+genuinely open paths are (a) let B-06's forward paper-trading record
+accumulate — no formalism substitutes for real time passing — or (b) a
+scope decision by the project owner (order-book/queue simulation, or a
+materially different asset universe with real cross-sectional breadth
+beyond the BTC/ETH/eight-instrument crypto panel), both currently outside
+what a single automated session can decide for itself.
+
 **Re-checked 08-26 (fifteenth same-day/next-day session), no round
 dispatched (not an R-numbered entry — zero new configurations
 evaluated).** Tasked independently with the standard brief (take the best
