@@ -16227,6 +16227,74 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-checked 08-26 (fourth pass), no round dispatched (not an R-numbered
+entry — zero configurations evaluated).** A fifth same-day session, tasked
+independently with the same brief as the four preceding 08-26 sessions
+(propose an improvement vector for the incumbent `kelly_regime_v4`, dispatch
+a conservative/novel branch pair, measure, promote the winner), ran
+ROUTINE.md Step 0 first (no undispatched frozen pre-registration — `r151_shared.py`
+is the newest and already has its matching section B entry) and the
+backlog-table grep second (unchanged live set: B-06, B-09, B-10, B-17, B-28,
+B-45, B-46, B-47; B-45/46/47 are HybridBroker code-precision items with no
+promotion waiting behind them per R-151's and B-47's own entries). Rather
+than force a conservative/novel implementation pair onto a direction not
+yet screened, this session dispatched one research-only sub-agent, explicitly
+briefed on everything the three prior 08-26 passes had already ruled out or
+found data-blocked, and pointed at the two axes this file's own standing
+diagnosis and R-144 describe as **less** exhausted than INFO: ERR and COST,
+plus the N≈3 effective-sample-size problem directly. It confirmed by grep
+against `docs/LEDGER.md` and live 2025–2026 web research that all three are
+in fact also saturated as of today's R-147–R-151:
+
+- **ERR.** 13+ configurations across five/six distinct notions of
+  uncertainty (sampling significance R-28/R-87/R-104; within-family and
+  cross-model-class specification disagreement R-105/R-106; distributional
+  novelty via Mahalanobis/kNN across five rounds R-109/R-112/R-115/R-121/
+  R-122; combination-weight shrinkage/Bayesian averaging closed today by
+  R-147). A recent (Aug 2026) preprint, arXiv:2608.01494 "Conformal Kelly:
+  Conformal Prediction Intervals as the Scale in Fractional Kelly Position
+  Sizing," is the closest on-point 2026 literature found — but R-144
+  (08-25) already tried and rejected this exact construction, finding it
+  "carries none of `kelly_regime_v4`'s signature." B-09's own standing note
+  (correctly-calibrated trust is already low; conformal would just say so
+  more slowly) applies to it unchanged.
+- **COST.** Closed across turnover corridors (R-131/R-133), Gârleanu–
+  Pedersen smoothing (R-64/R-128), the analytically-derived no-trade band
+  now registered as `kelly_regime_ev`/`kelly_regime_ev_fast` (R-66–69/
+  R-89/R-90), patient-limit/taker-fallback execution (R-56/R-77/B-24's full
+  sweep), Almgren–Chriss-style adaptive urgency (R-77 novel), and
+  funding-aware venue routing (R-145, today). Two 2025 papers checked
+  (an optimal-rebalancing-boundary result and arXiv:2603.01298 "Single-Asset
+  Adaptive Leveraged Volatility Control") both reduce to the
+  Constantinides/Davis–Norman no-trade-band family already shipped, or to
+  conditional volatility targeting already promoted as `kelly_regime_v3`.
+  Genuine order-placement COST work is not simulable here regardless
+  (L-14/15/16: no order-book/queue data to proxy from OHLCV).
+- **N≈3.** R-144 (today) is the decisive closure: an ETH-native event
+  calendar (not borrowed from BTC) re-run through the extended 9-episode
+  permutation test came back negative (p=0.96), and the BTC-only
+  significance was shown by an independent skeptic to hinge almost
+  entirely on a single episode (leave-one-out flips p to 0.109). R-144's
+  own line names the battery — permutation, Synthetic Control, jackknife,
+  bootstrap/PSR — "close to exhausted against the episode data this project
+  can construct without new forward time," and warns against "another
+  significance procedure on the same claim." Small-sample-inference
+  literature outside finance (clinical-trial historical-borrowing methods)
+  falls into exactly that category and was not treated as a candidate.
+
+No code changed, no strategy touched, no configuration evaluated, no
+sub-agent produced an implementable candidate. **B-06 remains the only
+ranked, unblocked backlog item and this project's standing recommendation**,
+unchanged by this pass — the fifth same-day session to reach it
+independently. The honest reading of five independent 08-26 sessions
+converging on the same conclusion by different search paths (established
+literature, recent/cross-disciplinary, and now a targeted ERR/COST/N≈3
+sweep) is that today's date has produced a genuinely exhaustive same-day
+search rather than five shallow ones: a sixth session re-running this
+brief without new forward calendar time (B-06) or a data source outside
+this project's stated constraints (order book, paid vendors) should expect
+the same answer.
+
 **Re-checked 08-26 (third pass), no round dispatched (not an R-numbered
 entry — zero configurations evaluated).** A fourth same-day session, tasked
 independently with the same brief as the two preceding 08-26 verification
