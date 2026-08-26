@@ -315,6 +315,159 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-155 · 08-26 · NEGATIVE (both branches, stopped at Step A) — persistent homology (H0, Vietoris-Rips via MST) of a causal Takens-embedded return series, an eleventh structurally distinct regime-timing mechanism, fails the identical six-episode detection-lag gate at 2/6 (conservative, fixed config) and 2/6 (novel, best of a 9-cell embedding-window x embedding-dimension sweep)
+
+**Direction.** Step 0 (eleventh same-day 08-26 pass): no undispatched
+frozen pre-registration (`r99_shared.py` was the newest `_shared.py` file
+in `experiments/` before this round and already has its matching R-99
+section-B entry); `origin/main` and the working branch reconciled to the
+latest commit (`6481a65`, carrying R-154) before this file was written.
+Backlog-table grep: unchanged live set (B-06, B-09, B-10, B-17, B-28),
+none independently actionable per R-154's own close-out. Rather than
+re-run the ten categories the ten prior 08-26 passes (through R-154)
+already swept and closed, a dedicated research-only sub-agent was
+dispatched with that full closed-candidate list (RL sizing, BOCPD/HSMM,
+nonparametric vote-response curves, multi-timescale ensembles, CDaR
+sizing R-152/R-153, a Bitcoin power-law paper, sentiment fusion,
+nonparametric regime clustering, `AdaptiveTrend`, a CVaR/put-tail-risk
+paper) and told to grep the ledger by name before treating anything as
+promising. It found exactly one literal non-duplicate: **topological
+data analysis / persistent homology**. Grepped "topological", "persistent
+homology", "persistence landscape", "TDA", "Takens" against
+`docs/LEDGER.md` — zero hits anywhere before this round.
+
+One sentence: does the H0 (connected-component) persistent homology of a
+causal Takens-embedded window of daily log returns — a topological
+complexity/instability statistic, computed via the standard
+Vietoris-Rips-H0-equals-minimum-spanning-tree equivalence (Chazal &
+Michel 2021) to avoid adding a TDA library dependency — serve as a
+regime-timing input to `kelly_regime_v4`, measured the *identical* way
+R-82 (BOCPD), R-83 (Kalman LLT), R-85 (CSD), R-86 (transfer entropy),
+R-96 (Hawkes), R-98 (POT/GPD), R-99 (jump/QV), R-139 (CUSUM) and R-141
+(LPPLS) measured their own candidates: against a fixed detection-lag gate
+on the same six dated, publicly-known historical BTC regime transitions,
+requiring the detector to react at least as fast as v4's own fixed
+20/40/80-day anchor-crossing heuristic on ≥4/6 episodes before any Step-B
+implementation is attempted. Citations (both 2026, verified live by the
+research sub-agent via WebSearch): Bhatia et al., "Topological Complexity
+and Phase Space Stability: A Persistent Homology Approach to
+Cryptocurrency Risk" (arXiv:2604.13311); "Null-Validated Topological
+Signatures of Financial Market Dynamics" (arXiv:2602.00383); mechanism
+also cites Carlsson (2009, *Bull. AMS* 46(2)), Edelsbrunner & Harer
+(2010), Takens (1981) and Chazal & Michel (2021, *Frontiers in AI* 4) for
+the MST equivalence. **Attacks INFO**, in the same narrow sense every
+predecessor on this gate used it — no new external data channel, a
+structurally different *estimator* (algebraic topology of a reconstructed
+phase space) applied to the same committed OHLCV close series v4 already
+reads. **Not a duplicate of:** R-01/R-82/R-83/R-85/R-86/R-96/R-98/R-99/
+R-139/R-141 — same six-episode Step-A gate, TDA never run against it, and
+confirmed absent from the ledger by direct grep before this round.
+**What would make it fail, named before any code** (this round's explicit
+prior, restated from R-85's and R-86's own closing diagnoses): the gate
+is dominated by *sudden*, news-driven shocks (COVID, Terra/Luna, FTX)
+where no mechanism across ten prior structurally distinct theoretical
+bases has beaten v4's own crude fixed-window anchor average — only the
+one slow-building 2018 episode has ever been anticipated early, by any
+detector — and a topological-complexity statistic computed from the same
+daily-resampled OHLCV window is, like CSD, a geometry-of-recent-
+price-action statistic with no a priori reason to escape that pattern.
+Fewer than 4/6 episodes passing was pre-registered as the falsification
+outcome.
+
+**What was done.** `experiments/r155_shared.py` (operator-authored,
+frozen pre-registration, committed and pushed before either branch ran:
+the MST-based H0 construction, the causal Takens embedding, a trailing
+rolling-z-score alarm → run-length series, and a generalised `step_a_gate`
+importing R-82's own episode table, gate machinery
+(`nearest_transition`, `episode_window`, `block_bootstrap_shifts`,
+`nearest_bocpd_detection` — generic on any run-length series per R-139's
+own precedent) and anchor gate (`anchor_majority`) verbatim). Two
+branches, disjoint files, dispatched as parallel subagents:
+`experiments/r155_conservative_tda_vote.py` (one fixed configuration:
+`window_days=20` — v4's own fastest anchor — `embed_dim=3, embed_delay=1,
+trail_days=90, z_thresh=2.0`) and `experiments/r155_novel_tda_sweep.py`
+(the full pre-registered 3×3 grid, `window_days ∈ {10,20,30} ×
+embed_dim ∈ {2,3,4}`, other parameters held at the conservative branch's
+values, 9 cells, full table reported with no suppression). Data: BTC spot
+5m bars, 631,008 bars, 2017-01-01 → 2022-12-31 (inner-train +
+inner-validation only; `assert_no_holdout` guards in both branches and in
+the shared gate function itself, independently re-run and reproduced
+bit-for-bit by the operator after both branches reported). **Pre-registered
+stop rule** (frozen in `r155_shared.py` before any real-data number
+existed, identical in form to R-82/R-85/R-96/R-98/R-99/R-139/R-141's own):
+an episode passes if the TDA alarm detects at or before v4's own nearest
+downward anchor-flip (lead ≥ 0) AND that lead beats a 500-draw
+block-bootstrap null's median (block=5 days, seed=155); a branch clears
+Step A only at ≥4/6 episodes, and only then does Step B (a confirming-vote
+combination) get built — otherwise STOP, report NEGATIVE. **Configurations
+evaluated: 10** (1 conservative + 9 novel), this round's trials count for
+deflated Sharpe per ROUTINE.md's parallelism rule.
+
+**Result.** **Conservative: n_pass=2/6.** Passes: 2018 bear
+bottom/capitulation (lead +33.22d vs null median +4.32d), 2020-03 COVID
+crash (+8.78d vs −5.90d). Fails: 2018 bear onset (−4.07d), 2021-11 top
+(−30.20d), 2022-05 Terra/Luna (−23.00d — the alarm arrives, but *later*
+than v4's own reaction), 2022-11 FTX (nan/nan — no anchor-flip or no TDA
+alarm found in the ±60-day window at the tail of the pre-2023 series,
+scored FAIL by the gate's own construction, the same "possibly empty
+window" outcome R-139's own docstring notes it hit once too). **Novel:
+best cell n_pass=2/6** (a 4-way tie at `window_days=20` × `embed_dim ∈
+{2,3,4}` and `window_days=30, embed_dim=2`; tie-break to smallest
+`window_days` then smallest `embed_dim` selects `window_days=20,
+embed_dim=2`); the full 9-cell table (window_days × embed_dim → n_pass):
+`10×2→1, 10×3→1, 10×4→1, 20×2→2, 20×3→2, 20×4→2, 30×2→2, 30×3→1, 30×4→1`.
+Zero of 9 cells reach the 4/6 promotion bar, so `plateau_ok()` was never
+invoked in earnest (per its own pre-registered condition — no winner to
+check). Both branches independently re-run by the operator after the
+implementing sub-agents reported: conservative reproduced 2/6 exactly
+(same per-episode leads and null medians to the printed precision);
+novel's full 9-cell table reproduced exactly, same tie set, same winner.
+Neither branch's code path reads any bar at or after `OOS_START` — the
+operator's own re-runs confirm the max timestamp read by either file is
+`2022-12-31 23:55:00+00:00`.
+
+**Verdict.** **NEGATIVE, both branches, stopped at Step A.** Persistent
+homology — an algebraic-topological statistic of a reconstructed phase
+space, with no shared machinery against any of its ten predecessors on
+this gate — joins HMM (R-01), BOCPD (R-82), Kalman LLT (R-83), critical
+slowing down (R-85), transfer entropy (R-86), Hawkes (R-96), POT/GPD
+(R-98), jump/QV (R-99), CUSUM (R-139) and LPPLS (R-141) in failing to
+detect these six known historical BTC regime transitions faster than
+v4's own crude fixed-window anchor average, whether run at a literal
+fixed configuration or swept across a 9-cell embedding-window ×
+embedding-dimension grid — and the sweep's ceiling (2/6) does not even
+exceed the fixed configuration's own result, unlike CUSUM's R-139 sweep
+which moved 2/6→3/6. **This is now the eleventh structurally distinct
+theoretical basis** — spanning discrete-state Markov switching, Bayesian
+generative inference, linear state-space filtering, dynamical-systems
+fluctuation statistics, information theory, self-exciting point
+processes, extreme-value theory, jump/quadratic-variation decomposition,
+sequential process control, log-periodic bubble models, and now algebraic
+topology — **to fail this exact gate**, further strengthening R-85's and
+R-86's own closing lesson that the gate itself, not any one technique's
+theoretical basis, is the load-bearing finding: this project's six
+detection-lag episodes are dominated by shocks sudden enough that no
+estimator of "how much has recently changed" in the price series itself,
+regardless of mathematical machinery, beats a crude fixed-window heuristic
+at anticipating them. **Holdout counter: +0** (neither branch read
+`W_HOLD`), running program-level total stays **~705** (R-154's figure,
+unchanged) — see the bullet added below in
+[Holdout consultations to date](#holdout-consultations-to-date). Decision
+rule did not move after any number was read (frozen before either branch
+ran, applied verbatim by both, matching the operator's own independent
+re-runs). `pytest -q`: **516 passed**, run by the operator before this
+round's branches were dispatched and unaffected by it (no file under
+`src/tradebot/` was touched; both new files live under `experiments/`,
+not auto-discovered). **Next step:** the "detect a known regime break
+faster than v4's own anchors" line now reads as exhausted across eleven
+independent theoretical bases — a twelfth would need either a genuinely
+different question (an *unknown, undated* real-time break, which this
+gate does not test) or a different data channel entirely (this project's
+own committed-OHLCV-only INFO scope), not a twelfth detector on the same
+six episodes. **B-06 remains the only ranked, unblocked backlog item and
+this project's standing recommendation**, unchanged by this pass — the
+eleventh same-day session to reach it independently.
+
 ### R-154 · 08-26 · PARTIAL (methodology) — B-45 and B-46 closed: both `HybridBroker` defects fixed and measured, conservative (gross-turnover) dominates novel (net-exposure) on every cell, B-47 re-run under the fully corrected harness stays NEGATIVE
 
 **Direction.** Backlog items **B-45** (`OPEN, LOW` since R-151) and **B-46**
@@ -16696,6 +16849,22 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-checked 08-26, R-155 dispatched (one round, ten configurations
+evaluated).** An eleventh same-day session ran ROUTINE.md Step 0 (no
+undispatched frozen pre-registration; `origin/main` reconciled to
+`6481a65`, carrying R-154) and the backlog-table grep (unchanged live
+set: B-06, B-09, B-10, B-17, B-28). Rather than re-run the ten already-
+closed categories, a research-only sub-agent found one literal
+non-duplicate — topological data analysis / persistent homology, absent
+from the ledger by direct grep — and this session dispatched a
+conservative/novel branch pair to test it against the project's standing
+six-episode detection-lag gate (R-01/R-82/R-83/R-85/R-86/R-96/R-98/R-99/
+R-139/R-141's own gate). Both branches NEGATIVE at Step A (2/6 each; see
+R-155 above). **B-06 remains the only ranked, unblocked backlog item and
+this project's standing recommendation** — unchanged by this pass, the
+detection-lag-gate line now reads as exhausted across eleven independent
+theoretical bases (see R-155's own "Next step").
+
 **Re-checked 08-26 (eighth pass), no round dispatched (not an R-numbered
 entry — zero configurations evaluated).** A ninth same-day session, tasked
 independently with the same brief as the eight preceding 08-26 sessions
@@ -20630,6 +20799,11 @@ Rules that the format exists to enforce:
 Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
+
+- **08-26 · ~705** — R-155: **+0** on top of R-154's ~705. Both branches
+  (persistent-homology/TDA regime detector, an eleventh structurally
+  distinct basis) stopped at Step A — neither cleared the 4/6
+  detection-lag gate needed to proceed to a Step-B holdout evaluation.
 
 - **08-26 · ~705** — R-154: **+0** on top of R-153's ~705. A methodology
   round (fixing B-45/B-46 in `HybridBroker`, closing B-47) with no code
