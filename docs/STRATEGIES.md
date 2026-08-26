@@ -184,6 +184,18 @@ Hommes' (1998) β, whose warning about instability at high β becomes a
 concrete fee constraint here. Cash as a species is the Maynard Smith &
 Price (1973) ESS anchor: when nothing is fit, the book goes flat.
 
+**Why futures ($10.58) is so much worse than spot ($2,330), diagnosed by
+R-148.** Its `on_bar` places orders via `ctx.order_target`,
+whose convention is a fraction of the *market's own* maximum leverage (1.0
+= fully using whatever leverage the market allows) — not a fraction of
+equity. So on 5x futures, a blended position sitting near its own ±1 cap is
+already running close to the full 5x leverage, not 1x notional as the spot
+number might suggest; there is no separate leverage-management step. This
+has no bearing on the registered strategy's own numbers (unchanged) but
+explains, for the first time, why the two markets' results diverge so much
+more here than for `kelly_regime*` (which sizes via `ctx.order_notional`,
+an absolute, leverage-independent fraction of equity).
+
 ---
 
 ## 6. `universal_kelly`
