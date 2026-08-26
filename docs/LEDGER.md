@@ -16227,6 +16227,72 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-checked 08-26 (sixth pass), no round dispatched (not an R-numbered
+entry — zero configurations evaluated).** A seventh same-day session, tasked
+independently with the same brief as the six preceding 08-26 sessions
+(take the best strategy, propose an improvement vector, dispatch a
+conservative/novel branch pair, measure, promote the winner), ran
+ROUTINE.md Step 0 first (no undispatched frozen pre-registration —
+`r151_shared.py` is still the newest `_shared.py` file in `experiments/`
+and already has its matching section B entry at R-151; `origin/main` and
+the working branch are identical, both at the latest automated
+paper-trading commit) and the backlog-table grep second (unchanged live
+set: B-06, B-09, B-10, B-17, B-28, B-45, B-46, B-47). Best registered
+strategy by the README's own ranking is unchanged: `kelly_regime_v4`
+($66.8K spot / $156.2K futures_5x, not distinguishably better than
+`buy_and_hold` on growth, drawdown property scoped to BTC/ETH only).
+
+Rather than re-run the same literature categories the six prior 08-26
+sessions already swept (established microstructure/behavioral finance,
+on-chain, DeFi, prediction markets, ERR/COST/N≈3 methodology, Kelly/
+regime-switching preprints), this session did two narrower things:
+
+- **A live web search for the single newest angle available today** —
+  liquidation-cascade early-warning signals, since two new preprints
+  surfaced that none of the six prior passes' queries had returned:
+  arXiv:2607.27070 ("Where does the criticality live? Early-warning
+  signals are event-heterogeneous across seven crypto-perpetual
+  liquidation cascades") and its 2026 follow-up arXiv:2608.03616
+  ("Measuring the engine of a liquidation cascade: subcritical branching
+  inside a first-order transition"). Both study rolling variance and
+  lag-1 autocorrelation (critical-slowing-down statistics) on
+  minute-level BTC price around seven 2022–2025 liquidation cascades,
+  finding the signature present in 5 of 7 events and silent on the two
+  sudden-news shocks — event-heterogeneous, not event-invariant. This
+  reads as a fresh mechanism until a ledger grep for "critical slowing
+  down" shows it is not: **R-85 (08-21) already tried exactly this
+  statistic** (Scheffer et al. 2009 rising variance/autocorrelation) as a
+  regime-timing detector against this project's own six-episode
+  detection-lag gate — whose episodes are themselves dominated by sudden
+  news- and liquidation-driven shocks — and scored 1/6 single-indicator,
+  0/6 on a joint two-indicator AND-gate, the same partial-but-inconsistent
+  signature the new papers report on their own seven-event panel. The new
+  literature corroborates R-85's finding rather than reopening it: no new
+  door, independent confirmation from a source that did not exist when
+  R-85 ran.
+- **A direct grep check, rather than a category-level recall, of six
+  specific named signals this project's own broader closure statements
+  had described only by category:** open interest and top-trader
+  long/short ratio (R-81, both at native 5-minute cadence — NEGATIVE,
+  lags the anchor gate), hashrate (R-44/B-07 on-chain activity —
+  NEGATIVE), Google Trends and social-media discourse (closed NEGATIVE,
+  cited alongside the on-chain sweep), and DXY/VIX macro (closed NEGATIVE
+  in the same INFO-axis round). All six are confirmed already tried and
+  closed by name, not merely by category — closing the specific gap that
+  a future session grepping any one of these names by itself, rather than
+  trusting a category summary, might otherwise re-open by accident.
+
+No code changed, no strategy touched, no configuration evaluated, no
+sub-agent produced an implementable candidate. B-06's recorder was checked
+directly and is healthy (`reports/paper_trading/kelly_regime_v4_bitstamp.csv`,
+latest row 2026-08-26T10:10:00Z, on its designed cadence). **B-06 remains
+the only ranked, unblocked backlog item and this project's standing
+recommendation**, unchanged by this pass — the seventh same-day session to
+reach it independently, and the second to specifically test whether a
+brand-new (post-dating the day's earlier searches) literature result could
+change that answer. It could not: the new preprints sharpen the citation
+for R-85's existing verdict rather than opening a new mechanism.
+
 **Re-checked 08-26 (fifth pass), no round dispatched (not an R-numbered
 entry — zero configurations evaluated).** A sixth same-day session, tasked
 independently with the same brief as the five preceding 08-26 sessions
