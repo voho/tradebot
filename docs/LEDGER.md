@@ -315,6 +315,11 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+IN PROGRESS: R-156 deterministic Elliott Wave counter (B-10) — conservative
+branch (literal ZigZag+Fibonacci mechanical counter, B-10 as filed) and
+novel branch (wave-count confidence as a SIZE-axis regime multiplier on
+`kelly_regime_v4`) dispatched, execution in progress.
+
 ### R-155 · 08-26 · NEGATIVE (both branches, stopped at Step A) — persistent homology (H0, Vietoris-Rips via MST) of a causal Takens-embedded return series, an eleventh structurally distinct regime-timing mechanism, fails the identical six-episode detection-lag gate at 2/6 (conservative, fixed config) and 2/6 (novel, best of a 9-cell embedding-window x embedding-dimension sweep)
 
 **Direction.** Step 0 (eleventh same-day 08-26 pass): no undispatched
