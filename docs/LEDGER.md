@@ -16227,6 +16227,93 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-checked 08-26 (eighth pass), no round dispatched (not an R-numbered
+entry — zero configurations evaluated).** A ninth same-day session, tasked
+independently with the same brief as the eight preceding 08-26 sessions
+(take the best strategy, propose an improvement vector, do the research,
+dispatch a conservative/novel branch pair, measure, promote the winner),
+ran ROUTINE.md Step 0 first (no undispatched frozen pre-registration —
+`r151_shared.py` is still the newest `_shared.py` file in `experiments/`
+and already has its matching section B entry at R-151; `origin/main` and
+the working branch were reconciled to the latest automated paper-trading
+commit, `9bfdb2d`, before writing this entry) and the backlog-table grep
+second (unchanged live set: B-06, B-09, B-10, B-17, B-28, B-45, B-46,
+B-47 — the same eight rows the eight prior 08-26 passes found, none
+struck or re-ranked in the interim). Best registered strategy by the
+README's own ranking is unchanged: `kelly_regime_v4` ($66.8K spot /
+$156.2K futures_5x).
+
+Rather than re-run the categories the eight prior 08-26 sessions already
+swept, this session dispatched one research-only sub-agent for a fresh,
+differently-angled 2025–2026 literature sweep, explicitly told what the
+eight prior passes had already closed today and instructed to grep the
+ledger by name before treating any candidate as promising. It checked
+four candidate families and closed all four before any implementation
+was justified:
+
+- **Reinforcement-learning-based position sizing under transaction
+  costs** (fresh 2025–2026 leads: `FineFT` risk-aware ensemble RL for
+  futures, arXiv:2512.23773; positional-context intraday RL,
+  arXiv:2406.08013; systematic-FX RL, arXiv:2110.04745; a March-2026
+  breakeven-cost DL benchmark, arXiv:2603.01820) — not a duplicate by
+  name, but fails ROUTINE.md Step 1 Q4 at the design stage on the same
+  grounds R-05 already closed deep learning generally (2–3bps/88–100
+  instruments there vs. 10bps+/one instrument here), sharpened by R-144's
+  direct finding that this project's effective sample size (N≈3) is
+  already too thin for the existing, far simpler vote to generalize past
+  BTC — a fortiori too thin to fit a policy network without overfitting
+  to the same BTC/ETH sign-inversion pattern R-33/R-57/R-144 already
+  documented for simpler constructions.
+- **Bayesian online changepoint detection / hidden semi-Markov models for
+  the regime VOTE** — grepped exhaustively ("changepoint", "Bayesian
+  online", "BOCPD", "semi-Markov", 60+ hits). BOCPD itself is closed
+  twice (R-03, R-82), and the ledger's own running tally lists eleven-plus
+  structurally distinct regime-timing theoretical bases already scored
+  against the identical six-episode detection-lag gate (HMM/R-01,
+  BOCPD/R-03/R-82, Kalman LLT/R-83, CSD/R-85, transfer entropy/R-86,
+  Hawkes/R-96, POT/GPD/R-98, jump/QV decomposition/R-99, CUSUM/R-139,
+  LPPLS/R-141), none clearing ≥4/6. An HSMM is a discrete-state-switching
+  construction with an explicit sojourn distribution — the same basis as
+  R-01's family, not a new one. Closed as a duplicate.
+- **Robust/nonparametric estimation of the vote's response curve**
+  (distinct from R-147's combination-weight work and `kelly_regime_v2`'s
+  convex gamma) — the vote has only 4 support points (0/1/2/3 anchors
+  agreeing); with N≈3 effective regime events behind it, a nonparametric
+  fit over 4 states cannot carry more information than the 1-parameter
+  gamma already registered, and collapses into a reparameterization of
+  what R-146's own Levine & Pedersen (2016) linear-filter equivalence
+  argument already covers.
+- **Multi-timescale ensemble voting beyond the 3-anchor ladder** —
+  duplicate of R-40's bagging sweep and R-105/R-147's 5-member
+  alternative-ladder ensembles, all NEGATIVE with the same ETH
+  sign-inversion.
+
+Five further literature leads were surfaced, checked by name, and closed
+as already-covered or data-blocked: Baquero & Menezes' 2026 Bitcoin
+power-law paper (arXiv:2605.21316, too close to R-74/R-125's closed MVRV
+sub-axis), a social-sentiment/technical fusion regime model
+(arXiv:2607.23370, INFO-blocked — no sentiment data), a nonparametric
+regime-clustering method (same discrete-state basis as R-01, closed),
+`AdaptiveTrend` (arXiv:2602.11708, span/ensemble/response-curve
+territory already covered by R-06/R-07/R-40/R-105/R-146/R-147/R-59/R-60),
+and a CVaR/put-option tail-risk paper (arXiv:2607.00883, already checked
+and rejected in R-125 on options-data unavailability).
+
+No code changed, no strategy touched, no configuration evaluated, no
+implementation sub-agent dispatched — the research-only screen failed
+before any conservative/novel branch pair would have been justified,
+consistent with ROUTINE.md's own filter and with all eight prior 08-26
+passes. B-06's recorder was checked directly and is healthy
+(`reports/paper_trading/kelly_regime_v4_bitstamp.csv`, latest row
+2026-08-26T12:45:00Z, on its designed cadence). **B-06 remains the only
+ranked, unblocked backlog
+item and this project's standing recommendation**, unchanged by this
+pass — the ninth same-day session to reach it independently. The vote
+mechanism's span/statistic/combination-weight/response-curve/gamma/band
+axes and the regime-timing detector-basis axis both now read as
+exhausted; a tenth session should not re-search the terms named above
+without new evidence.
+
 **Re-checked 08-26 (seventh pass), no round dispatched (not an R-numbered
 entry — zero configurations evaluated).** An eighth same-day session, tasked
 independently with the same brief as the seven preceding 08-26 sessions
