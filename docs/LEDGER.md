@@ -16008,9 +16008,59 @@ trip.
 
 ## D. Backlog (ranked)
 
-**Re-checked 08-26, no round dispatched (not an R-numbered entry — zero
-configurations evaluated, so this is not a research round and is not
-filed as one, per ROUTINE.md's "not tested is not a negative result").**
+**Re-checked 08-26 (second pass), no round dispatched (not an R-numbered
+entry — zero configurations evaluated).** A second same-day session, tasked
+independently with the same brief (propose an improvement vector for the
+incumbent `kelly_regime_v4`, dispatch a conservative/novel branch pair,
+measure, promote the winner), ran ROUTINE.md Step 0 first, found no
+undispatched frozen pre-registration, then re-read this section and the
+first 08-26 pass below before doing its own fresh literature sweep rather
+than trusting the earlier pass's coverage claim at face value. Three
+2025–2026 leads were checked and none opens a non-duplicate, simulable
+door:
+
+- **Prediction-market-implied crypto volatility** (arXiv:2604.01431,
+  "Do Prediction Markets Forecast Cryptocurrency Volatility? Evidence from
+  Kalshi Macro Contracts") is a genuinely different data class from the
+  DVOL level/momentum this project already closed (R-73/R-136) — it is
+  event-contract pricing, not options-implied vol. It fails the same gate
+  R-143 already found for Deribit's option chain: no free, sufficiently
+  long historical feed. Kalshi's crypto contracts are a 2025-era product
+  with third-party historical access sold by paid data vendors
+  (lycheedata.com, predexon.com), not a free public endpoint this
+  project's fetch scripts pattern (Wikimedia REST, Deribit, Binance) can
+  reach, and even a paid feed would cover at most ~1–2 years against the
+  2017–2026 backtest window — a coverage-gap problem, not a mechanism
+  problem, same shape as R-143's.
+- **Online conformal prediction via universal-portfolio algorithms**
+  (arXiv:2602.03168) reads, on its face, like a new ERR-axis primitive.
+  It is not a new *locus*: applying it here means wrapping error control
+  around a universal-portfolio-style exposure mixture, which is exactly
+  `universal_kelly`'s own SIZE mechanism, already given a dedicated round
+  and closed (R-149, "the first continuous-grid application of a mixing
+  primitive... found nothing to track"), on an ERR axis already closed in
+  five independent constructions (R-31, R-87 x2, plus the two regime-timing
+  families folded into ERR by the standing diagnosis). It attacks the
+  intersection of two already-closed loci, not a new one.
+- **CEX/DEX perpetual funding-rate two-tier arbitrage** (2025 study on
+  Binance/BitMEX vs. ApolloX/Drift funding spreads) needs DEX order-book
+  and funding data this project has never fetched from any venue — a new
+  external dependency, not a mechanism expressible on committed or
+  fetchable data, the same shape of blocker R-15's still-`BLOCKED`
+  funding-harvest/cash-and-carry direction already carries.
+
+No code changed, no strategy touched, no sub-agent dispatched — forcing a
+conservative/novel pair onto any of the three leads above would mean
+re-testing an axis already closed (the universal-portfolio case) or
+building unavailable-data infrastructure and calling the resulting
+proxy a signal, which L-14/L-15/L-16 already show the cost of.
+**B-06 remains the only ranked, unblocked backlog item and this
+project's standing recommendation**, unchanged by this pass.
+
+**Re-checked 08-26 (first pass), no round dispatched (not an R-numbered
+entry — zero configurations evaluated, so this is not a research round and
+is not filed as one, per ROUTINE.md's "not tested is not a negative
+result").**
 A session tasked with proposing a fresh improvement vector, dispatching a
 conservative/novel pair of branches and measuring them ran ROUTINE.md
 Step 0/1 first, as required, and found every candidate failed Step 1's
