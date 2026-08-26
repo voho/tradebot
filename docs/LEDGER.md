@@ -17366,6 +17366,77 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-checked 08-27 (thirteenth same-day/next-day session), no round
+dispatched (not an R-numbered entry — zero new configurations
+evaluated).** Tasked independently with the standard brief (take the best
+strategy, propose an improvement vector, do the research, dispatch a
+conservative/novel branch pair, measure, promote the winner), this
+session ran ROUTINE.md Step 0 first and found **R-156 already in
+flight**: `experiments/r156_shared.py` existed with its conservative
+branch (`elliott_wave_zigzag`) registered and its novel branch already
+NEGATIVE at Step-A, but the ledger still carried only the IN-PROGRESS
+stub — the conservative branch's holdout evaluation had not been read or
+recorded. Per Step 0 ("an undispatched/unfinished frozen pre-registration
+outranks both the backlog and any new idea"), this session installed the
+project's Python dependencies fresh (none were present in this
+container), then completed that holdout read itself: `elliott_wave_zigzag`
+loses to `buy_and_hold` out-of-sample on both markets (spot Δ-Sharpe
+−1.18 [−2.32,−0.14], futures Δ-Sharpe −1.74 [−2.83,−0.43], futures
+liquidated at 99.5% dead-tail) — the standard promotion bar's default
+REJECT, exactly as the round's own pre-registration expected. Before this
+session's own `python scripts/inference.py`/`tradebot run`/ledger-write
+sequence finished, a **concurrent session landed the identical
+completion first** (commit `fadd507`/`8cd78f6`, recorded as R-156,
+closing B-10) — with holdout numbers matching this session's own
+independent computation to the numbers quoted above. No new information
+survived to add (this session ran the same already-committed
+`r156_shared.py`/`elliott_wave_zigzag.py`, not an independently authored
+second implementation, so it is a mechanical re-run rather than R-153's
+kind of independent replication); this session's own in-progress commit
+was merged with origin/main's landed version and pushed, verified via a
+full `pytest -q` pass (526 passed) after the merge. See R-156's own
+section-B entry for the full write-up.
+
+With R-156 closed and no other undispatched pre-registration on disk,
+this session then ran the backlog-table grep (live set unchanged again:
+B-06, B-09, B-17, B-28 — **B-10 now struck**, closed by R-156) and, per
+the twelfth pass's own conclusion that the marginal value of re-running
+already-closed categories is approximately zero, dispatched one
+research-only sub-agent for its own fresh, independent 2024–2026
+literature sweep across all four constraints. It was hand-fed the
+instruction to first extract, from the ledger itself, the full list of
+candidates all twelve prior 08-26 passes had already checked and closed,
+then run ten further varied searches (game-theoretic/evolutionary sizing,
+sequential e-value/small-sample testing, BTC volatility/VRP forecasting,
+quadratic-cost optimal execution, deflated-Sharpe/multiple-testing
+methods, liquidation-cascade/order-flow microstructure, growth-optimal
+drawdown control, 2026 HMM/regime-switching work, synthetic-control
+small-sample causal inference, and effective-sample-size framing
+directly) before recommending anything. Every hit it found was either
+already named and closed today (Conformal Kelly, Bayesian
+Kelly/Grossman–Zhou, path-signature regime detection, cost-aware
+execution bandits, BOCPD/HSMM, RL sizing, TDA, stablecoin-copula,
+liquidation-cascade CSD, Fear & Greed/sentiment-regime, ZigZag/Elliott), a
+structural variant of an already-closed mechanism (REDD-COPS ≡
+Grossman–Zhou family, closed at R-93 in both fixed-α and online-adaptive
+form; a 2026 sentiment-regime paper ≡ the Fear-&-Greed series closed at
+R-95), or not simulable from this repo's committed data (order-book
+liquidity-state papers; options-skew/prediction-market papers with no
+free multi-year history). **Thirteenth independent confirmation that
+nothing clears the bar** — no non-duplicate, simulable direction found,
+so no conservative/novel branch pair was dispatched (forcing one against
+a null result would be exactly the mistake this project's own culture
+penalizes). B-06 remains the only ranked, unblocked backlog item.
+
+**Note added on reconciliation (this push):** this thirteenth-pass
+session's own text above did not know about **R-157**, a structurally
+different, independently-dispatched implementation of the same B-10 item
+(a different session again, running concurrently with both R-156 and
+this thirteenth pass) — see R-157's own collision note in section B and
+the combined B-10 backlog row below, which now cites both R-156 and
+R-157. Left unedited above rather than rewritten, per this file's own
+"nothing is deleted" rule; the combined row is the current truth.
+
 **Re-ranked 08-26, R-157 dispatched (two branches, 41 configurations
 evaluated).** A thirteenth same-day session ran ROUTINE.md Step 0 (no
 undispatched frozen pre-registration — the newest `_shared.py` files are
