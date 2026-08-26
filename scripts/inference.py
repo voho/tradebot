@@ -138,7 +138,16 @@ def build_curves(strategies: list[str], period: str,
         cached = pd.read_csv(cache, index_col=0, parse_dates=True)
         want = {f"{s}|{m}" for s in strategies for m in MARKETS}
         if want.issubset(cached.columns):
-            return cached
+            # The "full" cache is shared with the multi-asset curves
+            # (CACHE["full"] is one file), whose own window can run to a
+            # later "last bar" than the single-asset data's — its cache
+            # write unions in those extra dates, NaN-padding every
+            # single-asset column for them. Trim to the requested columns'
+            # own valid range rather than returning the whole shared
+            # index, or those trailing NaNs silently corrupt every
+            # downstream statistic (R-157 caught this from a literal nan
+            # printed in the README rather than a plausible wrong number).
+            return cached[sorted(want)].dropna(how="any")
         print(f"{period} cache is missing {len(want - set(cached.columns))} "
               f"series; rebuilding", file=sys.stderr)
 

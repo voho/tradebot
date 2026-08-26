@@ -539,55 +539,62 @@ strategy that failed its own promotion bar, the same treatment R-107's
 same-round risk-parity attempt and R-152's CDaR sizing attempt received;
 its code stays in `experiments/` as the record.
 
-**Incidental finding, disclosed rather than silently absorbed.**
-Registering `elliott_wave` required regenerating `reports/inference/ordering.csv`
-(`python scripts/inference.py ordering`) so its own adjacent-pair statistic
-would be real rather than copied from a stale file. That file had last been
-written 08-24, before R-154's `HybridBroker` fixes (B-45/B-46, landed
-08-26) — nobody had regenerated it since. The refresh changed the
-README's "adjacent steps down this ranking that survive the same test"
-line substantially (full/spot: 3 of 24 -> **14 of 25**; full/futures: 2 of
-24 -> **5 of 25**) even though `kelly_regime_v4`'s own bootstrap row is
-bit-identical before and after (verified directly) — the resampling is
-fully seeded (`seed=7` throughout `tradebot.inference`), so this is not
-resampling noise, it is `ordering.csv` catching up to two days of
-unrelated engine fixes it had silently drifted out of sync with. Not
-investigated further this round (out of R-157's scope, and not required
-by ROUTINE.md's registration procedure, which names only the README table
-and `bootstrap.csv`), but worth a future session's attention: `deflated.csv`
-and `cpcv.csv` (both also last written 08-24) likely carry the same
-staleness, and the hand-written "10 of 96" / "P = 0.52" prose warnings
-elsewhere in the README predate this refresh too and may now understate
-how much of the table's ordering is real. (Superseded in part: the
-concurrent R-156's own merge separately refreshed `deflated.csv` and
-`cpcv.csv`, per its own commit's diff — the hand-written prose warnings
-above the table were still not updated by either round, and remain a
-loose end.)
-
-**Second incidental finding: a corrupted cache, caught before push.**
-Reconciling the two collided rounds required a third `inference.py
-bootstrap` pass (to add both `elliott_wave` and `elliott_wave_zigzag` to
-the same file). That pass produced silently wrong numbers for the *entire*
-`full` period, on every strategy, not just the new ones — `buy_and_hold`'s
-own full/spot Sharpe read `0.0` (correct: `0.97`), `full` period `days`
-read `3518` instead of the stable `3510`, and `d_log_growth` point
-estimates were blank while their own confidence intervals stayed
-populated. The committed BTC data file was unchanged (`git log`/`git
-status` both clean on `data/`); root cause was `reports/inference/daily_returns.csv.gz`,
-the equity-curve cache the docstring already warns must be deleted to
-force a rebuild — evidently left in a bad state by *this session's own*
-first `inference.py bootstrap` invocation hours earlier, which had been
-killed by a `timeout 900` mid-run (see the very first attempt in this
-round's own history) before it could finish writing. Deleting the cache
-and rebuilding from scratch fixed every affected row back to the correct,
-previously-verified numbers (spot-checked against this entry's own
-earlier `elliott_wave` bootstrap figures — bit-identical). **Caught
-because the README's growth-vs-hold column printed a literal `nan`**,
-which is what made it visible rather than merely off; a version of this
-bug that landed on a plausible-looking wrong number instead would have
-shipped silently. Worth a standing caution for any future session that
-kills a `scripts/inference.py` run mid-flight: verify the cache before
-trusting the next run's output, don't just re-run and check exit code 0.
+**Incidental finding: a real, reproducible bug in the shared curves cache,
+found, root-caused and fixed — not merely worked around.** Registering
+`elliott_wave` required regenerating `reports/inference/ordering.csv` so
+its own adjacent-pair statistic would be real rather than copied from a
+stale (08-24) file. The first two regeneration attempts produced silently
+wrong numbers for the **entire `full` period, on every strategy, not just
+the new ones** — `buy_and_hold`'s own full/spot Sharpe read `0.0` (true
+value: `0.97`), `full`-period `days` read `3518` instead of the stable
+`3510`, `d_log_growth` point estimates were blank while their own
+confidence intervals stayed populated, and the adjacent-pairs count
+inflated to a since-retracted **14 of 25 / 5 of 25** this entry originally
+(wrongly) reported as a real consequence of R-154's `HybridBroker` fix
+landing since the cache was last written. **That attribution was itself
+wrong — caught and corrected before this entry's final push, not left
+standing.** Root cause, found by reading `scripts/inference.py` directly
+rather than guessing again: `CACHE["full"]` (`reports/inference/daily_returns.csv.gz`)
+is **one file shared** between the single-asset curves and the
+multi-asset panel's own curves (`_multi_asset_curves` writes into it via
+an index `union`, three lines of code away from the fix). The panel's
+own window can run to a later "last bar" than the single-asset BTC data,
+so that union silently pads every single-asset column with trailing NaN
+for the extra dates — and `build_curves`'s cache-hit path returned the
+**whole shared cache**, extra NaN tail included, rather than trimming to
+the columns it was actually asked for (the multi-asset function three
+lines below it already does exactly this trim — `cached[sorted(want)].dropna(how="any")`
+— `build_curves` simply never had the matching line). Confirmed
+reproducible on demand: delete the cache, rebuild fresh inside one
+process (clean, correct — the freshly-computed frame is used directly,
+never re-read) — then any *second*, separate invocation that hits the
+now-multi-asset-polluted cache reproduces the corruption exactly, every
+time. **Fixed** in `scripts/inference.py`'s `build_curves` (one line,
+mirroring the multi-asset function's own existing pattern), verified by
+re-running `bootstrap`/`ordering` against the polluted cache post-fix and
+getting the correct, previously-verified numbers back (bit-identical to
+the values measured before any of this began). **The corrected number**
+for "adjacent steps down this ranking that survive the same test" is
+**3 of 26 on spot, 2 of 26 on futures_5x, full period** — the same 3/2
+count the stale 08-24 file already carried (at 3 of 24 / 2 of 24), just
+against two more strategies' worth of denominator. R-154's `HybridBroker`
+fix did **not** meaningfully move this statistic; the appearance that it
+had was entirely the caching bug now fixed. `deflated.csv` and `cpcv.csv`
+were separately refreshed by the concurrent R-156's own merge (per its
+commit's diff) and are not know to carry this specific bug (they do not
+go through `build_curves`'s cache-hit path the same way), but were not
+independently re-verified by this round; the hand-written "10 of 96" /
+"P = 0.52" prose warnings above the README table remain unrefreshed by
+either round and are a loose end for a future session. **Caught only
+because the README printed a literal `nan`** in the growth-vs-hold
+column — without that, a landed-but-wrong number would have shipped
+silently, and this entry's own first draft demonstrates exactly how: it
+had already written up the corrupted 14/25 figure as a real finding
+before the second corruption (the `nan`) forced a second look. Standing
+caution for any future session: a large, surprising change in a refreshed
+statistic is a bug report first, the same rule this project already
+applies to a single suspiciously-good backtest result — extend it to
+infrastructure numbers, not just strategy numbers.
 
 **Next step.** B-10 is closed. Re-ranking the backlog below: with B-10
 struck, the live, unblocked set returns to what the twelfth-pass session

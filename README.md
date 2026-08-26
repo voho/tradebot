@@ -218,7 +218,7 @@ _The last two columns are the only ones that answer **"is this difference real?"
 
 _**Growth**, not Sharpe, because final balance is what this table ranks by — and the two disagree. **spot**, because leveraged buy-and-hold is a stress case rather than a benchmark: it is liquidated in early 2017, and an account that cannot draw down further is not something to draw down less than (R-22). On this run **0 of 26** strategies are distinguishably better than holding on growth; the drawdown column is where the project's findings actually live._
 
-_Adjacent steps down this ranking that survive the same test: **16 of 26** on spot · **5 of 26** on futures_5x. The order is a display convention, not a result — read the table as buckets._
+_Adjacent steps down this ranking that survive the same test: **3 of 26** on spot · **2 of 26** on futures_5x. The order is a display convention, not a result — read the table as buckets._
 
 _Regenerate with `python scripts/inference.py`; the numbers live in `reports/inference/bootstrap.csv`._
 <!-- comparison:end -->
