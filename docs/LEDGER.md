@@ -315,6 +315,23 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-149 · 08-26 · IN PROGRESS — `universal_kelly`'s own exposure-mixture mechanism (SIZE axis), never touched since L-11 registration
+
+Frozen pre-registration: `experiments/r149_shared.py` (direction, non-duplicate
+argument, literature, named failure risks and the exact promotion bar all
+live in that module's own docstring, written before either branch was
+dispatched). Off-backlog per R-148's own re-ranking (ranked list holds only
+B-06 and the LOW-priority B-44). Conservative branch bolts `kelly_regime_v3`/
+`v4`'s own unretuned conditional-volatility-target scale onto
+`universal_kelly`'s posterior-mean exposure, replacing its fixed `kappa=0.5`
+constant. Novel branch applies fixed-share re-injection (Herbster & Warmuth
+1998; continuous-grid generalization per Cesa-Bianchi, Gaillard, Lugosi &
+Stoltz 2012) to `universal_kelly`'s own wealth posterior over its 41-point
+exposure grid, calibrated to `fixed_share=1e-2` by a Step-0 non-degeneracy
+check alone (1e-4/1e-3 both R²>0.955 against control, 1e-3 nearly R²=1 —
+disclosed and fixed before any performance number was read). Execution and
+verification in progress.
+
 ### R-148 · 08-26 · NEGATIVE (both branches) — volatility-based sizing for `replicator_book`'s own blend (SIZE axis), never touched since L-10 registration
 
 **Direction.** Off-backlog (the ranked list holds only **B-06**, unchanged since R-137's own re-ranking and reconfirmed by R-147). `kelly_regime_v4`'s own INFO/SIZE/ERR/COST axes are exhausted (19+ INFO signals, 28+ SIZE retunes, ERR closed across seven notions including R-147's own combination-weight round, eight regime-timing mechanisms, five COST-model families) and `champions_council`/`hedge_experts` have each already received dedicated improvement rounds (R-125/R-126, R-128-R-136). `replicator_book` (L-10, 08-12) has not — grep-confirmed against this file, its only two prior mentions are its own registration row and an incidental listing as one of `champions_council`'s four members (R-125's text). Its final position is a replicator-weighted species blend times a **fixed 0.75 constant**, with no volatility-based risk management of any kind. **Attacks SIZE**, this project's one constraint credited as "what actually worked," for the first time on this object — the same "pick a genuinely different, never-improved OBJECT" move R-107 and R-125 made when `kelly_regime_v4`'s own axes exhausted. Two structurally distinct loci, species/fitness/replicator-weights/deadband held fixed in both: **conservative** bolts `kelly_regime_v3`/`v4`'s own, unretuned, already-validated conditional (extremes-only) volatility target (Bongaerts, Kang & van Dijk 2020, FAJ 76(4)) onto the blend, replacing the fixed scale constant; **novel** applies per-species fractional-Kelly sizing (Whitrow 2007, JRSS-C 56(5) — the multi-simultaneous-bet extension of Kelly 1956/Breiman 1961, fractionalized per MacLean-Thorp-Ziemba 2010) to each of the five species' signal *before* the replicator blend, a mechanism with no analogue anywhere in the `kelly_regime` family (which sizes one signal, not five). Not a duplicate of L-10's own finding ("fitness is a lagging estimator") — that is a claim about the weight update's speed, not about risk management once a position is held; not a duplicate of R-125/R-126 (`champions_council`'s Hedge weights *across* six strategies, a portfolio-of-strategies object, vs. this round's work entirely *inside* one of those six); not a duplicate of R-38/R-125 (both resize one already-existing directional bet, vs. this round's novel branch sizing five simultaneous bets independently). Full non-duplicate argument, citations and named failure risks (conservative: a volatility overlay can lever *up* into a still-lagging, wrong-signed blend during a regime transition; novel: noisy per-species pnl variance at 5-minute granularity can whipsaw the blend) in the frozen `experiments/r148_shared.py` module docstring, written by the operator before either branch was dispatched.
