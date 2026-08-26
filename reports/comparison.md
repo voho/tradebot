@@ -25,22 +25,23 @@ Every comparison against `buy_and_hold` carries a 95% paired block-bootstrap int
 | 15 | [stealth_trend](../src/tradebot/strategies/stealth_trend.py) | 🔴 **$465** | 🔴 $0.38 | 1,605 | 📉 -$535 | 55% ⚠️ | ▼ -4.92 [-9.26, -0.76] | ≈ -29.0pp [-43.9, +12.1] |
 | 16 | [flow_regime](../src/tradebot/strategies/flow_regime.py) | 🔴 **$447** | 🔴 $0.80 | 1,184 | 📉 -$553 | 56% ⚠️ | ▼ -4.96 [-9.43, -0.54] | ≈ -27.3pp [-47.2, +6.3] |
 | 17 | [game_council](../src/tradebot/strategies/game_council.py) | 🔴 **$284** | 🔴 $2.00 | 2,541 | 📉 -$716 | 72% ⚠️ | ▼ -5.42 [-9.97, -0.95] | ≈ -11.5pp [-25.9, +12.4] |
-| 18 | [minority_oracle](../src/tradebot/strategies/minority_oracle.py) | 🔴 **$53.36** | 🔴 $3.83 | 9,039 | 📉 -$947 | 95% ⚠️ | ▼ -7.09 [-11.60, -2.52] | ≈ +11.5pp [-3.8, +35.9] |
-| 19 | [game_switch](../src/tradebot/strategies/game_switch.py) | 🔴 **$5.00** | 🔴 $1.00 | 6,672 | 📉 -$995 | 99% ⚠️ | ▼ -9.45 [-15.38, -4.06] | ▼ +16.3pp [+1.0, +39.3] |
-| 20 | [regret_grid](../src/tradebot/strategies/regret_grid.py) | 🔴 **$5.00** | 🔴 $1.00 | 3,461 | 📉 -$995 | 100% ⚠️ | ▼ -9.46 [-16.20, -3.49] | ▼ +16.3pp [+0.9, +39.9] |
-| 21 | [tft_trend](../src/tradebot/strategies/tft_trend.py) | 🔴 **$4.99** | 🔴 $1.00 | 2,538 | 📉 -$995 | 100% ⚠️ | ▼ -9.46 [-14.88, -4.58] | ▼ +16.3pp [+3.0, +39.9] |
-| 22 | [macd_cross](../src/tradebot/strategies/macd_cross.py) | 🔴 **$4.99** | 🔴 $1.00 | 4,301 | 📉 -$995 | 100% ⚠️ | ▼ -9.47 [-16.93, -3.21] | ≈ +16.4pp [-1.4, +40.0] |
-| 23 | [macd_rsi](../src/tradebot/strategies/macd_rsi.py) | 🔴 **$4.96** | 🔴 $0.94 | 2,454 | 📉 -$995 | 100% ⚠️ | ▼ -9.46 [-15.00, -4.40] | ▼ +16.3pp [+2.6, +39.6] |
-| 24 | [attrition_reversion](../src/tradebot/strategies/attrition_reversion.py) | 🔴 **$4.94** | 🔴 $0.99 | 2,930 | 📉 -$995 | 100% ⚠️ | ▼ -9.47 [-14.55, -4.69] | ▼ +16.3pp [+3.1, +39.1] |
-| 25 | [rsi_reversion](../src/tradebot/strategies/rsi_reversion.py) | 🔴 **$4.85** | 🔴 $0.77 | 4,464 | 📉 -$995 | 100% ⚠️ | ▼ -9.49 [-13.24, -5.78] | ▼ +16.7pp [+3.5, +39.8] |
+| 18 | [elliott_wave](../src/tradebot/strategies/elliott_wave.py) | 🔴 **$272** | 💀 $81.67 | 1,261 | 📉 -$728 | 81% ⚠️ | ▼ -5.46 [-9.80, -1.00] | ≈ -2.9pp [-33.6, +22.3] |
+| 19 | [minority_oracle](../src/tradebot/strategies/minority_oracle.py) | 🔴 **$53.36** | 🔴 $3.83 | 9,039 | 📉 -$947 | 95% ⚠️ | ▼ -7.09 [-11.60, -2.52] | ≈ +11.5pp [-3.8, +35.9] |
+| 20 | [game_switch](../src/tradebot/strategies/game_switch.py) | 🔴 **$5.00** | 🔴 $1.00 | 6,672 | 📉 -$995 | 99% ⚠️ | ▼ -9.45 [-15.38, -4.06] | ▼ +16.3pp [+1.0, +39.3] |
+| 21 | [regret_grid](../src/tradebot/strategies/regret_grid.py) | 🔴 **$5.00** | 🔴 $1.00 | 3,461 | 📉 -$995 | 100% ⚠️ | ▼ -9.46 [-16.20, -3.49] | ▼ +16.3pp [+0.9, +39.9] |
+| 22 | [tft_trend](../src/tradebot/strategies/tft_trend.py) | 🔴 **$4.99** | 🔴 $1.00 | 2,538 | 📉 -$995 | 100% ⚠️ | ▼ -9.46 [-14.88, -4.58] | ▼ +16.3pp [+3.0, +39.9] |
+| 23 | [macd_cross](../src/tradebot/strategies/macd_cross.py) | 🔴 **$4.99** | 🔴 $1.00 | 4,301 | 📉 -$995 | 100% ⚠️ | ▼ -9.47 [-16.93, -3.21] | ≈ +16.4pp [-1.4, +40.0] |
+| 24 | [macd_rsi](../src/tradebot/strategies/macd_rsi.py) | 🔴 **$4.96** | 🔴 $0.94 | 2,454 | 📉 -$995 | 100% ⚠️ | ▼ -9.46 [-15.00, -4.40] | ▼ +16.3pp [+2.6, +39.6] |
+| 25 | [attrition_reversion](../src/tradebot/strategies/attrition_reversion.py) | 🔴 **$4.94** | 🔴 $0.99 | 2,930 | 📉 -$995 | 100% ⚠️ | ▼ -9.47 [-14.55, -4.69] | ▼ +16.3pp [+3.1, +39.1] |
+| 26 | [rsi_reversion](../src/tradebot/strategies/rsi_reversion.py) | 🔴 **$4.85** | 🔴 $0.77 | 4,464 | 📉 -$995 | 100% ⚠️ | ▼ -9.49 [-13.24, -5.78] | ▼ +16.7pp [+3.5, +39.8] |
 
 _Balances from a $1,000 start · bold = the strategy's better market · 🟢 profit · 🔴 loss · 💀 liquidated · ⚠️ drawdown over 50%. Trades, profit and max drawdown describe that market._
 
 _The last two columns are the only ones that answer **"is this difference real?"** Both are paired differences against `buy_and_hold` on spot over the full period (3,510 daily observations), each with a 95% stationary block-bootstrap interval — 30-day mean block, 2,000 resamples, the identical resample applied to both strategies so the market's own variance cancels instead of swamping the gap. ▲ / ▼ = the interval excludes zero and the strategy is better / worse; **≈ = it contains zero, so the difference from simply holding is not established**._
 
-_**Growth**, not Sharpe, because final balance is what this table ranks by — and the two disagree. **spot**, because leveraged buy-and-hold is a stress case rather than a benchmark: it is liquidated in early 2017, and an account that cannot draw down further is not something to draw down less than (R-22). On this run **0 of 24** strategies are distinguishably better than holding on growth; the drawdown column is where the project's findings actually live._
+_**Growth**, not Sharpe, because final balance is what this table ranks by — and the two disagree. **spot**, because leveraged buy-and-hold is a stress case rather than a benchmark: it is liquidated in early 2017, and an account that cannot draw down further is not something to draw down less than (R-22). On this run **0 of 25** strategies are distinguishably better than holding on growth; the drawdown column is where the project's findings actually live._
 
-_Adjacent steps down this ranking that survive the same test: **3 of 24** on spot · **2 of 24** on futures_5x. The order is a display convention, not a result — read the table as buckets._
+_Adjacent steps down this ranking that survive the same test: **14 of 25** on spot · **5 of 25** on futures_5x. The order is a display convention, not a result — read the table as buckets._
 
 _Regenerate with `python scripts/inference.py`; the numbers live in `reports/inference/bootstrap.csv`._
 
@@ -60,6 +61,7 @@ _Regenerate with `python scripts/inference.py`; the numbers live in `reports/inf
 | [universal_kelly](../src/tradebot/strategies/universal_kelly.py) | $1,227 | $227 | +22.65% | 20 | 50.0 | $129 | -$15.25 | 9.0 | 0.46 | 30.0 | $1.18 |  | ☠ +0.82 [-0.03, +1.45] | ☠ -90.9pp [-94.8, +13.5] | ☠ +4.38 [-0.01, +13.41] | 0.97 |
 | [harsanyi_crowd](../src/tradebot/strategies/harsanyi_crowd.py) | $429 | -$571 | -57.13% | 178 | 28.7 | $34.04 | -$73.42 | 57.7 | -0.86 | 0.2 | $308 |  | ☠ -0.67 [-1.49, -0.00] | ☠ -41.9pp [-61.0, +73.8] | ☠ +3.33 [-1.32, +12.38] | 0.64 |
 | [hedge_experts](../src/tradebot/strategies/hedge_experts.py) | $258 | -$742 | -74.25% | 4103 | 11.4 | $53.0K | -$15.9K | 99.9 | 0.96 | 99.6 | $52.1K |  | ☠ +1.14 [+0.15, +1.88] | ☠ +0.9pp [-1.6, +100.0] | ☠ +2.82 [-10.84, +18.21] | 0.62 |
+| [elliott_wave](../src/tradebot/strategies/elliott_wave.py) | $81.67 | -$918 | -91.83% | 164 | 51.8 | $512 | -$2,966 | 97.5 | 0.13 | 1.0 | $565 | yes | ☠ +0.49 [-0.12, +0.93] | ☠ -1.7pp [-35.0, +100.0] | ☠ +1.67 [-7.61, +10.85] | 0.66 |
 | [overshoot_fade](../src/tradebot/strategies/overshoot_fade.py) | $33.52 | -$966 | -96.65% | 341 | 57.2 | $71.14 | -$115 | 97.0 | -1.16 | 0.3 | $309 |  | ☠ -0.92 [-1.75, -0.17] | ☠ -2.1pp [-14.5, +99.3] | ☠ +0.78 [-4.96, +11.00] | 0.53 |
 | [buy_and_hold](../src/tradebot/strategies/buy_and_hold.py) | $18.05 | -$982 | -98.20% | 1 | 0.0 | -$982 | -$982 | 99.0 | -0.19 | 0.3 | $4.50 | yes | benchmark | benchmark | benchmark | 0.00 |
 | [replicator_book](../src/tradebot/strategies/replicator_book.py) | $10.58 | -$989 | -98.94% | 1427 | 24.4 | $1,847 | -$681 | 99.8 | 0.33 | 99.6 | $2,215 |  | ☠ +0.54 [-0.24, +1.13] | ☠ +0.7pp [-4.9, +100.0] | ☠ -0.38 [-9.36, +11.50] | 0.43 |
@@ -97,6 +99,7 @@ _Regenerate with `python scripts/inference.py`; the numbers live in `reports/inf
 | [stealth_trend](../src/tradebot/strategies/stealth_trend.py) | $465 | -$535 | -53.55% | 1605 | 30.5 | $109 | -$40.68 | 54.8 | -0.31 | 9.9 | $1,542 |  | ▼ -1.32 [-2.06, -0.62] | ≈ -29.0pp [-43.9, +12.1] | ▼ -4.92 [-9.26, -0.76] | 0.01 |
 | [flow_regime](../src/tradebot/strategies/flow_regime.py) | $447 | -$553 | -55.33% | 1184 | 38.0 | $102 | -$52.56 | 56.1 | -0.72 | 3.5 | $966 |  | ▼ -1.73 [-2.67, -0.87] | ≈ -27.3pp [-47.2, +6.3] | ▼ -4.96 [-9.43, -0.54] | 0.02 |
 | [game_council](../src/tradebot/strategies/game_council.py) | $284 | -$716 | -71.60% | 2541 | 25.9 | $22.92 | -$14.04 | 71.7 | -2.67 | 2.8 | $718 |  | ▼ -3.79 [-4.82, -2.85] | ≈ -11.5pp [-25.9, +12.4] | ▼ -5.42 [-9.97, -0.95] | 0.01 |
+| [elliott_wave](../src/tradebot/strategies/elliott_wave.py) | $272 | -$728 | -72.82% | 1261 | 39.4 | $141 | -$113 | 81.0 | -0.57 | 7.6 | $2,097 |  | ▼ -1.63 [-2.43, -0.79] | ≈ -2.9pp [-33.6, +22.3] | ▼ -5.46 [-9.80, -1.00] | 0.01 |
 | [minority_oracle](../src/tradebot/strategies/minority_oracle.py) | $53.36 | -$947 | -94.66% | 9039 | 12.2 | $3.00 | -$2.93 | 94.7 | -19.17 | 1.2 | $1,024 |  | ▼ -9.76 [-11.54, -8.09] | ≈ +11.5pp [-3.8, +35.9] | ▼ -7.09 [-11.60, -2.52] | 0.00 |
 | [game_switch](../src/tradebot/strategies/game_switch.py) | $5.00 | -$995 | -99.50% | 6672 | 26.6 | $9.00 | -$11.38 | 99.5 | -6.19 | 1.2 | $1,264 |  | ▼ -5.98 [-7.95, -3.96] | ▼ +16.3pp [+1.0, +39.3] | ▼ -9.45 [-15.38, -4.06] | 0.00 |
 | [regret_grid](../src/tradebot/strategies/regret_grid.py) | $5.00 | -$995 | -99.50% | 3461 | 8.4 | $13.29 | -$46.98 | 99.5 | -5.11 | 7.7 | $872 |  | ▼ -6.04 [-8.02, -4.03] | ▼ +16.3pp [+0.9, +39.9] | ▼ -9.46 [-16.20, -3.49] | 0.00 |

@@ -1,6 +1,6 @@
 # The strategies, best to worst
 
-Every registered strategy — all twenty-five — ordered as in the README
+Every registered strategy — all twenty-six — ordered as in the README
 comparison table (final balance on the best market over 2017–2026). Each
 section says **what it is**, **how it works**, and **what principles it
 rests on**. Balances below are from a **$1,000** start — results scale
@@ -16,7 +16,7 @@ statistically distinguishable
 The five `kelly_regime_*` variant entries (v2/v3/v4 and the two `ev`
 strategies) are variants of the leader and are described together in the
 [appendix](#appendix-the-variants); the numbered sections below cover the
-twenty distinct ideas.
+twenty-one distinct ideas.
 
 | # | strategy | spot | futures 5x | verdict |
 |---|---|---|---|---|
@@ -37,14 +37,15 @@ twenty distinct ideas.
 | 10 | [stealth_trend](#10-stealth_trend) | $465 | $0.38 | as above |
 | 11 | [flow_regime](#11-flow_regime) | $447 | $0.80 | combination did not rescue its members |
 | 12 | [game_council](#12-game_council) | $284 | $2.00 | can only allocate among losers |
-| 13 | [minority_oracle](#13-minority_oracle) | $53 | $3.83 | honest negative result |
-| 14 | [game_switch](#14-game_switch) | $5.00 | $1.00 | fee death |
-| 15 | [regret_grid](#15-regret_grid) | $5.00 | $1.00 | fee death |
-| 16 | [tft_trend](#16-tft_trend) | $4.99 | $1.00 | fee death |
-| 17 | [macd_cross](#17-macd_cross) | $4.99 | $1.00 | baseline; fee death |
-| 18 | [macd_rsi](#18-macd_rsi) | $4.96 | $0.94 | baseline; fee death |
-| 19 | [attrition_reversion](#19-attrition_reversion) | $4.94 | $0.99 | fee death |
-| 20 | [rsi_reversion](#20-rsi_reversion) | $4.85 | $0.77 | baseline; fee death |
+| 13 | [elliott_wave](#13-elliott_wave) | $272 | $81.67 (liquidated) | falsifiable Elliott Wave count, decisively negative |
+| 14 | [minority_oracle](#14-minority_oracle) | $53 | $3.83 | honest negative result |
+| 15 | [game_switch](#15-game_switch) | $5.00 | $1.00 | fee death |
+| 16 | [regret_grid](#16-regret_grid) | $5.00 | $1.00 | fee death |
+| 17 | [tft_trend](#17-tft_trend) | $4.99 | $1.00 | fee death |
+| 18 | [macd_cross](#18-macd_cross) | $4.99 | $1.00 | baseline; fee death |
+| 19 | [macd_rsi](#19-macd_rsi) | $4.96 | $0.94 | baseline; fee death |
+| 20 | [attrition_reversion](#20-attrition_reversion) | $4.94 | $0.99 | fee death |
+| 21 | [rsi_reversion](#21-rsi_reversion) | $4.85 | $0.77 | baseline; fee death |
 
 > **The pattern in one line:** every strategy that makes money decides
 > *how much to hold*; every strategy that tries to predict *what happens
@@ -349,7 +350,61 @@ algorithm, profitable members) sits at #3.
 
 ---
 
-## 13. `minority_oracle`
+## 13. `elliott_wave`
+
+**What it is.** A deterministic, causal ZigZag/Fibonacci Elliott Wave
+counter, traded directionally: **$272** on spot, liquidated on futures.
+Backlog item B-10 — R-18's 08-16 literature rejection of Elliott Wave
+Theory, converted into an actual run instead of left as a citation.
+
+**How it works.** A Wilder-style ATR feeds a causal ZigZag: a pivot is
+permanently frozen the instant price reverses `k * ATR` from the running
+extreme since the last confirmed pivot (never repainted by a later bar).
+Every trailing 6-pivot window is hard-gated as a 5-wave impulse (wave 2
+retraces 38.2-100% of wave 1 without exceeding wave 0's start; wave 3 is
+never the shortest of waves 1/3/5; wave 4 does not enter wave 1's price
+territory — the diagonal-triangle exception is deliberately ignored, per
+B-10's "no discretion"), and every trailing 4-pivot window as an A-B-C
+correction (B retraces 38.2-78.6% of A). A pattern clearing its hard gates
+earns a soft Fibonacci-ratio confidence score (Gaussian kernel around the
+canonical 1.618/0.618/1.0 ratios); only a completed pattern with confidence
+above a fixed threshold moves the target — impulse up/down to long/short
+(short clamps to flat on spot automatically), A-B-C to flat. No Kelly
+sizing, no discretion, no relabeling: exactly the falsifiable version of
+classical Elliott counting B-10 asked for.
+
+**Principles.** R.N. Elliott's wave principle, as practiced, is
+unfalsifiable — counts are relabeled after the fact once they fail, the
+same causality-leak class `tests/test_causality_strict.py` exists to catch
+applied to a human analyst's own process (Aronson 2006). Its one
+quantitative, testable claim — that price respects Fibonacci retracement
+ratios — was empirically refuted (Batchelor & Ramyar, "Magic numbers in the
+Dow"). The one paper claiming a live edge, *ElliottAgents* (Applied
+Sciences 14(24), Dec 2024, multi-agent LLM + deep RL), reports 73.68% vs
+57.89% directional accuracy on BTC/USD Oct 2022-Sep 2024 — three extra
+correct calls over a single monotonic bull run, no walk-forward split.
+
+**Result (R-157, 08-26): NEGATIVE, decisively.** On the 2023+ holdout the
+frozen configuration lost to `buy_and_hold` on both spot (-65.0% vs
++283.9%) and futures_5x (-99.6% vs +1417.6%, funding-free upper bound);
+the project's own stationary-block-bootstrap harness confirms both
+holdout cells at 95% intervals excluding zero (ΔSharpe -3.33 and -2.60,
+Δlog growth -2.39 and -8.24). The identical failure magnitude replicated
+on ETH (-66.8% spot, -99.9% futures), ruling out "unlucky on BTC" as an
+explanation. Registered despite the negative verdict — per B-10's own
+framing ("converts an unfalsifiable debate into a table row") and this
+project's convention for instructive negatives (`minority_oracle`,
+`game_switch`, `game_council`). Turnover stayed material even after the
+ATR/confidence gates (543-1,065 trades in the holdout alone, only 7-16%
+time-in-market) — the same INFO+ERR+COST combination every other
+directional predictor in this ledger has lost to, now measured for
+Elliott Wave specifically. A same-round attempt to repurpose the wave
+counter's structural-clarity *confidence* (not its direction) as a SIZE-axis
+dampener on `kelly_regime_v4` also failed — see `docs/LEDGER.md` R-157.
+
+---
+
+## 14. `minority_oracle`
 
 **What it is.** A grand-canonical minority game trained online on the
 binarized return series: **$53** on spot. A clean negative result.
@@ -373,7 +428,7 @@ over 12 bars — and loosening it produced trading that loses.
 
 ---
 
-## 14. `game_switch`
+## 15. `game_switch`
 
 **What it is.** Fictitious play against the market: **$5.00** on spot.
 
@@ -393,7 +448,7 @@ means are non-stationary and tiny relative to fees.
 
 ---
 
-## 15. `regret_grid`
+## 16. `regret_grid`
 
 **What it is.** Regret matching over a grid of positions: **$5.00** on
 spot.
@@ -414,7 +469,7 @@ noisy that it rebalances constantly, converting a sound guarantee into
 
 ---
 
-## 16. `tft_trend`
+## 17. `tft_trend`
 
 **What it is.** Axelrod's tit-for-tat played against the trend:
 **$4.99** on spot.
@@ -437,7 +492,7 @@ protect.
 
 ---
 
-## 17. `macd_cross`
+## 18. `macd_cross`
 
 **What it is.** The textbook MACD crossover: **$4.99** on spot from 4,301
 trades.
@@ -452,7 +507,7 @@ fees per $1,000 of capital, the fee bill alone is larger than the account.
 
 ---
 
-## 18. `macd_rsi`
+## 19. `macd_rsi`
 
 **What it is.** Trend filter plus pullback timing: **$4.96** on spot.
 
@@ -468,7 +523,7 @@ round trips thousands of times.
 
 ---
 
-## 19. `attrition_reversion`
+## 20. `attrition_reversion`
 
 **What it is.** Market-maker-style reversion with a war-of-attrition exit:
 **$4.94** on spot, despite a 58.6% win rate — one of the highest in the
@@ -493,7 +548,7 @@ short-gamma payoff paying fees on 2,930 trades.
 
 ---
 
-## 20. `rsi_reversion`
+## 21. `rsi_reversion`
 
 **What it is.** The classic oversold-bounce baseline: **$4.85** on spot
 from 4,464 trades.
