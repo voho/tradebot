@@ -315,20 +315,160 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
-### R-150 · 08-26 · IN PROGRESS — `champions_council`'s own top-level SCALE (SIZE axis), never touched since L-08 registration
+### R-150 · 08-26 · NEGATIVE (both branches) — `champions_council`'s own top-level SCALE (SIZE axis), never touched since L-08 registration; conservative's apparent PROMOTE reclassified by an independent skeptic as the BTC-pass/ETH-invert artifact
 
-Frozen pre-registration: `experiments/r150_shared.py`. Direction: replace
-`champions_council`'s plain, continuous `min(target_vol/v, max_leverage)`
-scale (registered 08-14, one day before L-02/R-33 found conditional beats
-continuous) with v4's own conditional-vol-target machinery (conservative,
-third reuse after R-148/R-149) and per-member fractional-Kelly pre-scaling
-before the Hedge blend (novel, second application after R-148's on
-`replicator_book`). Full direction, non-duplicate justification, citations,
-named failure risks and promotion bar (A2/B1/B2/B3/B4/B5/B6) are in that
-file's module docstring — not restated here. Two branch agents dispatched
-in parallel, each owning `experiments/r150_conservative.py` /
-`experiments/r150_novel.py` respectively, neither committing. This stub
-will be replaced by the full R-150 entry once both report.
+**Direction.** `champions_council` (L-08, 08-14) has never had its own
+top-level position SCALE touched since registration — it multiplies its
+Hedge-blended member vote by a plain, continuous, always-on
+`min(target_vol/v, max_leverage)` ratio, registered one calendar day
+*before* L-02/R-33 (08-15) discovered that a conditional (extremes-only,
+hysteresis-gated) target beats a continuous one — an upgrade that was
+chronologically impossible at registration and has never been retrofitted.
+**Attacks SIZE.** Not a duplicate of R-125/R-126 (`champions_council`'s
+cross-strategy Hedge-weight ALLOCATION across its six members, both NEGATIVE
+— both rounds' own text discloses their shared harness reused the
+vol-target/deadband tail unchanged, which is exactly the locus this round
+touches); not a duplicate of R-46 (Grossman-Zhou/CPPI drawdown cushions on
+`kelly_regime_v4`, a different object, a path-dependent floor mechanism
+neither branch here uses); not a duplicate of R-73 (Deribit DVOL-derived VRP
+brake on `kelly_regime_v4`, a different object, a different data channel, a
+one-sided haircut architecture). Conservative is the THIRD reuse of
+Bongaerts-Kang-van Dijk (2020)'s conditional-vol-target machinery
+(unretuned, byte-identical to `kelly_regime_v3`/`v4`), after R-148
+(`replicator_book`) and R-149 (`universal_kelly`), disclosed as reuse.
+Novel is the SECOND application of Whitrow (2007)'s multi-simultaneous-bet
+Kelly framework — per-member fractional-Kelly pre-scaling before the blend
+— after R-148's first application to `replicator_book`'s five
+replicator-weighted species, applied here to `champions_council`'s six
+Hedge-weighted (exponential-weights, not replicator-dynamics) members, a
+structurally different combination rule. Full non-duplicate argument,
+citations (including Whitrow 2007 and Han, Yu & Mathew 2025's plug-in-Kelly
+upward-bias result, used as a stated PRIOR risk before any branch ran, not a
+post-hoc explanation) and named failure risks are in
+`experiments/r150_shared.py`'s module docstring.
+
+**What was done.** Two branches dispatched in parallel against the frozen
+`experiments/r150_shared.py` (written by the operator before either ran,
+read-only to both): `experiments/r150_conservative.py`,
+`experiments/r150_novel.py`. Promotion bar: A2 (Step-0 R² kill switch vs
+`champions_council`'s own path, inner-train, >0.98 stops); B1 (bootstrap
+paired Δlog-growth/ΔSharpe, inner-validation, ≥1 of 2 markets, ΔSharpe>+0.2
+OR CI excludes zero); B2 (exposure/vol-ratio, diagnostic); B3 (plateau sweep
+— conservative: `target_vol`∈{0.44,0.55,0.66}; novel: `kelly_cap`∈{1.0,1.5,
+2.0}); B4 (ETH sign agreement with BTC inner-val, ≥1 market); B5 (0.40% spot
+fee tier, gated on B1); **B6, new this round** (a mandatory zero-information,
+turnover-matched control — `champions_council` with only `deadband` widened
+— per R-132/R-135's own lesson that a turnover-reduction artifact can clear
+a falsification battery that never isolates turnover; gates only if B1
+passes). **Configs evaluated: 13 total** — conservative 10 (3 `target_vol`
+candidates + 7 B6 deadband-control trials), novel 3 (`kelly_cap` grid; B6 not
+run, B1 never passed).
+
+**Result.** *Novel*: A2 R²=−1.005 (no trip — strongly, not trivially,
+different). B1 fails decisively on both markets at inner-validation
+(ΔSharpe spot −0.25, futures −0.03, both point estimates negative, CIs
+contain zero), reproducing the round's own pre-registered high-prior failure
+(Han-Yu-Mathew 2025's bias in 5-minute-bar Kelly estimates) but via a
+different concrete mechanism than R-148's turnover *explosion*: turnover
+instead *collapsed* (1 trade vs. the control's 27/49 over two years,
+exposure_ratio≈0.07) — the per-member Kelly fractions apparently rarely
+exceed the deadband once fractionalized, an honest and informative variant
+of the predicted failure, not the literally-named kill condition. B3
+degenerate-passes (all three `kelly_cap` values produce byte-identical
+results — the fraction never binds the cap in this window). B4 passes
+(BTC and ETH agree, both negative, on both markets) — the failure itself
+replicates cross-asset, the cleanest possible negative. `pytest -q`: 516
+passed.
+
+*Conservative*: A2 R²=0.895 (no trip). Primary `compare()`: ΔSharpe
+inner-val spot **+0.231** (CI `[−0.012,+0.279]`, does not exclude zero),
+futures **−0.210** (CI `[−0.279,+0.184]`) — B1 passes on spot only, via the
+point-estimate disjunct, not CI exclusion. B3 sign-stable and positive
+across the full `target_vol` grid (one cell, 0.44, independently significant:
+CI `[+0.028,+0.394]`). B5: edge survives the 0.40% fee tier (ΔSharpe
++0.263). B4: BTC/ETH agree on **futures** (both negative) but **disagree on
+spot** — the only market carrying the round's promotion case. B6: the
+zero-information deadband-only control (deadband=0.15, turnover-matched to
+the candidate's 33 inner-val spot trades as closely as a *wider*-deadband
+grid can reach) scores ΔSharpe **+0.160** (CI `[−0.050,+0.191]`) — below the
++0.2 bar, `artifact_detected=False` by the letter of the gate. Literal
+promotion-bar reading: **A2/B1/B3/B4/B5/B6 all pass → PROMOTE-CANDIDATE**,
+as the branch itself reported.
+
+An independent skeptic (dispatched per this project's own standing rule —
+"an independent skeptic re-runs each surviving claim before it is
+believed") re-read every touched line of `r150_shared.py` and
+`r150_conservative.py` for lookahead (none found: every full-series-looking
+computation is an `ewm` recursion followed by `.shift(1)`, or reads only
+prior sequential state) and independently re-ran `compare()` and `run_b6`
+from a clean script **before** reading the branch's own log. Every number reproduced **bit-for-
+bit** — d_sharpe, bootstrap CIs, trade counts, exposure/vol ratios, B6's
+chosen deadband and result, all identical to the branch's own report. This
+is not a numerical dispute. The skeptic's disagreement is substantive,
+argued from B2's own diagnostic (per R-33's standing rule): `risk_matched`
+is `True` at inner-train (exposure/vol ratios ≈0.94–1.0) but **`False` at
+inner-validation** (≈0.86 both) — the conditional scale specifically
+de-levers relative to control during the very window B1 is measured on.
+Combined with B4's own substantive reading — the market supplying B4's
+technical "agreement" (futures) is the market where the candidate already
+*loses* to control, so two negative numbers agreeing there confirms nothing
+about the one positive result (spot), which is exactly where ETH inverts —
+the skeptic judged this the same BTC-pass/ETH-invert signature documented at
+R-33, R-57, R-64, R-127, R-137 and R-145's own conservative branch (R-149's
+own text: "documented repeatedly... across different objects and axes"),
+wearing a disguise the per-market B4 rule's literal wording does not catch:
+nothing in the rule as written requires the agreeing market to be the market
+B1 passed on. The skeptic additionally flagged that B6's own deadband grid
+(0.15–1.00, all *wider* than the true control's 0.10) can structurally only
+ever produce *fewer* trades than the true control's 27 — but the candidate
+trades *more* (33) at inner-val spot, the opposite direction, so the closest
+available B6 cell (19 trades) sits on the wrong side of both, and B6's
+"pass" rules out only a turnover-*reduction* artifact, not the
+turnover-*increase* shape this specific candidate actually shows. Both
+findings were independently re-derived, not merely asserted.
+
+**Verdict.** **NEGATIVE, both branches.** The operator adopts the skeptic's
+substantive reading over the branch's literal one: B4 exists to ask whether
+the asset-specific edge earning a B1 pass replicates on an independent
+asset, and the honest answer here, on the one market carrying the round's
+entire case, is no. This is the same move R-33 established for benchmarks
+and R-132/R-135 established for turnover-reduction artifacts, applied here
+to a pre-registered gate whose letter and substance diverged — not a
+post-hoc tightening of the bar to manufacture a rejection (the bar's
+wording, B6's mechanism, and B2's diagnostic were all fixed before any
+branch ran; only their *interpretation*, guided by this project's own
+standing risk-matching rule, was applied after seeing the numbers, exactly
+as R-33/R-132 did). **One-line lesson:** a per-market "agrees on ≥1 market"
+falsification rule is not sufficient when a candidate's own BTC result is
+mixed-sign across markets — it can be satisfied by an agreement on the
+losing market while the winning market's own cross-asset check fails,
+and B6's control-search grid must be able to move turnover in *both*
+directions from the true control, not just widen, or it cannot test a
+candidate whose own mechanism increases trade frequency. **This closes
+`champions_council`'s SCALE axis**, joining its own ALLOCATION axis
+(R-125/R-126) as closed — meaning `champions_council` now has BOTH its
+cross-strategy weighting and its own internal risk sizing tested and
+failed to improve on the incumbent, the same double-closure
+`kelly_regime_v4` (28+ SIZE-axis attempts across many sub-loci) already
+has. **Holdout counter: +0**, running program-level total stays **~699**
+(R-149's figure, unchanged) — neither branch, nor the skeptic's own re-runs,
+read, printed, or held in memory any bar dated 2023-01-01 or later (every
+`assert_no_holdout` guard ran clean throughout); see the bullet added below
+in [Holdout consultations to date](#holdout-consultations-to-date). Neither
+branch's own pre-registered decision rule moved after seeing any number —
+the operator's adoption of the skeptic's reading is an *interpretation* of
+an already-frozen gate (B4), not a changed threshold, and is disclosed in
+full above rather than silently substituted for the branch's own reported
+verdict. `pytest -q`: 516 passed (both branches, independently, and the
+skeptic's own re-run of the causality-strict suite). **Next step:** not
+filed as a new backlog item. `champions_council`'s two internal axes
+(cross-strategy allocation, own top-level scale) are now both closed,
+alongside `kelly_regime_v4` (all axes), `hedge_experts` (composition,
+R-128-R-136), `replicator_book` (own blend, R-148) and `universal_kelly`
+(own exposure mixture, R-149) — every profitable, registered, multi-signal
+object this project has now given a dedicated round on every locus its own
+architecture exposes. **B-06 remains the only ranked, unblocked backlog
+item.**
 
 ### R-149 · 08-26 · NEGATIVE (both branches) — `universal_kelly`'s own exposure-mixture mechanism (SIZE axis), never touched since L-11 registration; conservative branch reproduces the BTC-pass/ETH-invert signature once again
 
@@ -15868,6 +16008,43 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-26 after R-150.** Off-backlog (the ranked list has held only
+B-06 since R-137's own re-ranking). `champions_council`'s own top-level
+SCALE — untouched since its L-08 registration, and distinct from its
+cross-strategy ALLOCATION axis already closed by R-125/R-126 — was tested
+for the first time and is **NEGATIVE on both branches**: bolting
+`kelly_regime_v3`/`v4`'s own unretuned conditional-vol-target machinery onto
+the blend (conservative) initially reported PROMOTE-CANDIDATE against its
+own literal pre-registered bar, but an independent skeptic reproduced every
+number bit-for-bit and reclassified it, substantively, as the same
+BTC-pass/ETH-invert artifact this project has now documented repeatedly
+(R-33/R-57/R-64/R-127/R-137/R-145/R-149) — the market carrying the round's
+entire promotion case (spot) is exactly where ETH inverts sign, and B4's
+technical "agreement" comes only from futures, a market where the candidate
+already loses to the control; per-member fractional-Kelly pre-scaling before
+the Hedge blend (novel, Whitrow 2007, the second application of this
+primitive after R-148) is decisively negative on both BTC markets at
+inner-validation, via turnover *collapse* (near-total freezing, 1 trade in
+two years) rather than R-148's turnover explosion — a different concrete
+failure shape from the same predicted mechanism (Han-Yu-Mathew 2025's
+plug-in-Kelly bias), and one that replicates cleanly onto ETH (B4 passes,
+both negative). **This closes `champions_council`'s SCALE axis**, meaning
+the object now has BOTH its cross-strategy allocation (R-125/R-126) and its
+own internal risk sizing (R-150) tested and failed to improve on the
+incumbent — the same double-closure `kelly_regime_v4` already carries across
+many more sub-loci. Every profitable, registered, multi-signal object this
+project has now given a dedicated round on every locus its own architecture
+exposes: `kelly_regime_v4` (all axes, 28+ SIZE-axis attempts alone),
+`champions_council` (allocation + scale), `hedge_experts` (composition,
+R-128-R-136), `replicator_book` (own blend, R-148), `universal_kelly` (own
+exposure mixture, R-149). **B-06 remains the only ranked, unblocked backlog
+item, unchanged by this round.** A future session preferring a fresh
+mechanism idea over B-06 needs either a genuinely new registered, profitable
+object this project has not yet given a dedicated round (none is currently
+known — the five existing ones are now each closed on every locus their own
+code exposes) or a data channel this project cannot already construct from
+its committed or fetchable files.
+
 **Re-ranked 08-26 after R-149.** Off-backlog (the ranked list has held only
 B-06 since R-137's own re-ranking). `universal_kelly`'s own exposure-mixture
 mechanism — untouched since its L-11 registration — was tested for the first
@@ -19202,6 +19379,16 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-26 · ~699** — R-150: **+0** on top of R-149's ~699 (unchanged).
+  Neither branch, nor the independent skeptic's own re-runs, approached
+  `OOS_START=2023-01-01`: every `assert_no_holdout` guard (both branches'
+  own, plus the skeptic's clean-script re-runs of `compare()` and `run_b6`)
+  ran clean throughout, and the NEGATIVE verdict on both branches came from
+  inner-train/inner-validation/ETH/fee cells only. The skeptic independently
+  re-derived the conservative branch's A2 R² and full `compare()`/`run_b6`
+  output from a clean script before reading the branch's own log; every
+  number matched bit-for-bit (no discrepancy of the kind R-149's own
+  bullet below disclosed).
 - **08-26 · ~699** — R-149: **+0** on top of R-147's ~699 (unchanged; R-148
   did not append its own bullet here, the same omission R-144 made, noted
   rather than silently repeated). Neither branch approached
