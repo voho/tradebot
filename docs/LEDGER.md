@@ -315,13 +315,161 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
-### R-152 · 08-26 · IN PROGRESS — CDaR (Chekhlov/Uryasev/Zabarankin 2005) sizing for `kelly_regime_v4`'s SCALE/CAP axis, two branches
+### R-152 · 08-26 · NEGATIVE (both branches) — CDaR (Chekhlov/Uryasev/Zabarankin 2005) sizing for `kelly_regime_v4`'s SCALE/CAP axis
 
-Frozen pre-registration: `experiments/r152_shared.py`. Conservative branch
-(dynamic CDaR-derived leverage cap) and novel branch (CDaR-budgeted
-exposure, replacing the vol-target ratio) dispatched to independent
-sub-agents against the frozen decision rule. Stub commit per ROUTINE.md
-step 0 to announce in-flight work before execution; full entry to follow.
+**Direction.** Conditional Drawdown-at-Risk (Chekhlov, Uryasev & Zabarankin
+2005, *Int. J. Theor. Appl. Finance* 8(1); companion machinery Krokhmal,
+Uryasev & Zrazhevsky 2003, *J. Risk*) — a convex risk measure computed on
+the strategy's own equity **path** (mean of the worst `1-beta` fraction of
+trailing drawdowns), used as the input to `kelly_regime_v4`'s leverage
+limiter instead of its two fixed constants. Attacks **N≈3**: unlike every
+prior regime-timing round in this ledger (HMM through LPPLS, all closed by
+a six-episode detection-lag gate that needs more regime events to
+discriminate), CDaR never tries to *detect* a rare event — it is a rolling
+statistic of an already-observed, continuously sampled quantity, so it is
+well-posed at any sample size. Not a duplicate of R-11/R-46 (CPPI-family
+floor-plus-multiplier heuristics, hand-set free parameters, no empirical
+drawdown distribution), R-125 (CVaR on the *return* distribution, not the
+*path*), R-97 (Wasserstein-DRO, no drawdown-path component), or any of the
+regime-timing family closed same-day 08-26 (no detection-lag gate applies
+here — nothing is being detected). Full literature and the four-question
+justification: `experiments/r152_shared.py` module docstring.
+
+**What was done.** Frozen pre-registration `experiments/r152_shared.py`
+(committed and pushed as an `IN PROGRESS` stub before either branch ran,
+per ROUTINE.md step 0), containing the shared `rolling_cdar()` primitive,
+the selection rule (inner-validation, 2021-01-01 → 2022-12-31, futures 5x)
+and the promotion rule (holdout). **A real bug was caught and fixed before
+freezing anything**, exactly the smoke-test discipline ROUTINE.md step 2
+asks for: the first `rolling_cdar` draft computed a per-index rolling
+quantile and a per-index rolling tail-mean as two independent `.rolling()`
+calls, silently mixing observations governed by different reference
+windows — the "tail" flag rate measured 19% on quiet synthetic data (should
+be ~5%) and exactly 0% once a large synthetic drawdown entered the window.
+Replaced with an exact per-window computation (`np.partition`, no
+non-associative rolling reduction), recomputed daily and forward-filled
+between recomputes (staleness only during the ~1 day immediately after a
+crash-scale move; disclosed in the function's own docstring), verified
+against a brute-force per-bar reference on synthetic data (`0.0` max
+absolute difference at `recompute_every=1`) before any branch used it.
+
+Two independent sub-agents implemented the two branches against the frozen
+file, each writing to disjoint `experiments/` files and reporting without
+committing (ROUTINE.md's parallel-round rule): **conservative**
+(`experiments/r152_conservative_cdar_cap.py`) replaces v4's fixed
+`max_leverage=2.0` with a dynamic cap inversely derived from rolling CDaR
+of v4's own unmodified vote-scaled reference return stream, rescaled so
+its inner-train mean cap equals 2.0; **novel**
+(`experiments/r152_novel_cdar_budget.py`) replaces the vol-target ratio
+itself with a closed-form CDaR-budget solve (`f* = budget / CDaR_0.95`,
+exploiting CDaR's degree-1 homogeneity in exposure — no iterative
+optimizer), budget calibrated by bisection to match v4's own inner-train
+mean exposure. Both keep the vote (`frac`), anchors, hysteresis and
+deadband byte-identical to v4 (each verified: forcing the dynamic term to
+a constant reproduces `KellyRegimeV4`'s own `target` array exactly). Both
+passed a causal-truncation probe on their actual `prepare()`, not just on
+`rolling_cdar` in isolation. The conservative branch's own selection-rule
+pass (below) triggered the pre-registered holdout + ETH-falsification
+step, run by the operator directly in
+`experiments/r152_conservative_holdout.py` at the branch's selected window
+length (all three swept lengths tied bit-for-bit on inner-validation, so
+`CDAR_WINDOW_DAYS_DEFAULT=365` was used as the non-cherry-picked
+representative — see Result).
+
+**Configs evaluated (total across both branches, real backtests only;
+cheap calibration sweeps — 102 bisection evaluations on the novel branch,
+one closed-form calc on the conservative branch — disclosed separately,
+not counted here per this project's convention of counting backtests, not
+array arithmetic): conservative 4 (selection stage) + 6 (training-period
+context) + 3 (holdout: candidate/control/buy_and_hold) + 4
+(ETH-falsification/BTC-control × candidate/control) = 17; novel 4
+(selection stage, ineligible for holdout) = 4. Total = 21.**
+
+**Result.**
+
+*B2 diagnostic (both branches, inner-train, correlation of the branch's
+own CDaR-derived series against v4's own realized-vol column, restricted
+to CDaR-engaged bars) — neither branch flagged (`|r|<0.85` everywhere):*
+conservative r = −0.353 (180d) / −0.168 (365d) / +0.206 (545d); novel
+r = −0.32 / −0.35 / −0.41. Both mechanisms are measurably not a relabeled
+volatility target.
+
+*Novel, inner-validation:* fails decisively. Sharpe at every window length
+is 0.90–1.13 **below** control (control 0.251; branch −0.646/−0.722/−0.876
+at 180/365/545d) and drawdown is *worse*, not better, at every length
+(control 32.29%; branch 37.81/49.13/40.20%). Exposure match holds only at
+180d (13.34pp TiM gap; 365d/545d gaps 28.9/42.4pp — the mechanism reacts
+more slowly than v4's fixed ratio as the CDaR window lengthens, so it
+increasingly *under*-sizes into 2021-22's own drawdown rather than
+matching it). Selection criterion (3) plateau passes (3/3 windows agree in
+sign — a consistent, replicated failure, not a single bad draw) but
+criterion (2) fails everywhere and criterion (1) fails at 2 of 3 lengths.
+**Ineligible for holdout; none read.**
+
+*Conservative, inner-validation:* the candidate's `target` array is
+**bit-identical to control except on one 764-of-209,953-bar (~2.6-day)
+episode, 2022-12-11 → 2022-12-14**, where all three swept window lengths
+independently relaxed the cap above v4's fixed 2.0 the same way. Sharpe
+0.246 vs control's 0.251 (Δ −0.0057), drawdown 32.51% vs 32.29% (Δ +0.22pp,
+marginally worse), exposure matched to 0.04pp. All three selection
+criteria pass mechanically (matched exposure; Δ-Sharpe within the ±0.2
+noise floor; 3/3 window-length agreement in sign) — **but the "plateau" is
+one shared episode appearing identically in all three configurations, not
+three independent lines of evidence**, disclosed by the implementing agent
+rather than glossed over. Per the frozen rule this makes the branch
+eligible for holdout, and per ROUTINE.md's rule against moving the
+goalposts after seeing a result, holdout was read as pre-registered.
+
+*Conservative, holdout (2023-01-01 →, futures 5x, 365d window):* candidate
+$4,943 (+394.3%, Sharpe 1.37, DD 32.5%) vs control $4,901 (+390.1%, Sharpe
+1.36, DD 33.0%) — Δ-Sharpe +0.0053, **indistinguishable from zero against
+the ±0.2 noise floor**, not an improvement that clears it. Neither beats
+`buy_and_hold`'s $15,176 (+1,417.6%) on this holdout — expected and not a
+new finding, since `kelly_regime_v4` itself lags steady bulls by
+construction (`docs/STRATEGIES.md`'s own documented +325%-vs-+1,418% OOS
+gap). **Falsification test (survives on ETH?) fails**: on the paired
+Bitfinex 2016-2019 window (BTC-control vs ETH-falsification, no holdout
+bars touched — that dataset physically ends 2019-12-31), the candidate's
+Δ-Sharpe over control is **+0.0164 on BTC-control but −0.0049 on
+ETH-falsification — sign inverted**, consistent with the inner-validation
+finding that the whole effect is one narrow, non-generalizing episode
+rather than a real risk-timing improvement.
+
+**Verdict.** **NEGATIVE, both branches.** One-line lesson: CDaR sizing on
+this data isolates cleanly (B2 confirms neither branch is a disguised
+vol-target relabel) but neither branch improves on v4's own construction
+— the novel budget rule is a real, consistently worse allocator across
+window lengths and regimes; the conservative cap rule is real but so
+nearly a no-op (99.6% bit-identical target path on the exact period it was
+tested against) that its one apparent selection-rule pass turns out to be
+a single episode's cap relaxation that does not generalize to a second
+asset. This closes the CDaR-as-SCALE/CAP-input direction on
+`kelly_regime_v4`: a path-dependent risk measure was a genuinely new,
+non-duplicate construction to try (N≈3-immune by design), and it still
+lost to the incumbent's simpler ratio — evidence that the SCALE/CAP slot's
+remaining headroom, if any, is not unlocked by a more sophisticated risk
+statistic feeding the same limiter architecture. No independent skeptic
+was dispatched (both branches close NEGATIVE with no promotion pending, so
+the operator's own direct re-run of the conservative branch's
+holdout/falsification step — a full independent execution against the
+frozen rule, not a re-read of the sub-agent's numbers — serves the same
+function that a skeptic re-run does elsewhere in this project: neither
+branch's headline claim goes forward unverified by more than the single
+implementing agent). `pytest -q`: 516 passed (both branches independently
+confirmed this; unchanged, since no registered strategy was touched — the
+five R-152 files are not auto-discovered). **Holdout counter: +3** (the
+conservative branch's holdout comparison: candidate, control, and a
+`buy_and_hold` re-read, all against the ≥2023-01-01 slice; the novel
+branch read none), running program-level total **~702** (on top of
+R-151's ~699) — see the bullet added at the top of
+[Holdout consultations to date](#holdout-consultations-to-date). Neither
+branch's pre-registered decision rule moved after seeing any number.
+**Next step:** not filed as a new backlog item — both the conservative and
+novel CDaR constructions are now tested and closed (see section C), and no
+variant of this specific limiter-architecture substitution is left
+untried on `kelly_regime_v4`'s SCALE/CAP slot. **B-06 remains the only
+ranked, unblocked backlog item**; B-45/B-46/B-47 remain `OPEN, LOW`
+(HybridBroker precision items, no promotion waiting behind them).
 
 ### R-151 · 08-26 · PARTIAL (methodology) — B-44 closed: the cross-leverage trading-precision defect in `HybridBroker` is real, its own proposed fix removes it where the split is exact, and it flipped one of R-145's six gate cells
 
@@ -16128,6 +16276,8 @@ trip.
 
 | what | why | ref |
 |---|---|---|
+| A rolling CDaR-budgeted exposure rule (Chekhlov, Uryasev & Zabarankin 2005), `f*=budget/CDaR_0.95(unit vote-scaled returns)` via CDaR's degree-1 homogeneity, replacing `kelly_regime_v4`'s `target_vol/realized_vol` ratio entirely, budget calibrated to match v4's own inner-train mean exposure | 4 configurations (3 CDaR window lengths + 1 control). B2 clears (r=−0.32 to −0.41 vs v4's own realized vol, not a relabel). Inner-validation Sharpe is 0.90–1.13 BELOW control at every window length (control 0.251; branch −0.646/−0.722/−0.876 at 180/365/545d) and drawdown is worse, not better (32.29% vs 37.81/49.13/40.20%) — decisively fails the selection rule's criterion (2). Exposure match holds only at the shortest (180d) window; the mechanism reacts too slowly to 2022's drawdown as the window lengthens, under-sizing further from control the longer the window. Plateau criterion (3) passes (3/3 windows agree in sign) — a consistent, replicated failure, not noise. Ineligible for holdout; none read. Do not re-try a CDaR-budget solve as a direct replacement for v4's vol-target ratio expecting a shorter/longer window to rescue it — the sign is stable and negative across the whole 180-545d sweep. | R-152 (novel) |
+| A dynamic CDaR-derived leverage cap (same citation), replacing `kelly_regime_v4`'s fixed `max_leverage=2.0` with `cap_scale/CDaR_0.95` (inverse: worse trailing drawdowns tighten the cap), `cap_scale` calibrated so inner-train mean cap equals 2.0, reference stream v4's own unmodified vote-scaled returns (no circularity with the derived cap) | 17 configurations (4 selection + 6 training-period context + 3 holdout + 4 ETH-falsification/BTC-control). B2 clears (r=−0.353/−0.168/+0.206 across window lengths). Mechanically passes all three selection criteria on inner-validation, but the branch's `target` array is bit-identical to control on 209,189 of 209,953 inner-validation bars — the "plateau" is one shared 764-bar/2.6-day episode (2022-12-11→12-14) appearing identically at all three window lengths, not independent evidence. Holdout (2023-01-01→, futures 5x, 365d): d_sharpe=+0.0053, indistinguishable from the ±0.2 noise floor; neither beats `buy_and_hold` (expected — v4 itself lags steady bulls, `docs/STRATEGIES.md`). **Falsification test fails**: BTC-control d_sharpe=+0.0164 vs ETH-falsification d_sharpe=−0.0049 on the paired Bitfinex 2016-2019 window — sign inverts, consistent with the effect being one narrow non-generalizing episode rather than real risk-timing. Do not re-try a CDaR-derived dynamic cap on v4's leverage limiter expecting the inner-validation pass to be real evidence rather than a single-episode artifact; check for episode concentration (fraction of bars where candidate and control diverge) before trusting any future plateau claim built the same way. | R-152 (conservative) |
 | `kelly_regime_v3`/`v4`'s own conditional (extremes-only) volatility target (Bongaerts, Kang & van Dijk 2020), reused unretuned, substituted for `replicator_book`'s fixed `scale=0.75` constant, executed via `order_notional` (an absolute leverage multiple, distinct from the control's `order_target`-executed, fraction-of-max-leverage convention) | 6 configurations (1 primary + target_vol±20% sweep). A2 clears (R²=0.798, genuinely different from the control's own path). B1 passes on futures_5x only (inner-val d_sharpe=+0.36, boot [+0.314,+3.689] excludes zero) but fails on spot (+0.02, CI includes zero). **B2 diagnostic disclosure**: the passing futures cell carries `vol_ratio`≈0.15-0.20 throughout — the candidate realizes a fifth of the control's volatility there, the same exposure-level-artifact signature R-28/R-31/R-33 have each independently found, materially explained by the `order_notional` vs. `order_target` execution-convention difference (this round's own diagnosed finding) rather than by the conditional-targeting mechanism itself. B3: futures sign stable (+1 throughout, but riding the same risk mismatch); spot sign flips at +20% ([+,+,−]), consistent with noise. B4 passes technically (ETH futures d_sharpe≈0.00, same sign as BTC, essentially a tie) while disagreeing on spot. **B5 decides it**: the one nominal spot edge at 0.10% fee (d_sharpe +0.0157) reverses sign at 0.40% (−0.0799); B5 gates whenever B1 passed on any market (it did, futures) and fails. Independently reproduced by the operator (A2 R² and both futures cells exact). Do not re-try bolting v4's own conditional-vol-target onto `replicator_book`'s blend expecting the futures-market result to hold once risk-matched, or expecting the spot result (never significant, never fee-tier-robust) to improve without a materially different scale construction. | R-148 (conservative) |
 | Per-species fractional-Kelly sizing (Whitrow 2007's multi-simultaneous-bet Kelly, fractionalized per MacLean-Thorp-Ziemba 2010) applied to each of `replicator_book`'s five species' signal, from trailing EWM mean/variance of that species' own net pnl, before the unmodified replicator weight blend | 6 configurations (1 primary + kelly_cap∈{1.0,1.5,2.0} sweep). A2 clears (R²=0.563). **B1 fails decisively on both markets** (inner-val d_sharpe spot=−0.90, futures=−1.00; several cells exclude zero on the LOSING side, e.g. inner-train spot −0.90 [−1.60,−0.27], ETH spot −0.65 [−1.30,−0.18]). B3 sign is stable but stably negative across the whole kelly_cap sweep. B5 shows no edge exists at 0.10% to be tested, and it worsens at 0.40%. **Turnover is honestly ~3x the control on both markets** (spot 336 vs 113 trades, futures 679 vs 226) despite LOWER mean exposure (exposure_ratio 0.48-0.65) — the pre-registered estimation-noise whipsaw risk materializing exactly as named: noisy per-species pnl variance at 5-minute granularity churns the replicator blend without improving the signal. Independently reproduced by the operator (A2 R² and the full four-cell primary table exact). Do not re-try per-species Kelly-fraction pre-scaling on `replicator_book` (or, by extension, on any other multi-signal blend this project registers) using trailing pnl variance at native 5-minute cadence as the fraction's denominator — the variance estimate is dominated by noise at this granularity, the same reason 20+ pure predictors in this table lose to fees. | R-148 (novel) |
 | The Log-Periodic Power Law Singularity (LPPLS) model (Johansen, Ledoit & Sornette 2000; Filimonov & Sornette 2013) as a regime-timing input to `kelly_regime_v4`'s vote, a bubble-confidence indicator (fraction of 5 window-length fits clearing Sornette et al.'s quality filter) swept over `conf_thresh∈{0.4,0.6,0.8}`, against the identical six-episode Step-A detection-lag gate as HMM/BOCPD/Kalman LLT/CSD/transfer entropy/Hawkes/CUSUM | **0/6 at every threshold** — the worst score of any of the now eight regime-timing mechanisms tried against this gate (the seven priors scored 0-2/6). The indicator is non-degenerate (238/2191 BTC training days show >=1/5 qualifying fits, clustered 2019-04-to-07 and 2020-12-to-2021-06) but none of its elevated periods falls within ±60 days of any of the six dated episode onsets, so no crossing was ever available to score. A disclosed, non-gating diagnostic (the 2-episode "genuine bubble top" subset, theory-motivated as the only episodes LPPLS could plausibly lead) also scored 0/2 — the theory-consistent partial pass named in the pre-registration did not materialize. Independently reproduced bit-for-bit by the operator. Do not re-try LPPLS as a v4 regime-timing input on this exact six-episode gate expecting a different result; the formal-statistics-and-now-critical-phenomena well for "detect a known historical regime break faster than v4's own anchors" is exhausted across eight structurally distinct theoretical bases. | R-141 (conservative) |
@@ -20169,6 +20319,18 @@ Rules that the format exists to enforce:
 Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
+
+- **08-26 · ~702** — R-152: **+3** on top of R-151's ~699. The conservative
+  CDaR-dynamic-cap branch mechanically cleared the frozen selection rule on
+  inner-validation, so its holdout comparison ran as pre-registered:
+  candidate, control, and a `buy_and_hold` re-read against the
+  ≥2023-01-01 slice (futures 5x, 365-day CDaR window, the branch's
+  selected — untied, non-cherry-picked — configuration). Result:
+  Δ-Sharpe +0.0053 (indistinguishable from the ±0.2 noise floor) and the
+  falsification test (BTC-control vs ETH-falsification on the paired
+  Bitfinex 2016-2019 window, itself reading no holdout bar) inverted sign
+  — NEGATIVE. The novel branch failed the selection rule outright and
+  never reached holdout (+0 from that branch).
 
 - **08-26 · ~699** — R-151: **+0** on top of R-150's ~699 (unchanged). A
   methodology round on backlog item B-44 (`HybridBroker`'s cross-leverage
