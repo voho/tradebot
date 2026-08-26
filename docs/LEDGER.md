@@ -315,22 +315,178 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
-### R-149 · 08-26 · IN PROGRESS — `universal_kelly`'s own exposure-mixture mechanism (SIZE axis), never touched since L-11 registration
+### R-149 · 08-26 · NEGATIVE (both branches) — `universal_kelly`'s own exposure-mixture mechanism (SIZE axis), never touched since L-11 registration; conservative branch reproduces the BTC-pass/ETH-invert signature once again
 
-Frozen pre-registration: `experiments/r149_shared.py` (direction, non-duplicate
-argument, literature, named failure risks and the exact promotion bar all
-live in that module's own docstring, written before either branch was
-dispatched). Off-backlog per R-148's own re-ranking (ranked list holds only
-B-06 and the LOW-priority B-44). Conservative branch bolts `kelly_regime_v3`/
-`v4`'s own unretuned conditional-volatility-target scale onto
-`universal_kelly`'s posterior-mean exposure, replacing its fixed `kappa=0.5`
-constant. Novel branch applies fixed-share re-injection (Herbster & Warmuth
-1998; continuous-grid generalization per Cesa-Bianchi, Gaillard, Lugosi &
-Stoltz 2012) to `universal_kelly`'s own wealth posterior over its 41-point
-exposure grid, calibrated to `fixed_share=1e-2` by a Step-0 non-degeneracy
-check alone (1e-4/1e-3 both R²>0.955 against control, 1e-3 nearly R²=1 —
-disclosed and fixed before any performance number was read). Execution and
-verification in progress.
+**Direction.** Off-backlog — the ranked list has held nothing but B-06 (and
+the LOW-priority `HybridBroker` note, B-44) since R-137's own re-ranking,
+reconfirmed by R-148. `docs/LEDGER.md`'s standing diagnosis and R-148's own
+"next step" text are explicit: every "profitable, registered, multi-signal
+object this project has now given a dedicated sizing round" — `kelly_regime_v4`
+internally (28+ SIZE-axis attempts), `champions_council`'s cross-strategy
+allocation (R-125/R-126), `hedge_experts`'s expert composition
+(R-128-R-136), and `replicator_book`'s own blend (R-148) — has failed to
+improve on its own incumbent, and R-126's own "next step" says plainly that
+no further axis of variation on either `kelly_regime_v4` or
+`champions_council` clears Step-1's non-duplicate filter "without real
+strain." This round picked a FIFTH object: `universal_kelly` (L-11, 08-12,
+$1,276 spot / $1,227 futures), built on a third distinct online-learning
+primitive (Cover's 1991 universal-portfolio wealth-weighted mixture over a
+continuous 41-point exposure grid, as opposed to `kelly_regime_v4`'s
+anchor-vote-times-vol-target or the discrete-expert Hedge/multiplicative-
+weights blends `champions_council`/`hedge_experts`/`game_council` use).
+Grep-confirmed against this file: `universal_kelly`'s only prior mentions
+are its own L-11 registration row, one incidental listing as a
+`champions_council` member (R-126/R-148's text), a fill-rate-floor footnote,
+and two boundary mentions in the 10-of-96 pairwise-bootstrap table — no
+round has ever varied its grid, wealth-update recursion, `kappa` scalar, or
+hysteresis rule. **Attacks SIZE.** Two structurally different loci, the grid/
+discount/hysteresis held fixed in both: **conservative** bolts
+`kelly_regime_v3`/`v4`'s own unretuned conditional-volatility-target scale
+(Bongaerts, Kang & van Dijk 2020, FAJ 76(4); Baur & Dimpfl 2018, Econ.
+Letters 173) onto `universal_kelly`'s posterior-mean exposure, replacing its
+fixed `kappa=0.5` scalar — the same primitive R-148 used on `replicator_book`,
+applied here a second time, disclosed as reuse rather than a fresh
+mechanism; **novel** applies fixed-share re-injection (Herbster & Warmuth
+1998, *Machine Learning* 32(2), 151-178) to the wealth posterior over the
+CONTINUOUS grid for the first time — `fixed_share` already exists, unvaried,
+in `champions_council`/`game_council`/`hedge_experts`, but only ever mixes a
+small set of NAMED experts; the continuous-grid generalization is licensed
+by Cesa-Bianchi, Gaillard, Lugosi & Stoltz (2012, NeurIPS 25;
+arXiv:1202.3323), verified real via WebSearch this session and not
+previously cited anywhere in this project (grep-confirmed). Named failure
+risks (conservative: `universal_kelly`'s own registration finding is that
+its `b_hat` signal is extremely inert — "nine trades in a decade" — so a
+scale reaching 2.0x can only leave the candidate a near-no-op or amplify a
+small, possibly wrong-signed bet exactly when volatility is already high;
+novel: fixed-share only helps if the true optimal exposure genuinely drifts
+within-sample, and `universal_kelly`'s 30-day-memory posterior may already
+be close to stationary, in which case re-injection only adds churn) live in
+the frozen `experiments/r149_shared.py` module docstring, written by the
+operator before either branch was dispatched.
+
+**What was done.** `experiments/r149_shared.py` (operator-authored, frozen):
+a byte-identical reproduction of `universal_kelly`'s own grid/log-wealth
+recursion/kappa/hysteresis (`universal_kelly_target`, self-tested against
+the registered `UniversalKelly` class), `kelly_regime_v3`/`v4`'s
+conditional-vol-target machinery reproduced byte-for-byte, a Step-0
+non-degeneracy gate (KILL if R² > 0.98 vs control on inner-train), and the
+shared `compare()`/promotion-bar harness (identical shape to R-89...R-148's).
+**One pre-freeze calibration, disclosed:** the novel branch's `fixed_share`
+was originally slated at the token rate already shipped elsewhere (1e-4) or
+1e-3; a Step-0-only probe (before any performance number existed) found
+both produced R² > 0.955 against the control on inner-train, with 1e-3 at
+R²=0.99999874 — a near-exact no-op — so the operator recalibrated the
+default to `fixed_share=1e-2` (R²=0.956, the smallest rate on a log grid
+that moves R² measurably off 1) and the B3 sweep to {1e-2, 3e-2, 1e-1},
+disclosed in the shared module and the ledger's own in-progress stub before
+either branch was dispatched — a bug-fix-before-dispatch, not a post-hoc
+threshold move. `experiments/r149_conservative.py` and
+`experiments/r149_novel.py` were each built by an independent agent from
+the frozen shared module. **Decision rule, pre-registered verbatim from the
+SIZE/ERR family's own convention (R-109...R-148):** PROMOTE-candidate only
+if A2 does not trip AND B1 passes (>=1 of 2 markets) AND B4 passes AND B5
+passes-or-is-moot; B2 is diagnostic only. **Falsification test,
+pre-registered:** B4 — does the candidate's `d_sharpe` sign (vs
+`universal_kelly`, BTC inner-validation) agree with the ETH replication
+slice's sign on at least one market? The identical test this whole research
+programme has used since R-59. **Configs evaluated: 20 total** (conservative
+9 = 1 Step-0 + 2 B1 + 3 B3 + 2 B4 + 1 B5; novel 11 = 1 Step-0 + 2 B1 + 3 B3 +
+2 B4, B5 moot/not run since B1 failed outright, plus 3 pre-freeze
+calibration probes at fixed_share ∈ {1e-4, 1e-3, 1e-2}).
+
+**Result — conservative:** A2 did not trip. B1: spot `d_sharpe=+0.17`
+(CI [−0.043, +0.051], contains zero) fails the point-estimate-only reading
+marginally but the CI reading cleanly; futures `d_sharpe=+0.25`
+(CI [−0.008, +0.064]) clears `+0.2` on the point estimate though its own CI
+still contains zero — **B1 PASSES on the pre-registered point-estimate
+disjunct, futures only.** B2 (diagnostic): `exposure_ratio=1.343` on both
+markets, `vol_ratio=0.827` spot / `1.008` futures — NOT risk-matched; the
+candidate runs ~34% more raw exposure than the control even though realized
+volatility on futures lands close to matched, exactly the amplification the
+pre-registration named as a risk in advance. B3 (target_vol ∈ {0.44, 0.55,
+0.66}, primary=futures): `d_sharpe` = +0.305, +0.252, +0.293 — sign-stable
+positive, **PASS.** B4 (ETH): BTC inner-val signs are `+1`/`+1` (spot/
+futures); ETH signs are `−1`/`−1` (`d_sharpe=−0.57` spot, `−0.47` futures) —
+**no agreement on either market, B4 FAILS**, the same BTC-pass/ETH-invert
+signature this ledger has now documented across multiple objects and axes
+(R-33/R-57/R-125/R-126, among others). B5 (0.40% fee, spot): `d_sharpe`
++0.1685 → +0.1613, sign survives (moot given B4's own failure, reported
+regardless per convention). **Independent reproduction:** the operator
+re-derived the A2 R² from a clean shell using the frozen shared primitives
+directly (not re-running the branch's own script) and got **0.133428**
+against the implementing agent's own reported **0.138905** — both far below
+the 0.98 kill line and neither changes any gate outcome, but the two do not
+match to the printed digit the way R-125/R-126/R-147's reproductions did.
+Traced to the branch script's own local A2 helper using
+`btc.index < INNER_TRAIN_END` (`INNER_TRAIN_END="2020-12-31"`, a bare date
+string compares against that day's midnight and so silently excludes the
+last day of inner-train) rather than the shared module's own
+label-slice convention, which includes it — a one-day-out-of-four-years
+discrepancy in a diagnostic-only Step-0 statistic, immaterial to the
+verdict, disclosed rather than quietly corrected after the fact since the
+branch's own script is left as historical record, not edited post-hoc.
+
+**Result — novel:** A2 did not trip (R²=0.955848 agent-reported,
+0.955891 operator-reproduced — matching to 4 decimal places, unlike the
+conservative branch's own discrepancy above). B1: spot `d_sharpe=−0.0035`
+(CI [−0.0022, +0.0004], contains zero); futures `d_sharpe=+0.0876`
+(CI [−0.0041, +0.0300], contains zero) — **both near-zero and statistically
+indistinguishable from the control, B1 FAILS outright on both markets.** B2:
+`exposure_ratio=0.893` / `vol_ratio≈0.97–0.99` on inner-validation — close
+to risk-matched, consistent with fixed-share re-injection being a mild
+perturbation on an already-near-stationary posterior rather than a real
+regime change in behaviour. B3 (fixed_share ∈ {1e-2, 3e-2, 1e-1},
+primary=spot, defaulted per the pre-registered rule since B1 passed neither
+market): `d_sharpe` = −0.0035, −0.0499, −0.0205 — sign-stable, but stably
+**negative**, not a win; **PASS on the stability criterion alone.** B4
+(ETH): BTC inner-val signs are `−1` spot / `+1` futures; ETH signs are `−1`/
+`−1` — spot agrees (both negative), **B4 PASSES**, again on a losing sign
+rather than a confirmed edge. The one cell in the ENTIRE round whose
+bootstrap interval excludes zero is ETH futures on this branch:
+`d_sharpe=−0.42`, CI **[−0.508, −0.001]** — a statistically distinguishable
+*harmful* effect, reinforcing rather than contradicting the NEGATIVE call.
+B5: moot, B1 failed. **Skeptic reproduction:** the operator independently
+re-ran `pytest tests/test_causality_strict.py` (51 passed) and the full
+suite (516 passed) from a clean shell after both branches reported, matching
+both agents' own pytest figures exactly.
+
+**Verdict.** **NEGATIVE, both branches. Decision rule did not move** — both
+branches' frozen stop rules were applied exactly as pre-registered; neither
+branch's own script was edited after a performance number was seen (each
+implementing agent disclosed this explicitly, and the operator's own
+pre-freeze `fixed_share` recalibration happened strictly before dispatch,
+using only the Step-0 A2 diagnostic, never a B1/B4/B5 outcome). Neither
+branch touched `OOS_START`: both max-timestamp lines and every
+`assert_no_holdout` guard in the shared module ran clean throughout; the
+operator re-verified this by grepping both branch scripts and the shared
+module for any bare `2023`/`2024`/`2025`/`2026` date literal used to slice
+or filter a DataFrame (none found outside comments/assertions). **One-line
+lesson:** `universal_kelly`'s own inertness (L-11's original diagnosis) is
+the load-bearing fact for both branches' failures — the conservative
+branch's only passing market (futures) is exposure-unmatched and inverts on
+ETH exactly like every other risk-budgeting substitution this project has
+tried on a different object, and the novel branch's fixed-share mechanism
+finds essentially nothing to track, consistent with the posterior already
+being close to stationary over any window this project can measure. **This
+closes `universal_kelly`'s own exposure-mixture axis** as a fifth
+profitable, registered, multi-signal object given a dedicated SIZE-axis
+round and found not to improve on its own incumbent, alongside
+`kelly_regime_v4` (28+), `champions_council` (R-125/R-126), `hedge_experts`
+(R-128-R-136) and `replicator_book` (R-148). **Holdout counter: +0** on top
+of R-147's ~699 (R-148 did not append its own bullet to [Holdout
+consultations to date](#holdout-consultations-to-date), the same omission
+R-144 made — noted here rather than silently repeated a second time);
+running program-level total stays **~699**. **Next step:** not filed as a
+new backlog item. Five distinct, profitable, multi-signal registered
+objects have now each received a dedicated SIZE-axis round and failed to
+improve; a future session preferring a fresh mechanism idea over B-06 needs
+either a genuinely new registered object this project has not yet dedicated
+a round to (none is currently known and profitable) or a data channel this
+project cannot already construct from its committed or fetchable files —
+not a sixth risk-budgeting or tracking construction on any of the five
+objects already closed. **B-06 remains the only ranked, unblocked backlog
+item** (B-44 stays OPEN/LOW, a methodology note rather than a strategy
+direction).
 
 ### R-148 · 08-26 · NEGATIVE (both branches) — volatility-based sizing for `replicator_book`'s own blend (SIZE axis), never touched since L-10 registration
 
@@ -15697,6 +15853,37 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-26 after R-149.** Off-backlog (the ranked list has held only
+B-06 since R-137's own re-ranking). `universal_kelly`'s own exposure-mixture
+mechanism — untouched since its L-11 registration — was tested for the first
+time and is **NEGATIVE on both branches**: bolting `kelly_regime_v3`/`v4`'s
+own unretuned conditional volatility target onto its posterior-mean exposure
+(conservative) passes on futures only, unmatched in raw exposure
+(`exposure_ratio=1.34`), and inverts sign on ETH on both markets — the same
+BTC-pass/ETH-invert signature this project has now documented repeatedly
+across different objects and axes; fixed-share re-injection into the wealth
+posterior over its continuous grid (novel, the first continuous-grid
+application of a mixing primitive already shipped, unvaried, in three other
+strategies) finds essentially nothing to track — both markets read as
+statistically indistinguishable from the control, and the one cell in the
+entire round that IS statistically distinguishable (ETH futures) is
+negative. **This closes `universal_kelly`'s own exposure-mixture axis**,
+making it the fifth profitable, registered, multi-signal object — alongside
+`kelly_regime_v4` (28+ SIZE-axis attempts), `champions_council`'s allocation
+(R-125/R-126), `hedge_experts`'s composition (R-128-R-136) and
+`replicator_book`'s own blend (R-148) — given a dedicated sizing round and
+found not to improve on its own incumbent. **B-06 remains the only ranked,
+unblocked backlog item, unchanged by this round** (B-44 stays OPEN/LOW, a
+methodology note rather than a strategy-improvement direction). A future
+session preferring a fresh mechanism idea over B-06 now needs either a
+genuinely new registered, profitable object this project has not yet given
+a dedicated round (none is currently known) or a data channel this project
+cannot already construct from its committed or fetchable files — five
+structurally distinct objects, spanning three different online-learning
+families (anchor-vote-times-vol-target, discrete-expert Hedge/multiplicative
+weights, and now continuous-grid universal portfolio), have each now had
+their own internal sizing mechanism tested and failed to improve on it.
+
 **Re-ranked 08-26 after R-148.** Off-backlog (the ranked list has held only
 B-06 since R-137's own re-ranking). `replicator_book`'s own SIZE mechanism —
 untouched since its L-10 registration — was tested for the first time and is
@@ -19000,6 +19187,18 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-26 · ~699** — R-149: **+0** on top of R-147's ~699 (unchanged; R-148
+  did not append its own bullet here, the same omission R-144 made, noted
+  rather than silently repeated). Neither branch approached
+  `OOS_START=2023-01-01`: both branches' own `assert_no_holdout` guards ran
+  clean throughout, and both NEGATIVE verdicts came from inner-train/
+  inner-validation/ETH/fee cells only. The operator independently
+  re-derived both branches' Step-0 A2 kill-switch R² from a clean shell
+  using the frozen shared primitives: novel matched to 4 decimal places
+  (0.955891 vs the agent's 0.955848); conservative did not (0.133428 vs
+  0.138905), traced to an off-by-one-day slice boundary in that branch's
+  own local A2 helper, disclosed in R-149's own section above — immaterial
+  to any gate, since both readings sit far below the 0.98 kill line.
 - **08-26 · ~699** — R-147: **+0** on top of R-146's ~699 (unchanged). Neither
   branch approached `OOS_START=2023-01-01`: both max-timestamp lines read
   2022-12-31 23:55:00 UTC, `assert_no_holdout` guards ran clean throughout,
