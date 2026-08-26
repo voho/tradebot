@@ -16008,6 +16008,54 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-checked 08-26, no round dispatched (not an R-numbered entry — zero
+configurations evaluated, so this is not a research round and is not
+filed as one, per ROUTINE.md's "not tested is not a negative result").**
+A session tasked with proposing a fresh improvement vector, dispatching a
+conservative/novel pair of branches and measuring them ran ROUTINE.md
+Step 0/1 first, as required, and found every candidate failed Step 1's
+own duplicate filter before any code was written:
+
+- A dedicated reconnaissance pass over Section C (ruled out) and this
+  section confirmed R-150's own conclusion independently: every axis of
+  every registered, profitable, multi-signal object (`kelly_regime_v4`,
+  `champions_council`, `hedge_experts`, `replicator_book`,
+  `universal_kelly`) is closed, and all 19 INFO-axis signals, 8
+  regime-timing detectors, 5 ERR-axis constructions and the COST-axis
+  turnover/execution work are each closed with a decisive verdict.
+- Fresh 2026 web literature was checked specifically for a data channel
+  or mechanism this project could not already construct (Kelly/vol-target
+  crypto trend research, funding/basis carry, options skew and
+  liquidation-cascade early-warning work). The one genuinely novel-looking
+  lead — 25-delta risk-reversal (put/call skew) as a forward-return
+  signal, distinct from the DVOL *level/momentum* this project already
+  tried and closed (R-73/R-136) — is not simulable here: R-143 already
+  checked live and found no historical Deribit option-chain endpoint,
+  only a trailing-day IV snapshot. Not a new finding, but independent
+  confirmation that this specific door is still shut.
+- Maker/limit-order execution (an execution-mechanism axis, orthogonal to
+  signal/sizing) looked promising until a ledger grep surfaced R-56:
+  already tried, both a conservative (100%-fill-on-touch) and a novel
+  (Cont & Kukanov 2017 queue-position fill-probability) branch, both
+  NEGATIVE, closed.
+- B-44 (the only other OPEN item) is a harness precision footnote in
+  `HybridBroker` that only matters if a future round reuses that specific
+  two-leg harness; R-145 itself found no economic reason to revisit
+  venue-routing on `kelly_regime_v4`, so fixing B-44 now would not unlock
+  any pending test.
+
+**B-06 is confirmed healthy** (`reports/paper_trading/`, latest record
+2026-08-26T04:40:28Z, ~30-90 minute cadence as designed) and remains the
+only ranked, unblocked backlog item and this project's standing
+recommendation. Forcing a conservative/novel dispatch onto an already-shut
+axis to produce an artifact would have duplicated closed work rather than
+added evidence, which ROUTINE.md's parallel-round rules treat as the
+specific failure mode to avoid ("the single most likely way to
+manufacture a fake winner here is to run many searches and report the
+best one as though it were the only one" — the inverse failure, running a
+known-losing search and dressing it as new, is the same dishonesty in the
+other direction). No code changed; no strategy touched.
+
 **Re-ranked 08-26 after R-150.** Off-backlog (the ranked list has held only
 B-06 since R-137's own re-ranking). `champions_council`'s own top-level
 SCALE — untouched since its L-08 registration, and distinct from its
