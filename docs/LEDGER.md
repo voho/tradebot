@@ -315,6 +315,15 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-151 · 08-26 · IN PROGRESS — B-44: hold trading precision constant across legs of different leverage in `HybridBroker`
+
+Announced before any arm was run, per ROUTINE.md step 0's anti-collision
+rule. Pre-registration frozen in `experiments/r151_shared.py` (three arms:
+per-leg base = R-145's frozen behaviour, shared deadband base = B-44's own
+proposed fix, shared base + shared haircut = diagnostic decomposition).
+Methodology round: reads no holdout bar, registers no strategy, and does
+not modify `experiments/r145_shared.py` or anything under `src/tradebot/`.
+
 ### R-150 · 08-26 · NEGATIVE (both branches) — `champions_council`'s own top-level SCALE (SIZE axis), never touched since L-08 registration; conservative's apparent PROMOTE reclassified by an independent skeptic as the BTC-pass/ETH-invert artifact
 
 **Direction.** `champions_council` (L-08, 08-14) has never had its own
