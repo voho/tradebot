@@ -81,6 +81,34 @@ sitting `OPEN` since R-65. Infrastructure and methodology items count —
 they are usually the cheapest things on the list and the only ones that
 can actually be finished in a session.
 
+**Do not read that warning, agree with it, and then read the prose
+anyway.** Run the grep — a struck row is `~~B-nn~~`, a live one is
+`**B-nn**`, so one line prints the whole live list and no re-ranking
+paragraph can talk you out of it:
+
+```bash
+# every backlog item still live, with its status cell
+awk '/^## D\. Backlog/,0' docs/LEDGER.md \
+  | grep -oE "^\| \*\*B-[0-9]+\*\* \|.*" \
+  | awk -F'|' '{printf "%-9s %s\n", $2, substr($5,1,70)}'
+```
+
+Then **strike what that prints as already done** (`~~B-nn~~`, the file's
+own convention) before reading the list, because a row whose status says
+`DONE` while its ID is still bold is a live-looking item that is not one.
+R-151 found four of them and R-110 had already had to clean up the same
+error once: B-42's row sat bold-but-closed through six rounds'
+re-rankings.
+
+R-151 is why this is a command and not a paragraph. Four consecutive
+sessions (R-147 through R-150, plus both 08-26 verification passes) wrote
+"B-06 is the only ranked, unblocked backlog item" while **B-44** sat
+`OPEN` in the table underneath them; two of those sessions dispatched
+nothing at all as a result. The grep takes a second, B-44 took one
+session to finish, and it produced a measurement that annotated an
+earlier round's published table. The prose is a summary of one round's
+opinion. The table is the state.
+
 **Multi-day threads are expected.** If today's work does not finish,
 write the state into the ledger with verdict `PARKED` and stop. Do not
 force a shippable strategy into a single session.
@@ -242,6 +270,21 @@ Report all of:
 | the pre-registered falsification test | chosen in step 2 |
 | path sensitivity | `scripts/beta_test.py --windows 24` / `stress_test.py` |
 | trials-adjusted significance | deflated Sharpe using the step-3 count |
+
+**A decision rule must partition the outcome space.** Before freezing it,
+check that every possible result maps to exactly one verdict — not that
+each verdict has a plausible trigger, which is a different and much
+weaker property. R-151 froze three clauses (ADOPT / PARTIAL / REJECT)
+whose conditions left a gap, and the result landed in it: the median
+effect cleared REJECT's bar comfortably while two of six cells missed
+PARTIAL's, so no clause fired. There is exactly one honest response —
+**report the fall-through as a fall-through, say the rule was
+under-specified, and let the raw table carry the finding.** Reaching for
+the nearest-looking label after the fact is the goalpost move wearing a
+different hat, and it is the more tempting version of it because nothing
+was technically changed. Two lines of thought at freeze time ("what
+result would satisfy none of these? what would satisfy two?") is the
+whole cost.
 
 **If you change the decision rule after seeing any of this, say so
 explicitly in the ledger entry and downgrade the result to in-sample.**

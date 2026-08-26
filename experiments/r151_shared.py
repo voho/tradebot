@@ -353,6 +353,13 @@ class HybridResultV2(HybridResult):
     absorbed_notional_fut: float = 0.0
     mean_threshold_spot: float = float("nan")
     mean_threshold_fut: float = float("nan")
+    #: Realized combined notional / equity at each bar close, recorded only
+    #: when `run_hybrid_backtest_v2(..., record_exposure=True)`. Read-only
+    #: instrumentation added AFTER the freeze to diagnose this round's own
+    #: residual; it is off by default, so every scored arm above runs the
+    #: identical code path it was frozen with (T4/T3a are re-run to confirm
+    #: that, and both still report 0.000e+00).
+    exposure: pd.Series | None = None
 
 
 # ------------------------------------------------------------------ runner
@@ -370,6 +377,7 @@ def run_hybrid_backtest_v2(
     warmup: int | None = None,
     deadband_base: str = "leg",
     haircut_base: str = "leg",
+    record_exposure: bool = False,
 ) -> HybridResultV2:
     """`r145_shared.run_hybrid_backtest`'s per-bar loop, copied verbatim,
     with `HybridBroker` swapped for `HybridBrokerV2`.
@@ -415,6 +423,7 @@ def run_hybrid_backtest_v2(
                             haircut_base=haircut_base)
 
     equity = np.zeros(n, dtype=float)
+    exposure = np.zeros(n, dtype=float) if record_exposure else None
     pending: tuple[float, float] | None = None
 
     for i in range(n):
@@ -434,6 +443,9 @@ def run_hybrid_backtest_v2(
         if not math.isfinite(eq):
             raise ValueError(f"HybridBrokerV2: equity became non-finite at bar {i} ({index[i]})")
         equity[i] = eq
+        if exposure is not None:
+            exposure[i] = ((broker.pos_spot + broker.pos_fut) * closes[i] / eq
+                           if eq > 0 else 0.0)
 
         last_bar = i == n - 1
         if not broker.dead and not last_bar and i >= prefix:
@@ -444,8 +456,12 @@ def run_hybrid_backtest_v2(
                 pending = route(i)
 
     eq_series = pd.Series(equity, index=index, name="equity")
+    exp_series = (pd.Series(exposure, index=index, name="exposure")
+                  if exposure is not None else None)
     if prefix:
         eq_series = eq_series.iloc[prefix:]
+        if exp_series is not None:
+            exp_series = exp_series.iloc[prefix:]
 
     return HybridResultV2(
         equity=eq_series,
@@ -465,6 +481,7 @@ def run_hybrid_backtest_v2(
                              if broker.retargets_spot else float("nan")),
         mean_threshold_fut=(broker.threshold_sum_fut / broker.retargets_fut
                             if broker.retargets_fut else float("nan")),
+        exposure=exp_series,
     )
 
 

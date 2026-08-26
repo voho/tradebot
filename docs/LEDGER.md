@@ -315,14 +315,210 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
-### R-151 · 08-26 · IN PROGRESS — B-44: hold trading precision constant across legs of different leverage in `HybridBroker`
+### R-151 · 08-26 · PARTIAL (methodology) — B-44 closed: the cross-leverage trading-precision defect in `HybridBroker` is real, its own proposed fix removes it where the split is exact, and it flipped one of R-145's six gate cells
 
-Announced before any arm was run, per ROUTINE.md step 0's anti-collision
-rule. Pre-registration frozen in `experiments/r151_shared.py` (three arms:
-per-leg base = R-145's frozen behaviour, shared deadband base = B-44's own
-proposed fix, shared base + shared haircut = diagnostic decomposition).
-Methodology round: reads no holdout bar, registers no strategy, and does
-not modify `experiments/r145_shared.py` or anything under `src/tradebot/`.
+**Direction.** Backlog item **B-44** (`OPEN, LOW` since R-145, 08-25), taken
+because ROUTINE.md step 0 says to work the backlog table and not the
+re-ranking prose above it — the prose from R-147 through R-150 and both
+08-26 verification passes has read "B-06 is the only ranked, unblocked
+backlog item", which is the exact failure mode step 0 already warns about
+by name ("R-77's re-ranking said B-06 was *the only item remaining on the
+backlog* while B-32 had been sitting `OPEN` since R-65. Infrastructure and
+methodology items count"). B-44 was sitting `OPEN` in the table the whole
+time. Attacks **COST (methodology gap)**, the classification the row
+carries. Not a duplicate of R-134/B-43 (single-leg `broker.py`: one
+leverage, so no cross-leg asymmetry is expressible), of R-72 (whether
+*lowering* the single-venue deadband helps `kelly_regime_v4`'s economics —
+a different question about a different number), or of R-145 itself, which
+diagnosed the defect but could not touch it: its shared file was frozen
+before either branch ran, and editing it after seeing results is the
+goalpost-move ROUTINE.md forbids.
+
+**The defect.** `r145_shared.HybridBroker._execute_leg` compares each leg's
+re-target against **that leg's own leveraged ceiling**, `eq *
+market.leverage`, so at a shared equity the unlevered spot leg ignores
+moves below `0.05 · eq` while the 5x futures leg ignores everything below
+`0.25 · eq`. B-44's own suggested fix, quoted from the row: *"the deadband
+compared against a SHARED notional base … rather than each leg's own
+leveraged ceiling."*
+
+**What was done.** `experiments/r151_shared.py` (frozen pre-registration +
+`HybridBrokerV2`), `experiments/r151_run.py` (executes it),
+`experiments/r151_residual.py` (the residual decomposition the
+pre-registration's PARTIAL clause requires). `experiments/r145_shared.py`
+is **imported, never edited**; `HybridBrokerV2` subclasses its broker and
+nothing under `src/tradebot/` is touched. Data: BTC spot 5m + funding
+(`load_funding_extended`), **inner-validation only** (2021-01-01 →
+2022-12-31) — this round contains no code path that can slice at or after
+`OOS_START`. Three arms, frozen before any run: **A `"leg"`** (R-145's
+behaviour reproduced), **B `"shared"`** (both legs' deadband against one
+base, `eq · 5.0` = the plain all-futures baseline's own base — B-44's
+fix), **C `"shared+hc"`** (B plus a shared `_max_qty` fee haircut, declared
+in advance as a *diagnostic decomposition* arm for the second, ~0.15%
+cross-leverage asymmetry in the same three lines, never a competing fix).
+Pre-registered rule: **ADOPT** iff all six cells (3 thresholds × 2 fee
+tiers) land inside R-145's own `EXPOSURE_MATCH_TOL_PCT = 1.0%` and both
+fidelity gates hold; **PARTIAL** iff every cell's mismatch is cut ≥50%;
+**REJECT** iff the median cut is <25% or a fidelity gate fails. Fidelity
+gates: **T4** — arm A reproduces the frozen harness exactly; **T3a** — the
+all-futures degenerate route still reproduces plain futures v4 to <1e-6.
+**Configs evaluated: 26** scored hybrid runs (the freeze declared 25; the
+count omitted one degenerate-route run — the +1 discrepancy is disclosed,
+not reconciled after the fact), plus **24 purely diagnostic re-runs** of
+already-scored configurations. **Zero parameters searched:** every
+threshold is R-145's own frozen `CONSERVATIVE_THRESHOLDS`, and the two new
+bases are structural switches.
+
+**Result.**
+
+*Fidelity gates — both PASS, at exactly 0.* Arm A reproduces the frozen
+`run_hybrid_backtest` to `0.000e+00` on final balance, fees, funding, every
+bar of the equity curve, and fill counts, at both fee tiers ($978.139108 /
+$817.358498, fills (256, 11)). The all-futures degenerate route reproduces
+plain futures v4 at `0.000e+00` under **both** arms (T3a PASS). Arm A also
+reproduces R-145's published mismatch table independently, cell for cell:
+
+| fee tier | thr | R-145 published | arm A here |
+|---|---|---|---|
+| 0.10% | 0.8 | 3.57% | 3.5698% |
+| 0.10% | 1.0 | 3.54% | 3.5400% |
+| 0.10% | 1.2 | 1.90% | 1.9013% |
+| 0.40% | 0.8 | 4.78% | 4.7840% |
+| 0.40% | 1.0 | 4.81% | 4.8082% |
+| 0.40% | 1.2 | 3.15% | 3.1467% |
+
+*The disclosed cost, quantified as promised.* Under the shared base the
+**all-spot** degenerate route stops reproducing plain spot v4 —
+`rel = 5.501e-02` ($1,052.87 vs $997.98, 140 fills vs 256). That is
+arithmetic, not a bug: plain spot's own dollar deadband is `0.05 · eq · 1`
+and the shared base is `0.05 · eq · 5`. Any future round using
+`deadband_base="shared"` gets an all-futures-comparable harness and gives
+up all-spot comparability; the choice is per-comparison and must be
+declared.
+
+*The defect, measured directly rather than inferred.* At threshold 1.0,
+0.10% tier, arm A: the spot leg's mean dollar deadband is **$59.41** against
+the futures leg's **$275.62** — the 5x asymmetry, live. Spot absorbs
+**6.2%** of its 162 re-targets against futures' **87.5%** of 8, and fires
+**256** fills against the single-venue baseline's **143**. Under arm B the
+two legs' mean thresholds become $307.67 and $289.99, spot absorption rises
+to **77.8%**, and fills fall to **140** — the baseline's 143, from the
+wrong side by three.
+
+*Headline table — realized-volatility mismatch vs the plain all-futures
+baseline (R-145's criterion 3, its own measurement code imported, not
+reimplemented):*
+
+| fee tier | thr | A `leg` | B `shared` | C `shared+hc` | B vs A |
+|---|---|---|---|---|---|
+| 0.10% | 0.8 | 3.5698% | 3.5969% | 3.7251% | **−0.8%** |
+| 0.10% | **1.0** | 3.5400% | **0.1294%** | 0.2647% | **96.3%** |
+| 0.10% | 1.2 | 1.9013% | 1.7903% | 1.9257% | **5.8%** |
+| 0.40% | 0.8 | 4.7840% | 2.6827% | 2.5527% | **43.9%** |
+| 0.40% | **1.0** | 4.8082% | **0.7433%** | 0.8803% | **84.5%** |
+| 0.40% | 1.2 | 3.1467% | 0.9392% | 0.8020% | **70.2%** |
+
+Median reduction **57.0%**; both cells at the primary threshold clear the
+1% tolerance R-145 failed 6/6. But two cells barely move, so this is
+neither ADOPT (not all six ≤1%) nor PARTIAL as the freeze defined it (not
+all six cut ≥50%) nor REJECT (median 57% ≫ 25%). **The pre-registered rule
+has a gap between its PARTIAL and REJECT clauses and this result fell into
+it.** No threshold was moved to resolve that; the fall-through is reported
+as the script printed it (`PARTIAL-BELOW-BAR`) and the table above is what
+carries the finding. That the rule was under-specified is itself the
+methodology note: three outcomes were written where the space needs four.
+
+*Arm C confirms its own pre-registered prediction.* The haircut asymmetry
+(0.9990 vs 0.9975 spot/futures at 0.10%; 0.9960 vs 0.9975 at 0.40%) is
+worth ~0.15% and moves nothing: C lands within noise of B in every cell,
+better in three and worse in three. It is not the residual.
+
+*The residual, named rather than glossed — and it is two different things,
+neither of them B-44.* The decisive measurement is the realized exposure
+path (combined notional / equity, bar by bar) against the baseline's own
+path rebuilt from its fills — because under the fix the **fill counts
+already converge** at every threshold while the volatility mismatch does
+not, which rules the throttle out as the whole story:
+
+| thr | baseline mean exposure | A `leg` | B `shared` | mean\|Δexp\| A → B |
+|---|---|---|---|---|
+| 0.8 | 0.2776 | 0.2912 (+4.9%) | 0.2668 (**−3.9%**) | 0.0369 → 0.0244 |
+| **1.0** | 0.2776 | 0.2917 (+5.1%) | **0.2780 (+0.1%)** | 0.0377 → **0.0091** |
+| 1.2 | 0.2776 | 0.2875 (+3.6%) | 0.2737 (−1.4%) | 0.0409 → 0.0121 |
+
+At threshold 1.0 the fix is decisive — mean exposure error +5.1% → +0.1%,
+tracking error cut 76%. Off it, the shared arm **overshoots into
+under-holding**, and for two structurally distinct reasons:
+
+1. **Threshold > 1.0 — silent exposure truncation (new, not B-44).**
+   `target_equiv = min(1.0, frac / leverage)` caps the *unlevered* spot leg
+   at 1.0x, and the overflow is **dropped, never rerouted to the leg that
+   could carry it**. Measured at thr=1.2: `spot_frac > 1.0` on **2.26%** of
+   bars, mean truncated exposure **0.175x**, time-weighted **0.0040x**.
+   The route asks for exposure the harness quietly does not hold, which is
+   why thr=1.2's mismatch is nearly deadband-insensitive (1.90% → 1.79%).
+2. **Threshold < 1.0 — per-leg rather than aggregate throttling (new, not
+   B-44).** Once the spot leg is pinned at its threshold, all residual
+   exposure sits on the futures leg, whose *independent* deadband absorbs
+   9 of its 12 re-targets — systematic under-holding (−3.9% at thr=0.8).
+   **12 of 266 target moves (4.51%) require both legs to move, and on those
+   bars each leg sees only 67.2% of the aggregate move**, so a re-target the
+   single-venue baseline would have executed can be absorbed twice, once
+   per leg. No choice of shared *base* fixes this: it needs the throttle
+   decided once on the combined re-target and then apportioned. That fourth
+   arm was **deliberately not built or scored** — an addition after a freeze
+   may only tighten a bar, never loosen one, and an arm that removed the
+   residual would have converted this round's own sub-bar result into an
+   ADOPT.
+
+*Secondary rule (frozen in advance): did the defect change R-145's
+verdict?* Recomputed at the primary threshold with R-145's own
+`paired_bootstrap` / `annualized_vol` / `paired_daily`, imported:
+
+| fee tier | arm | d_sharpe | 95% CI | extra fees | ratio | G1 | G2 |
+|---|---|---|---|---|---|---|---|
+| 0.10% | `leg` | +0.180 | [−0.039, +0.420] | $48.35 | 0.264 | fail | pass |
+| 0.10% | **`shared`** | **+0.268** | **[+0.086, +0.448]** | **$29.43** | 0.161 | **PASS** | pass |
+| 0.40% | `leg` | −0.121 | [−0.373, +0.132] | $234.86 | 1.283 | fail | fail |
+| 0.40% | `shared` | +0.045 | [−0.215, +0.290] | $170.41 | 0.931 | fail | fail |
+
+The two `leg` rows reproduce R-145's published numbers to the last digit
+(+0.180 [−0.039, +0.420] ratio 0.264; −0.121 [−0.373, +0.132] ratio 1.283).
+**Under the corrected harness, R-145's criterion (1) flips from fail to
+pass at the 0.10% tier** — the defect's 256-vs-140 spot over-trading was
+charging the mechanism $48.35 instead of $29.43 in extra fees at that tier
+(and $234.86 instead of $170.41 at 0.40%), and it was hiding a real, now
+significant +0.268 Sharpe difference. **R-145's NEGATIVE verdict
+nevertheless stands, and stands unambiguously:** its gate requires both fee
+tiers, and at the real 0.40% Bitstamp tier both criterion (1) (CI still
+contains zero) and criterion (2) (turnover eats 93% of the funding saved,
+against a 50% kill bar) still fail under the fix. The kill bar triggers
+independently, exactly as it did. This is the R-134/B-43 pattern again with
+one difference worth recording: there the evaluability defect changed no
+cell; here it changed one of six, in the direction of a **false negative** —
+the same asymmetry R-131 flagged for unmatched ablation controls, now
+observed in a harness rather than a control arm.
+
+**Verdict.** **PARTIAL (methodology).** One-line lesson: **a deadband is a
+dollar amount, not a fraction — and the moment two legs of different
+leverage share one ledger, "the same 5%" silently means two different
+prices of admission, worth 5% of realized exposure and one gate cell
+here.** B-44's defect is confirmed real and materially so; B-44's own
+proposed fix is confirmed correct *and* confirmed incomplete, closing the
+exposure gap to +0.1% exactly where the split is exact and leaving two
+newly-named defects — silent truncation of an over-1.0x route on the
+unlevered leg (**B-45**), and per-leg rather than aggregate throttling
+(**B-46**) — that no choice of base can reach. **B-44 → DONE, FIX ADOPTED
+IN PART** (`HybridBrokerV2(deadband_base="shared")` in
+`experiments/r151_shared.py`, default `"leg"` so nothing already measured
+moves). **Holdout counter: +0**, running program-level total stays **~699**
+— see the bullet added at the top of [Holdout consultations to
+date](#holdout-consultations-to-date). Neither pre-registered rule moved
+after seeing a number; the one place the rule proved under-specified is
+disclosed above rather than patched. `pytest -q`: **516 passed** (unchanged — no registered strategy was touched, and this round's three experiment files are not auto-discovered). **Next step:** B-45, B-46 and B-47
+filed below (B-47: re-run R-145's conservative branch under the corrected
+harness — LOW, because the 0.40% tier kills it on two independent criteria
+regardless). R-145's own section is annotated in place, not rewritten. **Ledger housekeeping done this round, disclosed rather than silent:** four section-D rows (**B-29**, **B-33**, **B-39**, **B-42**) carried `DONE`/`CLOSED` statuses while their IDs were still bold, so they read as live items to any reader or grep — the identical error R-110 already had to clean up once, after B-42's stale row propagated into six rounds' re-rankings. All four are now struck (`~~B-nn~~`, the file's own convention); B-28 was left bold on purpose, since its breadth clause is genuinely still open. One new row also carried a literal `|delta|` inside a table cell — the `|basis|`-style column shift this file warns about by name (R-41, R-44) — caught by the same grep and rewritten as `abs(delta)`. Nothing was removed. ROUTINE.md gained two paragraphs from this round: the backlog check is now a command rather than a warning, and step 4 now requires a decision rule to partition its own outcome space.
 
 ### R-150 · 08-26 · NEGATIVE (both branches) — `champions_council`'s own top-level SCALE (SIZE axis), never touched since L-08 registration; conservative's apparent PROMOTE reclassified by an independent skeptic as the BTC-pass/ETH-invert artifact
 
@@ -810,6 +1006,20 @@ Both branches ran `causal_truncation_probe_vote` on their own candidate function
 **Verdict.** **NEGATIVE, both branches.** One-line lesson: this project's first test of the vote's own anchor STATISTIC (as opposed to its span, gamma, or band) produces two structurally different non-results — the median anchor is different enough from v4's own vote to clear the non-degeneracy check (R²=0.918) but trades away return without any drawdown compensation, stably across a ladder neighbourhood, and disagrees in sign with its own single significant-looking cell (which is on the wrong market/slice to count); the jump-excluding mean is also genuinely different (R²=0.953) but the effect of excluding 3-11% of bars from a multi-year rolling window is simply too small, once v4's own 10% deadband absorbs it, to move the strategy's realized trade path at all — a clean instance of "the substitution binds on the vote's own path, but not through to the traded target." Read together with Levine & Pedersen's (2016) linear-filter equivalence result (which is why this round did not also test an EMA/HP-filter anchor, expecting a reparameterization) and R-89's own instability finding (anchor ranking inverts between inner-train and inner-validation), **this closes the anchor-STATISTIC axis** as a promising direction on this specific 20/40/80-day ladder: order-statistic and jump-exclusion variants have now both been tried, and both fail for complementary reasons (median: binds but doesn't help; jump-exclusion: barely binds at all). A real, disclosed methodology finding survives independent of the verdict: an initial jump-robust design (winsorize-and-reconstruct) silently diverges by 200x over a multi-year backtest and was caught only by a Step-0 smoke test against real data before dispatch — worth remembering for any future round that reconstructs a synthetic price path from capped returns rather than excluding them. **Holdout counter: +0**, running program-level total stays **~699** (R-145's figure, unchanged) — see the bullet added below in [Holdout consultations to date](#holdout-consultations-to-date). Neither pre-registered decision rule moved after seeing any number. `pytest -q`: 516 passed (operator-run from a clean shell; unchanged, since no registered strategy was touched — this round's two experiment files are not auto-discovered). **Next step:** not filed as a new backlog item — the anchor-statistic axis (this round) and the band/hysteresis axis (R-89) are both now closed, alongside span/ladder search (R-06/R-07/R-40/R-45/R-89/R-92), leaving the vote's own architecture (latched 3-anchor majority vote, 1% band) essentially exhausted as a SIZE-axis target for a fresh construction on this specific 20/40/80-day ladder. **B-06 remains the only ranked, unblocked backlog item.**
 
 ### R-145 · 08-25 · NEGATIVE (both branches) — funding-aware spot/futures venue routing for `kelly_regime_v4`'s own, unmodified target (COST axis)
+
+> **Annotated in place by R-151 (08-26), not rewritten.** The harness defect
+> this round diagnosed and filed as B-44 was confirmed real and was
+> materially mis-scoring one of the six gate cells below: under a corrected
+> deadband base, criterion (1) at the **0.10% tier flips from fail to pass**
+> (`d_sharpe +0.180` CI [−0.039, +0.420] → **+0.268** CI [**+0.086**, +0.448]),
+> because the per-leg deadband was forcing 256 spot fills against the
+> baseline's 143 and charging the mechanism $48.35 instead of $29.43 in extra
+> fees. **The NEGATIVE verdict below stands** — the gate requires both fee
+> tiers and at the real 0.40% tier criteria (1) and (2) both still fail under
+> the fix (CI [−0.215, +0.290]; turnover eats 93% of the funding saved against
+> a 50% kill bar) — but the 0.10%-tier row of the table below should be read
+> with this attached. Every other number below reproduces at `0.000e+00`
+> under R-151's independent re-implementation. See R-151, and B-47.
 
 **Direction.** An undispatched frozen pre-registration found at Step 0 (`experiments/r145_shared.py`, committed by a prior session with no matching section B entry — outranks the backlog and any new idea per ROUTINE.md's own rule). `kelly_regime_v4`'s `target` (a single causal fraction-of-equity) is currently expressed through ONE venue at a time (all spot or all futures_5x). This round splits the SAME, unchanged target across two venues at once: the `<=1.0x` core through unlevered spot (no funding), the `>1.0x` excess (v4 never shorts, so always `>=0`) through 5x leveraged futures (funding-bearing). Attacks **COST** by instrument choice, not by retiming or throttling the signal — structurally distinct from every closed COST family (turnover corridor/shrink R-131/R-133, Uziel-El-Yaniv mixing R-130, Gârleanu-Pedersen smoothing R-64/R-128, Kelly no-trade bands R-66–69/R-89/R-90, patient-limit/taker-fallback execution R-56/R-77/B-24). Not B-03 (delta-neutral carry harvest, NEGATIVE R-39 — this keeps v4's exact directional exposure, takes no new bet) or B-05 (funding gate/flat, R-35/R-39 — that REDUCES exposure; this only reroutes financing). Citations: Ackerer, Hugonnier & Jermann (2024/2025 working paper) — an arbitrage-free perpetual as continuously-refinanced spot replication, the basis for treating venue choice as a pure financing decision; Schmeling, Schrimpf & Todorov (2023, BIS WP 1087) — the crypto funding/carry premium is large, volatile, and sometimes negative, cited as a guardrail (this design may only ever AVOID a cost already being paid on an unchanged position, never harvest a new carry bet).
 
@@ -16017,6 +16227,38 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-26 after R-151.** **The three preceding 08-26 sessions each
+concluded "B-06 is the only ranked, unblocked backlog item" and dispatched
+nothing; the table said otherwise, and this round took what was in it.**
+B-44 had been sitting `OPEN, LOW` in the table below since R-145 (08-25)
+while the re-ranking prose above it — written by R-147, R-148, R-149,
+R-150 and both 08-26 verification passes — said the ranked list held only
+B-06. That is verbatim the failure ROUTINE.md step 0 names ("R-77's
+re-ranking said B-06 was *the only item remaining on the backlog* while
+B-32 had been sitting `OPEN` since R-65. Infrastructure and methodology
+items count — they are usually the cheapest things on the list and the
+only ones that can actually be finished in a session"). It cost one
+session to finish B-44 and it produced a measurement, which is what two
+of those three sessions did not. **Read the table, not the prose — this
+paragraph included.**
+
+B-44 is **DONE (fix adopted in part)**. Three new items are filed from
+its residual and from what closing it revealed: **B-45** (silent
+over-1.0x exposure truncation on the unlevered leg), **B-46** (per-leg
+rather than aggregate throttling), and **B-47** (re-run R-145's
+conservative branch under the corrected harness, LOW — the 0.40% tier
+kills it on two independent criteria regardless). All three are `LOW`
+and all three are honest about being contingent on a future round
+actually using the two-leg harness; none of them displaces B-06 on
+merit. What has changed is that the unblocked list is no longer a list
+of one, and the next session that wants a cheap, finishable, measurable
+item now has three named ones with their own numbers attached.
+
+**B-06 remains the standing zero-cost recommendation and the
+highest-value item on merit**, unchanged by this round (R-78's audit
+still stands: keep it running, do not call it the plan). R-151 read no
+holdout bar and touched no registered strategy.
+
 **Re-checked 08-26 (second pass), no round dispatched (not an R-numbered
 entry — zero configurations evaluated).** A second same-day session, tasked
 independently with the same brief (propose an improvement vector for the
@@ -19375,22 +19617,25 @@ which only forward paper trading can supply.
 
 | ID | item | attacks | status | note |
 |---|---|---|---|---|
-| **B-44** | `HybridBroker` (`experiments/r145_shared.py`, a two-leg spot+futures harness sharing one cash ledger) does not hold trading precision constant across legs of different leverage: its reused per-leg deadband (`MarketSpec.deadband`, the same field `B-43` addressed for `broker.py`'s single-leg case) is scaled to each leg's OWN leveraged max notional, so an unlevered spot leg's dollar deadband is 5x tighter than a 5x futures leg's for an identical equity base — producing measurably different fill counts and realized volatility (1.9–4.8% relative) between a hybrid route and a single-venue baseline even when the nominal routed target is bit-identical every bar | COST (methodology gap, not a market-constraint code) | OPEN, LOW | Filed by R-145, which found this diagnosing why its own conservative branch failed criterion (3) (exposure match). Not fixed there: `r145_shared.py` was frozen before any branch ran, and editing it after seeing results would be the goalpost-move ROUTINE.md forbids. Only matters if a future round reuses `HybridBroker` for a genuinely fine-grained, cross-leverage exposure comparison; low priority since R-145 itself found no economic reason (see its own verdict) to revisit venue-routing on `kelly_regime_v4`. A fix, if ever needed, likely wants the deadband compared against a SHARED notional base (e.g. combined equity, not each leg's own max) rather than each leg's own leveraged ceiling. |
+| **B-45** | `HybridBroker`/`HybridBrokerV2` **silently truncate an over-1.0x route on the unlevered leg**: `_execute_leg`'s `target_equiv = min(1.0, frac / market.leverage)` caps the spot leg at 1x equity and the overflow is **dropped, not rerouted** to the leg that could carry it. Measured by R-151 at `threshold=1.2` on BTC inner-validation: `spot_frac > 1.0` on **2.26%** of bars, mean truncated exposure **0.175x**, time-weighted **0.0040x** — exposure the route asks for and the harness does not hold. This is why that cell's mismatch is nearly deadband-insensitive (1.90% → 1.79% under the B-44 fix) | COST (methodology gap, not a market-constraint code) | OPEN, LOW | Filed by R-151. Distinct from B-44 (a *precision* asymmetry) — this is an *exposure* leak, and it fires only for routes that ask an unlevered leg for more than 1x. A fix wants the overflow pushed to the levered leg rather than clipped, which changes the route's own semantics and so must be pre-registered, not patched in. Only matters if a future round runs a hybrid route with a threshold above 1.0. |
+| **B-46** | `HybridBroker`/`HybridBrokerV2` throttle **per leg rather than on the aggregate re-target**: each leg compares its own `abs(delta) * price` against the deadband independently, so a move the single-venue baseline would execute can be absorbed twice, once per leg. Measured by R-151 on BTC inner-validation: **12 of 266 target moves (4.51%) require both legs to move**, and on those bars each leg sees only **67.2%** of the aggregate move; at `threshold=0.8` the consequence is systematic **under**-holding (mean realized exposure 0.2668 vs the baseline's 0.2776, **−3.9%**) that survives the B-44 fix intact | COST (methodology gap, not a market-constraint code) | OPEN, LOW | Filed by R-151, which deliberately did **not** build or score a fourth arm for it: an addition after a freeze may only tighten a bar, never loosen one, and an arm removing this residual would have converted R-151's own sub-bar result into an ADOPT. A fix decides the deadband **once** on the combined re-target and then apportions it across legs. Note that R-151's fill counts already converge on the baseline's under the B-44 fix while this exposure gap does not — fill count is a proxy for exposure match, never a substitute for it. |
+| **B-47** | Re-run R-145's conservative branch (fixed-threshold spot/futures venue routing for `kelly_regime_v4`) under the corrected harness (`HybridBrokerV2(deadband_base="shared")`), since R-151 found its criterion (1) flips from fail to **pass** at the 0.10% fee tier once the B-44 defect is removed (`d_sharpe` +0.180 CI [−0.039, +0.420] → **+0.268** CI [**+0.086**, +0.448]) | COST | OPEN, LOW | Filed by R-151 because its own pre-registered secondary rule required filing a contaminated cell as a backlog item rather than acting on it. **LOW on purpose, and the reason is the point:** R-145's gate requires BOTH fee tiers and at the real 0.40% Bitstamp tier criteria (1) and (2) *both* still fail under the fix (CI [−0.215, +0.290]; extra fees eat 93% of the funding saved against a 50% kill bar), so the kill bar triggers independently and the NEGATIVE verdict is not in doubt. This item exists to keep the record honest, not because a promotion is waiting behind it — and any re-run must first settle B-45/B-46, which move the same numbers. |
+| ~~B-44~~ | `HybridBroker` (`experiments/r145_shared.py`, a two-leg spot+futures harness sharing one cash ledger) does not hold trading precision constant across legs of different leverage: its reused per-leg deadband (`MarketSpec.deadband`, the same field `B-43` addressed for `broker.py`'s single-leg case) is scaled to each leg's OWN leveraged max notional, so an unlevered spot leg's dollar deadband is 5x tighter than a 5x futures leg's for an identical equity base — producing measurably different fill counts and realized volatility (1.9–4.8% relative) between a hybrid route and a single-venue baseline even when the nominal routed target is bit-identical every bar | COST (methodology gap, not a market-constraint code) | **DONE → R-151, FIX ADOPTED IN PART** | Filed by R-145, which found this diagnosing why its own conservative branch failed criterion (3) (exposure match). Not fixed there: `r145_shared.py` was frozen before any branch ran, and editing it after seeing results would be the goalpost-move ROUTINE.md forbids. Only matters if a future round reuses `HybridBroker` for a genuinely fine-grained, cross-leverage exposure comparison; low priority since R-145 itself found no economic reason (see its own verdict) to revisit venue-routing on `kelly_regime_v4`. A fix, if ever needed, likely wants the deadband compared against a SHARED notional base (e.g. combined equity, not each leg's own max) rather than each leg's own leveraged ceiling. **R-151 (08-26) confirmed the defect and implemented the suggested fix** as `HybridBrokerV2(deadband_base="shared")` in `experiments/r151_shared.py` (default `"leg"`, so nothing already measured moves; the frozen `r145_shared.py` is imported, never edited, and arm `"leg"` reproduces it at `0.000e+00` on balance, fees, funding, fills and every equity bar). Measured directly: the spot leg's mean dollar deadband was **$59.41** against the futures leg's **$275.62**, absorbing 6.2% of its re-targets against 87.5%, firing 256 fills against the single-venue baseline's 143. The fix closes the realized-exposure gap at the exact-split threshold from **+5.1% to +0.1%** (volatility mismatch 3.54% → **0.13%**) and cuts the mismatch by a median 57% across six cells, but does **not** bring all six inside the 1% tolerance — the residual is two structurally different defects, now filed as **B-45** (silent over-1.0x truncation on the unlevered leg) and **B-46** (per-leg rather than aggregate throttling), neither reachable by any choice of base. Disclosed cost of the shared base, quantified rather than waved through: the **all-spot** degenerate route stops reproducing plain spot v4 (`rel = 5.5e-02`), so the base is a per-comparison choice that must be declared. |
 | ~~B-43~~ | ~~Make size-acting cost mechanisms evaluable: address `broker.REBALANCE_DEADBAND`.~~ | COST | **DONE → R-134, FIX ADOPTED** | Filed by R-133. `MarketSpec` gained a `deadband` field (`src/tradebot/broker.py`, default unchanged at 0.05 — the accumulate-and-release alternative was proven behaviorally equivalent at any shared threshold and not adopted, since it adds persistent state for no further capability). Re-testing R-133's own `NovelTurnoverThrottle` through the corrected broker at a venue-realistic deadband does **not** reverse its NEGATIVE verdict on either market (B1 fails the full `DEADBAND_GRID`, both branches, independently confirmed by a skeptic) — the evaluability defect was real (absorption 43.5%→78.5% spot, 23.9%→87.4% futures_5x, baseline→realistic) but this mechanism's own rejection was not an artifact of it. `multi_engine.py`'s mirrored constant turned out to already be a function parameter, not a hard-coded global — no change needed there. |
 | ~~B-38~~ | ~~Pre-register and record a **risk-matched** forward comparison instead of the raw one B-06 has been recording: pair `kelly_regime_v4` against a passive long carrying v4's own mean notional (R-33's matched benchmark, per-window matched, not a fully-invested hold), so the paired daily difference stops carrying ~0.6-0.7 of BTC's own move as common-mode variance. Decide in advance what horizon would make it worth continuing~~ | N≈3, ERR | **DONE → R-83, ANSWERED (NOT VIABLE AS SPECIFIED)** | Filed by R-78, costed by its own addendum (`experiments/r78_matched_arm_sizing.py`: −54.8%/−64.5% noise, horizon 7.1→6.2y train / 808.8→42.1y validation). R-83 ran the pre-registered round for real: a deployable rolling causal match (90-day EWM of v4's own realized exposure) reproduces the noise reduction (55–60%, operator-verified) and beats a frozen mean-notional match on notional-transfer (27.0% vs. 42.5% train→val gap) but not on volatility-transfer (29.6% vs. 14.6%). On the pre-registered decisive cell (inner-validation, 0.40% live fee) the real anytime-valid horizon fires on only **1.0%** of bootstrap paths within 25 years, and every path that resolves resolves **against** the strategy — R-78's own headline finding, now confirmed on a risk-matched pair. Not reopened; a narrower thread (match on realized volatility directly rather than mean notional) is named but not filed as a new item. |
-| **B-39** | Carry R-78's `level_resync_order()` fix into `bot.py` / `live_bot.py`, which still gate on the same edge-triggered `abs(target[i] − target[i−1]) > 1e-9` and therefore lose every target change that lands between two invocations for anyone running them slower than the bar interval | methodology (not one of the four constraints) | **DONE → R-81 session, CLOSED** | Filed by R-78, which fixed the identical defect in `scripts/paper_trade.py` only, because those two files were not that round's to change (the same scoping R-71 used when it fixed the inception half). The measurement transfers unchanged: exactly `1/k` of a strategy's target changes survive a 1-in-`k` decision grid, so a live account polled every 15 minutes acts on ~1/3 of them and one polled hourly on ~1/12. **Fixed**: `tradebot.bot.raw_desired_target()` reads the strategy's current stance directly from `prepare()` (level-triggered, schedule-immune, the same fix `level_resync_order()` applied), used whenever `compute_signal` emits nothing; falls back to the pre-existing edge-triggered `orders` for the ~5 strategies with no `target` column. `live_bot.py` calls `bot.py`'s `step()` directly, so it inherits the fix with no separate change. 6 new tests (`tests/test_bot.py`), full suite green. |
+| ~~B-39~~ | ~~Carry R-78's `level_resync_order()` fix into `bot.py` / `live_bot.py`, which still gate on the same edge-triggered `abs(target[i] − target[i−1]) > 1e-9` and therefore lose every target change that lands between two invocations for anyone running them slower than the bar interval~~ | methodology (not one of the four constraints) | **DONE → R-81 session, CLOSED** | Filed by R-78, which fixed the identical defect in `scripts/paper_trade.py` only, because those two files were not that round's to change (the same scoping R-71 used when it fixed the inception half). The measurement transfers unchanged: exactly `1/k` of a strategy's target changes survive a 1-in-`k` decision grid, so a live account polled every 15 minutes acts on ~1/3 of them and one polled hourly on ~1/12. **Fixed**: `tradebot.bot.raw_desired_target()` reads the strategy's current stance directly from `prepare()` (level-triggered, schedule-immune, the same fix `level_resync_order()` applied), used whenever `compute_signal` emits nothing; falls back to the pre-existing edge-triggered `orders` for the ~5 strategies with no `target` column. `live_bot.py` calls `bot.py`'s `step()` directly, so it inherits the fix with no separate change. 6 new tests (`tests/test_bot.py`), full suite green. |
 | ~~B-36~~ | ~~Formalize a Ledoit & Wolf (2008)-style **paired difference test** between a candidate arm and the frozen arm it's meant to improve on, as a reusable function in `tradebot.inference` rather than a one-off script, and apply it retroactively to every surviving (`further_work`-clearing or near-clearing) arm on the COST axis before a fifth mechanism round is run~~ | ERR (methodology gap) | **DONE → R-70** | Filed by R-68. Built as TWO independent standard-error estimators (Parzen-kernel HAC per the literal paper, and a stationary-bootstrap studentization matching this project's own convention) rather than one, since a single estimator cannot say whether disagreement on a near-zero cell is real. Applied to R-68's own published pair plus two never-before-tested ones (ENTRY_ONLY, novel derived threshold): `r68_entry_only_0.080`/W_VAL is significant by all three methods (growth-percentile, HAC-Sharpe, bootstrap-Sharpe) — the sharpest number this axis has produced — while D1 against the matched hold still fails for that arm, unchanged. Two cells split 2-1 across the two new methods, reported rather than adjudicated. Not reopened; the two functions and 15 tests are the permanent product. |
 | ~~B-37~~ | ~~Does a rule that tightens ONLY the entry threshold (`enter_eligible = s > +delta`, exit left at R-63's original `s > 0`) reproduce R-68 conservative's ENTRY_ONLY edge with a single free parameter, now that the round found the exit half (B-31's original target) carries none of it?~~ | COST | **DONE → R-69, ANSWERED (NO)** | Filed by R-68. Answered cleanly: with R-65's `buffer`/`hold_days` genuinely removed (not merely isolated inside R-68's own ENTRY_ONLY sub-arm, which still inherited both), turnover inflates 4-29x and membership-change rate 4-23x relative to R-68's own published ENTRY_ONLY cell at a comparable or larger delta, and the D1 point estimate flips sign on both a fitted sweep (+1.07 -> -2.98) and an independently-derived, zero-fitted-parameter threshold (+1.07 -> -0.36). Both branches' `further_work` was `False`; neither read the holdout. The coupling ENTRY_ONLY's isolated read could not see turns out to be load-bearing: the buffer and timer were suppressing one-bar rank-flicker swaps the entry threshold alone cannot substitute for. Not reopened — this closes the entry/exit decomposition line R-67 opened. |
 | ~~B-37~~ | ~~Does a rule that tightens ONLY the entry threshold...~~ | COST | **STALE DUPLICATE, struck by R-72** | This row is a leftover live copy of the row directly above it, filed when R-68 first opened B-37 and never struck when R-69 answered it the same day. Found during R-72's ledger housekeeping while re-ranking the backlog; not re-tested, just corrected — see the row above for the actual DONE→R-69, ANSWERED (NO) verdict. Nothing here was treated as open or actionable by R-72 or any round between R-69 and R-72; this correction only fixes the written record. |
 | ~~B-34~~ | ~~Extend both R-67 grids past the edges their winners leaned against, and — the more important half — run a SYMMETRIC deadband as a matched arm beside the asymmetric one~~ | COST | **DONE → R-68, ANSWERED** | Filed by R-67. Ran as a two-threshold decomposition (contains R-67's symmetric-in-magnitude arm as its diagonal) rather than the literal symmetric arm, since a symmetric band on a long/flat gate coincides with R-67's rule (amendment recorded and justified in R-68's write-up, backed after the fact by Guan–Peng–Xu's no-symmetry result). **Both questions answered.** The curve turns over: hump-shaped, peaking at δ≈0.16 on both selection windows (confirmed independently by the sweep and by a Patton–Timmermann monotonicity test), degrading past ≈0.22 — F3's worry (an unbounded far-end improvement) does not materialize. And the confound separates: ENTRY_ONLY (tighten only the entrant threshold) carries the edge R-67 attributed to the coupled rule; EXIT_ONLY (soften only the exit, R-67's original framing) is worse than the coupled diagonal at every matched δ with a *negative* cross-window rank correlation. `further_work=False` on the selected configuration regardless. The grid cap this item's own note cited (dLC's 1.6σ) was found miscalibrated — it is a full-width saturation applied as a half-width cap — and is corrected to 0.80σ in R-68's write-up. Reopens as **B-37** (does entry-only alone reproduce the edge with one parameter). |
 | ~~B-35~~ | ~~Measure the stopping premium of the forced exit (Kaminski & Lo 2014)~~ | COST | **DONE → R-68, ANSWERED** | Filed by R-67. Measured before either R-68 branch ran (`experiments/r68_stopping_premium.py`). At the horizon the mechanism acts on (mean grace span 0.17 days at δ=0.080) the incumbent's forward return after a downward crossing is **positive** (+0.00504 at H=1d vs +0.00048 unconditional) — a **negative** stopping premium, Kaminski–Lo's random-walk case reproduced, consistent with score autocorrelation of −0.078/+0.059/−0.061 at 1/5/14 days. Priced: grace periods cost +0.311 log units at δ=0.080 against +1.044 saved in avoided round trips, net +1.355 — and the saving **asymptotes** while grace span keeps growing, which correctly predicted the sweep's hump shape found later the same round. Every interval contains zero. Closes with a nameable reason: the exit was never informative on this signal, which is also why R-68's ENTRY_ONLY beat EXIT_ONLY. |
-| **B-29** | Separate the two things R-64's conservative arm confounded: a trade-to-the-boundary destination **that still snaps to exactly flat when `desired == 0`**. R-64 measured the destination change as worth a real 43% of turnover with a D2 slope in its favour, and killed it on the residual long the band leaves behind in bear regimes — but those are two independent consequences of one line, and only one of them is fatal | COST | **DONE -> R-66, REJECTED** | Filed by R-64. Cheapest live item on the list: one conditional in a loop this project already has two implementations of, zero new data, zero new fitted parameters, and it inherits R-64's whole pre-registered battery (D0–D5) unchanged so the comparison is already specified. Its own named failure mode: the snap-to-flat may just re-introduce the turnover the boundary saved, at exactly the moments (regime exits) when the step is largest — in which case the 43% figure was never bankable and the answer is a number rather than another attempt. | **ANSWERED, and the answer is a refutation rather than a rescue.** R-66 ran both readings of this item — the literal conditional (conservative) and a derived vanishing-width band that reaches flat without a special case (novel). Both NEGATIVE, and between them they refute the premise the item was filed on: separating the destination from the never-goes-flat consequence closes only **14.5%** of R-64's ETH-A gap against a pre-registered 50% bar, the dose-response inverts, and the novel arm's isolation probe puts **70% of the loss** at a setting where the width change is switched off and fees are *lower* than v4's. The item's own named failure mode (the snap gives back the turnover the boundary saved) was only partly realised — ~75% of R-64's saving is retained and turnover still falls 41% — so the mechanism worked and the story motivating it was wrong. The residual long **does** explain R-64's BTC drawdown escalation, which disappears once flat is reachable; it does not explain the ETH-A growth loss. Live diagnosis is tracking lag.
+| ~~B-29~~ | ~~Separate the two things R-64's conservative arm confounded: a trade-to-the-boundary destination **that still snaps to exactly flat when `desired == 0`**. R-64 measured the destination change as worth a real 43% of turnover with a D2 slope in its favour, and killed it on the residual long the band leaves behind in bear regimes — but those are two independent consequences of one line, and only one of them is fatal~~ | COST | **DONE -> R-66, REJECTED** | Filed by R-64. Cheapest live item on the list: one conditional in a loop this project already has two implementations of, zero new data, zero new fitted parameters, and it inherits R-64's whole pre-registered battery (D0–D5) unchanged so the comparison is already specified. Its own named failure mode: the snap-to-flat may just re-introduce the turnover the boundary saved, at exactly the moments (regime exits) when the step is largest — in which case the 43% figure was never bankable and the answer is a number rather than another attempt. | **ANSWERED, and the answer is a refutation rather than a rescue.** R-66 ran both readings of this item — the literal conditional (conservative) and a derived vanishing-width band that reaches flat without a special case (novel). Both NEGATIVE, and between them they refute the premise the item was filed on: separating the destination from the never-goes-flat consequence closes only **14.5%** of R-64's ETH-A gap against a pre-registered 50% bar, the dose-response inverts, and the novel arm's isolation probe puts **70% of the loss** at a setting where the width change is switched off and fees are *lower* than v4's. The item's own named failure mode (the snap gives back the turnover the boundary saved) was only partly realised — ~75% of R-64's saving is retained and turnover still falls 41% — so the mechanism worked and the story motivating it was wrong. The residual long **does** explain R-64's BTC drawdown escalation, which disappears once flat is reachable; it does not explain the ETH-A growth loss. Live diagnosis is tracking lag.
 | ~~B-30~~ | ~~Settle what `broker.REBALANCE_DEADBAND = 0.05` is doing to every futures figure in this project before another round reads one~~ | methodology (not one of the four constraints) | **DONE → R-72, ANSWERED** | Filed by R-64. Generalized to all 25 registered strategies × 2 markets × 2 splits (154 configs): the gap is **not** a general futures property (unweighted mean 62.7%/52.3% train, 65.6%/65.0% val) but is concentrated in the 8 strategies sized via `ctx.order_notional()` — 7 of 8 (the whole kelly_regime family plus `champions_council`) show 21–67pp gaps; the 17 `order_target`-based strategies are mixed-to-reversed. An isolated equity-scaled-deadband fix (broker subclass, `broker.py` untouched) restores fill-through to ~100% but does not help `kelly_regime_v4` — fees rise, growth/Sharpe/drawdown all move the wrong way on the point estimate (both bootstrap intervals contain zero). **No broker change made.** README's warning box updated from "not yet settled" to measured and scoped. |
-| **B-33** | Settle the **holdout convention for panel reads**. `W_FULL6` runs to the last bar and therefore includes post-2023 U6 data; R-47/B-08, R-57, R-63 and now R-65 have all recorded such reads as **+0** on the grounds that the reserved BTC/ETH holdout is untouched. That is a convention, not a derivation, and it has now been applied often enough that it is load-bearing | ERR | **DONE → R-72, ANSWERED** | Flagged by R-65's novel branch. The literal leakage channel (a fitted parameter crossing from panel-2023+ into a BTC/ETH decision) is clean — verified across R-63/65/67/68's eight branch files. A different, unflagged channel was not: all eight branches build a `BTC_HOLD` reporting-only context cell that reads real BTC 2023+ price data (never feeding any promotion gate) — **+9** uncounted consultations (R-63 +2, R-65 +2, R-67 +2, R-68 +3), now applied. Researcher-degrees-of-freedom risk named as honestly unclosed, not dismissed. Panel-vs-BTC correlation is ~0.56 both sides of 2023-01-01 — a panel-2023+ read is not price-independent of a BTC/ETH-2023+ read even with zero shared code. Running total moves ~627 → ~637 (the +9 correction plus R-72's own +1 for the correlation check itself) — see [Holdout consultations to date](#holdout-consultations-to-date). Standing instruction: any future round descended from `r63_shared.py`'s pattern must retire or explicitly count its `BTC_HOLD` cell. |
+| ~~B-33~~ | ~~Settle the **holdout convention for panel reads**. `W_FULL6` runs to the last bar and therefore includes post-2023 U6 data; R-47/B-08, R-57, R-63 and now R-65 have all recorded such reads as **+0** on the grounds that the reserved BTC/ETH holdout is untouched. That is a convention, not a derivation, and it has now been applied often enough that it is load-bearing~~ | ERR | **DONE → R-72, ANSWERED** | Flagged by R-65's novel branch. The literal leakage channel (a fitted parameter crossing from panel-2023+ into a BTC/ETH decision) is clean — verified across R-63/65/67/68's eight branch files. A different, unflagged channel was not: all eight branches build a `BTC_HOLD` reporting-only context cell that reads real BTC 2023+ price data (never feeding any promotion gate) — **+9** uncounted consultations (R-63 +2, R-65 +2, R-67 +2, R-68 +3), now applied. Researcher-degrees-of-freedom risk named as honestly unclosed, not dismissed. Panel-vs-BTC correlation is ~0.56 both sides of 2023-01-01 — a panel-2023+ read is not price-independent of a BTC/ETH-2023+ read even with zero shared code. Running total moves ~627 → ~637 (the +9 correction plus R-72's own +1 for the correlation check itself) — see [Holdout consultations to date](#holdout-consultations-to-date). Standing instruction: any future round descended from `r63_shared.py`'s pattern must retire or explicitly count its `BTC_HOLD` cell. |
 | ~~B-31~~ | ~~Attack the **long/flat gate**, which R-65 identified as where the remaining turnover lives once buffering has done its work. R-63's frozen rule holds only positive-scoring assets and stands flat otherwise, so every zero-crossing of the incumbent's score forces an exit — a channel R-65's conservative branch measured as **invariant at 0.386/day across all 20 cells of a holding-period grid** while voluntary swaps fell 16-fold. Candidate fixes: a hysteresis band around zero (enter above +δ, exit below −δ), a continuous rather than binary positivity weight, or letting the partial-adjustment recursion carry the position through a crossing instead of resetting it~~ | COST | **DONE → R-67, ANSWERED** | Filed by R-65. **The mechanism was real and R-67 broke it; the round failed anyway.** Two of the three fixes this row names were run — asymmetric hysteresis on the eligibility test (conservative) and the partial-adjustment recursion (novel). Forced exits fall **242 → 8 events** on W_TRAIN (0.3781 → 0.0125/day, a 30× cut) with the voluntary-swap channel **invariant at 0.117–0.122/day** at every δ, so the fix reaches exactly and only the channel this row named — **the floor was a threshold artifact, not score noise (F2 refuted)**. Turnover reaches 0.102/day (conservative) and 0.336/day (novel), both **below the 0.641/day break-even this row quotes**, and the conservative arm becomes the first on this axis to pass the 0.40% fee tier. The predicted price — holding a declining asset longer — **was not paid**: drawdown improved at every step on both arms. Both still fail `(D1 or D2)`: +1.093 [−2.019, +4.106] and +1.246 [−1.795, +4.325]. This row's own honest prior was half right: the gate mattered for the discrete-selection family (0.900 → 0.102/day) and the smoothed arm did reach a low rate without a gate fix — but the smoothed arm also **failed D4**, which the gate-fixed discrete arm passed. Reopens only as **B-34** (extend the grids; run the symmetric deadband as a matched arm) and **B-35** (measure whether the exit was informative at all). |
 | ~~B-40~~ | ~~**State-dependence of the horizon** — the third of the three axes Levine & Pedersen (2016) leave open on a single instrument, and the one R-89 did not take. Goulding, Harvey & Mazzoleni (2023), "Momentum turning points", *Journal of Financial Economics* 149, 378–406, define four states from the intersection of a slow and a fast signal (Bull = both trailing returns ≥0; Correction = slow ≥0, fast <0; Bear = both <0; Rebound = slow <0, fast ≥0) and re-set the slow/fast blend weight after observing a break. Rare among this project's candidate sources in that the headline result is a **single time series** (the US market index), not a panel. Test the sharpest sub-claim first, before building anything: is BTC's conditional mean return in the Bear state (80d<0 AND 7d<0) significantly negative on 2017–2022, and does the sign hold after?~~ | SIZE, N≈3 | **DONE → R-108, SUB-CLAIM NEGATIVE** | Filed by R-89 with a pre-emptive honest magnitude warning ("approximately zero... a cheap null to document, not a promotion candidate"). R-108 ran the exact sub-claim named here (`experiments/r108_bear_state_conditional_mean.py`, pre-registered in commit `14378e2` before any number was read). Bear-state mean forward daily log return on 2017-2022: **−15.02 bps/day** with a 95% stationary block-bootstrap CI of **[−43.49, +17.28] bps/day** — the sign is negative as the mechanism predicts and the magnitude is exactly the "approximately zero" the row filing predicted, but the CI contains zero decisively (upper bound sits +0.32 daily-return-standard-deviation units above zero). Only the Bull state clears the noise floor on this window (+44.35 [+7.49, +72.78] bps/day). The pre-registered secondary holdout sign-check was contingent on primary passing and was not spent (+0 holdout consultations). Sub-claim closes NEGATIVE; building the full four-state dynamic-blend variant on this ceiling would be arguing against a signal whose 2017-2022 CI is [−0.43, +0.17] percent per day. |
 | ~~B-41~~ | ~~**Path-dependent exit** — a trailing ATR ratchet with a principled re-arm, replacing "hold until the anchors flip". Sepp & Lucic (2026), arXiv:2607.19497, formalise the "American" trend system; Han, Zhou & Zhu (SSRN 2407199) find a fixed stop cuts momentum's worst month roughly in half; Hsieh (2023), arXiv:2303.02613, supplies the restart-mechanism concept~~ | COST, SIZE | **DONE → R-90, ANSWERED (NEGATIVE, both branches)** | Filed by R-89. Tried both ways named in the original filing: a literal fixed-percentage stop with instant restart (conservative — the exact naive case Hsieh's paper motivates a fix for) and an ATR-scaled stop with a reclaim-gated, cooldown-confirmed restart (novel — Hsieh's stated concept, not his unseen exact formula). Both confirm, rather than merely fail to refute, the main risk named in this row before any code: the conservative branch's own finalist has an 80% whipsaw rate on its inner-train stop-outs with a negative point estimate on that same cell; the novel branch's stricter restart drops the whipsaw rate to 0% of *events* only by collapsing to near-zero exposure instead (0.00–0.30 of v4's), reproducing Hsieh's own named failure mode (permanent de-risking) rather than curing it, and separately whipsaws on **100%** of the re-entries it does allow — mechanically near-guaranteed once a reclaim gate shares its own inequality with the whipsaw definition, a reusable finding for any future round pairing the two. Not reopened; a materially looser reclaim condition (a fractional retracement rather than the exact exit price) is a different, untested question. |
-| **B-42** | **Derive the anchor span instead of searching it.** Sepp & Lucic (2026), arXiv:2607.19497, give a closed-form Sharpe for a trend system under any causal linear process plus a net-Sharpe-under-proportional-cost correction; Grebenkov & Serror (2014), *Physica A* 394, 288–303, give the closed-form P&L distribution for an EMA trend system; Valeyre (2025), arXiv:2504.10914, fits that Sharpe formula to 70 futures at **R² = 0.98**, recovering λ = 1/180 ± 17 days and an optimal η ≈ 1/112 business days. Fit BTC's own return autocorrelation on 2017–2022, plug into the closed form, and compare the derived span against v4's shipped 20/40/80 | N≈3, COST | **DONE → R-92, CLOSED NEGATIVE** (row left showing `OPEN` after R-92's verdict — a stale-row error that propagated into six later rounds' re-rankings, R-104-R-109; corrected by R-110 as pure housekeeping, nothing re-tested) | Filed by R-89. Not a duplicate of R-06/R-07 (empirical ladder sweeps), R-40 (bagging the ladder) or R-45 (walk-forward re-estimation / minimax reselection): all four *search* for a span in backtest space; this derives one from a fitted generative model of the instrument and produces a falsifiable point prediction rather than a distribution over spans. Two named ways it ends cheaply, both of which are still results: BTC's daily ACF is small and noisy, so the implied span may be unstable across subsamples; and Sepp & Lucic's own theory says an **interior** cost-optimal span exists only under ARFIMA long-memory dynamics — if BTC fits short-memory AR(1), the answer is "as slow as you can stand", which is a one-line conclusion rather than an edge. Also worth pricing against their reported **≈37–41bps span-invariant break-even**, against this project's 20bps spot round trip. |
+| ~~B-42~~ | ~~**Derive the anchor span instead of searching it.** Sepp & Lucic (2026), arXiv:2607.19497, give a closed-form Sharpe for a trend system under any causal linear process plus a net-Sharpe-under-proportional-cost correction; Grebenkov & Serror (2014), *Physica A* 394, 288–303, give the closed-form P&L distribution for an EMA trend system; Valeyre (2025), arXiv:2504.10914, fits that Sharpe formula to 70 futures at **R² = 0.98**, recovering λ = 1/180 ± 17 days and an optimal η ≈ 1/112 business days. Fit BTC's own return autocorrelation on 2017–2022, plug into the closed form, and compare the derived span against v4's shipped 20/40/80~~ | N≈3, COST | **DONE → R-92, CLOSED NEGATIVE** (row left showing `OPEN` after R-92's verdict — a stale-row error that propagated into six later rounds' re-rankings, R-104-R-109; corrected by R-110 as pure housekeeping, nothing re-tested) | Filed by R-89. Not a duplicate of R-06/R-07 (empirical ladder sweeps), R-40 (bagging the ladder) or R-45 (walk-forward re-estimation / minimax reselection): all four *search* for a span in backtest space; this derives one from a fitted generative model of the instrument and produces a falsifiable point prediction rather than a distribution over spans. Two named ways it ends cheaply, both of which are still results: BTC's daily ACF is small and noisy, so the implied span may be unstable across subsamples; and Sepp & Lucic's own theory says an **interior** cost-optimal span exists only under ARFIMA long-memory dynamics — if BTC fits short-memory AR(1), the answer is "as slow as you can stand", which is a one-line conclusion rather than an edge. Also worth pricing against their reported **≈37–41bps span-invariant break-even**, against this project's 20bps spot round trip. |
 | ~~B-32~~ | ~~Multi-asset strategy **registration**, so that a bar-by-bar cross-asset allocator can enter the comparison table at all~~ | ERR (methodology gap) | **DONE → R-107, ANSWERED** | Filed by R-65, promoted from B-17's deferred half. A native `MultiAssetStrategy` engine (`src/tradebot/multi_engine.py`/`multi_strategy.py`), a separate registry auto-discovered from `src/tradebot/multi_strategies/`, and additive wiring into `tradebot run`/`scripts/inference.py`/`tests/test_evidence.py` now exist, tested (8 new tests, 516 total passing) and reproduce R-68's own already-published numbers to full float precision as the correctness check. `xsmom_entry_band` (R-68's `ENTRY_ONLY, δ=0.080`) is registered as B-32's first candidate, `further_work=False` — the same NEGATIVE verdict R-68 already reached, unchanged by registration, explicitly labeled in the README as not a promotion claim. Zero touches to the single-asset registry/strategy/strategies path. A same-round novel attempt to find a *promotable* candidate for the new path (correlation-aware risk-parity weighting) also failed — see R-107 in section B — so the path exists and works but nothing on it clears the bar yet. |
 | **B-28** | Reopen "more instruments" only against a universe whose **breadth** — not whose asset count — clears the bar R-63 measured: mean pairwise daily-return correlation materially below 0.634, or a Grinold equal-correlation breadth materially above 1.47, or a holding period long enough that the 2.86 leader-changes-per-day that cost the novel arm 8.02 log units stops being the binding cost. R-63 established that the cross-sectional signal here is real and merely unaffordable, so the axis is closed for this data rather than on principle | INFO, N≈3 | **HALF-CLOSED → R-65**; breadth clause still blocked on data this repo does not have | Filed by R-63. **Its holding-period clause is answered: R-65 ran it and the value/cost curves cross** — the affordable window is turnover 0.06–0.33/day, holding 1.4–5 days, and at a derived trading rate the same signal costs 0.43 log units instead of 8.02 while its frictionless edge rises. Still NEGATIVE on the interval. The **breadth** clause is untouched and remains blocked. Not actionable from inside a session today: the eight committed instruments are the universe, and R-63 measured them at 1.47 effective bets. Reopening needs either genuinely less-correlated instruments (a different asset class, which this project cannot fetch or simulate) or a lower-frequency bar series that would cut the leader-change rate — note that this project's entire dataset is 5-minute bars, so the second is a data-acquisition task, not a strategy task. Recorded so the idea is not re-tried blind on the same eight assets, which is exactly what section C exists to prevent. |
 | ~~B-01~~ | ~~E-process regime detection with unified Kelly sizing~~ | ERR, N≈3 | **DONE → R-28**, qualified by R-31 | NEGATIVE on the promotion bar. It read as the strongest risk result in the project — 0 of 40 windows deeper than the incumbent — until B-11 compared the two at equal risk and found that number was about exposure, not about the gate. (R-26's null round listed this as untried; R-28 is the round that actually ran it.) |
@@ -19486,6 +19731,16 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-26 · ~699** — R-151: **+0** on top of R-150's ~699 (unchanged). A
+  methodology round on backlog item B-44 (`HybridBroker`'s cross-leverage
+  deadband). Every number it produced comes from BTC **inner-validation**
+  (2021-01-01 → 2022-12-31); the round's three files contain no code path
+  that can slice at or after `OOS_START`, and the only constants imported
+  from the frozen R-145 pre-registration are `INNER_VAL_START` /
+  `INNER_VAL_END`. Its secondary rule found one of R-145's six
+  inner-validation gate cells had been mis-scored by the defect; per that
+  rule the response was to file it (**B-47**) and annotate R-145 in place,
+  explicitly **not** to spend a holdout read on it.
 - **08-26 · ~699** — R-150: **+0** on top of R-149's ~699 (unchanged).
   Neither branch, nor the independent skeptic's own re-runs, approached
   `OOS_START=2023-01-01`: every `assert_no_holdout` guard (both branches'
