@@ -1,6 +1,6 @@
 # The strategies, best to worst
 
-Every registered strategy — all twenty-six — ordered as in the README
+Every registered strategy — all twenty-seven — ordered as in the README
 comparison table (final balance on the best market over 2017–2026). Each
 section says **what it is**, **how it works**, and **what principles it
 rests on**. Balances below are from a **$1,000** start — results scale
@@ -16,7 +16,7 @@ statistically distinguishable
 The five `kelly_regime_*` variant entries (v2/v3/v4 and the two `ev`
 strategies) are variants of the leader and are described together in the
 [appendix](#appendix-the-variants); the numbered sections below cover the
-twenty-one distinct ideas.
+twenty-two distinct ideas.
 
 | # | strategy | spot | futures 5x | verdict |
 |---|---|---|---|---|
@@ -29,23 +29,24 @@ twenty-one distinct ideas.
 | 2 | [buy_and_hold](#2-buy_and_hold) | **$66.0K** | $18 (liquidated) | benchmark; unbeatable on spot, fatal on leverage |
 | 3 | [champions_council](#3-champions_council) | $19.3K | **$36.8K** | lowest drawdown of the high-return strategies |
 | 4 | [hedge_experts](#4-hedge_experts) | **$13.3K** | $258 | profitable on spot, over-trades on leverage |
-| 5 | [replicator_book](#5-replicator_book) | **$2,330** | $10.58 | modest but real edge on spot |
-| 6 | [universal_kelly](#6-universal_kelly) | **$1,276** | $1,227 | tiny gains, remarkable 7% max drawdown |
-| 7 | [harsanyi_crowd](#7-harsanyi_crowd) | $888 | $429 | near break-even, very low exposure |
-| 8 | [overshoot_fade](#8-overshoot_fade) | $662 | $33 | good win rate, bad tails |
-| 9 | [camouflage_flow](#9-camouflage_flow) | $548 | $0.99 | signal exists, fees eat it |
-| 10 | [stealth_trend](#10-stealth_trend) | $465 | $0.38 | as above |
-| 11 | [flow_regime](#11-flow_regime) | $447 | $0.80 | combination did not rescue its members |
-| 12 | [game_council](#12-game_council) | $284 | $2.00 | can only allocate among losers |
-| 13 | [elliott_wave](#13-elliott_wave) | $272 | $81.67 (liquidated) | falsifiable Elliott Wave count, decisively negative |
-| 14 | [minority_oracle](#14-minority_oracle) | $53 | $3.83 | honest negative result |
-| 15 | [game_switch](#15-game_switch) | $5.00 | $1.00 | fee death |
-| 16 | [regret_grid](#16-regret_grid) | $5.00 | $1.00 | fee death |
-| 17 | [tft_trend](#17-tft_trend) | $4.99 | $1.00 | fee death |
-| 18 | [macd_cross](#18-macd_cross) | $4.99 | $1.00 | baseline; fee death |
-| 19 | [macd_rsi](#19-macd_rsi) | $4.96 | $0.94 | baseline; fee death |
-| 20 | [attrition_reversion](#20-attrition_reversion) | $4.94 | $0.99 | fee death |
-| 21 | [rsi_reversion](#21-rsi_reversion) | $4.85 | $0.77 | baseline; fee death |
+| 5 | [elliott_wave_zigzag](#5-elliott_wave_zigzag) | **$5,027** | $12.75 (liquidated) | a second, independent Elliott Wave implementation; not distinguishable from holding |
+| 6 | [replicator_book](#6-replicator_book) | **$2,330** | $10.58 | modest but real edge on spot |
+| 7 | [universal_kelly](#7-universal_kelly) | **$1,276** | $1,227 | tiny gains, remarkable 7% max drawdown |
+| 8 | [harsanyi_crowd](#8-harsanyi_crowd) | $888 | $429 | near break-even, very low exposure |
+| 9 | [overshoot_fade](#9-overshoot_fade) | $662 | $33 | good win rate, bad tails |
+| 10 | [camouflage_flow](#10-camouflage_flow) | $548 | $0.99 | signal exists, fees eat it |
+| 11 | [stealth_trend](#11-stealth_trend) | $465 | $0.38 | as above |
+| 12 | [flow_regime](#12-flow_regime) | $447 | $0.80 | combination did not rescue its members |
+| 13 | [game_council](#13-game_council) | $284 | $2.00 | can only allocate among losers |
+| 14 | [elliott_wave](#14-elliott_wave) | $272 | $81.67 (liquidated) | falsifiable Elliott Wave count, decisively negative |
+| 15 | [minority_oracle](#15-minority_oracle) | $53 | $3.83 | honest negative result |
+| 16 | [game_switch](#16-game_switch) | $5.00 | $1.00 | fee death |
+| 17 | [regret_grid](#17-regret_grid) | $5.00 | $1.00 | fee death |
+| 18 | [tft_trend](#18-tft_trend) | $4.99 | $1.00 | fee death |
+| 19 | [macd_cross](#19-macd_cross) | $4.99 | $1.00 | baseline; fee death |
+| 20 | [macd_rsi](#20-macd_rsi) | $4.96 | $0.94 | baseline; fee death |
+| 21 | [attrition_reversion](#21-attrition_reversion) | $4.94 | $0.99 | fee death |
+| 22 | [rsi_reversion](#22-rsi_reversion) | $4.85 | $0.77 | baseline; fee death |
 
 > **The pattern in one line:** every strategy that makes money decides
 > *how much to hold*; every strategy that tries to predict *what happens
@@ -163,7 +164,43 @@ edge.
 
 ---
 
-## 5. `replicator_book`
+## 5. `elliott_wave_zigzag`
+
+**What it is.** A second, independent implementation of backlog item B-10
+(deterministic Elliott Wave counting), built the same day by a concurrent
+session unaware of `elliott_wave` (#14 below) — a percentage-ZigZag,
+long-only impulse counter: **$5,027** on spot, liquidated on futures.
+
+**How it works.** A causal 5% percentage ZigZag over 5-minute closes
+produces alternating confirmed pivots. From each confirmed low as a
+candidate wave-0, Frost & Prechter's (1978) three hard impulse rules gate
+a 5-wave bull count: wave 2 may not fully retrace wave 1, and must land in
+the canonical [0.382, 0.786] Fibonacci band; wave 4 may not re-enter wave
+1's territory; wave 3 may not be the shortest of waves 1/3/5. Any
+violation invalidates the count and restarts the search; a clean wave-5
+completion also restarts it. Long-only: enter when wave 2 confirms valid
+(anticipating wave 3), exit at wave 5 completion or invalidation. One
+frozen configuration (5% ZigZag, Fibonacci band required) — no parameter
+search, per B-10's own "no discretion" brief. Bear-leg counting and
+diagonal-triangle exceptions are explicitly out of scope.
+
+**Principles.** Same literature rejection as `elliott_wave` (#14) —
+R-18's "not falsifiable as practiced" and Batchelor & Ramyar's refutation
+of the Fibonacci-ratio claim — converted into a run rather than argued
+from a citation.
+
+**Result.** The nominal $5,027 spot balance looks respectable next to
+`elliott_wave`'s $272, but the paired difference from `buy_and_hold` on
+spot contains zero (**≈ -2.54 [-6.51, +1.49]**) — not distinguishable from
+simply holding, in either direction. Two structurally different
+implementations of the same backlog item, dispatched in the same
+collision (`docs/LEDGER.md` R-157's own collision note), land on
+different point estimates but the same qualitative verdict: neither
+clears the bar. See `docs/LEDGER.md` for both rounds' full write-ups.
+
+---
+
+## 6. `replicator_book`
 
 **What it is.** A miniature market ecology that reallocates capital between
 trading styles by their realized fitness: **$2,330** on spot.
@@ -199,7 +236,7 @@ an absolute, leverage-independent fraction of equity).
 
 ---
 
-## 6. `universal_kelly`
+## 7. `universal_kelly`
 
 **What it is.** Cover's universal portfolio on one asset: **$1,276** on
 spot — small gains, but a **7.4% maximum drawdown**, by far the smoothest
@@ -220,7 +257,7 @@ lag: it concedes the early part of every new regime by construction.
 
 ---
 
-## 7. `harsanyi_crowd`
+## 8. `harsanyi_crowd`
 
 **What it is.** A Bayesian read on which regime the market is in, sized
 down when the trend looks crowded: **$888** on spot — a small loss, with
@@ -243,7 +280,7 @@ trade means buying the crowd's permanent impact right before it stops.
 
 ---
 
-## 8. `overshoot_fade`
+## 9. `overshoot_fade`
 
 **What it is.** The one mean-reversion trade microstructure theory
 actually licenses — fading a forced-liquidation cascade: **$662** on spot
@@ -268,7 +305,7 @@ worst-trade column.
 
 ---
 
-## 9. `camouflage_flow`
+## 10. `camouflage_flow`
 
 **What it is.** An attempt to detect and follow informed traders hiding
 inside ordinary volume: **$548** on spot — the signal is real but does not
@@ -292,7 +329,7 @@ implementation gives back more in fees than the drift is worth.
 
 ---
 
-## 10. `stealth_trend`
+## 11. `stealth_trend`
 
 **What it is.** Momentum that only counts bars where informed traders
 could plausibly have been hiding: **$465** on spot.
@@ -313,7 +350,7 @@ cumulative drift on unremarkable bars rather than one dramatic print.
 
 ---
 
-## 11. `flow_regime`
+## 12. `flow_regime`
 
 **What it is.** A combination that lets the two sides of the microstructure
 game arbitrate each other: **$447** on spot. It did not rescue its members.
@@ -332,7 +369,7 @@ them cannot manufacture an edge.
 
 ---
 
-## 12. `game_council`
+## 13. `game_council`
 
 **What it is.** Hedge allocation across the seven pure game-theoretic
 strategies: **$284** on spot.
@@ -350,7 +387,7 @@ algorithm, profitable members) sits at #3.
 
 ---
 
-## 13. `elliott_wave`
+## 14. `elliott_wave`
 
 **What it is.** A deterministic, causal ZigZag/Fibonacci Elliott Wave
 counter, traded directionally: **$272** on spot, liquidated on futures.
@@ -404,7 +441,7 @@ dampener on `kelly_regime_v4` also failed — see `docs/LEDGER.md` R-157.
 
 ---
 
-## 14. `minority_oracle`
+## 15. `minority_oracle`
 
 **What it is.** A grand-canonical minority game trained online on the
 binarized return series: **$53** on spot. A clean negative result.
@@ -428,7 +465,7 @@ over 12 bars — and loosening it produced trading that loses.
 
 ---
 
-## 15. `game_switch`
+## 16. `game_switch`
 
 **What it is.** Fictitious play against the market: **$5.00** on spot.
 
@@ -448,7 +485,7 @@ means are non-stationary and tiny relative to fees.
 
 ---
 
-## 16. `regret_grid`
+## 17. `regret_grid`
 
 **What it is.** Regret matching over a grid of positions: **$5.00** on
 spot.
@@ -469,7 +506,7 @@ noisy that it rebalances constantly, converting a sound guarantee into
 
 ---
 
-## 17. `tft_trend`
+## 18. `tft_trend`
 
 **What it is.** Axelrod's tit-for-tat played against the trend:
 **$4.99** on spot.
@@ -492,7 +529,7 @@ protect.
 
 ---
 
-## 18. `macd_cross`
+## 19. `macd_cross`
 
 **What it is.** The textbook MACD crossover: **$4.99** on spot from 4,301
 trades.
@@ -507,7 +544,7 @@ fees per $1,000 of capital, the fee bill alone is larger than the account.
 
 ---
 
-## 19. `macd_rsi`
+## 20. `macd_rsi`
 
 **What it is.** Trend filter plus pullback timing: **$4.96** on spot.
 
@@ -523,7 +560,7 @@ round trips thousands of times.
 
 ---
 
-## 20. `attrition_reversion`
+## 21. `attrition_reversion`
 
 **What it is.** Market-maker-style reversion with a war-of-attrition exit:
 **$4.94** on spot, despite a 58.6% win rate — one of the highest in the
@@ -548,7 +585,7 @@ short-gamma payoff paying fees on 2,930 trades.
 
 ---
 
-## 21. `rsi_reversion`
+## 22. `rsi_reversion`
 
 **What it is.** The classic oversold-bounce baseline: **$4.85** on spot
 from 4,464 trades.

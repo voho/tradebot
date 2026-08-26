@@ -3,7 +3,8 @@ full,spot,attrition_reversion,buy_and_hold,,-14.418610009826702,-4.5580670159582
 full,spot,buy_and_hold,camouflage_flow,,-0.07015742852988587,9.691962379023465,0.287,False
 full,spot,camouflage_flow,champions_council,,-6.198893277623797,-1.3806479839402594,0.0005,True
 full,spot,champions_council,elliott_wave,,2.0704321108513977,6.729558223087877,0.2955,True
-full,spot,elliott_wave,flow_regime,,-1.57581378240643,0.8390492306286151,0.0705,False
+full,spot,elliott_wave,elliott_wave_zigzag,,-5.3862080699830095,-0.6855903974698297,0.0015,True
+full,spot,elliott_wave_zigzag,flow_regime,,0.4512373028054796,4.811308479330789,0.292,True
 full,spot,flow_regime,game_council,,-0.14093683855700512,1.0677115744741994,0.2755,False
 full,spot,game_council,game_switch,,1.1309401699235653,7.5306594974105305,0.2955,True
 full,spot,game_switch,harsanyi_crowd,,-8.789245439735495,-2.324606786240631,0.0,True
@@ -28,7 +29,8 @@ full,futures,attrition_reversion,buy_and_hold,,-12.450659346193833,1.85822629528
 full,futures,buy_and_hold,camouflage_flow,,-1.0457264902628804,11.070548783213603,0.2805,False
 full,futures,camouflage_flow,champions_council,,-16.45228602007967,-5.474447261662236,0.0,True
 full,futures,champions_council,elliott_wave,,0.17670959272707043,12.602245987899632,0.2895,True
-full,futures,elliott_wave,flow_regime,,-2.8964329480311575,13.10112072822496,0.265,False
+full,futures,elliott_wave,elliott_wave_zigzag,,-6.991696550911854,11.717527828591603,0.1835,False
+full,futures,elliott_wave_zigzag,flow_regime,,-5.303492765384484,12.283006099886379,0.232,False
 full,futures,flow_regime,game_council,,-5.538269707523058,2.7213528297506726,0.1115,False
 full,futures,game_council,game_switch,,-3.160134053859919,5.505207134040199,0.172,False
 full,futures,game_switch,harsanyi_crowd,,-11.584462522522312,-1.6566509135516347,0.0005,True
@@ -61,7 +63,8 @@ holdout,spot,hedge_experts,universal_kelly,0.266598253792496,-0.8212268071339246
 holdout,spot,universal_kelly,replicator_book,0.04743542519609102,-0.3897859053839725,0.49919272945455223,0.6005,False
 holdout,spot,replicator_book,harsanyi_crowd,0.02176556293030593,-0.44815784831941585,0.48638995013340414,0.5235,False
 holdout,spot,harsanyi_crowd,overshoot_fade,0.012287589669441074,-0.08283357202470078,0.11663585290217811,0.596,False
-holdout,spot,overshoot_fade,game_council,0.23035697097953206,0.10906475569377888,0.349395841170854,1.0,True
+holdout,spot,overshoot_fade,elliott_wave_zigzag,0.11053997834449449,-0.5577980327020127,0.828370397397361,0.6185,False
+holdout,spot,elliott_wave_zigzag,game_council,0.11981699263503759,-0.5763096805664245,0.7588883148912942,0.641,False
 holdout,spot,game_council,stealth_trend,0.002675845822896483,-0.37988843922633486,0.37843637838809335,0.493,False
 holdout,spot,stealth_trend,minority_oracle,0.06658336554553096,-0.4379441009955234,0.6662391043277311,0.596,False
 holdout,spot,minority_oracle,flow_regime,0.028513756952873504,-0.3840180649092574,0.3385029581259464,0.5605,False
@@ -92,7 +95,8 @@ holdout,futures,game_council,minority_oracle,0.02389633463303875,-1.719268616258
 holdout,futures,minority_oracle,flow_regime,0.16879044486675143,-2.484783015822861,2.3114887663229613,0.5655,False
 holdout,futures,flow_regime,stealth_trend,0.6812866406981097,-1.4857894728822032,2.7827518476646422,0.744,False
 holdout,futures,stealth_trend,game_switch,0.4466365734823947,-2.491252271930961,3.8055493412739683,0.5955,False
-holdout,futures,game_switch,elliott_wave,1.946792750495291,-1.3626420593776523,5.338559017082194,0.871,False
+holdout,futures,game_switch,elliott_wave_zigzag,1.4893358338734028,-5.314702050278447,10.804004288156658,0.6105,False
+holdout,futures,elliott_wave_zigzag,elliott_wave,0.45745691662188825,-9.467128186026718,7.576334323755573,0.573,False
 holdout,futures,elliott_wave,macd_cross,1.293797125386197,-6.690501168427967,13.036941665201612,0.534,False
 holdout,futures,macd_cross,regret_grid,0.005627082832213581,-4.363112148946741,4.079646659028063,0.526,False
 holdout,futures,regret_grid,macd_rsi,0.0650937260962321,-3.44117861555799,4.128727846240373,0.522,False
