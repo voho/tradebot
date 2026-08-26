@@ -16849,6 +16849,80 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-checked 08-26 (twelfth same-day session), no round dispatched (not
+an R-numbered entry — zero configurations evaluated).** Tasked
+independently with the standard brief (take the best strategy, propose
+an improvement vector, do the research, dispatch a conservative/novel
+branch pair, measure, promote the winner), this session ran ROUTINE.md
+Step 0 first — `r155_shared.py` is still the newest `_shared.py` file in
+`experiments/` and already has its matching section B entry at R-155;
+`origin/main` and the working branch were reconciled to the latest
+automated commit, `4132cfe` (R-155's own merge), before writing this
+entry — then the backlog-table grep (unchanged live set: B-06, B-09,
+B-10, B-17, B-28, the same five rows R-155's session found).
+
+Rather than re-run any of the eleven categories the eleven prior 08-26
+sessions already closed, this session dispatched one research-only
+sub-agent for a fresh, wide 2024–2026 literature sweep across all four
+constraints, handed the full 95-row section-C table and today's own
+closed-topic list, and instructed to check every hit against both before
+recommending anything. It surfaced and closed five:
+
+- **"Conformal Kelly"** (Ryan 2026, arXiv:2608.01494) — a conformal
+  quantile of residuals as fractional Kelly's dispersion denominator.
+  This is the exact construction R-87's novel branch already ran and
+  killed (ACI-calibrated conformal quantile replacing the trailing-EWM-vol
+  denominator); the paper's own out-of-sample collapse (Sharpe 1.34→0.45)
+  corroborates R-87's verdict rather than contradicting it. Duplicate.
+- **Bayesian Kelly / Bayesian Grossman–Zhou** (Sukhov, SSRN, Feb 2026) —
+  shrinks the Kelly fraction toward zero by posterior edge-uncertainty,
+  the G-Z variant combined with a drawdown cap. Same family as R-38
+  (risk-constrained/CRRA Kelly), R-40 (Bayesian-shrink of a bagged vote)
+  and R-93 (online-adaptive Grossman–Zhou, built for the identical
+  "sidestep a fixed α's fragility" reason and killed by its own
+  pre-registered stress test) — a posterior-based adaptation rule is not
+  a different enough mechanism from a multiplicative-weights one to
+  expect a different outcome from the same underlying drawdown-scale
+  fragility. Judged a likely duplicate; not worth the false-positive risk
+  of a round to confirm it.
+- **Path-signature regime detection** (rough-path signature features on
+  spot/basis/funding, 2026) — fails on two axes at once: it is a
+  regime-*timing* detector, the axis R-155 closed today across eleven
+  structurally distinct bases, and its inputs (perp basis, funding rate)
+  are INFO sources this ledger already ruled out (R-41 basis, R-39/R-16
+  funding). Duplicate.
+- **Cost-aware execution / no-trade-region bandit learning** (2026
+  market-making and execution literature) — structurally identical to
+  the no-trade-band family already closed here (Constantinides 1986;
+  Davis & Norman 1990; Gârleanu–Pedersen 2013; the asymmetric-band and
+  boundary-trading rows). Duplicate.
+- **"Implementation Risk in Portfolio Backtesting"** (arXiv:2603.20319)
+  — a real, not-yet-filed finding, but an audit of backtest-*engine*
+  correctness (undocumented transaction-cost-handling divergence between
+  simulators), not a trading mechanism; it produces nothing to run
+  through Step-0/A/B against `kelly_regime_v4`, so it does not fit the
+  routine's candidate template. Noted here so a future session does not
+  spend a round rediscovering that it isn't one, not filed as a backlog
+  row since this project's own harness is the thing it would need to
+  audit, not the strategy.
+
+No code changed, no strategy touched, no configuration evaluated, no
+implementation sub-agent dispatched — the research-only screen failed
+before any conservative/novel branch pair would have been justified, the
+twelfth same-day session in a row to reach that conclusion (R-150 through
+R-155's six dispatched rounds, plus six research-only passes including
+this one). **B-06 remains the only ranked, unblocked backlog item and
+this project's standing recommendation**, unchanged by this pass. Worth
+naming plainly for whoever reads this next: at twelve independently-
+tasked sessions in one calendar day converging on the identical
+conclusion by six different research sweeps, the marginal value of
+another same-day literature pass over this exact ground is now
+approximately zero — the honest read is that this project's searchable
+literature space, not merely today's obvious candidates, is exhausted
+until either new data becomes available (options, order-book, an asset
+class this repo cannot fetch) or B-06's forward record accumulates enough
+rows to say something on its own.
+
 **Re-checked 08-26, R-155 dispatched (one round, ten configurations
 evaluated).** An eleventh same-day session ran ROUTINE.md Step 0 (no
 undispatched frozen pre-registration; `origin/main` reconciled to
