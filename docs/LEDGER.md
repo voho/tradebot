@@ -315,10 +315,15 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
-IN PROGRESS: R-156 deterministic Elliott Wave counter (B-10) — conservative
-branch (literal ZigZag+Fibonacci mechanical counter, B-10 as filed) and
-novel branch (wave-count confidence as a SIZE-axis regime multiplier on
-`kelly_regime_v4`) dispatched, execution in progress.
+IN PROGRESS: R-156 deterministic Elliott Wave counter (B-10) — the prior
+stub named this direction but froze no shared file and dispatched no
+branch (`experiments/r156_shared.py` did not exist); `experiments/r156_shared.py`
+is now frozen (conservative = literal ZigZag+Fibonacci mechanical counter,
+one fixed config, B-10 as filed; novel = wave-count invalidation run-length
+as a Step-A-gated SIZE-axis regime multiplier on `kelly_regime_v4`, 3x2
+Fibonacci-ablation grid, same six-episode gate R-82/85/96/98/99/139/141/155
+used) before any real-data number was read from it. Conservative and novel
+branches dispatched, execution in progress.
 
 ### R-155 · 08-26 · NEGATIVE (both branches, stopped at Step A) — persistent homology (H0, Vietoris-Rips via MST) of a causal Takens-embedded return series, an eleventh structurally distinct regime-timing mechanism, fails the identical six-episode detection-lag gate at 2/6 (conservative, fixed config) and 2/6 (novel, best of a 9-cell embedding-window x embedding-dimension sweep)
 
