@@ -315,12 +315,135 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
-**IN PROGRESS: R-147** — off-backlog (ranked list holds only B-06 per R-146's
-own re-ranking). ERR-axis: reweight `kelly_regime_v4`'s 3-anchor vote by a
-formal estimate of each anchor's/ladder's own reliability (James-Stein
-shrinkage, conservative; Bayesian Model Averaging over a 5-member ladder
-ensemble, novel) instead of the shipped fixed 1/3-each average. Frozen shared
-pre-registration: `experiments/r147_shared.py`. Dispatching both branches now.
+### R-147 · 08-26 · NEGATIVE (both branches) — the vote's own COMBINATION WEIGHTS (not span, statistic, gamma or band): James-Stein shrinkage across the 3 shipped anchors, and a sequential Bayesian posterior across a 5-member alternative-ladder ensemble, the first ERR-axis attempt on how `kelly_regime_v4`'s vote combines its components rather than on how confident it is in the combined result
+
+**Direction.** Off-backlog (the ranked list holds only **B-06**, unchanged
+since R-137's own re-ranking, reconfirmed by R-146). `kelly_regime_v4`'s
+directional vote combines its 3 anchors (20/40/80-day) by a fixed, unweighted
+1/3-each average (`kelly_regime_v3.py:64`) with no notion of which anchor is
+currently more trustworthy — no error control anywhere in the combination
+step. Conservative branch: classical known-variance James-Stein (James &
+Stein 1961; Efron & Morris 1975) shrinkage of each anchor's own causal
+rolling spell-level hit-rate toward the cross-anchor grand mean, normalized
+into combination weights. Novel branch: a genuinely sequential Beta-Bernoulli
+posterior (Bayesian-Model-Averaging in spirit; Hoeting, Madigan, Raftery &
+Volinsky 1999) over a 5-member alternative-ladder ensemble (bases 10/15/20/25/30,
+reused verbatim from R-105's own novel branch), each ladder's own equal-weight
+3-anchor vote blended by its posterior-mean reliability. **Attacks ERR** — the
+combination step, not the vote's per-anchor point estimate (untouched, v4's own
+plain rolling-mean crossing in both branches) or `scale` (untouched in both).
+**Not a duplicate of:** R-40 (unweighted ladder bagging — no reliability
+estimate at all); R-105 (the same 3-anchor jackknife / 5-ladder ensemble
+objects, but used as a multiplicative *discount* on the shipped, unmodified
+vote — this round changes the combination weights that *produce* the vote
+itself, and the shipped equal-weight vote is never traded); R-114 (empirical-
+Bayes shrinkage of a covariate-stratified *hazard table*, not the anchor
+combination weights); R-146 (changes each anchor's own point estimate —
+median/jump-exclusion — holding the equal-weight combination fixed; this
+round is the complementary half, holding each anchor's point estimate fixed
+and changing only the combination weights); `kelly_regime_v2` (a post-hoc
+power transform of the vote's scalar output, `vote_gamma=1.0` in both
+branches here); `hedge_experts`' Hedge combinator (a regret-minimizing
+gradient update, closed; both mechanisms here are closed-form/conjugate-
+Bayesian, no gradient step). Ledger-wide grep before dispatch found zero
+prior hits for "James-Stein", "empirical Bayes" (outside R-114's unrelated
+use), or "Bayesian model averaging". Literature: James & Stein (1961, Proc.
+4th Berkeley Symp.); Efron & Morris (1975, *JASA* 70(350)) — the `(k-3)`
+empirical-Bayes form is degenerate at exactly k=3 anchors, resolved by using
+the classical known-variance `(k-2)` form instead, disclosed in
+`r147_shared.py`'s own docstring before any branch ran; Hoeting et al. (1999,
+*Statistical Science* 14(4)); Benhamou et al. (2025, arXiv:2507.15876,
+Bayesian graphical trend-factor reweighting on real CTA data — the closest
+recent precedent, read with R-05's diversification caveat attached); Valeyre
+(2025, arXiv:2504.10914, already this project's B-42/R-92 citation) — named
+in advance as the standing counter-prediction (combining indicators mainly
+risks cherry-picking), which is why both branches are built to provably
+degenerate to equal-weight when reliability estimates carry no genuine
+signal (the Step-0 kill switches below).
+
+**What was done.** Shared module `experiments/r147_shared.py` (operator-
+authored, self-tested, not edited by either branch): generic causal
+`spell_hit_series`/`rolling_reliability`/`beta_bernoulli_posterior_mean`/
+`normalize_weights`/`bind_frac`/`build_target_from_frac` primitives, the
+5-ladder family reused from R-105, and the pre-registered decision-rule
+constants (`JS_M_GRID=(8,4,16,32)`, `BETA_PRIOR_GRID=((2,2),(1,1),(5,5))`,
+`R2_DEGENERACY_THRESH=0.98`, `BIND_FRAC_THRESH=0.01`, `FEE_TIER=0.0040`,
+`SHARPE_NOISE_FLOOR=0.2`), all validated by a synthetic self-test and by the
+operator independently re-deriving both branches' Step-0 numbers from the
+frozen primitives (see Result). **`experiments/r147_conservative_james_stein.py`**
+— known-variance James-Stein across the 3 shipped anchors, `m=8` primary.
+**`experiments/r147_novel_bma_ladder.py`** — Beta-Bernoulli posterior across
+the 5-ladder ensemble, `Beta(2,2)` primary prior, plus a 40-window Monte
+Carlo robustness check (seeded, drawn from inner-train+inner-val, causal
+`frac`/`target` computed once over the whole span then sliced per window,
+run through the real fee-charging engine). **Configs evaluated: 72 total**
+(20 conservative: 4 `m`-grid values × up to 6 `compare()` cells, plus 2
+fee-tier re-runs; 52 novel: 6 primary `compare()` cells + 40 Monte Carlo
+windows + 2 fee-tier cells + 4 fresh prior-grid cells). Neither branch edited
+`r147_shared.py`; each owns disjoint files. `pytest -q`: 516 passed
+(operator-run from a clean shell; unchanged, since no registered strategy
+was touched — this round's two experiment files are not auto-discovered).
+
+**Result.** Both branches' Step-0 kill switches cleared non-degeneracy
+(conservative: `bind_frac=0.6746`, `R²=0.9676`; novel: `bind_frac=0.9589`,
+`R²=0.9614` — both independently reproduced by the operator to 4 decimal
+places from the frozen primitives, a from-scratch re-derivation rather than
+a re-run of either branch's own script). **Conservative**: BTC inner-train
+dSharpe ≈0 (spot −0.001, futures +0.041); BTC inner-val spot +0.015 but
+futures **−0.303** (bootstrap CI [−1.165,−0.110], excludes zero — the
+mechanism's one significant cell is a loss); ETH replication disagrees in
+sign with BTC on spot (−0.073 vs +0.015) and only nominally agrees on
+futures (both negative, neither an edge); the `JS_M_GRID` sweep flips sign on
+futures (−0.303 at m=8 to +0.014 at m=32) — an isolated cell, not a plateau.
+Exposure/vol ratios stayed risk-matched (0.96–1.03) throughout. **Novel**:
+BTC inner-train shows a significant *loss* on futures (dSharpe −0.264, CI
+[−1.165,−0.110] excludes zero) against a small, risk-matched, non-significant
+spot gain (+0.076, via drawdown improvement); both inner-val cells are noise
+(|dSharpe|<0.03); the Monte Carlo falsification test shows a same-sign
+majority on Sharpe (25/40 windows, 62.5%) but an exact coin-flip on
+log-growth (20/40); the 0.40% fee tier flips sign on the futures inner-val
+cell (−0.028 → +0.135); the `BETA_PRIOR_GRID` sweep is directionally
+consistent but every cell sits inside the ±0.2 noise floor. Neither branch's
+mechanism is degenerate (both bind non-trivially and are not near-exact
+rescales of v4's own vote — the two properties any "it's just v4 relabeled"
+critique would require), but neither produces a real, risk-matched,
+plateau-stable, fee-robust edge on the standard promotion bar. Both
+branches' causal-truncation probes passed; the operator's independent
+re-derivation of the Step-0 statistics matched both branches' own reported
+numbers exactly.
+
+**Verdict.** **NEGATIVE, both branches.** One-line lesson: this project's
+first attempt at the vote's own COMBINATION step (as opposed to its span,
+per-anchor statistic, response curve, or the volatility-target scale it
+multiplies) produces two non-degenerate, genuinely different reweighting
+schemes, and both land in the same place as 6 of the 7 prior ERR-axis
+constructions — real movement away from equal-weight that is uncorrelated
+with (conservative, on futures) or too weak to distinguish from noise
+(novel) which anchor/ladder is actually more reliable going forward. The
+conservative branch's failure is sharper: its one statistically significant
+cell is a loss, and its own parameter-grid sweep is not a plateau (an
+isolated-direction result, R-20's kind of neighbourhood check doing its job).
+The novel branch's failure is softer but still decisive under the
+pre-registered rule: a real Monte Carlo majority on Sharpe does not survive
+being paired with a fee-tier sign flip and a significant futures loss on the
+same data it was built from. **This closes the vote's own combination-weight
+axis** as a promising ERR-axis target on this specific 3-anchor/5-ladder
+family, joining the anchor point-estimate axis (R-146), the vote/scale
+factor-isolation axis (R-62, 4×), and the discount/hazard-table ERR-axis
+constructions (R-87 ×2, R-104, R-105 ×2, R-114 ×2) as closed. **Holdout
+counter: +0**, running program-level total stays **~699** (R-146's figure,
+unchanged) — neither branch, nor the operator's independent re-derivation,
+ever read a bar at or after `OOS_START=2023-01-01`; both scripts print their
+own max-timestamp line (2022-12-31 23:55:00 UTC) and both `assert_no_holdout`
+guards ran clean throughout — see the bullet added below in [Holdout
+consultations to date](#holdout-consultations-to-date). Neither pre-registered
+decision rule moved after seeing any number. **Next step:** not filed as a
+new backlog item — the vote's combination-weight axis is now closed alongside
+its point-estimate (R-146), span/ladder (R-06/R-07/R-40/R-45/R-89/R-92), and
+factor-isolation (R-62) axes, leaving the 3-anchor/5-ladder vote architecture
+on this specific ladder family essentially exhausted as an ERR/SIZE-axis
+target for a fresh construction. **B-06 remains the only ranked, unblocked
+backlog item.**
 
 ### R-146 · 08-25 · NEGATIVE (both branches) — the vote's anchor STATISTIC (not span, not gamma, not the band width): a robust/order-statistic replacement for `kelly_regime_v4`'s plain rolling-mean anchors, a SIZE-axis construction never attempted before
 
@@ -15543,6 +15666,28 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-26 after R-147.** Off-backlog (the ranked list has held only
+B-06 since R-137's own re-ranking). `kelly_regime_v4`'s vote's own
+COMBINATION WEIGHTS — as opposed to its span, per-anchor statistic, response
+curve, or the scale it multiplies, all previously tried — are tested for the
+first time and are **NEGATIVE on both branches**: known-variance James-Stein
+shrinkage of the 3 shipped anchors' own causal spell-level reliability
+(conservative) is genuinely non-degenerate (bind_frac=0.67, R²=0.97) but its
+one statistically significant cell is a **loss** (BTC futures inner-val,
+CI excludes zero on the negative side) and its own parameter-grid sweep
+flips sign, not a plateau; a sequential Beta-Bernoulli posterior over a
+5-member alternative-ladder ensemble (novel) is also genuinely non-degenerate
+(bind_frac=0.96, R²=0.96) and passes a Monte Carlo majority check on Sharpe,
+but that survives neither a significant futures inner-train loss on the same
+data nor a fee-tier sign flip. Both branches' Step-0 statistics were
+independently re-derived by the operator from the frozen shared primitives
+(not a re-run of either script) and matched to 4 decimal places. **This
+closes the vote's own combination-weight axis** as a promising ERR-axis
+target on this specific 3-anchor/5-ladder family, alongside R-146's
+point-estimate axis, R-62's factor-isolation axis, and R-87/R-104/R-105/
+R-114's discount/hazard-table ERR-axis constructions. **B-06 remains the
+only ranked, unblocked backlog item, unchanged by this round.**
+
 **Re-ranked 08-25 after R-146.** Off-backlog (the ranked list has held only
 B-06 since R-137's own re-ranking). `kelly_regime_v4`'s vote's own anchor
 STATISTIC — as opposed to its span, gamma, or band width, all previously
@@ -18800,6 +18945,15 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **08-26 · ~699** — R-147: **+0** on top of R-146's ~699 (unchanged). Neither
+  branch approached `OOS_START=2023-01-01`: both max-timestamp lines read
+  2022-12-31 23:55:00 UTC, `assert_no_holdout` guards ran clean throughout,
+  and both NEGATIVE verdicts came from inner-train/inner-validation/ETH/fee/
+  Monte-Carlo cells only. The operator independently re-derived both
+  branches' Step-0 kill-switch statistics (`bind_frac`, R²) from scratch
+  using the frozen shared primitives rather than re-running either branch's
+  own script, and matched both to 4 decimal places — the same pre-holdout
+  data, a different code path.
 - **08-25 · ~699** — R-146: **+0** on top of R-145's ~699 (unchanged). Neither
   branch approached `OOS_START=2023-01-01`: both max-timestamp lines read
   2022-12-31 23:55:00 UTC, `assert_no_holdout` guards ran clean throughout,
