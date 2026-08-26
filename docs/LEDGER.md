@@ -16227,6 +16227,90 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-checked 08-26 (third pass), no round dispatched (not an R-numbered
+entry — zero configurations evaluated).** A fourth same-day session, tasked
+independently with the same brief as the two preceding 08-26 verification
+passes (propose an improvement vector for the incumbent `kelly_regime_v4`,
+dispatch a conservative/novel branch pair, measure, promote the winner),
+ran ROUTINE.md Step 0 first (no undispatched frozen pre-registration; the
+branch was already fast-forwarded to R-151 plus the latest automated
+paper-trading commit) and Step 0's backlog-table grep second (only B-06,
+B-09, B-10, B-17, B-28, B-45, B-46, B-47 are live; B-45/46/47 are HybridBroker
+code-precision items, not a strategy-improvement direction — R-151's own
+entry already says no promotion is waiting behind them). Rather than force a
+conservative/novel *implementation* pair onto a direction not yet screened —
+the specific failure this file's own parallel-round rules warn against
+("the single most likely way to manufacture a fake winner here is to run
+many searches and report the best one as though it were the only one," and
+its mirror, "running a known-losing search and dressing it up as new") —
+this session first dispatched two independent research-only sub-agents to
+find a direction that survives ROUTINE.md Step 1's four-question filter
+before any code was written, one screening established (non-2026-preprint)
+literature, one screening recent/cross-disciplinary work. Full detail in
+each sub-agent's own report; summarized here because neither produced an
+implementable candidate:
+
+- **Established-literature sweep.** Market-microstructure mechanisms (Roll
+  1984, Amihud 2002, Kyle 1985 λ, VPIN, Almgren–Chriss 2000 optimal
+  execution) either need order-book/impact data this project's bar-close
+  harness cannot express (fails Step 1 Q3), or are the specific trap
+  `camouflage_flow`/`stealth_trend`/`flow_regime` already paid for
+  (L-14/15/16: reconstructing order flow from OHLCV is a price transform,
+  not new information) and Gârleanu–Pedersen partial-adjustment execution
+  smoothing already closed as a category error against this project's
+  proportional (not quadratic) fee structure. Behavioral-finance mechanisms
+  (prospect-theory/loss-averse position sizing, disposition effect,
+  round-number anchoring) either need account/order-level data not present
+  in OHLCV, or are SIZE-axis reformulations of the `scale` factor that
+  R-62/R-87 (four independent replications) already showed carries none of
+  v4's edge — the vote does. White's (2000) Reality Check / Hansen's (2005)
+  SPA test for multiple-testing correction are genuinely untried in this
+  exact form but are an evaluation tool, not a strategy mechanism, and
+  target the same problem R-119 already closed for N≈3 ("the only two
+  remaining levers this ledger has ever named for N≈3 are a genuinely
+  different window… or forward evidence").
+- **Recent/cross-disciplinary sweep, with live data probes rather than
+  literature claims alone.** Bitcoin ETF creation/redemption flow data
+  fails Step 1 Q3 outright — flow data has only existed as a market force
+  since January 2024, entirely inside/after `OOS_START`, zero inner-train
+  or inner-validation coverage, a nonexistence problem rather than a
+  paywall. SOPR and NUPL fail Q2 (NUPL is an exact monotonic transform of
+  MVRV, and SOPR — computed only over coins that moved that day, with no
+  dormant-supply denominator diluting the coupling at all — is *more*
+  price-coupled than the mechanism R-74 already killed for exactly that
+  reason, not merely adjacent to it) **and** Q3, confirmed by a live query
+  against `bitcoin-data.com`'s free SOPR/NUPL endpoints: both return a hard
+  rolling window of exactly 1,461 rows starting 2022-08-26 regardless of
+  the requested date range, covering 0% of inner-train and ~4 months of
+  inner-validation — the same shape as R-143's Deribit-snapshot and the
+  Kalshi paid-vendor finding already in this section. **Two doors are
+  newly and specifically named here, checked live rather than assumed
+  closed by keyword association** (an R-126 ledger grep for "exchange
+  flow" had matched this file's own table-of-contents mention of the term
+  without a round ever building or measuring it): **exchange netflow**
+  (wallet-clustering-derived BTC flow onto/off exchanges — genuinely
+  distinct from MVRV/realized-cap, on-chain activity/B-07/R-44, and
+  stablecoin supply/R-54/R-55/R-58, so it clears Q2) and **DeFi lending
+  rate / stablecoin-yield-curve** (a *price* of USD-leverage demand,
+  distinct from R-54/R-58's aggregate supply-quantity signal, so it too
+  clears Q2) — both fail **Q3** on live checks: no free full-history
+  exchange-netflow endpoint exists on the one aggregator (bitcoin-data.com)
+  that does serve SOPR/NUPL/MVRV for free (every netflow/inflow/outflow/
+  reserve path 404s), and DeFi lending data fails on two independent
+  grounds — non-existence (Compound launched 2018-09, Aave 2020-01, so even
+  a perfect feed misses this project's 2018 stress episodes) and access
+  (DefiLlama's yields-history API returned `HTTP 402`, Aavescan gates
+  multi-year export behind a paid tier). Both are now named, specifically
+  diagnosed, and closed for a citable reason rather than silently retried
+  by a future session that greps the word "flow" and assumes it is settled.
+
+No code changed, no strategy touched, no configuration evaluated, no sub-agent
+produced an implementable candidate. **B-06 remains the only ranked,
+unblocked backlog item and this project's standing recommendation**,
+unchanged by this pass — the fourth same-day session to reach it
+independently, three of them (this one included) via a fresh literature
+sweep rather than by trusting an earlier pass's coverage claim.
+
 **Re-ranked 08-26 after R-151.** **The three preceding 08-26 sessions each
 concluded "B-06 is the only ranked, unblocked backlog item" and dispatched
 nothing; the table said otherwise, and this round took what was in it.**
