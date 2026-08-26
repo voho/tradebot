@@ -315,6 +315,14 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-152 · 08-26 · IN PROGRESS — CDaR (Chekhlov/Uryasev/Zabarankin 2005) sizing for `kelly_regime_v4`'s SCALE/CAP axis, two branches
+
+Frozen pre-registration: `experiments/r152_shared.py`. Conservative branch
+(dynamic CDaR-derived leverage cap) and novel branch (CDaR-budgeted
+exposure, replacing the vol-target ratio) dispatched to independent
+sub-agents against the frozen decision rule. Stub commit per ROUTINE.md
+step 0 to announce in-flight work before execution; full entry to follow.
+
 ### R-151 · 08-26 · PARTIAL (methodology) — B-44 closed: the cross-leverage trading-precision defect in `HybridBroker` is real, its own proposed fix removes it where the split is exact, and it flipped one of R-145's six gate cells
 
 **Direction.** Backlog item **B-44** (`OPEN, LOW` since R-145, 08-25), taken
