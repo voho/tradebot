@@ -316,6 +316,8 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+IN PROGRESS: R-160 · 08-27 · online false-discovery-rate control (LORD/SAFFRON) gating kelly_regime_v4's anchor-vote flips — pre-registration frozen in `experiments/r160_shared.py`, conservative (LORD) and novel (SAFFRON) branches dispatched, results pending.
+
 ### R-159 · 08-27 · METHOD — the B-06 forward-paper-trading cron silently stopped firing for ~7.5h; resumed by manual dispatch
 
 **Direction.** Not a market mechanism: an instrument fix, same category as R-151/B-44/R-158. This
