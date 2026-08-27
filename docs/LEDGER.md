@@ -316,6 +316,58 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-159 · 08-27 · METHOD — the B-06 forward-paper-trading cron silently stopped firing for ~7.5h; resumed by manual dispatch
+
+**Direction.** Not a market mechanism: an instrument fix, same category as R-151/B-44/R-158. This
+session's scheduled brief was the generic "propose an improvement, dispatch conservative/novel
+branches" prompt already seen and correctly declined by 08-27 passes 1-3 (Step 0b, 3+ consecutive
+null passes → no new literature sweep). Rather than run a fourth sweep over exhausted ground, this
+session's cheap Step-0b diligence item (confirm B-06's recorder is still writing, per the routine's
+own instruction) surfaced a genuine defect: `.github/workflows/paper_trading.yml`'s
+`*/15 * * * *` schedule trigger had not fired since run #199 (2026-08-27T03:27:27Z) despite the
+workflow showing `state: active` and the repo taking three further pushes (each of which triggered
+`ci.yml` normally) in the interim — a ~7.5h / ~30-candle gap, an order of magnitude beyond the
+50-85min degraded-cadence documented in that file's own comment. This falls squarely within Step
+0b's "Fix the instrument" carve-out: B-06 is the sole standing recommendation of this entire
+158-round program, and its only value is in continuing to record. Not a duplicate of R-158 (that
+round fixed the routine's own null-pass bookkeeping; this one fixes a live recorder outage) or of
+any prior B-06 health check (passes 1-3, R-78, R-151's audit) — none of those checked the
+scheduler's own firing cadence against wall-clock time, only that the CSV had *a* recent row.
+
+**What was done.** No strategy code, no backtest, no holdout. Confirmed via the GitHub Actions API:
+`paper_trading.yml`'s last scheduled run was #199 (03:27 UTC); no runs queued or in_progress at
+inspection time (10:52 UTC); `ci.yml` (push-triggered) ran normally across all three intervening
+passes' commits, ruling out an account-wide Actions outage. Manually re-dispatched
+`paper_trading.yml` via `workflow_dispatch` at 10:54:47 UTC — it completed successfully as run #200
+and pushed a fresh row (`2026-08-27T10:50:00+00:00`) to all seven `reports/paper_trading/*.csv`
+recorders, confirming the recorder script, its state files and the Bitstamp candle fetch are all
+still healthy; only the schedule trigger had stopped firing. Per `scripts/paper_trade.py`'s
+documented one-candle-per-invocation behavior (see R-78's correction in this file), the ~30
+candles between 03:20 and 10:50 are permanently dropped from the record, not backfilled — a real
+but bounded loss of resolution, not evidence the recorder is unhealthy going forward.
+
+**Result.** No promotion-relevant numbers. The workflow's `state` field never left `active`; GitHub
+does not surface a reason for a schedule trigger silently not firing (their own docs note schedule
+events are "best-effort" and can be delayed under platform load, but do not document multi-hour
+silent gaps as expected behavior). No config in this repo changed the trigger, and no
+branch-protection or workflow-file edit coincides with the gap window. The most likely explanation
+is a transient GitHub Actions platform issue outside this repo's control, not a defect in the
+workflow file itself — so no code change is proposed here beyond the manual resume already applied.
+
+**Verdict.** **METHOD.** One-line lesson: Step 0b's "confirm B-06's recorder is still writing" line
+is doing real, not perfunctory, work — passes 1-3 all "confirmed" it healthy by checking that the
+CSV had a recent row, which cannot distinguish "recording normally" from "long-stalled, about to
+silently jump to whatever candle is current on the next tick" (the documented one-candle-catch-up
+behavior masks a multi-hour outage as an ordinary-looking one-row gap). A future session's cheap
+diligence item should compare the recorder's latest row timestamp against wall-clock time (expect
+~15-50min gaps per the workflow's own comment; treat anything past ~2h as a stall worth
+re-dispatching) rather than only checking that a row exists at all. Holdout counter: **+0** (no
+holdout read; running total unchanged). Decision rule: not applicable, no promotion bar in play,
+so nothing to say moved. Next step: none required now — the recorder is confirmed healthy and
+writing again. If a future pass finds another multi-hour gap, that is a second occurrence and
+worth a workflow-level fix (e.g. a stall-detecting alert) rather than another silent manual
+dispatch.
+
 ### R-158 · 08-27 · METHOD — the routine had no stopping rule, and 20 null passes cost 1,285 lines and one deleted record
 
 **Direction.** Not a market mechanism: this round applies R-78's own
