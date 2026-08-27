@@ -316,6 +316,136 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-166 · 08-27 · NEGATIVE (killed at Step 0, no branch built) — volatility-response sign inversion in `kelly_regime_v4`'s SCALE factor: R-10's own inverse-leverage-effect finding does not survive causal, inner-train-only re-measurement
+
+**Direction.** This session's scheduled brief was the generic "take the
+best strategy, propose a research direction, do the research, dispatch
+conservative/novel sub-agents, measure, promote the winner." Step 0/0b
+run first per ROUTINE.md: clean, `HEAD == origin/main`, unshallowed,
+`r165_shared.py` newest frozen pre-registration with a matching section B
+entry (no in-flight round), backlog empty of live NEXT/OPEN rows (B-06
+ongoing/de-ranked, B-09 LOW, B-17 PARTIAL, B-28 blocked). One consecutive
+null pass since R-165's own dispatch (the 08-27 21:06 row) — under the
+3-pass "no new literature sweep" threshold, so a fresh sweep was
+permitted, but deliberately steered away from that pass's own territory
+(CAP parameter, fractional-Kelly/MZB shrinkage, general 2025-26
+microstructure sweep, and the statistical-physics/TDA/info-theory/
+econometrics/RL/behavioral/actuarial field survey — not revisited here).
+
+A research-only sub-agent (38 tool calls) read section C in full (~112
+rows) and the last ~20 rounds of section B, then found one candidate that
+had not, in fact, been tried in 165 rounds: **every prior SIZE-axis
+attempt that touches `kelly_regime_v4`'s volatility response has kept
+`∂scale/∂σ ≤ 0`** (β=+1 in the shipped `target_vol/vol`, or β=0 in R-62's
+constant-notional isolate) — retuning the response's *magnitude* or
+supplying a different exogenous state variable, never its *sign*. R-102's
+own Direction paragraph names this gap explicitly. The proposed direction:
+test β<0 (pro-cyclical leverage into high-volatility states), motivated by
+this project's own R-10 "KEY FINDING" (08-15) that BTC's highest
+lagged-volatility quintile carries the **highest**, not lowest, forward
+5-day Sharpe (+1.08 all bars, +2.06 gate-bullish) — the inverse of the
+equity-market leverage effect Moreira & Muir (2017) build on, and the
+reason v3/v4 already switched from continuous to conditional
+(extremes-only) volatility targeting (Bongaerts, Kang & van Dijk 2020,
+*FAJ* 76(4)). Baur & Dimpfl (2018, *Economics Letters* 173) is v3/v4's own
+citation for the asymmetry; Huang, Ni & Xu (2022, *Pacific-Basin Finance
+Journal* 73) independently confirms it cross-coin, which is what licenses
+ETH as this direction's falsification test rather than a BTC-only claim.
+Cederburg, O'Doherty, Wang & Yan (2020, *JFE* 138(1)) — volatility
+management does not systematically outperform out-of-sample across 103
+equity strategies, and the failure traces to structural instability in
+the spanning regressions — is the warrant for treating the response
+*sign* as something to measure rather than import.
+
+**Attacks** N≈3 primarily (moves the sizing decision off the ~3-regime-event
+object onto a ~10^5-observation vol-quintile statistic) and ERR
+secondarily (replaces an unmeasured, imported equity-market sign
+assumption with a causally estimated one).
+
+**Not a duplicate of** (by section C / ledger ID, all of which keep
+`∂scale/∂σ ≤ 0`): R-08 (better vol *forecasting*, same sign), R-09 (range
+estimators), R-37c/R-37n (magnitude grid; per-vote-state Kelly), R-38c/R-38n
+(risk-constrained Kelly/CRRA), R-45, R-46 (CPPI/Hurst-CPPI), R-59c/R-59n
+(per-asset/self-normalizing relative vol scale), R-60, R-62 (isolates
+β=+1 and β=0, never β<0), R-87 (conformal dispersion estimator), R-93
+(Grossman–Zhou drawdown cap), R-97 (Wasserstein-DRO), R-99 (bipower jump
+split), R-101 (jackknife CI), R-102/R-103 (semivariance + RSJ discount,
+one-sided ≤1.0 — and R-102 is the entry that names sign structure as
+untried), R-136 (HAR estimator swap), R-146 (median/jump-masked anchors),
+R-152/R-153 (CDaR), R-161 (CRC cap), R-164c/R-164n (Barroso–Santa-Clara /
+Daniel–Moskowitz de-levering overlays).
+
+**What was done.** The sub-agent designed two implementation branches —
+conservative `VolResponseExponentV4` (β fixed a priori at −1, the exact
+mirror of v4's β=+1, composed with a causal expanding-window level-
+neutralizer so the test isolates timing from exposure level per R-33;
+~23 configs) and novel `StateConditionalKellyV4` (a per-lagged-vol-quintile
+causal forward-Sharpe estimator driving exposure directly, nesting v4
+exactly as its own β=+1 special case during warmup; ~26 configs) — **and,
+because the whole premise rests on R-10's quintile finding holding up
+under *causal* (not full-series) measurement, a mandatory Step-0 gate to
+kill the direction cheaply before either branch was built**, with the
+kill condition frozen in the gate script's own docstring before it was
+run: `S(q5) − S(q1) ≤ 0`, or its 95% CI contains zero, in *either* the
+unconditional or the gate-bullish (`frac > 0`) reading → stop, no branch
+built. `experiments/r166_step0_gate.py` implements it: `kelly_regime_v4`'s
+own lagged realized-vol series (8-day EWM span of log-return, `.shift(1)`,
+byte-identical construction to `kelly_regime.KellyRegime.prepare`) is
+bucketed by **causal expanding-window quintiles** (cut-points fit only on
+bars up to and including the bucketed bar, minimum 365 days of history
+before any bucket is assigned — no full-series quantile lookahead),
+sampled once daily to avoid 288x intraday oversampling; forward 5-day
+log return per bucket, annualized; stationary block bootstrap (5-day
+blocks, 1000 reps, seed 20260827) for the Q5−Q1 spread's 95% CI. Run on
+**inner-train only** (2017-01-01 → 2020-12-31), no holdout bar read.
+
+**Configs evaluated: 2** (the two quintile-spread readings — no strategy
+code was run, no branch was implemented, no holdout was consulted).
+
+**Result.** Both readings trigger the kill condition:
+
+| reading | n | Q1 | Q2 | Q3 | Q4 | Q5 | spread Q5−Q1 | 95% CI |
+|---|---|---|---|---|---|---|---|---|
+| unconditional | 1,089 | −0.187 | +1.567 | −0.221 | −1.020 | +0.324 | +0.512 | [−3.083, +4.345] |
+| gate-bullish (frac>0) | 712 | +0.359 | +2.188 | +0.578 | +0.976 | **−2.058** | **−2.417** | [−7.118, +2.862] |
+
+The unconditional spread keeps R-10's original sign but is nowhere near
+significant, and the intermediate quintiles are non-monotone (Q2 spikes
+to +1.567, Q4 dips to −1.020) — noisier than the two-row VALIDATION.md
+summary suggests once expanding-window causality and an inner-train-only
+scope are imposed. The **gate-bullish** reading — the state the strategy
+actually trades in, and R-10's own headline framing — **reverses sign
+entirely**: −2.417 against R-10's original +0.30 (computed from its
+published Q5=+2.06, Q1=+1.76). Both intervals contain zero.
+
+**Verdict.** **NEGATIVE, killed at Step 0.** One-line lesson: R-10's
+vol-quintile forward-Sharpe finding, as originally reported (full 2017–2026
+period, no documented causality methodology), does not reproduce under
+causal expanding-window quantile bucketing restricted to inner-train —
+at minimum it is far noisier, and the gate-bullish sign is not stable the
+way the published two-row table implies. **This does not retract R-10**
+(different scope — full-period vs. inner-train-only — and possibly
+different quantile construction; v3/v4's own promoted, holdout-verified
+drawdown property is unaffected and rests on more than this one
+statistic), but it removes R-10 as usable evidence for a *new* mechanism
+change: a pre-registration is only allowed to look at inner-train, and
+the premise did not survive being looked at there. Per the frozen kill
+condition, no conservative or novel branch was implemented and the
+holdout was never consulted. Holdout counter: **unchanged, running total
+~735** (R-166 reads no holdout bar). Decision rule did not move — the
+kill condition was written into the gate script before it ran and
+triggered exactly as specified; nothing was re-run or re-thresholded
+after seeing the numbers. **Next step:** none from this direction as
+posed. If a future session wants to pursue volatility-response sign
+inversion, it must first re-derive a version of R-10's finding that
+survives causal, inner-train measurement (a longer window, the full
+training period rather than inner-train alone, or a different vol-lag/
+bucket construction) — that re-derivation is Step 1's "does the premise
+hold" question and is the actual next step, not a reason to skip straight
+to implementation a second time.
+
+---
+
 ### R-165 · 08-27 · NEGATIVE (both branches) — R-64's destination/rate axis isolated onto `kelly_regime_v4`'s SCALE factor alone: a boundary-trade no-trade region (conservative) removes R-64's exposure artifact but removes the mechanism with it, and a derived-rate EWMA smoothing (novel) prices a fee term the strategy does not actually pay — both confirm, by a different route, R-64's own "the no-trade region does everything, the smooth-rate object does nothing" finding on a new factor rather than escaping it
 
 **Direction.** This session's scheduled brief was the generic "take the
@@ -18274,6 +18404,19 @@ bars, +2.06 when the gate is bullish) — the opposite of equities. Moreira
 
 **Verdict.** **KEY FINDING** — explains L-02
 
+> **Annotated by R-166 (08-27):** the strategy-relevant property this
+> entry supports — v3/v4's switch from continuous to conditional
+> (extremes-only) volatility targeting — is unaffected and remains
+> holdout-verified. But the specific quintile spread quoted above,
+> re-measured with a causal expanding-window bucketing on inner-train
+> only rather than however the original full-period pass computed it,
+> does not reproduce: the gate-bullish reading reverses sign entirely
+> (−2.42 vs. this entry's implied +0.30), and neither reading's 95% CI
+> excludes zero. Read this entry's numbers as a full-period, undocumented-
+> methodology point estimate, not as evidence a *new* mechanism can be
+> pre-registered against — see R-166 for the re-measurement and why it
+> stopped a direction here rather than proceeding to implementation.
+
 ---
 
 ### R-09 · 08-15 · NEGATIVE — Range volatility estimators (Parkinson, Garman–Klass, Rogers–Satchell, Yang–Zhang)
@@ -18374,6 +18517,7 @@ trip.
 
 | what | why | ref |
 |---|---|---|
+| Inverting the sign of `kelly_regime_v4`'s volatility-response exponent in its SCALE factor (`target_vol/vol` at β=+1 today; test β<0, i.e. pro-cyclical leverage into high-vol states, either as a fixed exponent or a per-vol-quintile causal Sharpe estimator with no sign constraint) motivated by R-10's inverse-leverage-effect finding | Killed at a pre-registered Step-0 gate before either a conservative (β=−1 fixed exponent) or novel (per-quintile causal Kelly estimator) branch was implemented. R-10's own quintile forward-Sharpe finding, re-measured with CAUSAL expanding-window quantile bucketing (no full-series lookahead) on inner-train only, does not survive: the gate-bullish spread (`frac>0`, the state the strategy actually trades in) reverses sign entirely (−2.417 vs. R-10's implied +0.30), and neither the unconditional nor the gate-bullish reading's 95% bootstrap CI excludes zero (2 configs: `experiments/r166_step0_gate.py`). Do not re-try a volatility-response sign inversion on this architecture citing R-10's published numbers as-is — first re-derive R-10's spread so that it survives causal, in-sample-only measurement (a longer/full inner-train window or a different vol-lag/bucket construction); that re-derivation, not a new implementation, is the actual next step. | R-166 (Step-0 kill, both branches) |
 | A continuous, two-sided compound "panic/calm-bull" multiplier on `kelly_regime_v4`'s SCALE, `1+kappa*tanh(score/0.25)` where `score` = a 24-month trailing-return bull/bear component times a 1-year-median-relative volatility component (Daniel & Moskowitz 2016) | 26 configs (4 kappa in {0,0.5,1,1.5} x 2 markets x 3 slices = 24, +2 fee-tier). A1 exact, A2 passes (R²=0.780 at kappa=1.0 PRIMARY, full pre-holdout BTC). Every non-zero kappa cell is negative on `d_log_growth`/`d_sharpe` on inner-validation, both markets (spot −0.004 to −0.014, futures −0.040 to −0.066); exposure_ratio rises monotonically with kappa (1.00→1.15) rather than averaging near 1.0 as the two-sided construction's neutral case would predict. **0 of 24 sweep cells clear `clears_bar()`**; the 0.40% fee-tier re-run of PRIMARY confirms rather than rescues (spot −0.010 [−0.030,+0.001], futures −0.081 [−0.238,+0.000]). ETH falsification is vacuous (PRIMARY clears nowhere, so the sign-check never fires) — a disclosed non-finding, not a pass. The disclosed activity diagnostic shows the mechanism is genuinely active (35.8% of BTC pre-holdout days carry a non-trivial score, 694 calm-bull / 91 panic days) and still loses. Do not re-try a trend+volatility compound "panic/calm-bull" multiplier on this vote/scale architecture expecting a different kappa, trend window or vol-ratio reference to rescue it — the sign is stable and negative across the whole non-zero grid, and futures loses 6-10x more than spot on every cell, consistent with R-136's inverse-leverage-effect finding for any volatility-scaling substitution on this strategy's leveraged leg. | R-164 (novel) |
 | Barroso & Santa-Clara (2015) risk-managed-momentum: `kelly_regime_v4`'s SCALE multiplied by `sqrt(target_var/realized_var)` of the STRATEGY'S OWN realized payoff (v4's vote-only isolate), not price, 6-month trailing window (the paper's own default) vs. a causal expanding long-run target | 26 configs (4 window_days in {0,63,126,252} x 2 markets x 3 slices = 24, +2 fee-tier). A1 exact, A2 passes (R²=0.396–0.710 across the grid, inner-train). Every non-zero window_days cell is negative on `d_log_growth`/`d_sharpe` on inner-validation, both markets (spot −0.070 to −0.110, futures −0.117 to −0.234), **none risk-matched** (exposure_ratio 1.22–1.41, vol_ratio 1.05–1.48 — the R-33/R-141 unmatched-exposure-artifact pattern, on every cell), none excluding zero on the winning side. **0 of 24 sweep cells clear `clears_bar()`**; the 0.40% fee-tier re-run of PRIMARY (window_days=126) is decisively negative on futures (d_log_growth=−0.306, CI=[−0.591,−0.037], excluding zero on the losing side). Independently skeptic-reproduced (A1/A2 exact on both branches; see R-164 in section B for a disclosed A2-slice inconsistency between the two branches, immaterial to either verdict). Do not re-try scaling v4's SCALE by the strategy's own realized-payoff variance (Barroso-Santa Clara or any close variant) expecting a different trailing window to rescue it — the sign is stable and negative across the whole non-zero grid, worsens at realistic fees, and fails hardest on the leveraged futures market exactly where R-136's inverse-leverage-effect finding predicts. | R-164 (conservative) |
 | A continuous, two-sided episode-relative excursion multiplier on `kelly_regime_v4`'s SCALE (`1 + kappa*tanh(excursion_ATR_units/2.0)`, excursion measured since the current bullish episode began), Faith (2007)/Zarattini (2026)-motivated | 26 configs (4 kappa in {0,0.5,1,1.5} x 2 markets x 3 slices = 24, +2 fee-tier). A1/A2 pass (R²=−0.394, non-collinear). The multiplier is two-sided by construction but not symmetric in practice on real data (mean=1.456 at kappa=1.0 over the full pre-holdout series; 48.5% of bars sit above 1.0 vs. 2.8% below, because v4's own latching hysteresis flips the vote bearish before much adverse excursion accumulates). **0 of 24 sweep cells clear `clears_bar()` on inner-validation on either market**; `risk_matched=False` on all 24, exposure_ratio 1.70-1.74 and vol_ratio 1.39-1.81 at kappa=1.0; the 0.40% fee-tier re-run is decisively negative on both markets (spot d_log_growth=−0.899 [−1.703,−0.066], futures −0.712 [−1.398,−0.036], both excluding zero on the losing side). Do not re-try a continuous episode-relative excursion multiplier on this vote/scale architecture expecting a different kappa or reference-ATR constant to rescue it — the sign is stable and negative on inner-validation across the whole non-zero grid, and gets worse, not better, at realistic fees. | R-163 (novel) |
@@ -22001,6 +22145,7 @@ first `—`, and a dispatched round resets it by construction.
 
 | # | committed (UTC) | step 0 | attempted | outcome |
 |---|---|---|---|---|
+| — | 08-27 22:1x | clean, HEAD == `origin/main` @ `767ed95` (the prior pass's own null-pass commit), unshallowed, no undispatched `_shared.py` (`r165_shared.py` newest, has a matching B entry); one consecutive null pass since R-165's dispatch, under the 3-pass no-new-sweep threshold | R-166 (NEGATIVE, killed at Step 0): volatility-response sign inversion in `kelly_regime_v4`'s SCALE, motivated by R-10's inverse-leverage-effect finding; research sub-agent designed conservative (β=−1 exponent) and novel (per-quintile causal Kelly estimator) branches plus a mandatory Step-0 gate re-measuring R-10's quintile spread causally on inner-train only; both readings (unconditional and gate-bullish) failed the pre-registered kill condition, the gate-bullish spread reversing sign entirely — no branch built, holdout not read | full detail under R-166 in section B, section C row and R-10 annotation; resets the consecutive-null-pass counter to 0 per this section's own construction rule |
 | 1 | 08-27 21:06 | clean, HEAD == `origin/main` @ `000d1e0` (this session's own backfill commit above), unshallowed, no undispatched `_shared.py` (`r165_shared.py` newest, has a matching B entry) | scheduled firing's generic brief (take the best strategy, propose an improvement vector, research it, dispatch conservative/novel sub-agents, measure, promote the winner); Step 0/0b run first per ROUTINE.md's own instruction. Backlog grep unchanged (B-06 ongoing/de-ranked, B-09 LOW, B-17 PARTIAL, B-28 blocked on unfetchable data), none NEXT/OPEN. Read the standing diagnosis, the SIZE/VOTE/COST/ERR/INFO/regime-timing closed-mechanism history directly from section B (165 rounds) and the ~28 prior verification passes' own closed-candidate lists, then dispatched one research-only sub-agent briefed with the full compiled closed-mechanism map and four specific under-explored corners to check: the `max_leverage` CAP parameter swept independently of the CDaR-derived-cap round; fractional-Kelly shrinkage (MacLean-Ziemba-Blazenko growth-vs-security) as its own free parameter; fresh 2025-26 crypto microstructure/on-chain literature; and any field not yet borrowed from at all. Also checked the B-06 recorder's health directly: `reports/paper_trading/kelly_regime_v4_bitstamp.csv` had gone silent for ~3h (last row 17:55 UTC against a check time of 21:05 UTC, last workflow run #202 at 18:00:10 UTC, nothing since) | Sub-agent's verdict, independently corroborating my own reading: **nothing survives the filter.** (a) The CAP parameter: R-37's conservative branch already ran a 53-config `target_vol × max_leverage` grid under matched-exposure control (surviving cell's ΔSharpe sits inside the ±0.2 noise floor, fails ETH); R-93 held `max_leverage=2.0` fixed while deriving a *dynamic* cap from CDaR — both the static-grid and dynamic-derivation versions are closed. (b) Fractional-Kelly/MZB: R-37's novel branch is literal fractional-Kelly swept as a free parameter (fitted-peak/ETH failure); a 2026 "Bayesian Kelly" paper checked live duplicates the already-seven-times-closed "probabilistic-drawdown-bound-derived exposure cap" shape (CVaR, CDaR×2, Grossman-Zhou, EVT/Hill/POT-GPD, Wasserstein-DRO, H∞/CVaR-relaxed control); actuarial ruin theory (Cramér-Lundberg) is mathematically the same object as Grossman-Zhou. (c) Fresh literature: two live web searches (Kelly/leverage-cap crypto 2026; extremal-index/clustered-extremes effective-sample-size) returned nothing not already named — the effective-sample-size framing itself was already swept and closed (hierarchical Bayes/HRP). (d) No unmined field found: statistical physics, TDA, information theory, econometrics, RL, behavioral finance and actuarial science are all already closed or blocked on missing data; White's Reality Check/Hansen's SPA test is confirmed (again) to be an evaluation tool, not a dispatchable strategy mechanism. **No conservative/novel branch pair dispatched** — forcing one against a backlog and mechanism-space independently re-confirmed exhausted by both this session's own reading and ~28 prior passes' would be exactly the mistake this project's culture penalizes. Separately: the B-06 recorder's ~3h gap is GitHub Actions' own documented best-effort scheduled-workflow delay (the exact, already-analyzed and already-priced limitation `paper_trading.yml`'s own comments and R-78's measurement describe — not a new defect, and no code change is warranted); manually re-dispatched via `workflow_dispatch` (run #203, queued ~21:05 UTC). The prior pass's own suggestion ("if this recurs a third time it should get its own METHOD round") is deliberately not taken up here: `paper_trading.yml`'s own comments and R-78's measurement already document this exact GitHub-side best-effort-scheduling behavior, already chose 15 minutes specifically because of it, and already fixed the worse failure mode it used to cause (decision loss, via `level_resync_order()`) — a dedicated round would re-derive a limitation already named in the code rather than find anything new; manual redispatch on discovery remains the correct response. First null pass since R-165's dispatch, which resets the counter per this section's own construction rule; well under the 5-pass re-escalation threshold, so the firing-cadence flag (already sent at passes 17/20, unactioned) is not re-raised |
 | — | 08-27 20:32 | *(backfilled by the next session's pass 1 row above — R-165 dispatched a round but did not add its own row here at the time, the same gap this section has had to fix for R-159/R-161/R-162/R-163 before it)* | R-165 (NEGATIVE, both branches): R-64's destination/rate axis isolated onto `kelly_regime_v4`'s SCALE factor alone; pre-registration frozen and committed (`66823d1`, "IN PROGRESS: R-165") before either branch was dispatched; conservative (boundary-trade no-trade region) and novel (derived-rate EWMA smoothing) branches both fail, holdout read (+20, running total ~735) | full detail under R-165 in section B; resets the consecutive-null-pass counter to 0 per this section's own construction rule |
 | — | 08-27 19:19 | *(backfilled by the next session's pass 1 row above — R-164 dispatched a round but did not add its own row here at the time)* | R-164 (NEGATIVE, both branches): risk-managed momentum (Barroso-Santa Clara 2015 conservative, Daniel-Moskowitz 2016 novel) on `kelly_regime_v4`'s SCALE; pre-registration frozen and committed (`5ae1d95`, "IN PROGRESS: R-164") before either branch was dispatched; 52 configurations evaluated, holdout not read | full detail under R-164 in section B; resets the consecutive-null-pass counter to 0 per this section's own construction rule |
