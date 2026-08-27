@@ -316,7 +316,127 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
-IN PROGRESS: R-160 · 08-27 · online false-discovery-rate control (LORD/SAFFRON) gating kelly_regime_v4's anchor-vote flips — pre-registration frozen in `experiments/r160_shared.py`, conservative (LORD) and novel (SAFFRON) branches dispatched, results pending.
+### R-160 · 08-27 · NEGATIVE (both branches) — online false-discovery-rate control (LORD conservative / SAFFRON novel) gating `kelly_regime_v4`'s anchor-vote flips; the gate binds cleanly and is not degenerate, but delaying a flip costs more Sharpe/drawdown than it buys in precision, on every one of 96 real-data cells
+
+**Direction.** This session's scheduled brief was the generic "propose an
+improvement, dispatch conservative/novel implementation branches, measure,
+promote the winner." Step 0 found no in-flight round (HEAD == `origin/main`,
+unshallowed, no undispatched `_shared.py`). Step 0b's saturation count was 1
+consecutive null pass since R-159's dispatch — within the "0-2: normal"
+tier — and the backlog grep returned the same four already-inactionable rows
+(B-06 de-ranked, B-09 LOW, B-17 PARTIAL, B-28 blocked on data), so a fresh
+literature sweep was warranted rather than blocked. A research-only
+sub-agent ran 11 targeted searches, cross-checked against section C and the
+last ~25 rounds, and found two non-duplicate candidates: Prediction-Powered
+Inference (narrows a confidence interval on an existing measurement using
+auxiliary simulated data — a methodology/interval-width improvement, not a
+change to what gets traded, and therefore a poor fit for a "measure the
+improved strategy" round) and online false-discovery-rate control gating
+the vote's own flip decisions (a genuine trading-rule change). This entry
+pursues the second. **Attacks ERR** (no error control exists anywhere in
+`kelly_regime_v4`'s signal path — `_latched_anchor_vote` flips the instant a
+1%-band crossing occurs, with no notion of how often a crossing that size
+would occur under pure noise), secondarily N~3 (fewer, higher-precision
+discoveries is the same shape of problem as controlling error under a
+sparse-event budget). **Not a duplicate of** R-28/R-31 (single continuous
+e-process martingale, not a discrete multiple-testing stream), R-87
+(Adaptive Conformal Inference on a continuous confidence set, no discovery
+notion), R-138 (a fixed retrospective permutation test, changes nothing
+going forward), or R-147 (reweights the vote's combination, holding each
+anchor's own timing fixed — this round holds the equal-weight combination
+fixed and changes only WHEN each anchor's flip takes effect, the
+complementary axis). Full citations (Javanmard & Montanari 2015/2018 for
+LORD; Ramdas, Zrnic, Wainwright & Jordan 2018 for SAFFRON; Tian & Ramdas
+2019 for ADDIS) and the frozen pre-registration are in
+`experiments/r160_shared.py`, written and committed (`efc95e8`, "IN
+PROGRESS: R-160") before either branch was dispatched, per step 0's
+collision-avoidance convention.
+
+**What was done.** Two disjoint files, each importing only from the
+read-only `r160_shared.py`: `experiments/r160_conservative_lord_gate.py`
+(classical LORD, a fixed non-increasing discount sequence gamma_j ~ 1/j^1.5
+normalized to the closed-form zeta(1.5), initial wealth W0=0.5*alpha,
+reward b=alpha-W0 per past acceptance) and
+`experiments/r160_novel_saffron_gate.py` (SAFFRON's null-proportion-aware
+wealth accounting via a candidate threshold lambda, plus an ADDIS
+discarding-rule bonus config). Both gate each of v4's three anchors (20/40/
+80-day) independently, using an identical causal p-value (`H0`: the price/
+anchor gap is noise, via a trailing z-score of the gap normalized by its own
+rolling std) from `r160_shared.py`, wired through v4's own unmodified vol-
+target scale and 10% deadband (`build_target_from_frac`) — the only
+difference from v4 is the flip's timing, never its magnitude. Pre-registered
+decision rule (frozen in `r160_shared.py` before any real-data number was
+read): on inner-validation, both markets, (a) paired bootstrap CI on
+d_log_growth (candidate − v4) excludes zero positive, (b) d_sharpe >= +0.2
+or a risk-matched drawdown improvement, (c) the same-sign improvement
+reproduces on the `eth_replication` slice. Falsification test = ETH sign-
+replication (clause c). Pre-registered kill switches: A1 (>=1 anchor with
+>=3 flip-episodes actually delayed, else the gate is a relabeling of v4) and
+A2 (candidate frac path R² < 0.999 vs v4's own vote, else numerically
+indistinguishable from v4). **Configs evaluated: 16 distinct gate settings**
+(conservative: `ALPHA_GRID={0.20,0.10,0.35} x sigma_days={5,10}` = 6; novel:
+`ALPHA_GRID x LAM_GRID={0.5,0.3,0.7}` = 9, plus 1 ADDIS bonus) — **96
+real-data `compare()` cells total** (each config x 3 slices x 2 markets),
+plus 36 kill-switch cells (9 conservative + 27 novel) and 36 calibration-
+self-test cells on synthetic zero-drift noise (not counted toward the
+real-data trials count). Neither branch read a single bar at or after
+`OOS_START` (2023-01-01) at any point — both scripts assert this on every
+`compare()`/`run_slice()` call and both independently confirmed the max
+timestamp seen was 2022-12-31 23:55:00 UTC.
+
+**Result.** Both kill switches PASS on every tested config in both
+branches: delayed-episode counts ranged 13-48 per anchor (comfortably clear
+the >=3 threshold — the gate genuinely binds), and candidate-frac R² vs
+v4's own vote ranged 0.44-0.56 (far from the 0.999 degeneracy ceiling) —
+this is a real, non-degenerate measurement of the mechanism, not an
+artifact. Causal truncation probes passed on both branches' full candidate-
+build functions. Calibration self-tests (pure zero-drift synthetic noise)
+showed both gates accepting flips at roughly 400-2000x BELOW their nominal
+alpha budget — a safe-direction miscalibration (no inflated false-discovery
+risk) but a sign the gates are, in both branches' own words, closer to a
+blunt rare-event sparsifier than a mechanism cleanly discriminating real
+trend breaks from noise (the novel branch noted the accept-count on 400k
+bars of pure noise was the same order of magnitude as on 631k bars of real
+BTC history). On real data: **0 of 96 cells** satisfy any part of the
+decision rule's conjunction on both markets simultaneously. d_sharpe on
+inner-validation ranged −0.49 to +0.24 (conservative's one positive cell,
+sigma_days=10/spot, fails on both the CI-excludes-zero and risk-matching
+legs, and its paired futures cell is flat/negative); d_dd was worse (higher
+drawdown) in the overwhelming majority of cells; every d_log_growth
+bootstrap CI on inner-validation includes zero. Both branches independently
+observed the same asymmetry: ETH-futures_5x shows a small consistent
+positive dSharpe (+0.06 to +0.21) across nearly every config in both
+branches, while BTC inner-validation futures is negative-to-flat in every
+cell — since clause (a)/(b) never jointly clear on inner-validation, clause
+(c) (ETH replication) is never actually load-bearing for any config, but
+this cross-branch-consistent split is noted here as a pattern that might
+matter to a future round touching v4's futures-market vol-target scale
+specifically (not investigated further here — out of this round's scope).
+**Falsification test outcome: moot** — no config reached the point where
+ETH sign-replication needed to be checked as a tie-breaker, since (a)/(b)
+failed outright on BTC first, in every one of the 16 configs.
+
+**Verdict.** **NEGATIVE, both branches.** Neither LORD nor SAFFRON gating
+of v4's flip timing clears the pre-registered bar at any tested alpha,
+sigma_days, or lambda. Holdout was correctly never consulted (holdout
+counter unchanged at its prior value) — the pre-registration required
+clearing inner-validation first, and nothing did. One-line lesson: this
+project's vote/anchor architecture reacts to a regime change *because* it
+reacts immediately, and formally delaying that reaction to raise
+confidence trades away more return capture than it saves in whipsaw —
+predicted in advance as failure mode (5) in `r160_shared.py`'s own
+pre-registration, and it is what happened. This is the 7th-of-8 ERR-axis
+construction on this vote/scale architecture to close this way (R-28/R-31,
+R-87 x2, R-104, R-105 x2, R-114 x2, now R-160 x2), strengthening rather
+than merely repeating the standing pattern the R-147 entry already named.
+Decision rule was not moved after seeing any result. Not registered (an
+ordinary-shape negative on an axis with a well-established base rate, not
+independently instructive enough for a table row per step 5's own
+threshold — unlike `minority_oracle`/`game_switch`). Code lives under
+`experiments/` per step 5. Next step: this specific family (online-FDR gate
+on vote timing) is closed; a future ERR-axis attempt on this architecture
+should look at gating the SCALE/sizing decision rather than the vote's
+direction, which no prior ERR-axis round (including this one) has touched.
 
 ### R-159 · 08-27 · METHOD — the B-06 forward-paper-trading cron silently stopped firing for ~7.5h; resumed by manual dispatch
 
@@ -17423,6 +17543,7 @@ trip.
 
 | what | why | ref |
 |---|---|---|
+| Online false-discovery-rate control (LORD, Javanmard & Montanari 2015/2018, conservative; SAFFRON, Ramdas/Zrnic/Wainwright/Jordan 2018, +ADDIS bonus, novel) gating `kelly_regime_v4`'s three anchor votes' flip decisions — each candidate band-crossing tested as a "discovery" against a causal p-value, accepted only once an adaptively-shrinking wealth budget clears it, delaying low-confidence flips until evidence strengthens; v4's own vote combination, vol-target scale and deadband left unmodified | 16 gate configurations (6 conservative: alpha in {0.20,0.10,0.35} x sigma_days in {5,10}; 10 novel: alpha x lam in {0.5,0.3,0.7} + 1 ADDIS), 96 real-data `compare()` cells total. Both kill switches PASS on every config (delayed-episodes 13-48/anchor, R² 0.44-0.56 vs v4's own vote — the gate genuinely binds and is not a relabeling). Calibration self-test on synthetic zero-drift noise: both gates accept flips 400-2000x BELOW nominal alpha (safe-direction, but close to a blunt rare-event sparsifier rather than a real signal/noise discriminator — accept-counts on 400k bars of pure noise were the same order of magnitude as on 631k bars of real BTC history). **0 of 96 real-data cells** clear the decision rule (inner-validation d_log_growth CI excluding zero AND d_sharpe>=+0.2-or-risk-matched-drawdown-improvement, both markets); d_sharpe on inner-validation ranged −0.49 to +0.24, and the one positive cell fails both the CI and the risk-matching leg with its paired futures cell flat/negative. Both branches independently found the same pattern: delaying a flip to raise confidence costs more return capture than it saves in whipsaw (drawdown got WORSE, not better, in the large majority of cells) — the failure mode named in advance in the pre-registration. Falsification test (ETH sign-replication) was never load-bearing since (a)/(b) failed on BTC first in every config. Holdout never consulted (pre-registration required clearing inner-validation first). Do not re-try an online-FDR (or other formal multiple-testing) gate on this vote architecture's FLIP TIMING expecting a different alpha/lambda/discount-sequence choice to rescue it — the sign is stable and negative across a 16-point grid spanning both classical (LORD) and adaptive-null-aware (SAFFRON) online-FDR families; an ERR-axis attempt on this architecture's SCALE/sizing decision instead remains untried. | R-160 (both branches) |
 | A rolling CDaR-budgeted exposure rule (Chekhlov, Uryasev & Zabarankin 2005), `f*=budget/CDaR_0.95(unit vote-scaled returns)` via CDaR's degree-1 homogeneity, replacing `kelly_regime_v4`'s `target_vol/realized_vol` ratio entirely, budget calibrated to match v4's own inner-train mean exposure | 4 configurations (3 CDaR window lengths + 1 control). B2 clears (r=−0.32 to −0.41 vs v4's own realized vol, not a relabel). Inner-validation Sharpe is 0.90–1.13 BELOW control at every window length (control 0.251; branch −0.646/−0.722/−0.876 at 180/365/545d) and drawdown is worse, not better (32.29% vs 37.81/49.13/40.20%) — decisively fails the selection rule's criterion (2). Exposure match holds only at the shortest (180d) window; the mechanism reacts too slowly to 2022's drawdown as the window lengthens, under-sizing further from control the longer the window. Plateau criterion (3) passes (3/3 windows agree in sign) — a consistent, replicated failure, not noise. Ineligible for holdout; none read. Do not re-try a CDaR-budget solve as a direct replacement for v4's vol-target ratio expecting a shorter/longer window to rescue it — the sign is stable and negative across the whole 180-545d sweep. | R-152 (novel) |
 | A dynamic CDaR-derived leverage cap (same citation), replacing `kelly_regime_v4`'s fixed `max_leverage=2.0` with `cap_scale/CDaR_0.95` (inverse: worse trailing drawdowns tighten the cap), `cap_scale` calibrated so inner-train mean cap equals 2.0, reference stream v4's own unmodified vote-scaled returns (no circularity with the derived cap) | 17 configurations (4 selection + 6 training-period context + 3 holdout + 4 ETH-falsification/BTC-control). B2 clears (r=−0.353/−0.168/+0.206 across window lengths). Mechanically passes all three selection criteria on inner-validation, but the branch's `target` array is bit-identical to control on 209,189 of 209,953 inner-validation bars — the "plateau" is one shared 764-bar/2.6-day episode (2022-12-11→12-14) appearing identically at all three window lengths, not independent evidence. Holdout (2023-01-01→, futures 5x, 365d): d_sharpe=+0.0053, indistinguishable from the ±0.2 noise floor; neither beats `buy_and_hold` (expected — v4 itself lags steady bulls, `docs/STRATEGIES.md`). **Falsification test fails**: BTC-control d_sharpe=+0.0164 vs ETH-falsification d_sharpe=−0.0049 on the paired Bitfinex 2016-2019 window — sign inverts, consistent with the effect being one narrow non-generalizing episode rather than real risk-timing. Do not re-try a CDaR-derived dynamic cap on v4's leverage limiter expecting the inner-validation pass to be real evidence rather than a single-episode artifact; check for episode concentration (fraction of bars where candidate and control diverge) before trusting any future plateau claim built the same way. | R-152 (conservative) |
 | `kelly_regime_v3`/`v4`'s own conditional (extremes-only) volatility target (Bongaerts, Kang & van Dijk 2020), reused unretuned, substituted for `replicator_book`'s fixed `scale=0.75` constant, executed via `order_notional` (an absolute leverage multiple, distinct from the control's `order_target`-executed, fraction-of-max-leverage convention) | 6 configurations (1 primary + target_vol±20% sweep). A2 clears (R²=0.798, genuinely different from the control's own path). B1 passes on futures_5x only (inner-val d_sharpe=+0.36, boot [+0.314,+3.689] excludes zero) but fails on spot (+0.02, CI includes zero). **B2 diagnostic disclosure**: the passing futures cell carries `vol_ratio`≈0.15-0.20 throughout — the candidate realizes a fifth of the control's volatility there, the same exposure-level-artifact signature R-28/R-31/R-33 have each independently found, materially explained by the `order_notional` vs. `order_target` execution-convention difference (this round's own diagnosed finding) rather than by the conditional-targeting mechanism itself. B3: futures sign stable (+1 throughout, but riding the same risk mismatch); spot sign flips at +20% ([+,+,−]), consistent with noise. B4 passes technically (ETH futures d_sharpe≈0.00, same sign as BTC, essentially a tie) while disagreeing on spot. **B5 decides it**: the one nominal spot edge at 0.10% fee (d_sharpe +0.0157) reverses sign at 0.40% (−0.0799); B5 gates whenever B1 passed on any market (it did, futures) and fails. Independently reproduced by the operator (A2 R² and both futures cells exact). Do not re-try bolting v4's own conditional-vol-target onto `replicator_book`'s blend expecting the futures-market result to hold once risk-matched, or expecting the spot result (never significant, never fee-tier-robust) to improve without a materially different scale construction. | R-148 (conservative) |
@@ -20972,6 +21093,7 @@ first `—`, and a dispatched round resets it by construction.
 
 | # | committed (UTC) | step 0 | attempted | outcome |
 |---|---|---|---|---|
+| — | 08-27 13:3x | clean, HEAD == `origin/main` @ `466342c` before this session started, unshallowed, no undispatched `_shared.py` (`r99_shared.py` newest, R-95..R-99 all have matching B entries); full `pytest` suite re-run twice (before and after the two implementation branches landed) — 536 passed, 0 failed both times | R-160 (NEGATIVE, both branches): the prior pass's own 2-candidate shortlist (Conformal Kelly, path-signature map) was already closed, so a fresh research sub-agent was dispatched instead of reusing it; found online false-discovery-rate control (LORD/SAFFRON) gating v4's vote-flip timing as a genuinely non-duplicate ERR-axis candidate. Pre-registration frozen and committed (`efc95e8`, "IN PROGRESS: R-160") before either branch was dispatched, per step 0's collision-avoidance convention; conservative (LORD) and novel (SAFFRON+ADDIS) branches ran independently, 16 gate configs / 96 real-data cells total | full detail under R-160 in section B and the matching row in section C; resets the consecutive-null-pass counter to 0 per this section's own construction rule |
 | 1 | 08-27 12:05 | clean, HEAD == `origin/main` @ `3814ea2`, unshallowed, no undispatched `_shared.py` (`r99_shared.py` newest, R-95..R-99 all have matching B entries); full `pytest` suite re-run as this pass's cheap check — 536 passed, 0 failed; `reports/paper_trading/*.csv` confirmed still appending (latest row `2026-08-27T10:50:00+00:00`, ~67min gap at check time, within the workflow's own documented 15-85min degraded-cadence range per R-159, no re-dispatch needed) | scheduled firing's generic brief (propose a direction, research it, dispatch conservative/novel sub-agents, measure, promote the winner); backlog grep unchanged (B-06 ongoing/de-ranked, B-09 LOW, B-17 PARTIAL, B-28 blocked on unfetchable data), none NEXT/OPEN. Also backfilled the missing `—` row for R-159 immediately below — it dispatched a round but never added its own row here, the exact gap this section's own construction rule (this section's header, "every session adds a row, including the ones that dispatch a round") exists to prevent. Dispatched one research-only sub-agent (16 web searches plus a full read of two papers), briefed with the closed-mechanism map (11 regime-timing theoretical bases, 16 INFO-axis signals, 30+ SIZE-axis variants, the COST-axis band/stop/corridor family) so it could filter duplicates before reporting rather than after | Agent's own 2-candidate shortlist (Conformal Kelly, arXiv:2608.01494; a path-signature nonlinear exposure map) independently verified, not merely closed-as-duplicate-by-citation but each **already directly implemented and NEGATIVE** in this ledger: Conformal Kelly's core mechanism is R-87's own novel branch (a conformally-calibrated Kelly-scale dispersion estimator — missed the inner-validation noise floor, failed ETH sign-replication); the path-signature exposure map is R-121's own construction (a depth-2/3 truncated path-signature novelty statistic — replicated the ETH sign-inversion/inertness failure). No conservative/novel branch dispatched — nothing survived Step 1's non-duplicate filter. First null pass since R-159's dispatch, which resets the counter per this section's own construction rule; the firing-cadence flag remains at 2 sent (passes 17/20, still unactioned) and is not re-raised, under the 5-pass re-escalation threshold |
 | — | 08-27 10:57 | *(backfilled by pass 1 above — R-159 dispatched a round but did not add its own row here at the time)* | R-159 (METHOD): B-06's paper-trading cron (`paper_trading.yml`) had silently stopped firing for ~7.5h (last scheduled run #199 at 03:27 UTC, discovered at inspection time 10:52 UTC) | manually re-dispatched via `workflow_dispatch` at 10:54:47 UTC, resumed as run #200; full detail in the R-159 section under B. Resets the consecutive-null-pass counter to 0 per this section's own construction rule |
 | 3 | 08-27 09:52 | clean, HEAD == `origin/main` @ `136c903`, unshallowed, no undispatched `_shared.py` (both `r155_shared.py` and `r156_shared.py` already have matching B entries); full `pytest` suite re-run as this pass's cheap check — 536 passed, 0 failed, no infra defect found; `reports/paper_trading/*.csv` confirmed still appending (latest row `2026-08-27T03:20:00+00:00`) | scheduled firing arrived with a generic "pick the best strategy, research an improvement, dispatch conservative+novel sub-agents, measure, promote the winner" brief; step 0/0b run first per ROUTINE.md's own instruction to treat that as the actual procedure rather than the brief's literal steps. Backlog grep returned the same four live rows (B-06, B-09, B-17, B-28) already found inactionable by passes 1 and 2 — B-28 blocked on unfetchable data, B-06 explicitly de-ranked (ongoing background recorder, not a fresh implementation), B-09 LOW, B-17 already PARTIAL. Per Step 0b, this is the third consecutive null pass since R-158's reset, at the "3+: do not open a new literature sweep" tier — so none was run, and no conservative/novel branch pair was fabricated against a non-actionable backlog, which Step 1's own filter (and ROUTINE.md's "do not force a shippable strategy into a session") rules out | no non-literature-search item found either (suite green, recorder healthy, nothing else infra-shaped surfaced); nothing dispatched, nothing pushed to `src/`/`experiments/`/`reports/` beyond this row. Third null pass since R-158 reset the counter — still under the 5-pass re-escalation threshold, so the firing-cadence flag (already sent twice, passes 17/20, unactioned) is not re-raised |
