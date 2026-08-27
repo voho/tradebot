@@ -17373,6 +17373,38 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-checked 08-27 (nineteenth same-day/next-day session), no round
+dispatched (not an R-numbered entry — zero new configurations
+evaluated).** Step 0: `git fetch origin main` found `origin/main` at
+`60884e2`, the eighteenth pass's own commit, clean working tree — no
+in-flight round, no undispatched frozen pre-registration
+(`experiments/r*_shared.py` unchanged since R-156/R-157). Backlog grep:
+same four live rows all eighteen prior passes found — **B-06, B-09, B-17,
+B-28** — none actionable. B-06's automated recorder is healthy (hourly
+commits through `b6ead3c`, 08-26T22:18:20Z).
+
+Ran two searches angled at ground the eighteenth pass's own two searches
+did not cover (regime-switching/HMM-family forecasting, and a broad
+2026 sweep for anything newly cited). Both closed on inspection: the one
+concretely new hit, arXiv:2607.23370 ("Bitcoin Price Direction Prediction
+via Regime-Aware Multi-Modal Fusion of Social Sentiment and Technical
+Features"), fuses price with social-sentiment data this project does not
+have and cannot fetch from its own committed files — INFO-axis blocked by
+the standing rule ("never proxy unavailable data out of price"), same as
+every social/on-chain-data candidate every prior pass has closed the same
+way. The regime-switching/HMM search surfaced only forecasting-framework
+variants of a mechanism *shape* this project has already tried six times
+over (HMM/BOCPD/Kalman-LLT/CSD/transfer-entropy/CUSUM, R-01/82/83/85/86/139,
+all 0-2/6 against the six-episode detection-lag gate) — grepped and
+confirmed against `docs/LEDGER.md` directly rather than taken on memory.
+No non-duplicate, simulable, actionable direction found; no
+conservative/novel branch pair dispatched. **B-06 remains the only
+ranked, unblocked backlog item.** This is the sixth consecutive
+same-day/next-day pass (fourteenth through nineteenth) to reach that
+conclusion; per the seventeenth/eighteenth passes' own request, the
+cadence question has been raised directly with the project owner outside
+this file rather than re-argued a nineteenth time.
+
 **Re-checked 08-27 (eighteenth same-day/next-day session), no round
 dispatched (not an R-numbered entry — zero new configurations
 evaluated).** Tasked independently with the same standard brief the
