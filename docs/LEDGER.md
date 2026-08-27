@@ -316,7 +316,149 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
-### IN PROGRESS: R-167 -- anytime-valid concentration bounds (Howard et al. 2021 peeled/doubling Hoeffding, conservative; Waudby-Smith & Ramdas 2024 fixed-fraction betting confidence sequence, novel) replacing R-161's fixed-sample Hoeffding UCB in the same RCPS multiplicative-cap architecture on `kelly_regime_v4`'s SCALE output; pre-registration frozen in `experiments/r167_shared.py`, holdout not yet read.
+### R-167 · 08-27/08-28 · NEGATIVE (both branches) — anytime-valid concentration bounds (Howard et al. 2021 peeled/doubling Hoeffding, conservative; Waudby-Smith & Ramdas 2024 fixed-fraction betting, novel) on R-161's own RCPS cap architecture; both engines close the "different guarantee family" escape hatch R-161's own entry named, via two different failure modes that share one root cause
+
+**Direction.** This session's scheduled brief was the generic "take the best
+strategy, propose an improvement direction, research it, dispatch
+conservative/novel sub-agents, measure, promote the winner." A research
+sub-agent read the standing diagnosis, the full section-C ruled-out table
+(111 rows) and the last several rounds, confirmed no backlog item is
+NEXT/OPEN (B-06 de-ranked, B-09 LOW, B-17 PARTIAL, B-28 blocked on
+unfetchable data — unchanged), and proposed acting directly on R-161's own
+closing line: *"a genuinely different guarantee family that needs no fixed
+calibration window (e.g. martingale/e-value-based risk control) remains
+untried."* Citations: Xu, Karampatziakis & Mineiro (2024), "Active,
+Anytime-Valid Risk Controlling Prediction Sets," NeurIPS (arXiv:2406.10490)
+— the motivating paper, not itself the implemented engine (its own novelty,
+active/selective calibration-point querying, does not apply here, since
+every causal bar is already free to consume); Howard, Ramdas, McAuliffe &
+Sekhon (2021), "Time-Uniform Chernoff Bounds via Nonnegative
+Supermartingales," Probability Surveys (arXiv:1811.04644) — source of the
+CONSERVATIVE engine's peeling/doubling-stitching technique; Waudby-Smith &
+Ramdas (2024), "Estimating Means of Bounded Random Variables by Betting,"
+JRSS-B 86(1) — source of the NOVEL engine's wealth-martingale technique.
+**Attacks ERR** (no error control anywhere in v4's signal path), same as
+R-161. **Not a duplicate of** R-161 itself (same object — a calibrated
+multiplicative cap on v4's unmodified `frac*scale`, same tail-loss
+functional — but a structurally different concentration-bound algorithm:
+anytime-valid on an expanding window vs. R-161's fixed-sample Hoeffding on
+a bounded trailing window, precisely the isolation-of-one-factor pattern
+R-62 established as this project's most productive move), nor of any of
+the dozen-plus other ERR/SIZE-axis constructions on this slot R-161's own
+entry already distinguished itself from (R-28/31, R-87, R-104–R-115,
+R-122/123, R-125, R-147, R-160) — full detail in R-161's own entry and
+`r161_shared.py`'s docstring, restated in `r167_shared.py`'s. Ledger-wide
+grep before any code confirmed zero prior hits for "anytime-valid",
+"confidence sequence", "supermartingale", "Ville", "Howard", or
+"Waudby-Smith" outside R-161's own citation of the family and this entry.
+
+**What was done.** Pre-registration frozen and committed
+(`e52284d`, "IN PROGRESS: R-167") before either branch was dispatched, per
+Step 0's collision-avoidance convention, in `experiments/r167_shared.py`
+(architecture — `calibration_frame`, `loss_at`, `build_capped_target`, the
+A1/A2 kill switches, the synthetic calibration self-test, the causal
+truncation probe pattern — imported UNMODIFIED from `r161_shared`; only the
+concentration-bound engine differs). **A design-time diagnostic, run before
+dispatch per ROUTINE.md Step 2's "compute the n a threshold implies is
+reachable" requirement**, found that peeling the conservative engine's
+confidence budget at a FIXED calendar cadence spends it faster than the
+sample grows and never unlocks any exposure over the whole 4-year
+inner-train window at PRIMARY (alpha=0.05) — worse than R-161's own
+diagnosed floor. Fixed before freezing by spacing refits GEOMETRICALLY
+(doubling) instead — Howard et al.'s own named construction, not an ad hoc
+patch — and re-verified to partially unlock at the looser ALPHA_GRID cell
+before the pre-registration was written down. Two branches, each 6 configs
+(`TAU_GRID={0.05,0.08} × ALPHA_GRID={0.05,0.10}` primary grid, 2
+robustness cells), 36 real-data cells each (3 slices × 2 markets):
+`experiments/r167_conservative_howard_cap.py` (peeled-Hoeffding,
+expanding window, geometric-doubling refit schedule) and
+`experiments/r167_novel_betting_cap.py` (fixed-fraction betting confidence
+sequence, expanding window, fixed 30-day refit cadence — Ville's
+inequality needs no peeling, so no doubling schedule is required for this
+engine). **12 configs, 72 real-data cells total across both branches.**
+Decision rule: PROMOTE-CANDIDATE requires, on inner-validation, for at
+least one config on both markets, (a) strictly lower tail-loss exceedance
+than v4-uncapped AND (b) dSharpe ≥ +0.2 / a bootstrap-excludes-zero
+growth win / a risk-matched drawdown win AND (c) the same (a)+(b) result
+reproducing on the ETH-replication slice — identical bar and structure to
+R-161's own. Falsification tests, pre-registered per branch: CONSERVATIVE
+= ETH sign-replication (clause c itself); NOVEL = a direct head-to-head
+engine comparison (is betting's calibrated cap measurably looser/tighter
+than peeled-Hoeffding's on the same data at matched tau/alpha/delta — WSR's
+own headline empirical claim about their method). Neither branch read the
+holdout (`OOS_START = 2023-01-01`); both scripts assert this on every run
+and both causal-truncation probes passed on both branches. Full pytest
+suite green (536 passed) before dispatch.
+
+**Result.** (A2's `constant_cap_r2` diagnostic returned `nan` or
+enormous-magnitude garbage — e.g. `-1.2e32` — on both branches, an
+already-disclosed numerical instability inherited unmodified from
+`r161_shared`'s frozen `r_squared` chain, R-161's own entry disclosed the
+identical defect rather than a new one; raw lambda mean/std served as the
+non-degeneracy evidence instead, same workaround R-161 used.) **NOVEL
+(betting) — INERT on every one of 6 configs.** The A1 kill switch tripped
+outright ("every config is inert," binding_fraction=0 on all 6): the fixed
+betting fraction correctly and quickly recognizes
+that v4's own already-realized tail-loss rate at every tested tau
+(2.67%/0.96% uncapped on BTC inner-train at tau=0.05/0.08) sits comfortably
+below every tested alpha (0.05, 0.10), so the calibrated cap converges to
+"no cap needed" within ~20 days (the earliest possible refit) and stays
+there. Every cell's candidate exceedance rate equals the control's exactly
+and dSharpe = +0.000 on every market/slice — a relabeling of v4, not a
+tested mechanism. **The falsification test REPLICATED**: on the PRIMARY
+config, betting's cap was looser than (or equal to) peeled-Hoeffding's on
+100% of 1,440 overlapping calibration days — Waudby-Smith & Ramdas's own
+claimed advantage held here, it just wasn't the advantage that matters for
+this promotion bar. **CONSERVATIVE (Howard/peeled-Hoeffding) — two
+different failure modes across the grid, neither survivable.** At
+ALPHA_GRID's looser cell (0.10), the same INERT failure as the novel
+branch (dSharpe=+0.000 exactly, cand==ctrl exceedance) once it eventually
+unlocks. At PRIMARY (alpha=0.05, both tau values, and both robustness
+cells varying the first-refit day 10/20/40), the geometric-doubling fix
+does NOT help — `days_to_first_nonzero_lambda` = inf over the whole
+inner-train window (confirmed independently: this branch's own Step 1b
+re-measured R-161's fixed-window analogue at 460.0 days, matching R-161's
+own 460.5-day analytic floor almost exactly) — so the candidate holds
+essentially zero exposure the entire window. Clause (a) then passes
+trivially (a non-trading candidate has zero tail losses) while clause (b)
+collapses: dSharpe -0.14 to -0.76 on inner-validation, **-0.88 to -1.48 on
+ETH** — the same catastrophic total-shutdown failure reproduces
+identically on both assets (clause (c) fails, but not via an ETH sign
+inversion — via the same failure repeating, so the falsification test as
+originally framed was moot: there was no BTC-positive effect for ETH to
+invert). **0 of 12 configs (0 of 72 real-data cells) clear the promotion
+bar. Holdout not read by either branch.**
+
+**Verdict.** NEGATIVE, both branches. **Lesson, and it generalizes beyond
+this specific pair of engines**: R-161's own diagnosis ("a hard sample-size
+floor forces total shutdown") was correct but incomplete — the *actual*
+binding constraint on this object is that the alpha targets tested
+(0.05/0.10) sit above v4's own already-realized tail-loss rate at the
+tested tau values, so **any correctly-calibrated engine converges to "cap
+not needed" once it has enough evidence**, and the only axis a different
+concentration inequality moves is *how fast* and *how gracefully* it gets
+there — fast and graceful (betting) lands on inert immediately; slow and
+peeling-limited (Howard, at tight alpha) spends a long total-shutdown
+detour first and is still inert once it arrives; anywhere in between (Howard
+at loose alpha) is inert too, just later. Swapping the concentration bound
+was the right isolation move (R-62's pattern) and it closes R-161's own
+"different guarantee family... remains untried" escape hatch conclusively:
+no fixed-sample vs. anytime-valid choice changes the qualitative outcome,
+because the outcome is set by the alpha/tau-vs-realized-rate relationship,
+not by the bound. A future round on this exact slot should not retry yet
+another concentration inequality (Bentkus, empirical-Bernstein, a tighter
+betting fraction schedule) without first re-deriving alpha/tau targets from
+this project's own realized tail-loss distribution rather than reusing
+R-161's own values verbatim — carried forward as the actual next step, not
+filed as a fresh backlog item (no new mechanism family is implied, only a
+recalibration of an already-closed one). **Holdout counter: +0, no change
+to the running program-level total** (neither branch read it). Decision
+rule did not move. Backlog (section D) unchanged — same four live rows
+(B-06, B-09, B-17, B-28), none NEXT/OPEN; B-09's own LOW/subsumed
+reasoning ("the binding problem is not that trust is miscalibrated but
+that correctly-calibrated trust is low") is independently corroborated by
+this round's own INERT finding on the betting engine, which is exactly a
+correctly-calibrated-and-low-trust outcome.
 
 ### R-166 · 08-27 · NEGATIVE (killed at Step 0, no branch built) — volatility-response sign inversion in `kelly_regime_v4`'s SCALE factor: R-10's own inverse-leverage-effect finding does not survive causal, inner-train-only re-measurement
 
@@ -18519,6 +18661,7 @@ trip.
 
 | what | why | ref |
 |---|---|---|
+| Anytime-valid concentration bounds replacing R-161's fixed-sample Hoeffding UCB in the SAME RCPS multiplicative-cap architecture on `kelly_regime_v4`'s SCALE output (`frac*scale`, pre-deadband), on an expanding causal window instead of R-161's bounded trailing one — peeled/doubling-stitched Hoeffding (Howard, Ramdas, McAuliffe & Sekhon 2021, Probability Surveys, arXiv:1811.04644; conservative) and a fixed-fraction betting confidence sequence (Waudby-Smith & Ramdas 2024, JRSS-B 86(1); novel), motivated by Xu, Karampatziakis & Mineiro (2024, NeurIPS, arXiv:2406.10490) and directly closing R-161's own named escape hatch ("a genuinely different guarantee family... remains untried") | 12 configs (6 conservative: `tau x alpha` = 4 primary +2 robustness varying the first-refit day 10/20/40; 6 novel: `tau x alpha` = 4 primary +2 robustness varying refit cadence/betting fraction), 72 real-data `compare()` cells total (36+36). Causal truncation probes PASS both branches; calibration self-tests land within the +2pp margin both branches. A design-time diagnostic (before dispatch) found a fixed-cadence peeling schedule for the conservative engine never unlocks any exposure over the whole inner-train window at PRIMARY — worse than R-161's own floor — fixed by geometric-doubling refit spacing (Howard et al.'s own named construction) before freezing. **Both branches still fail, via two DIFFERENT failure modes that share one root cause**: the novel (betting) engine is INERT on all 6 configs (binding_fraction=0 everywhere, dSharpe=+0.000 on every cell) because it correctly and quickly (within ~20 days) recognizes that v4's own already-realized tail-loss rate at every tested tau (2.67%/0.96% uncapped on BTC) sits below every tested alpha (0.05/0.10) — its own pre-registered falsification test (a head-to-head comparison against the conservative engine) REPLICATED (looser than peeled-Hoeffding on 100% of 1,440 overlapping days), confirming Waudby-Smith & Ramdas's own claimed advantage, just not one that matters for this promotion bar. The conservative (peeled-Hoeffding) engine is INERT too at the looser alpha=0.10 cell (dSharpe=+0.000 exactly, same as novel) but at PRIMARY (alpha=0.05, both tau values, all three first-refit-day settings) instead reproduces R-161's own total-shutdown failure — `days_to_first_nonzero_lambda`=inf over the whole inner-train window even with the geometric fix (independently re-confirming R-161's own fixed-window analogue at 460.0 days, matching its 460.5-day analytic floor) — collapsing dSharpe to -0.14/-0.76 on inner-validation and **-0.88/-1.48 on ETH**, the identical failure reproducing on both assets rather than inverting (so the ETH-replication falsification test was moot: there was no BTC-positive effect for ETH to invert). **0 of 12 configs (0 of 72 real-data cells) clear the promotion bar. Holdout not read by either branch.** The generalizable lesson: the binding constraint on this object was never *which* concentration inequality is used — every correctly-calibrated engine converges to "cap not needed" once it has enough evidence, because the tested alpha targets sit above v4's own realized tail-loss rate at the tested tau values; a different bound only changes how fast and how gracefully it arrives at that same inert answer. Do not re-try a further concentration-inequality swap (Bentkus, empirical-Bernstein, a different betting-fraction schedule) on this exact SCALE-cap object without first re-deriving alpha/tau from this project's own realized tail-loss distribution rather than reusing R-161's values verbatim — that recalibration, not a new engine, is the actual next step if this is revisited. | R-167 (both branches) |
 | Inverting the sign of `kelly_regime_v4`'s volatility-response exponent in its SCALE factor (`target_vol/vol` at β=+1 today; test β<0, i.e. pro-cyclical leverage into high-vol states, either as a fixed exponent or a per-vol-quintile causal Sharpe estimator with no sign constraint) motivated by R-10's inverse-leverage-effect finding | Killed at a pre-registered Step-0 gate before either a conservative (β=−1 fixed exponent) or novel (per-quintile causal Kelly estimator) branch was implemented. R-10's own quintile forward-Sharpe finding, re-measured with CAUSAL expanding-window quantile bucketing (no full-series lookahead) on inner-train only, does not survive: the gate-bullish spread (`frac>0`, the state the strategy actually trades in) reverses sign entirely (−2.417 vs. R-10's implied +0.30), and neither the unconditional nor the gate-bullish reading's 95% bootstrap CI excludes zero (2 configs: `experiments/r166_step0_gate.py`). Do not re-try a volatility-response sign inversion on this architecture citing R-10's published numbers as-is — first re-derive R-10's spread so that it survives causal, in-sample-only measurement (a longer/full inner-train window or a different vol-lag/bucket construction); that re-derivation, not a new implementation, is the actual next step. | R-166 (Step-0 kill, both branches) |
 | A continuous, two-sided compound "panic/calm-bull" multiplier on `kelly_regime_v4`'s SCALE, `1+kappa*tanh(score/0.25)` where `score` = a 24-month trailing-return bull/bear component times a 1-year-median-relative volatility component (Daniel & Moskowitz 2016) | 26 configs (4 kappa in {0,0.5,1,1.5} x 2 markets x 3 slices = 24, +2 fee-tier). A1 exact, A2 passes (R²=0.780 at kappa=1.0 PRIMARY, full pre-holdout BTC). Every non-zero kappa cell is negative on `d_log_growth`/`d_sharpe` on inner-validation, both markets (spot −0.004 to −0.014, futures −0.040 to −0.066); exposure_ratio rises monotonically with kappa (1.00→1.15) rather than averaging near 1.0 as the two-sided construction's neutral case would predict. **0 of 24 sweep cells clear `clears_bar()`**; the 0.40% fee-tier re-run of PRIMARY confirms rather than rescues (spot −0.010 [−0.030,+0.001], futures −0.081 [−0.238,+0.000]). ETH falsification is vacuous (PRIMARY clears nowhere, so the sign-check never fires) — a disclosed non-finding, not a pass. The disclosed activity diagnostic shows the mechanism is genuinely active (35.8% of BTC pre-holdout days carry a non-trivial score, 694 calm-bull / 91 panic days) and still loses. Do not re-try a trend+volatility compound "panic/calm-bull" multiplier on this vote/scale architecture expecting a different kappa, trend window or vol-ratio reference to rescue it — the sign is stable and negative across the whole non-zero grid, and futures loses 6-10x more than spot on every cell, consistent with R-136's inverse-leverage-effect finding for any volatility-scaling substitution on this strategy's leveraged leg. | R-164 (novel) |
 | Barroso & Santa-Clara (2015) risk-managed-momentum: `kelly_regime_v4`'s SCALE multiplied by `sqrt(target_var/realized_var)` of the STRATEGY'S OWN realized payoff (v4's vote-only isolate), not price, 6-month trailing window (the paper's own default) vs. a causal expanding long-run target | 26 configs (4 window_days in {0,63,126,252} x 2 markets x 3 slices = 24, +2 fee-tier). A1 exact, A2 passes (R²=0.396–0.710 across the grid, inner-train). Every non-zero window_days cell is negative on `d_log_growth`/`d_sharpe` on inner-validation, both markets (spot −0.070 to −0.110, futures −0.117 to −0.234), **none risk-matched** (exposure_ratio 1.22–1.41, vol_ratio 1.05–1.48 — the R-33/R-141 unmatched-exposure-artifact pattern, on every cell), none excluding zero on the winning side. **0 of 24 sweep cells clear `clears_bar()`**; the 0.40% fee-tier re-run of PRIMARY (window_days=126) is decisively negative on futures (d_log_growth=−0.306, CI=[−0.591,−0.037], excluding zero on the losing side). Independently skeptic-reproduced (A1/A2 exact on both branches; see R-164 in section B for a disclosed A2-slice inconsistency between the two branches, immaterial to either verdict). Do not re-try scaling v4's SCALE by the strategy's own realized-payoff variance (Barroso-Santa Clara or any close variant) expecting a different trailing window to rescue it — the sign is stable and negative across the whole non-zero grid, worsens at realistic fees, and fails hardest on the leveraged futures market exactly where R-136's inverse-leverage-effect finding predicts. | R-164 (conservative) |
