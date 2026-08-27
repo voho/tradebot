@@ -17373,6 +17373,66 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-checked 08-27 (twenty-second same-day/next-day session), no round
+dispatched (not an R-numbered entry — zero new configurations
+evaluated).** Step 0: `git fetch origin main` found `origin/main` at
+`c2a107c`, matching this branch's own HEAD — no in-flight round, no
+undispatched frozen pre-registration (`experiments/r99_shared.py` already
+has its matching R-99 entry, newest unchanged since the twenty-first
+pass). Same four live backlog rows as all twenty-one prior passes —
+**B-06, B-09, B-17, B-28** — re-verified directly against their full row
+text, none actionable, same reasons as the twenty-first pass's entry
+immediately below.
+
+This pass added one data-driven check the prior twenty-one had not run
+directly: **B-06's own accumulated forward record.**
+`reports/paper_trading/kelly_regime_v4_bitstamp.csv` now covers
+2026-08-19T23:05Z→2026-08-27T03:20Z (~7.2 days, 206 rows; unattended
+cadence only since 08-26, matching R-78's own diagnosed gap). This is
+~0.01% of R-78's 18.9-year median horizon, and R-78's horizon is not a
+"not enough time has passed" problem: it is a direct function of the
+ratio between the strategy's daily effect size and the ~3.0%/day
+common-mode noise, and R-78 proved analytically that no valid test —
+sequential or fixed-`n` — clears that ratio below a 7.1-year floor. A
+quick sanity check confirms it here: the paired-difference standard error
+over 7 days (≈3%/√7 ≈ 1.1%/day) still swamps any plausible daily edge by
+orders of magnitude, so no cheaper test reads a verdict off this record
+yet. B-06's evidentiary status is unchanged from R-78/R-83 — recorded so
+a future pass does not re-ask the same question from zero.
+
+Six further web searches, each checked against section C and all
+twenty-one prior passes' closed-candidate lists rather than judged on
+citation recency: LPPLS+sentiment-index fusion (Cao/Wunkaew/Geman 2025;
+duplicates closed LPPLS (R-141, 0/6) plus closed sentiment/social-data —
+combines two already-closed shapes), a crypto-liquidation
+critical-slowing-down study (arXiv:2607.27070; already cited and closed
+inside R-85's CSD round and R-156's Elliott-wave annotation), GRO/
+numéraire optimal-e-value refinements (same anytime-valid-sequential
+shape as R-71/R-78/R-83 — R-78's floor argument forecloses any
+e-value construction, not just the one it tested), bounded-confidence
+opinion dynamics (would be a 13th price-derived early-warning signal
+against the same six-episode gate twelve mechanisms have already failed),
+SIR/epidemic contagion-cascade models (same "detect the cascade early"
+shape as CSD/Hawkes/BOCPD, same gate), and H∞/CVaR-relaxed robust-control
+sizing (closest to genuinely different math, but reduces to the same
+"shrink exposure under uncertainty" shape as the closed DRO/
+Wasserstein-Kelly and CDaR-budget rounds). No candidate survives step 1's
+non-duplicate test. **No conservative/novel branch pair dispatched** —
+per ROUTINE.md, "not tested is not a negative result," and none of the
+six passed step 1 far enough to be tested.
+
+Ninth consecutive same-day/next-day pass (fourteenth through
+twenty-second) to reach this conclusion. Per the twenty-first pass's own
+statement that it would not re-argue the firing-cadence flag further
+without a material change, and since nothing about the cadence or its
+prior unactioned escalations has changed, this pass does not re-escalate
+and does not send a further notification. **B-06 remains the only ranked
+backlog item and is explicitly not a plan to act on.** Next session
+should not repeat the six searches or the B-06 recheck above; either
+outcome (backlog status or B-06's horizon) needs materially more elapsed
+forward-trading time or a structurally new, currently-unfetchable data
+source (B-28) to move.
+
 **Re-checked 08-27 (twenty-first same-day/next-day session), no round
 dispatched (not an R-numbered entry — zero new configurations
 evaluated).** Step 0: `git fetch origin main` found `origin/main` at
