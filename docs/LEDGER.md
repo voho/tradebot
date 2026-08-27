@@ -316,7 +316,156 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
-### IN PROGRESS: R-163 -- Turtle-style pyramiding (Faith 2007 / Zarattini 2026), a path-dependent trade-level SIZE mechanism on kelly_regime_v4: a literal discrete 4-unit ATR stack (conservative) vs. a continuous two-sided episode-relative excursion multiplier (novel). Pre-registration frozen at `experiments/r163_shared.py`; conservative/novel branch agents dispatched, no verdict yet.
+### R-163 · 08-27 · NEGATIVE (both branches) — Turtle-style pyramiding (Faith 2007 / Zarattini 2026) as a path-dependent, episode-relative SIZE mechanism on `kelly_regime_v4`; the novel branch clears nothing, and the conservative branch's mechanical "PROMOTE" is a decision-rule artifact — no pre-registered config clears both markets, and the literal Faith-2007 PRIMARY loses money with statistical confidence at a realistic fee tier
+
+**Direction.** This session's scheduled brief was the generic "propose an
+improvement, dispatch conservative/novel implementation branches, measure,
+promote the winner." Step 0 found no in-flight round (`HEAD == origin/main`
+@ `bca0c7d`, unshallowed; newest `_shared.py` files `r95`-`r99`, all with
+matching section B entries) and Step 0b's saturation count was **1**
+consecutive null pass (the pass immediately after R-162's dispatch),
+squarely in the "0-2: normal" tier, so a fresh literature sweep was
+warranted; the backlog grep returned the same four already-inactionable
+rows (B-06 de-ranked, B-09 LOW, B-17 PARTIAL, B-28 blocked on data). A
+research-only sub-agent confirmed that the prior ~23 sessions across
+08-26/27 (including today's R-160/R-161/R-162) had already exhausted
+e-values/martingales, conformal/RCPS, online FDR, Bayesian/robust/
+Wasserstein-DRO Kelly, CPPI, Grossman-Zhou, CDaR, Kaufman ER, HRP, RL/
+online portfolio selection, quantile regression, meta-labeling, rough
+volatility, Hill/EVT, GP regression, particle filters, path-signatures and
+macro/on-chain/flow signals as duplicates or infeasible-by-construction,
+then ran 10 further searches and found one candidate that survives the
+four-question filter: **Turtle-style pyramiding** — Faith, Curtis M., *Way
+of the Turtle* (McGraw-Hill, 2007): add one unit every 0.5N (N = 20-day
+ATR) a position moves in favor, up to 4 units, whole stack stopped at 2N
+from the newest unit's own entry
+(https://www.theturtletrader.com/turtle-trading-rules/); corroborated by
+Zarattini, Carlo (Concretum Group), "Position Sizing in Trend-Following:
+Comparing Volatility Targeting, Volatility Parity, and Pyramiding" (2026),
+a 40-futures-market replication whose own headline discloses pyramiding
+roughly triples realized volatility (10.8%→25.4%) for a fatter right tail
+(https://concretumgroup.com/position-sizing-in-trend-following-comparing-volatility-targeting-volatility-parity-and-pyramiding/).
+**Attacks SIZE**, but via a state variable no prior SIZE-axis round has
+used: favorable/adverse price excursion **since the current bullish
+episode began** (an episode-relative, path-dependent quantity that resets
+at every episode boundary), rather than a global rolling statistic
+uniform across all bars. Ledger-wide grep
+(`pyramid|Turtle|Faith 2007|Zarattini|scale.?in|unit add|ATR\b`,
+case-insensitive) returned zero hits before this round. **Not a duplicate
+of**: R-90/R-46 (trailing-stop/CPPI — reduce exposure on adverse moves;
+this only adds on favorable ones, conservative branch); R-93/R-152
+(Grossman-Zhou/CDaR — driven by the strategy's own realized drawdown, a
+portfolio-level statistic, not price excursion since a specific trade's
+own entry); R-162 (Kaufman ER — a global rolling statistic that never
+resets); R-89 (fixed-window rolling-RMS response curve); R-146 (anchor
+statistic, leaves the vote-to-exposure mapping alone); R-59/R-60 (flat
+constant retunes). Full reasoning, citations and non-duplication argument
+frozen in `experiments/r163_shared.py` before either branch was dispatched
+(committed as an IN-PROGRESS stub, per ROUTINE.md step 0's
+collision-avoidance convention, before results existed).
+
+**What was done.** Two branches, both reading only the frozen
+`experiments/r163_shared.py`, neither committing: **conservative**
+(`experiments/r163_conservative_pyramid.py`) — the literal Faith (2007)
+discrete unit stack, `num_units_cap ∈ {0,1,2,4}` (0 = identity), added on
+top of v4's own `frac*scale`, clipped to v4's own `max_leverage=2.0`;
+**novel** (`experiments/r163_novel_pyramid.py`) — a continuous, two-sided
+multiplier `1 + kappa·tanh(excursion_ATR_units / 2.0)` applied to the same
+`frac*scale`, `kappa ∈ {0, 0.5, 1.0, 1.5}` (0 = identity), with no discrete
+unit/stop-ratchet machinery. Pre-registered falsification test (identical
+for both, chosen per this project's own most common SIZE-axis failure
+mode): ETH sign-replication at each branch's PRIMARY config
+(`num_units_cap=4` / `kappa=1.0`). Pre-registered decision table (2×2,
+`GATE_OK` × `CLEAR(spot)`/`CLEAR(futures)`) and non-degeneracy kill
+switches (A1 identity, A2 non-collinearity `R²<0.98`, A3 exposure-match
+disclosed-not-calibrated) — all identical in shape to R-160/R-161/R-162.
+**52 configurations total** (26 per branch: 4 grid values × 2 markets × 3
+slices = 24, + 2 fee-tier cells at 0.40%), the trials count for deflated
+Sharpe. **Holdout not read by either branch** (enforced by explicit
+instruction and verified in each branch's own Step 6 — neither script
+executes any `start=OOS_START` call). An independent skeptic agent then
+re-derived, from a from-scratch script, the A1/A2 kill switches, the
+`num_units_cap∈{2,4}` grid cells on both markets, and the fee-tier cells
+for the conservative branch's apparent PROMOTE, and reproduced every cited
+number bit-for-bit or to printed precision — no discrepancy found.
+
+**Result.** **Novel branch: clean REJECT.** A1 (bit-for-bit at kappa=0)
+and A2 (R²=−0.394, non-collinear) both pass; the multiplier is
+mathematically two-sided but **not symmetric in practice** — over the full
+BTC pre-holdout history at kappa=1.0, mean=1.456, 48.5% of bars sit above
+1.0 vs. only 2.8% below (v4's own latching hysteresis flips the vote to
+bearish before much adverse excursion accumulates), so it behaves close to
+a mostly-additive multiplier despite its two-sided construction. **No
+non-zero kappa clears `clears_bar()` on inner-validation on either
+market** (`CLEAR(spot)=False`, `CLEAR(futures)=False`); at kappa=1.0,
+inner-val `d_log_growth` is negative on both markets (spot −0.085,
+futures −0.071), `risk_matched=False` on all 24 sweep cells
+(exposure_ratio 1.70–1.74, vol_ratio 1.39–1.81), and the fee-tier re-run
+at 0.40% is **decisively negative on both markets, CI excluding zero on
+the losing side** (spot d_log_growth=−0.899 [−1.703,−0.066]; futures
+−0.712 [−1.398,−0.036]). GATE_OK is vacuously true (nothing cleared to
+falsify) → **REJECT** per the pre-registered table.
+
+**Conservative branch: mechanically PROMOTE, substantively an artifact —
+reported as a fall-through per the R-151 precedent, not stretched to
+either label.** A1 and A2 both pass (R²=−4.580174 at PRIMARY,
+`num_units_cap=4`); the diagnostic shows the stack is saturated at the
+full 4 units on **89.9%** of all bullish bars, i.e. this construction
+spends nearly all its active time behaving like "v4, levered up" rather
+than a nuanced, continuously time-varying path-dependent signal. On the
+Step-3 grid, `CLEAR(spot)=True` but only via `num_units_cap∈{1,2}`
+(d_sharpe +0.24, +0.30); `CLEAR(futures)=True` but only via
+`num_units_cap∈{2,4}` (d_sharpe +0.27, +0.283). **PRIMARY itself
+(`num_units_cap=4`, the literal, pre-nominated Faith-2007 config) clears
+futures (+0.283) but MISSES spot** (+0.198, under the 0.2 floor) — so the
+decision table's mechanical PROMOTE is stitched together from **different,
+never-jointly-frozen configs on different markets** (only `cap=2`, which
+was never nominated as PRIMARY, clears both). On every non-zero
+`num_units_cap` and every market: `risk_matched=False`, exposure_ratio
+1.6×–3.8×, vol_ratio 1.5×–3.0×, and max-drawdown **worse** than v4's own
+by **+8.6 to +53.7 percentage points** — not one bootstrap CI excludes
+zero on the winning side anywhere in the sweep. The pre-registered 0.40%
+fee-tier re-run of the literal PRIMARY config on inner-val **reverses
+sign on both markets**, and on futures the reversal is statistically
+decisive: d_log_growth=−1.700, CI=[−3.405,−0.004], excluding zero entirely
+on the **losing** side. The independent skeptic's verdict, after
+bit-for-bit reproduction: this is the R-33/R-141 "holding more draws down
+more; that is arithmetic, not evidence" exposure artifact in its most
+literal form yet (100% of cells fail risk-matching, not a borderline
+fraction), compounded by a genuine decision-rule design defect —
+`CLEAR(m)` was pre-registered as "some non-zero grid value clears on
+market m," not "the one frozen PRIMARY config clears on market m," and
+this round is the first on this axis where that ambiguity actually
+changes the outcome. Read literally and without re-tuning to the
+never-frozen `cap=2`, PRIMARY clears only one market (at best PARTIAL
+under a config-fixed reading) and that reading is itself overridden by
+the uniform exposure mismatch and the fee-tier reversal.
+
+**Verdict.** **NEGATIVE, both branches** — the novel branch cleanly, the
+conservative branch as a disclosed fall-through of an under-specified
+decision rule (per ROUTINE.md step 4's own R-151 instruction: state the
+gap plainly rather than stretch the nearest label). **One-line lesson,
+twofold:** (1) pyramiding's apparent Sharpe gain on this vote architecture
+is a textbook, saturating unmatched-exposure artifact, not a real
+sizing edge, exactly as this round's own pre-registration predicted before
+any data existed; (2) a decision rule that defines "clears" per market
+over *any* non-zero grid value, rather than requiring the *same* frozen
+config to clear every market, can manufacture a PROMOTE the actual
+pre-registered PRIMARY does not itself earn — **future rounds' decision
+tables should require one fixed config to satisfy every market's CLEAR
+clause, not evaluate each market's clause over the whole grid
+independently.** Holdout counter: **+0** (neither branch read it; running
+program-level total unchanged at ~715, per R-157's own count). Decision
+rule did not move after the holdout, because the holdout was never
+consulted by either branch. **Next step:** this closes the trade-level/
+episode-relative SIZE sub-family (ATR-based unit-adding, MFE/MAE-driven
+multipliers) in one round; a future session should not re-try Turtle-style
+pyramiding on this vote architecture expecting a different
+`num_units_cap`/`kappa` to rescue it — the failure is structural (exposure
+inflation compounds with v4's own vote confirmation, which already runs
+near-fully invested through most of a confirmed trend) — and should also
+apply the tightened same-config-both-markets decision-rule convention
+named above to any future round with a >1-market CLEAR clause.
 
 ### R-162 · 08-27 · NEGATIVE (both branches) — Kaufman (1995) Efficiency Ratio as a two-sided SIZE-axis conviction modifier on `kelly_regime_v4`; on real BTC data the statistic sits so close to v4's own scale/vote that it fails the non-collinearity kill switch in both branches, and the (tiny) surviving deltas fail the plateau/ETH-sign gate anyway
 
@@ -17852,6 +18001,8 @@ trip.
 
 | what | why | ref |
 |---|---|---|
+| A continuous, two-sided episode-relative excursion multiplier on `kelly_regime_v4`'s SCALE (`1 + kappa*tanh(excursion_ATR_units/2.0)`, excursion measured since the current bullish episode began), Faith (2007)/Zarattini (2026)-motivated | 26 configs (4 kappa in {0,0.5,1,1.5} x 2 markets x 3 slices = 24, +2 fee-tier). A1/A2 pass (R²=−0.394, non-collinear). The multiplier is two-sided by construction but not symmetric in practice on real data (mean=1.456 at kappa=1.0 over the full pre-holdout series; 48.5% of bars sit above 1.0 vs. 2.8% below, because v4's own latching hysteresis flips the vote bearish before much adverse excursion accumulates). **0 of 24 sweep cells clear `clears_bar()` on inner-validation on either market**; `risk_matched=False` on all 24, exposure_ratio 1.70-1.74 and vol_ratio 1.39-1.81 at kappa=1.0; the 0.40% fee-tier re-run is decisively negative on both markets (spot d_log_growth=−0.899 [−1.703,−0.066], futures −0.712 [−1.398,−0.036], both excluding zero on the losing side). Do not re-try a continuous episode-relative excursion multiplier on this vote/scale architecture expecting a different kappa or reference-ATR constant to rescue it — the sign is stable and negative on inner-validation across the whole non-zero grid, and gets worse, not better, at realistic fees. | R-163 (novel) |
+| A literal Faith (2007) discrete 4-unit Turtle pyramid (add every 0.5N favorable ATR move, stop the stack at 2N from the newest unit's own entry) stacked additively on top of `kelly_regime_v4`'s own `frac*scale`, clipped to v4's own `max_leverage` | 26 configs (4 num_units_cap in {0,1,2,4} x 2 markets x 3 slices = 24, +2 fee-tier). A1/A2 pass (R²=−4.580174 at PRIMARY=4, non-collinear); the stack sits at its full 4-unit cap on 89.9% of all bullish bars, i.e. it behaves as a near-constant leverage-up of v4's own signal rather than a nuanced path-dependent mechanism. The pre-registered decision table mechanically outputs PROMOTE (`CLEAR(spot)` via num_units_cap∈{1,2}, `CLEAR(futures)` via num_units_cap∈{2,4}), but **no single config clears both markets** — PRIMARY itself (num_units_cap=4, the literal cited standard) clears futures (d_sharpe +0.283) but misses spot (+0.198, under the 0.2 floor) by construction, so the mechanical PROMOTE describes a never-jointly-frozen `num_units_cap=2` config, not PRIMARY. `risk_matched=False` on every non-zero cell on every market (exposure_ratio 1.6x-3.8x, vol_ratio 1.5x-3.0x), max-drawdown worse than control by +8.6 to +53.7 percentage points on every one of them, and no bootstrap CI excludes zero on the winning side anywhere in the sweep. The 0.40% fee-tier re-run of the literal PRIMARY config reverses sign on both markets, decisively on futures (d_log_growth=−1.700, CI=[−3.405,−0.004], excluding zero on the losing side). An independent skeptic reproduced every cited number bit-for-bit and concluded this is the R-33/R-141 unmatched-exposure artifact in its most complete form (100% of cells fail risk-matching) compounded by a decision-rule gap (`CLEAR(m)` was pre-registered per-market over any grid value rather than for one fixed config). Do not re-try discrete ATR-unit pyramiding on this architecture expecting a different `num_units_cap` to rescue it, and do not write a future decision table whose per-market CLEAR clauses can each be satisfied by a different, never-jointly-frozen grid value — require the same config to clear every market. | R-163 (conservative) |
 | Conformal Risk Control (Angelopoulos et al. 2024, ICLR, arXiv:2208.02814) / Risk-Controlling Prediction Sets (Bates et al. 2021, J. ACM, arXiv:2101.02703) calibrating a multiplicative cap `lambda` on `kelly_regime_v4`'s SCALE output (`frac*scale`, pre-deadband) — periodic batch RCPS refit (conservative) or Angelopoulos et al. §4's online distribution-shift recursion (novel), both against an identical causal per-day tail-loss functional (`1{|exposure*lambda*next_day_return| > tau}`), leaving the vote and vol-target estimator untouched | 15 configs (6 conservative: `tau x alpha` at CALIB_DAYS=365/REFIT_DAYS=90 = 4, +2 robustness at CALIB_DAYS=730 and REFIT_DAYS=180; 9 novel: `tau x alpha x eta={0.01,0.02}` = 8, +1 warm-start at lambda_0=0.8), 90 real-data `compare()` cells total (36+54), plus the novel branch's 48 Monte Carlo stress-window cells and 48 stationary-bootstrap resamples. Causal truncation probes PASS both branches. Calibration self-tests on synthetic known-tail-rate data (true_tail_prob=0.05) landed within 0.01-0.03 of ground truth both branches — not badly miscalibrated. **A hard defect in the conservative branch's own pre-registered bound surfaced first**: the disclosed plain-Hoeffding UCB needs n>=460.5 days to certify anything above lambda=0 at alpha=0.05 (`delta=0.10`), but the pre-registered primary CALIB_DAYS=365 sits below that floor — so 3 of 6 conservative configs (including PRIMARY) degenerate into a **binary total-shutdown** (lambda=1 through warmup, then exactly 0 forever), not a nuanced cap; the other 2 alpha=0.10 configs sit the opposite way and stay fully inert (lambda approx 1 always). Only the one robustness cell that happens to fix the floor (CALIB_DAYS=730, n=730>460.5) shows genuinely continuous calibration (lambda 0.50-0.83) and is the branch's only cell with any positive Sharpe delta anywhere (+0.10/+0.05, ETH-only, bootstrap point still negative). The novel branch's online recursion avoids that binary failure by construction but is consequently too gentle to move the exceedance-rate clause at all in 8 of 9 configs (cand exceedance == ctrl exceedance to 4 decimals on inner-validation); only an artificially cold-started variant (lambda_0=0.8, not something the recursion would choose on its own) binds meaningfully, and it fails on futures. **0 of 15 configs (0 of 90 real-data cells) clear the decision rule** (inner-validation tail-exceedance strictly lower AND d_sharpe>=+0.2-or-risk-matched-drawdown-improvement-or-CI-excludes-zero, both markets, reproducing on the branch's own falsification test). Falsification tests (ETH sign-replication / Monte Carlo stress-window survival) were not decisive tie-breakers for any config since the exceedance/Sharpe clauses failed first in every case; the novel branch's own Monte Carlo check on its primary config was mixed regardless (58-63% of windows favored candidate on Sharpe, only 37.5-50% on log-growth). A second, unrelated numerical-instability defect (`r161_shared.constant_cap_r2` divides by a near-zero denominator for any non-bit-identical lambda path, returning nan or huge-magnitude garbage) was found and disclosed, not fixed (module frozen); raw lambda mean/std/range was used as the credible non-degeneracy evidence instead. Holdout never consulted. Do not re-try Conformal Risk Control / RCPS on v4's SCALE output expecting a different (tau, alpha) grid point or a tighter concentration bound (Hoeffding-Bentkus in particular) to rescue it — the failure modes are structural on both sides (a hard sample-size floor vs. a convergence property that resists binding), not a calibration-precision artifact; a genuinely different guarantee family that needs no fixed calibration window (e.g. martingale/e-value-based risk control) remains untried. | R-161 (both branches) |
 | Online false-discovery-rate control (LORD, Javanmard & Montanari 2015/2018, conservative; SAFFRON, Ramdas/Zrnic/Wainwright/Jordan 2018, +ADDIS bonus, novel) gating `kelly_regime_v4`'s three anchor votes' flip decisions — each candidate band-crossing tested as a "discovery" against a causal p-value, accepted only once an adaptively-shrinking wealth budget clears it, delaying low-confidence flips until evidence strengthens; v4's own vote combination, vol-target scale and deadband left unmodified | 16 gate configurations (6 conservative: alpha in {0.20,0.10,0.35} x sigma_days in {5,10}; 10 novel: alpha x lam in {0.5,0.3,0.7} + 1 ADDIS), 96 real-data `compare()` cells total. Both kill switches PASS on every config (delayed-episodes 13-48/anchor, R² 0.44-0.56 vs v4's own vote — the gate genuinely binds and is not a relabeling). Calibration self-test on synthetic zero-drift noise: both gates accept flips 400-2000x BELOW nominal alpha (safe-direction, but close to a blunt rare-event sparsifier rather than a real signal/noise discriminator — accept-counts on 400k bars of pure noise were the same order of magnitude as on 631k bars of real BTC history). **0 of 96 real-data cells** clear the decision rule (inner-validation d_log_growth CI excluding zero AND d_sharpe>=+0.2-or-risk-matched-drawdown-improvement, both markets); d_sharpe on inner-validation ranged −0.49 to +0.24, and the one positive cell fails both the CI and the risk-matching leg with its paired futures cell flat/negative. Both branches independently found the same pattern: delaying a flip to raise confidence costs more return capture than it saves in whipsaw (drawdown got WORSE, not better, in the large majority of cells) — the failure mode named in advance in the pre-registration. Falsification test (ETH sign-replication) was never load-bearing since (a)/(b) failed on BTC first in every config. Holdout never consulted (pre-registration required clearing inner-validation first). Do not re-try an online-FDR (or other formal multiple-testing) gate on this vote architecture's FLIP TIMING expecting a different alpha/lambda/discount-sequence choice to rescue it — the sign is stable and negative across a 16-point grid spanning both classical (LORD) and adaptive-null-aware (SAFFRON) online-FDR families; an ERR-axis attempt on this architecture's SCALE/sizing decision instead remains untried. | R-160 (both branches) |
 | A rolling CDaR-budgeted exposure rule (Chekhlov, Uryasev & Zabarankin 2005), `f*=budget/CDaR_0.95(unit vote-scaled returns)` via CDaR's degree-1 homogeneity, replacing `kelly_regime_v4`'s `target_vol/realized_vol` ratio entirely, budget calibrated to match v4's own inner-train mean exposure | 4 configurations (3 CDaR window lengths + 1 control). B2 clears (r=−0.32 to −0.41 vs v4's own realized vol, not a relabel). Inner-validation Sharpe is 0.90–1.13 BELOW control at every window length (control 0.251; branch −0.646/−0.722/−0.876 at 180/365/545d) and drawdown is worse, not better (32.29% vs 37.81/49.13/40.20%) — decisively fails the selection rule's criterion (2). Exposure match holds only at the shortest (180d) window; the mechanism reacts too slowly to 2022's drawdown as the window lengthens, under-sizing further from control the longer the window. Plateau criterion (3) passes (3/3 windows agree in sign) — a consistent, replicated failure, not noise. Ineligible for holdout; none read. Do not re-try a CDaR-budget solve as a direct replacement for v4's vol-target ratio expecting a shorter/longer window to rescue it — the sign is stable and negative across the whole 180-545d sweep. | R-152 (novel) |
@@ -17962,6 +18113,25 @@ trip.
 ---
 
 ## D. Backlog (ranked)
+
+**Re-ranked 08-27 after R-163 (NEGATIVE, both branches, 52 configurations,
+holdout not read).** The ranked list is unchanged — B-06, B-09, B-17, B-28
+— since R-163 was a fresh literature-sweep round (Step 0b's consecutive-
+null-pass count was 1, squarely "0-2: normal") rather than work on a
+backlog item. Turtle-style pyramiding (Faith 2007/Zarattini 2026) closed
+NEGATIVE on both branches: the novel (continuous two-sided excursion
+multiplier) branch cleanly clears nothing; the conservative (literal
+discrete unit-stack) branch's mechanical PROMOTE was found, on independent
+skeptic review, to be a decision-rule artifact — no single frozen config
+clears both markets, exposure is unmatched on 100% of cells, and the
+literal PRIMARY config loses money with statistical confidence at the
+0.40% fee tier. This closes the trade-level/episode-relative SIZE
+sub-family (ATR-based unit-adding, MFE/MAE-driven multipliers) alongside
+the 28+ prior SIZE-axis attempts already in this table's history. See
+R-163 in section B for the full write-up, and note the disclosed
+decision-rule lesson for future multi-market CLEAR clauses: require the
+*same* frozen config to clear every market, not any grid value per market
+independently.
 
 **Re-ranked 08-27 after R-162 (NEGATIVE, both branches, 52 configurations,
 holdout not read).** The ranked list is unchanged — B-06, B-09, B-17, B-28,
