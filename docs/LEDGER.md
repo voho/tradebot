@@ -316,7 +316,192 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
-IN PROGRESS: R-161 · 08-27 · Conformal Risk Control (Angelopoulos et al. 2024) / RCPS (Bates et al. 2021) calibrating a multiplicative cap on kelly_regime_v4's SCALE output — pre-registration frozen in `experiments/r161_shared.py`, conservative (periodic RCPS batch calibration) and novel (online CRC distribution-shift adaptation) branches dispatched, results pending.
+### R-161 · 08-27 · NEGATIVE (both branches) — Conformal Risk Control (Angelopoulos et al. 2024) / RCPS (Bates et al. 2021) calibrating a multiplicative cap on `kelly_regime_v4`'s SCALE output; the conservative branch's own pre-registered bound has a hard sample-size floor that forces total shutdown at its primary setting, the novel branch stays too gentle to matter except when artificially cold-started, and neither clears the promotion bar on any of 15 configs
+
+**Direction.** This session's scheduled brief was the generic "propose an
+improvement, dispatch conservative/novel implementation branches, measure,
+promote the winner." Step 0 found no in-flight round (HEAD == `origin/main`
+@ `b531a11`, unshallowed via `git fetch --unshallow`, newest `_shared.py`
+files `r97`/`r98`/`r99` by name but `r150_shared.py` newest by mtime, all
+with matching section B entries). Step 0b's saturation count was **0**
+consecutive null passes (R-160 had just dispatched, resetting the counter
+per this section's own construction rule) — squarely in the "0-2: normal"
+tier — and the backlog grep returned the same four already-inactionable
+rows (B-06 de-ranked, B-09 LOW, B-17 PARTIAL, B-28 blocked on data), so a
+fresh literature sweep was warranted. A research-only sub-agent read R-160's
+own closing line verbatim ("an ERR-axis attempt on this architecture's
+SCALE/sizing decision instead remains untried"), read section C in full to
+avoid the twelve-plus prior ERR-axis constructions already closed on the
+VOTE side (R-28/31, R-87 x2, R-104, R-105, R-106, R-109, R-112, R-113,
+R-114, R-115, R-122, R-123, R-147, R-160) plus R-125's SCALE-side
+risk-*statistic* swap (std to CVaR) and R-38's closed-form bet fraction, and
+proposed Conformal Risk Control (Angelopoulos et al. 2024, ICLR,
+arXiv:2208.02814) / Risk-Controlling Prediction Sets (Bates et al. 2021,
+J. ACM 68(6), arXiv:2101.02703) — a calibration-set/concentration-bound
+search for a finite-sample-guaranteed threshold on a bounded *loss*, a
+different target quantity and a different algorithm from every one of those
+(none puts a calibrated statistical guarantee on SCALE's *output*, as
+opposed to its confidence, timing, combination, internal estimator, or risk
+statistic). **Attacks ERR** (primary; no error control exists anywhere in
+v4's signal path, and this is the first attempt on the SCALE slot itself
+rather than the VOTE or an estimator feeding SCALE), secondarily SIZE (it
+modifies exactly the "how much to hold" decision the standing diagnosis
+credits as the one mechanism family that works, without touching the vote).
+Full citations, the complete non-duplication argument (cited by ID against
+all twelve-plus prior ERR-axis rounds plus R-125/R-38/B-09), the decision
+rule, and both branches' pre-registered falsification tests are in
+`experiments/r161_shared.py`, written and committed (`20137f2`, "IN
+PROGRESS: R-161") before either branch was dispatched, per step 0's
+collision-avoidance convention. Origin/main was re-checked immediately
+before that push (`git fetch origin main` == HEAD~1) — no collision.
+
+**What was done.** Two disjoint files, each importing only from the
+read-only `r161_shared.py`: `experiments/r161_conservative_rcps_cap.py`
+(periodic batch RCPS: every `REFIT_DAYS` days, recalibrate a cap `lambda`
+over the trailing `CALIB_DAYS` days via a one-sided Hoeffding UCB search —
+the disclosed, looser special case of Bates et al.'s Hoeffding-Bentkus
+hybrid, chosen because the tighter bound needs a binomial-tail inversion
+outside this project's numpy/pandas-only dependency set) and
+`experiments/r161_novel_online_crc_cap.py` (Angelopoulos et al. 2024 §4's
+online distribution-shift recursion, `lambda_{d+1} = clip(lambda_d +
+eta*(alpha - loss_d(lambda_d)), 0, 1)`, tracking the cap continuously
+day-by-day with no scheduled refit). Both wrap the SAME causal per-day loss
+functional (`1{|exposure_prev * lambda * next_day_return| > tau}`, where
+`exposure_prev` is v4's own **unmodified** `frac*scale`, pre-deadband) from
+`r161_shared.py` around that same unmodified `frac*scale`, applying v4's own
+10% deadband after the cap — the only difference from v4 is a multiplicative
+factor on its existing exposure, never anything about the vote or the vol-
+target estimator. Pre-registered decision rule (frozen before any real-data
+number was read): on inner-validation, both markets, (a) the candidate's
+realized tail-loss exceedance rate is strictly lower than v4's own at the
+same tau, (b) d_sharpe >= +0.2 OR a risk-matched drawdown improvement OR a
+bootstrap CI excluding zero positive, (c) the same direction reproduces on
+each branch's own falsification test (conservative: ETH sign-replication;
+novel: Monte Carlo stress-window survival). Pre-registered kill switches:
+A1 (binding_fraction >= 2% of calibrated days on >=1 market, else the gate
+is inert) and A2 (diagnostic only: is the cap a genuinely time-varying
+control or a degenerate constant de-lever). **Configs evaluated: 6
+conservative** (`TAU_GRID={0.05,0.08} x ALPHA_GRID={0.05,0.10}` at
+CALIB_DAYS=365/REFIT_DAYS=90 = 4, plus 2 robustness cells at
+CALIB_DAYS=730 and REFIT_DAYS=180) **+ 9 novel**
+(`TAU_GRID x ALPHA_GRID x ETA_GRID={0.01,0.02}` = 8, plus 1 warm-start
+variant at lambda_0=0.8) **= 15 total**, each through the full `compare()`
+(3 slices x 2 markets = 6 cells) — **90 real-data cells total** (36
+conservative + 54 novel) — plus the novel branch's 48 Monte Carlo
+stress-window cells and 48 stationary-bootstrap falsification resamples on
+its primary config (matching r160's own counting convention of
+compare()+MC cells, the novel branch's own accumulator reads 102; its
+broader count including every diagnostic cell is 169), and the
+conservative branch's 36 kill-switch/diagnostic cells and 2 calibration
+self-tests (not counted toward the real-data trials count, per convention).
+Neither branch read a bar at or after `OOS_START`; both independently
+confirmed the max timestamp seen was 2022-12-31 23:55:00 UTC, and both
+scripts' `compare()`/`run_slice()` calls assert this on every invocation.
+
+**Result.** Causal truncation probes **PASS** on both branches' full
+candidate-build pipelines (the required fixed-lambda probe matching
+`r161_shared.py`'s own self-test pattern, plus a bonus probe on the full
+per-config builder in each branch). Both branches' calibration self-tests
+on `synthetic_known_tail_frame` (n=400,000 bars, a KNOWN injected 5% daily
+tail-event rate) landed close to that ground truth — conservative:
+calibrated lambda=0.28, achieved exceedance 0.0209 vs true 0.0500 (0.0291
+off, conservative-direction); novel: achieved exceedance 0.0403 vs true
+0.0500 in the second half of the series after convergence (0.0097 off,
+converging essentially immediately, day 0 of 1,388) — neither badly
+miscalibrated under this project's real serial correlation, within an
+informal 0.03 sanity band either way.
+
+**A genuine defect in this round's own pre-registration surfaced before any
+Sharpe number was trusted, and is recorded here rather than quietly
+patched:** the disclosed plain-Hoeffding UCB, `margin =
+sqrt(log(1/delta)/(2n))`, must itself be <= alpha just to certify a *zero*
+empirical exceedance rate. At `delta=0.10`, `alpha=0.05` needs **n >=
+460.5 days** — but the pre-registered primary `CALIB_DAYS=365` is below
+that floor, so `rcps_calibrate`'s search (which starts from `best=0.0` and
+only raises it when a candidate lambda's UCB clears alpha) can **never**
+certify anything above lambda=0 at that (alpha, calib_days) pair,
+regardless of what the real data's tail risk actually looks like. This
+affects 3 of the 6 conservative configs (both tau values at
+alpha=0.05/CALIB_DAYS=365, including the round's PRIMARY cell), which
+consequently show the identical daily-lambda path — `{1.0 for the ~365-day
+warmup, 0.0 forever after}` — a binary strategy shutdown, not a nuanced
+risk cap. The remaining 2 configs at alpha=0.10 sit the opposite way:
+`margin` alone is already <= 0.10 at n=365 even at zero loss, so the bound
+rarely binds and lambda stays within a percent of 1.0 (fully inert,
+reproducing v4 almost exactly, including one config with dSharpe/dlogG
+identically 0.000 on every cell). Only the **one** robustness config that
+happens to fix the floor by using more data (CALIB_DAYS=730, so n=730 >
+460.5) shows genuinely continuous, non-degenerate calibration
+(lambda 0.50-0.83) — and it is the conservative branch's only cell with any
+positive Sharpe delta anywhere (+0.10 spot / +0.05 futures, on
+`eth_replication` only; the paired bootstrap point estimate is still
+negative there and BTC inner-validation is negative on both markets, so it
+does not clear clause (b)). A second, unrelated defect was found and
+disclosed rather than fixed (the module is frozen/read-only per convention):
+`r161_shared.constant_cap_r2`'s zero-variance guard (`np.std(x) <
+1e-12`) is correct for a bit-for-bit-constant array but its **numerator**
+computation (`r_squared(x, np.full_like(x, mean(x)))`) divides by a
+sum-of-squares against the array's own floating-point-rounded mean, which
+is a tiny nonzero epsilon rather than exact zero for any real
+(non-bit-identical) lambda path — both branches independently hit this and
+reported the resulting numerically unstable values (e.g. `-1.8e32`, `nan`)
+exactly as pre-registered, while substituting the raw lambda
+mean/std/range as the credible non-degeneracy evidence for the write-up.
+
+On real data: **0 of 15 configs (0 of 90 real-data cells) satisfy the full
+PROMOTE-CANDIDATE conjunction on both markets.** Conservative: the 3
+shutdown configs trivially clear clause (a) (a flat strategy has zero tail
+loss by construction) but fail clause (b) hard (inner-val dSharpe -0.14/
+-0.25, dDD -32 to -33pp, exposure_ratio 0.00 — the strategy goes
+essentially flat) and clause (c) reproduces the same negative shape on ETH
+(dSharpe -0.84/-0.85); the 2 inert configs fail clause (a) outright (cand
+exceedance == ctrl exceedance to 4 decimals); the 1 genuinely-calibrated
+config fails clause (b) on BTC and clause (c)'s bootstrap leg on ETH.
+Novel: 8 of 9 configs stay too gentle to move clause (a) at all (cand
+exceedance equals ctrl exceedance to 4 decimals in every one — lambda never
+strays more than 1-7% below 1.0 on average); only the artificially
+cold-started config (lambda_0=0.8, forcing an initial cap the online
+recursion would not have chosen on its own) genuinely reduces exceedance
+(0.0137 vs ctrl's 0.0178) but at the cost of degraded futures performance
+(b fails there) and no Monte Carlo run was pre-registered for a non-primary
+cell. The falsification tests were accordingly not decisive tie-breakers
+for any config (moot on the conservative side since (a)+(b) never jointly
+cleared BTC first; the novel branch's PRIMARY-config Monte Carlo stress
+test showed a mixed, not clearly favorable, picture regardless — 58-63%
+of 24 resampled windows favored the candidate on Sharpe, only 37.5-50% on
+log-growth, 79-83% on drawdown — and a companion stationary-bootstrap
+resample of the same config's own daily returns confirmed its tiny
+negative point estimates are directionally stable but economically
+negligible, not a case the falsification test needed to adjudicate since
+clause (a) had already failed for that config).
+
+**Verdict.** **NEGATIVE, both branches.** Neither periodic RCPS batch
+calibration nor online CRC tracking of a SCALE-output risk cap clears the
+pre-registered bar at any tested (tau, alpha, calib/refit or eta) setting.
+Holdout was correctly never consulted (holdout counter unchanged) — the
+pre-registration required clearing inner-validation first, and nothing did.
+One-line lesson, and it cuts across both branches despite their opposite
+proximate causes: a calibration tight enough to bind meaningfully on this
+sample size either forces a binary shutdown (conservative, when the
+disclosed Hoeffding bound's own sample floor exceeds the pre-registered
+calibration window) or needs an artificial cold start to bind at all
+(novel, whose self-correcting online recursion is — by the same literature's
+own convergence argument that makes it robust to distribution shift —
+exactly what prevents it from drifting far from "no cap" on this data's
+real tail-event rate); there is no middle setting on this architecture that
+both binds non-degenerately *and* pays for itself. This closes the SCALE
+side of the ERR axis the way R-160 closed the FLIP-TIMING side: **do not
+re-try Conformal Risk Control / RCPS on v4's SCALE output expecting a
+different (tau, alpha) grid point or a tighter concentration bound
+(Hoeffding-Bentkus, in particular) to rescue it** — the failure modes here
+are structural (a hard sample-size floor on one side, a convergence
+property that resists binding on the other), not a calibration-precision
+artifact a better bound would fix, though a future attempt with a genuinely
+different guarantee family (e.g. a martingale/e-value-based risk control
+that does not need a fixed calibration window at all) remains untried. Not
+registered (an ordinary-shape ERR-axis negative, not independently
+instructive enough for a table row per step 5's own threshold). Code lives
+under `experiments/` per step 5.
 
 ### R-160 · 08-27 · NEGATIVE (both branches) — online false-discovery-rate control (LORD conservative / SAFFRON novel) gating `kelly_regime_v4`'s anchor-vote flips; the gate binds cleanly and is not degenerate, but delaying a flip costs more Sharpe/drawdown than it buys in precision, on every one of 96 real-data cells
 
@@ -17545,6 +17730,7 @@ trip.
 
 | what | why | ref |
 |---|---|---|
+| Conformal Risk Control (Angelopoulos et al. 2024, ICLR, arXiv:2208.02814) / Risk-Controlling Prediction Sets (Bates et al. 2021, J. ACM, arXiv:2101.02703) calibrating a multiplicative cap `lambda` on `kelly_regime_v4`'s SCALE output (`frac*scale`, pre-deadband) — periodic batch RCPS refit (conservative) or Angelopoulos et al. §4's online distribution-shift recursion (novel), both against an identical causal per-day tail-loss functional (`1{|exposure*lambda*next_day_return| > tau}`), leaving the vote and vol-target estimator untouched | 15 configs (6 conservative: `tau x alpha` at CALIB_DAYS=365/REFIT_DAYS=90 = 4, +2 robustness at CALIB_DAYS=730 and REFIT_DAYS=180; 9 novel: `tau x alpha x eta={0.01,0.02}` = 8, +1 warm-start at lambda_0=0.8), 90 real-data `compare()` cells total (36+54), plus the novel branch's 48 Monte Carlo stress-window cells and 48 stationary-bootstrap resamples. Causal truncation probes PASS both branches. Calibration self-tests on synthetic known-tail-rate data (true_tail_prob=0.05) landed within 0.01-0.03 of ground truth both branches — not badly miscalibrated. **A hard defect in the conservative branch's own pre-registered bound surfaced first**: the disclosed plain-Hoeffding UCB needs n>=460.5 days to certify anything above lambda=0 at alpha=0.05 (`delta=0.10`), but the pre-registered primary CALIB_DAYS=365 sits below that floor — so 3 of 6 conservative configs (including PRIMARY) degenerate into a **binary total-shutdown** (lambda=1 through warmup, then exactly 0 forever), not a nuanced cap; the other 2 alpha=0.10 configs sit the opposite way and stay fully inert (lambda approx 1 always). Only the one robustness cell that happens to fix the floor (CALIB_DAYS=730, n=730>460.5) shows genuinely continuous calibration (lambda 0.50-0.83) and is the branch's only cell with any positive Sharpe delta anywhere (+0.10/+0.05, ETH-only, bootstrap point still negative). The novel branch's online recursion avoids that binary failure by construction but is consequently too gentle to move the exceedance-rate clause at all in 8 of 9 configs (cand exceedance == ctrl exceedance to 4 decimals on inner-validation); only an artificially cold-started variant (lambda_0=0.8, not something the recursion would choose on its own) binds meaningfully, and it fails on futures. **0 of 15 configs (0 of 90 real-data cells) clear the decision rule** (inner-validation tail-exceedance strictly lower AND d_sharpe>=+0.2-or-risk-matched-drawdown-improvement-or-CI-excludes-zero, both markets, reproducing on the branch's own falsification test). Falsification tests (ETH sign-replication / Monte Carlo stress-window survival) were not decisive tie-breakers for any config since the exceedance/Sharpe clauses failed first in every case; the novel branch's own Monte Carlo check on its primary config was mixed regardless (58-63% of windows favored candidate on Sharpe, only 37.5-50% on log-growth). A second, unrelated numerical-instability defect (`r161_shared.constant_cap_r2` divides by a near-zero denominator for any non-bit-identical lambda path, returning nan or huge-magnitude garbage) was found and disclosed, not fixed (module frozen); raw lambda mean/std/range was used as the credible non-degeneracy evidence instead. Holdout never consulted. Do not re-try Conformal Risk Control / RCPS on v4's SCALE output expecting a different (tau, alpha) grid point or a tighter concentration bound (Hoeffding-Bentkus in particular) to rescue it — the failure modes are structural on both sides (a hard sample-size floor vs. a convergence property that resists binding), not a calibration-precision artifact; a genuinely different guarantee family that needs no fixed calibration window (e.g. martingale/e-value-based risk control) remains untried. | R-161 (both branches) |
 | Online false-discovery-rate control (LORD, Javanmard & Montanari 2015/2018, conservative; SAFFRON, Ramdas/Zrnic/Wainwright/Jordan 2018, +ADDIS bonus, novel) gating `kelly_regime_v4`'s three anchor votes' flip decisions — each candidate band-crossing tested as a "discovery" against a causal p-value, accepted only once an adaptively-shrinking wealth budget clears it, delaying low-confidence flips until evidence strengthens; v4's own vote combination, vol-target scale and deadband left unmodified | 16 gate configurations (6 conservative: alpha in {0.20,0.10,0.35} x sigma_days in {5,10}; 10 novel: alpha x lam in {0.5,0.3,0.7} + 1 ADDIS), 96 real-data `compare()` cells total. Both kill switches PASS on every config (delayed-episodes 13-48/anchor, R² 0.44-0.56 vs v4's own vote — the gate genuinely binds and is not a relabeling). Calibration self-test on synthetic zero-drift noise: both gates accept flips 400-2000x BELOW nominal alpha (safe-direction, but close to a blunt rare-event sparsifier rather than a real signal/noise discriminator — accept-counts on 400k bars of pure noise were the same order of magnitude as on 631k bars of real BTC history). **0 of 96 real-data cells** clear the decision rule (inner-validation d_log_growth CI excluding zero AND d_sharpe>=+0.2-or-risk-matched-drawdown-improvement, both markets); d_sharpe on inner-validation ranged −0.49 to +0.24, and the one positive cell fails both the CI and the risk-matching leg with its paired futures cell flat/negative. Both branches independently found the same pattern: delaying a flip to raise confidence costs more return capture than it saves in whipsaw (drawdown got WORSE, not better, in the large majority of cells) — the failure mode named in advance in the pre-registration. Falsification test (ETH sign-replication) was never load-bearing since (a)/(b) failed on BTC first in every config. Holdout never consulted (pre-registration required clearing inner-validation first). Do not re-try an online-FDR (or other formal multiple-testing) gate on this vote architecture's FLIP TIMING expecting a different alpha/lambda/discount-sequence choice to rescue it — the sign is stable and negative across a 16-point grid spanning both classical (LORD) and adaptive-null-aware (SAFFRON) online-FDR families; an ERR-axis attempt on this architecture's SCALE/sizing decision instead remains untried. | R-160 (both branches) |
 | A rolling CDaR-budgeted exposure rule (Chekhlov, Uryasev & Zabarankin 2005), `f*=budget/CDaR_0.95(unit vote-scaled returns)` via CDaR's degree-1 homogeneity, replacing `kelly_regime_v4`'s `target_vol/realized_vol` ratio entirely, budget calibrated to match v4's own inner-train mean exposure | 4 configurations (3 CDaR window lengths + 1 control). B2 clears (r=−0.32 to −0.41 vs v4's own realized vol, not a relabel). Inner-validation Sharpe is 0.90–1.13 BELOW control at every window length (control 0.251; branch −0.646/−0.722/−0.876 at 180/365/545d) and drawdown is worse, not better (32.29% vs 37.81/49.13/40.20%) — decisively fails the selection rule's criterion (2). Exposure match holds only at the shortest (180d) window; the mechanism reacts too slowly to 2022's drawdown as the window lengthens, under-sizing further from control the longer the window. Plateau criterion (3) passes (3/3 windows agree in sign) — a consistent, replicated failure, not noise. Ineligible for holdout; none read. Do not re-try a CDaR-budget solve as a direct replacement for v4's vol-target ratio expecting a shorter/longer window to rescue it — the sign is stable and negative across the whole 180-545d sweep. | R-152 (novel) |
 | A dynamic CDaR-derived leverage cap (same citation), replacing `kelly_regime_v4`'s fixed `max_leverage=2.0` with `cap_scale/CDaR_0.95` (inverse: worse trailing drawdowns tighten the cap), `cap_scale` calibrated so inner-train mean cap equals 2.0, reference stream v4's own unmodified vote-scaled returns (no circularity with the derived cap) | 17 configurations (4 selection + 6 training-period context + 3 holdout + 4 ETH-falsification/BTC-control). B2 clears (r=−0.353/−0.168/+0.206 across window lengths). Mechanically passes all three selection criteria on inner-validation, but the branch's `target` array is bit-identical to control on 209,189 of 209,953 inner-validation bars — the "plateau" is one shared 764-bar/2.6-day episode (2022-12-11→12-14) appearing identically at all three window lengths, not independent evidence. Holdout (2023-01-01→, futures 5x, 365d): d_sharpe=+0.0053, indistinguishable from the ±0.2 noise floor; neither beats `buy_and_hold` (expected — v4 itself lags steady bulls, `docs/STRATEGIES.md`). **Falsification test fails**: BTC-control d_sharpe=+0.0164 vs ETH-falsification d_sharpe=−0.0049 on the paired Bitfinex 2016-2019 window — sign inverts, consistent with the effect being one narrow non-generalizing episode rather than real risk-timing. Do not re-try a CDaR-derived dynamic cap on v4's leverage limiter expecting the inner-validation pass to be real evidence rather than a single-episode artifact; check for episode concentration (fraction of bars where candidate and control diverge) before trusting any future plateau claim built the same way. | R-152 (conservative) |
