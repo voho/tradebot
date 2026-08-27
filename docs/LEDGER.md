@@ -316,7 +316,125 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
-IN PROGRESS: R-162 · 08-27 · Kaufman (1995) Efficiency Ratio as a two-sided SIZE-axis conviction modifier on `kelly_regime_v4` — pre-registration frozen in `experiments/r162_shared.py`, conservative (post-vote SCALE multiplier) and novel (per-anchor VOTE-weighting) branches dispatched, results pending.
+### R-162 · 08-27 · NEGATIVE (both branches) — Kaufman (1995) Efficiency Ratio as a two-sided SIZE-axis conviction modifier on `kelly_regime_v4`; on real BTC data the statistic sits so close to v4's own scale/vote that it fails the non-collinearity kill switch in both branches, and the (tiny) surviving deltas fail the plateau/ETH-sign gate anyway
+
+**Direction.** This session's scheduled brief was the generic "propose an
+improvement, dispatch conservative/novel implementation branches, measure,
+promote the winner." Step 0 found no in-flight round (HEAD == `origin/main`
+@ `92db44f`, unshallowed, newest `_shared.py` files `r95`-`r99` by name but
+none undispatched — all have matching section B entries) and Step 0b's
+saturation count was **0** consecutive null passes (R-160/R-161 had just
+dispatched), squarely in the "0-2: normal" tier, so a fresh literature sweep
+was warranted; the backlog grep returned the same four already-inactionable
+rows (B-06 de-ranked, B-09 LOW, B-17 PARTIAL, B-28 blocked on data). A
+research-only sub-agent read `docs/ROUTINE.md`, the standing diagnosis,
+section C in full, and the last ~15 rounds (R-147-R-161), ran 8 web
+searches across funding carry, anytime-valid inference, robust/Wasserstein
+Kelly, HAR/ML volatility forecasting, meta-labeling, crypto microstructure,
+and trend-strength/leverage-effect literature, and rejected every hit that
+duplicated an already-closed mechanism family. It surfaced R-141's own
+closing line — a one-sided multiplicative brake is mathematically
+degenerate under equality exposure-matching, and the named, untested fix is
+"use inequality matching or a two-sided (both-directions) multiplier
+instead" — and proposed Kaufman's (1995) Efficiency Ratio (`Smarter
+Trading`; the KAMA signal-to-noise engine), a causal, price-only, symmetric
+[0,1] trend-straightness statistic absent from the ledger by direct grep
+(`efficiency ratio|Kaufman|KAMA|fractal efficiency` → zero hits before this
+round), grounded further by arXiv:2606.20145 (2026) on trend-strength-
+conditional variance. **Attacks SIZE**: no new external data source (ER is
+a pure function of `close`, the same column v4 already reads), no vote-
+timing or formal statistical guarantee (distinct from R-160's online-FDR
+gate and R-161's Conformal Risk Control cap, both ERR-axis), no no-trade-
+band or execution logic (distinct from every COST-axis construction). Not a
+duplicate of R-34/R-41/R-46/R-53 (one-sided external-signal brakes), R-89
+(response-curve reshaping of the vote's own magnitude statistic), R-40
+(cross-ladder disagreement shrink), R-146 (anchor-statistic substitution),
+R-160/R-161 (formal ERR-axis guarantees on flip-timing/SCALE), or R-59/R-60
+(target_vol/max_leverage magnitude retunes) — full citations and the
+complete non-duplication argument, cited by ID, are in
+`experiments/r162_shared.py`, written and committed (`688ea70`, "IN
+PROGRESS: R-162") before either branch was dispatched, per step 0's
+collision-avoidance convention. Origin/main was re-checked immediately
+before writing this entry (`git fetch origin main` == the IN-PROGRESS
+commit) — no collision.
+
+**What was done.** Two disjoint files, each importing only from the
+read-only `r162_shared.py`: `experiments/r162_conservative_er_scale.py`
+(ER computed over v4's own slowest 80-day anchor window, applied as a
+post-vote, pre-deadband multiplier on `frac*scale`: `1 + gamma*(ER_t -
+ER_ref_t)`, clipped to `[0.5, 1.5]`) and `experiments/r162_novel_er_vote_weight.py`
+(ER computed per-anchor over each of the three 20/40/80-day windows,
+replacing v4's plain mean of the three latched votes with an ER-conviction-
+weighted mean, clipped to `[0.0, 2.0]`, never touching SCALE). Both apply
+the identical pre-registered decision rule: `CLEAR(m)` = clears the
+promotion bar (`clears_bar()`: a bootstrap CI on log-growth excluding zero,
+or a Sharpe gain ≥ the ±0.2 noise floor, or a real risk-matched drawdown
+improvement) on inner-validation for at least one non-zero gamma/beta in
+`{0.5, 1.0, 1.5}`; `GATE_OK` = the ETH-replication slice shows no sign
+inversion vs BTC on the market that cleared, AND the clearing configs share
+one sign of `d_log_growth` (a plateau, not a scatter). Sweep: 4 values
+(including the `gamma=0.0`/`beta=0.0` identity check) x 2 markets x 3
+slices (inner-train, inner-validation, ETH replication) = 24 cells per
+branch, plus a 0.40%-taker fee-tier re-run of the primary config on both
+markets (+2) = **26 configurations per branch, 52 total** — the number
+carried into the deflated-Sharpe accounting at the program level. Two
+independent agent runs on the conservative branch (a resumed session and a
+freshly re-run verification) reproduced identical numbers to the row, cross-
+confirming no run-to-run instability.
+
+**Result.** Both branches pass the A1 identity kill switch bit-for-bit
+(`gamma=0.0`/`beta=0.0` reproduces `v4_target` exactly, R²=1.0) and the
+causal-truncation probe. Both **fail the A2 non-collinearity kill switch**
+at the pre-registered PRIMARY setting: conservative R²=0.999844 (multiplier
+realized range on inner-train: min=0.50, max=1.03, mean=1.0016,
+std=0.0155), novel R²=0.999990 — in both cases the ER factor barely moves
+exposure away from v4's own path at all, because v4's three anchors already
+agree on direction far more often than not, so the failure mode named in
+advance in `r162_shared.py`'s own pre-registration (WHAT WOULD MAKE THIS
+FAIL #3: "MICROSTRUCTURE-DOMINATED ER... a disguised inverse-volatility
+proxy collinear with v4's own SCALE term") is exactly what happened, on the
+first attempt, on real data. On top of that: **conservative** — `gamma`
+0.5/1.0/1.5 all nominally clear `clears_bar()` on at least one market, but
+the clearing configs' `d_log_growth` signs scatter (spot: +0.0027 / -0.0035
+/ +0.0003 at gamma 0.5/1.0/1.5) rather than forming a plateau, and gamma=1.5
+inverts sign against ETH on spot (BTC +0.0003, ETH -0.1065) — `GATE_OK =
+False` on both grounds independently. **Novel** — no non-zero beta clears
+`clears_bar()` on either market at all (every inner-validation cell:
+`d_sharpe`≈0.00, `d_log_growth`≈0.000, no CI excluding zero, no drawdown
+improvement) — `CLEAR(spot)=CLEAR(futures)=False`, REJECT on the table's
+own first row regardless of `GATE_OK`. The novel branch's own named risk
+(delayed vote-flip cost, the R-160 failure signature) did not materialize:
+the delayed-flip diagnostic shows 0 delayed flips out of 165 (inner-train)
+and 76 (inner-validation) — the ER-weighted vote crosses its latch
+threshold at exactly the same bars as v4's own, consistent with the A2
+finding that the weighting almost never changes which side of 0.5 the
+combined vote sits on. Per the pre-registered protocol, since both verdicts
+are REJECT at the inner-validation stage, **the holdout was not read by
+either branch** — confirmed explicitly in both scripts' own guard logic and
+output.
+
+**Verdict.** **NEGATIVE, both branches.** Lesson: Kaufman's Efficiency
+Ratio, at the window choices this round used (v4's own existing 20/40/80-day
+anchors, no new free window parameter), is not an independent signal on
+this data — it is close enough to a monotonic function of v4's own vote
+agreement and volatility state that it cannot move exposure far enough from
+v4's own path to test the mechanism at all, before any promotion-bar
+question is even reached. R-141's "use a two-sided multiplier" fix is
+therefore not itself sufficient to escape the SIZE-axis's now 24-attempt
+0-for-24 record (21 pre-R-162 retunes/brakes plus this round's 2 two-sided
+constructions, plus R-89's response-curve reshaping) — the binding
+constraint on this axis looks less like "one-sided vs two-sided" and more
+like "every statistic tried so far is a near-restatement of information
+v4's vote/scale already extract from the same three anchors." **Holdout
+counter: unchanged (0 added this round)** — neither branch read it, so the
+running total stays at the value recorded by R-78 plus every round since
+that did consult it; see the `Holdout consultations to date` list. Decision
+rule did not move (frozen before either branch ran, applied exactly as
+written). Next step: a future SIZE-axis attempt should look for a
+statistic constructed from something OTHER than the same three anchor
+windows and the same close-price EWM volatility v4 already consumes, since
+every within-architecture reweighting/rescaling tried to date (this round
+included) ends up collinear with what v4 already computes.
 
 ### R-161 · 08-27 · NEGATIVE (both branches) — Conformal Risk Control (Angelopoulos et al. 2024) / RCPS (Bates et al. 2021) calibrating a multiplicative cap on `kelly_regime_v4`'s SCALE output; the conservative branch's own pre-registered bound has a hard sample-size floor that forces total shutdown at its primary setting, the novel branch stays too gentle to matter except when artificially cold-started, and neither clears the promotion bar on any of 15 configs
 
@@ -17842,6 +17960,15 @@ trip.
 ---
 
 ## D. Backlog (ranked)
+
+**Re-ranked 08-27 after R-162 (NEGATIVE, both branches, 52 configurations,
+holdout not read).** The ranked list is unchanged — B-06, B-09, B-17, B-28,
+same status as below — since R-162 was a fresh literature-sweep round (per
+Step 0b's "0-2 consecutive null passes: normal" tier) rather than work on a
+backlog item. Both branches (Kaufman Efficiency Ratio, post-vote SCALE
+multiplier and per-anchor VOTE weighting) failed the A2 non-collinearity
+kill switch on real data before any promotion-bar question was reached; see
+R-162 in section B.
 
 **Re-ranked 08-27 after R-158 (METHOD; 0 configurations, holdout not
 read).** The ranked list is unchanged — B-06 (de-ranked by its own audit,
