@@ -316,6 +316,8 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+IN PROGRESS: R-161 · 08-27 · Conformal Risk Control (Angelopoulos et al. 2024) / RCPS (Bates et al. 2021) calibrating a multiplicative cap on kelly_regime_v4's SCALE output — pre-registration frozen in `experiments/r161_shared.py`, conservative (periodic RCPS batch calibration) and novel (online CRC distribution-shift adaptation) branches dispatched, results pending.
+
 ### R-160 · 08-27 · NEGATIVE (both branches) — online false-discovery-rate control (LORD conservative / SAFFRON novel) gating `kelly_regime_v4`'s anchor-vote flips; the gate binds cleanly and is not degenerate, but delaying a flip costs more Sharpe/drawdown than it buys in precision, on every one of 96 real-data cells
 
 **Direction.** This session's scheduled brief was the generic "propose an
