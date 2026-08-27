@@ -17373,6 +17373,66 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-checked 08-27 (seventeenth same-day/next-day session), no round
+dispatched (not an R-numbered entry — zero new configurations
+evaluated).** Tasked independently with the standard brief (take the best
+strategy — `kelly_regime_v4`, unchanged — propose an improvement vector,
+do the research, dispatch a conservative/novel branch pair, measure,
+promote the winner), this session ran ROUTINE.md Step 0 first: no
+undispatched frozen pre-registration on disk (newest
+`experiments/r*_shared.py` is `r156_shared.py`, unchanged since R-156/R-157,
+both of which have matching completed section-B entries; `git fetch origin
+main` confirmed `origin/main` at `ae90394`, the sixteenth pass's own
+commit, clean working tree — no in-flight round). The backlog-table grep
+found the same four live rows all sixteen prior passes found: **B-06,
+B-09, B-17, B-28**, none actionable (B-06 explicitly "keep it running,
+stop calling it the plan"; B-09 LOW; B-17 deliberately deferred with no
+strategy needing it; B-28 blocked on data this repo cannot fetch).
+
+This session ran three targeted web searches distinct in phrasing from the
+sixteen prior sweeps, checking specifically for anything published or
+surfaced since the sixteenth pass (fresh 2026 crypto trend-following /
+regime-detection papers; deep-RL and online-portfolio-selection position
+sizing; a market-commentary sanity sweep for any newly-cited mechanism).
+Nothing new: the one crypto-specific hit (arXiv:2602.11708, "AdaptiveTrend")
+is the same paper the fifteenth pass already closed (its trailing-stop,
+rolling-Sharpe-selection and asymmetric-allocation components map onto
+R-90, R-111/R-63 and R-89 respectively). The RL/online-portfolio-selection
+hits (SAC/DDPG cryptocurrency portfolio agents, a 12-asset 4-hour-rebalance
+framework, a June 2026 ACM Computing Surveys review of the field) all lean
+on cross-sectional breadth across 8–150 instruments — the same "diversify
+across many instruments" premise R-05 ruled deep-learning trend forecasting
+out on and R-63 later priced directly (Grinold breadth 1.47 of this
+project's own 8-instrument panel), and a black-box policy trained on one
+price series with N≈3 effective regime events is exactly the ERR/N≈3
+failure mode R-87's ACI wrapper and R-104's jackknife already diagnosed
+from the estimation side. No non-duplicate, simulable, actionable direction
+found — forcing a conservative/novel branch pair against a null screening
+result would be exactly the mistake this project's own culture penalizes
+(stated verbatim in the fifteenth pass's own entry below), so none was
+dispatched. **B-06 remains the only ranked, unblocked backlog item.**
+
+**Seventeenth independently-tasked session, seventeenth identical
+conclusion.** Worth naming explicitly, since no prior pass has: this
+verification brief has now run often enough, on the same trading day and
+the one before it, that the marginal session is reliably a rediscovery of
+the sixteen before it rather than new evidence — the literature search
+itself has stopped being the bottleneck, and re-running it more often does
+not change what it finds. Nothing here recommends slowing B-06's own
+unattended accumulation, which is real evidence and keeps running; but the
+*research* half of this brief (steps 1–4 of ROUTINE.md) has no new input
+to consume at this cadence, and the honest thing to do with that finding is
+say so once rather than repeat the same negative seventeen times running.
+This session's recommendation to the project owner, unchanged from the
+sixteenth pass's: the two genuinely open paths remain (a) let B-06's
+forward record accumulate, or (b) a scope decision outside what a single
+automated session can make for itself (order-book/queue simulation, or a
+materially different asset universe with real cross-sectional breadth) —
+and, new this pass, (c) consider whether this brief should fire on a
+longer interval than "same day or next," since the last four consecutive
+firings (thirteenth through seventeenth) have spanned under 24 hours and
+produced zero incremental evidence between them.
+
 **Re-checked 08-26 (sixteenth same-day/next-day session), no round
 dispatched (not an R-numbered entry — zero new configurations
 evaluated).** Tasked independently with the standard brief (take the best
