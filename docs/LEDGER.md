@@ -316,6 +316,8 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+**IN PROGRESS: R-164 -- risk-managed-momentum overlay on `kelly_regime_v4`'s SCALE: Barroso & Santa-Clara (2015) strategy-own-variance targeting (conservative) vs. a Daniel & Moskowitz (2016) two-sided trend+volatility panic/calm-bull multiplier (novel).**
+
 ### R-163 · 08-27 · NEGATIVE (both branches) — Turtle-style pyramiding (Faith 2007 / Zarattini 2026) as a path-dependent, episode-relative SIZE mechanism on `kelly_regime_v4`; the novel branch clears nothing, and the conservative branch's mechanical "PROMOTE" is a decision-rule artifact — no pre-registered config clears both markets, and the literal Faith-2007 PRIMARY loses money with statistical confidence at a realistic fee tier
 
 **Direction.** This session's scheduled brief was the generic "propose an
