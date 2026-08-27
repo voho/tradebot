@@ -17373,6 +17373,61 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-checked 08-27 (eighteenth same-day/next-day session), no round
+dispatched (not an R-numbered entry — zero new configurations
+evaluated).** Tasked independently with the same standard brief the
+seventeenth pass names below, this session ran ROUTINE.md Step 0 first:
+`git fetch origin main` found `origin/main` at `e208ce2`, the seventeenth
+pass's own commit, working tree clean — no in-flight round, no
+undispatched frozen pre-registration (`experiments/r*_shared.py`
+unchanged since R-156/R-157). The backlog grep found the same four live
+rows all seventeen prior passes found — **B-06, B-09, B-17, B-28** — none
+actionable, unchanged from the seventeenth pass's own characterization.
+
+Given the seventeenth pass's explicit finding that the literature sweep
+itself has stopped being the bottleneck, this session ran two targeted
+searches rather than a full sweep, chosen for genuine novelty against the
+closed-candidate lists rather than breadth: crypto position-sizing /
+volatility-management literature dated around August 2026, and bitcoin
+perpetual-futures funding-rate arbitrage (cross-exchange and
+spot-vs-perp), the one candidate direction of the two whose keyword had
+not been searched verbatim in any of the prior seventeen passes. Both
+closed on inspection. The sizing search surfaced only restated
+conventional wisdom (inverse-volatility position sizing, ATR-scaled
+stops) — the same mechanism *shape* as `kelly_regime_v4`'s own already-shipped
+volatility target, and the SIZE axis it would attack is the one R-59/R-60
+already spent 21 attempts on (0-for-21, standing diagnosis). The funding-arbitrage
+search is a literal duplicate of **R-15/B-02/B-03**: R-15 measured this
+exact cash-and-carry mechanism on this project's own data as far back as
+08-16, B-02 extended the funding series through 2026 (Deribit), and R-39
+closed the delta-neutral construction as NEGATIVE for the current era
+("this repo's missing perp price series makes basis risk structurally
+unmeasurable") — a cross-exchange variant would additionally require a
+second venue's simultaneous order book, which is outside this project's
+single-series OHLCV simulation capability (ROUTINE.md step 1, question 3)
+regardless of the mechanism's own merit. No non-duplicate, simulable,
+actionable direction found; no conservative/novel branch pair dispatched,
+for the same reason the seventeenth pass names — forcing one against a
+null screening result is the mistake this project's culture penalizes.
+**B-06 remains the only ranked, unblocked backlog item.**
+
+**Eighteenth independently-tasked session, eighteenth identical
+conclusion, still within the same trading day as the fourteenth through
+seventeenth.** This session endorses the seventeenth pass's recommendation
+to the project owner without repeating its reasoning at length: the two
+genuinely open paths are (a) let B-06's forward record accumulate
+unattended, or (b) a scope decision this brief cannot make for itself
+(order-book/queue simulation, or a materially different asset universe
+with real cross-sectional breadth) — and the cadence question the
+seventeenth pass raised is now five consecutive same-day/next-day
+sessions old (fourteenth through eighteenth) with zero incremental
+evidence produced by any of them. This entry is deliberately shorter than
+its predecessor's for the same reason: re-deriving the same
+recommendation at full length an eighteenth time is exactly the kind of
+low-value repetition the seventeenth pass flagged. Notifying the project
+owner directly rather than leaving an eighteenth ledger paragraph as the
+only record of it.
+
 **Re-checked 08-27 (seventeenth same-day/next-day session), no round
 dispatched (not an R-numbered entry — zero new configurations
 evaluated).** Tasked independently with the standard brief (take the best
