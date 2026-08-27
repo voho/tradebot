@@ -17373,6 +17373,59 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-checked 08-27 (twenty-first same-day/next-day session), no round
+dispatched (not an R-numbered entry — zero new configurations
+evaluated).** Step 0: `git fetch origin main` found `origin/main` at
+`06d56b3`, matching this branch's own HEAD (a concurrent process had
+already force-synced `main` to this branch's tip between this session's
+first and second fetch — no in-flight round, no undispatched frozen
+pre-registration (`experiments/r*_shared.py` unchanged since R-156/R-157,
+newest still `r99_shared.py`). Same four live backlog rows as all twenty
+prior passes — **B-06, B-09, B-17, B-28** — none actionable, same reasons
+as the twentieth pass's entry immediately below.
+
+Rather than repeat the twentieth pass's own two generic searches, this
+pass dispatched a research-only sub-agent with a narrower brief: check
+six specific mechanism families a keyword grep against this file showed
+as under-explored (wavelet multi-resolution analysis — 0 prior hits;
+Gaussian process regression — 0; particle filters — 0; distributionally
+robust/Wasserstein-ambiguity Kelly — 0; EVT/tail-index sizing via
+Hill/POT-GPD — 1; meta-labeling / triple-barrier — 14, but never checked
+against this exact framing), across six distinct web searches, each
+evaluated against step 1's mechanism-SHAPE bar rather than citation
+recency. Result: every one collapses into a mechanism shape already
+closed. Wavelets split into forecasting preprocessing (categorical
+"another indicator" fail) or multiscale vol/regime estimation (duplicates
+the 21+ SIZE-axis retunes and the twelve regime-timing mechanisms already
+failing the six-episode gate). Gaussian processes and particle filters
+are, respectively, a forecaster or a sequential-Bayesian state filter —
+the latter inherits Kalman LLT's own named failure mode (lag on
+shock-driven episodes, which is exactly what the six-episode gate tests).
+DRO/Wasserstein-Kelly reduces to the same shrinkage/robustification shape
+as the closed Bayesian-Kelly and CDaR/Wasserstein-budget rounds. EVT
+tail-index sizing was already explicitly named closed in this file
+("Hill-estimator sizing ≡ closed POT/GPD and CDaR rounds"). Meta-labeling
+is a secondary classifier gating size — a forecaster, a duplicate of
+v4's own confidence-vote sizing, or both. No candidate survives; full
+reasoning and line citations in the sub-agent's own report, not
+reproduced here. **No conservative/novel branch pair dispatched** —
+forcing one against a backlog independently re-confirmed exhausted by
+twenty-one separate passes today would be exactly the mistake this
+project's culture penalizes.
+
+This is the eighth consecutive same-day/next-day pass (fourteenth through
+twenty-first) to reach that conclusion. Per the twentieth pass's own
+statement that it "will not re-argue [the firing-cadence flag] a further
+time on the next firing if the cadence is unchanged," and since nothing
+about the cadence or its two prior unactioned escalations has changed,
+this pass does not re-escalate and does not send a further notification —
+only a materially new finding would warrant one. **B-06 remains the only
+ranked backlog item, and it is explicitly not a plan to act on.** Next
+session should not repeat the six searches named above; a genuinely new
+attempt would need either a structurally different data source this repo
+cannot currently fetch (per B-28), or B-06's own forward record to
+accumulate further.
+
 **Re-checked 08-27 (twentieth same-day/next-day session), no round
 dispatched (not an R-numbered entry — zero new configurations
 evaluated).** Step 0: `git fetch origin main` found `origin/main` at
