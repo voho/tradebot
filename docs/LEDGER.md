@@ -316,7 +316,224 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
-### IN PROGRESS: R-165 -- destination/rate axis (R-64) isolated onto `kelly_regime_v4`'s SCALE factor alone (boundary-trade conservative, derived-rate EWMA novel); pre-registration frozen in `experiments/r165_shared.py`, holdout not yet read.
+### R-165 · 08-27 · NEGATIVE (both branches) — R-64's destination/rate axis isolated onto `kelly_regime_v4`'s SCALE factor alone: a boundary-trade no-trade region (conservative) removes R-64's exposure artifact but removes the mechanism with it, and a derived-rate EWMA smoothing (novel) prices a fee term the strategy does not actually pay — both confirm, by a different route, R-64's own "the no-trade region does everything, the smooth-rate object does nothing" finding on a new factor rather than escaping it
+
+**Direction.** This session's scheduled brief was the generic "take the
+best strategy, propose a research direction, do the research, dispatch
+conservative/novel implementation branches, measure, take the best."
+Step 0 found no in-flight round (`HEAD == origin/main`, no undispatched
+`r<nn>_shared.py`). Step 0b's consecutive-null-pass count was 1 (R-164's
+own dispatch reset it), squarely "0-2: normal." Section D's backlog is
+the same four-row state it has been since R-158 — B-06 (ongoing, de-ranked),
+B-09 (LOW), B-17 (deliberately PARTIAL), B-28 (blocked on unfetchable
+breadth data) — none unblocked, so per ROUTINE.md Step 0 a new direction
+was in scope.
+
+The idea: R-64 (08-20) tested two canonical destination policies —
+trade-to-boundary (Constantinides 1986 / Davis & Norman 1990) and
+Gârleanu-Pedersen (2013) partial adjustment — on `kelly_regime_v4`'s WHOLE
+position-update rule (`desired = frac*scale`; jump to `desired` whenever
+`|desired-pos| > deadband`), with the partial-adjustment arm's aim
+weighted by the three VOTE anchors' own causal decay rates (2.5/3.0/4.6
+days). It found partial adjustment collapses to a near-no-op: the anchors'
+decay rates are too similar and too slow for GP's weight formula to
+produce heterogeneity ("no better estimator can rescue it: it needs
+anchors whose decay rates differ by orders of magnitude, not by 2x"). R-64
+never isolated the OTHER factor in the product — `scale`, v3/v4's
+conditional-volatility-target sizing — which is not a blend of several
+correlated signals but a single continuously-valued ratio, so R-64's
+specific weight-collapse mechanism cannot apply to it structurally
+regardless of its own decay rate. **Constraint attacked: COST**
+(R-64's own framing: this changes how fast the position is allowed to
+track an unchanged target, not what the target computes — orthogonal to
+every SCALE-formula-substitution round: R-93/R-125/R-136/R-141/R-152/
+R-153/R-160/R-161/R-162/R-163/R-164).
+
+**Not a duplicate of:** R-64 (whole-product destination axis, weighted by
+anchor decay only — see above); R-93/R-125/R-136/R-141/R-152/R-153/R-160/
+R-161/R-162/R-163/R-164 (all substitute a different FORMULA for what
+`scale` targets; this round's `scale` formula is byte-identical to v4's
+shipped code in both branches); kelly_regime_ev/kelly_regime_ev_fast and
+R-66 (derive a band WIDTH, not a destination/rate — RESEARCH.md finding 8
+explicitly separates these two objects, and this round holds width fixed
+in the conservative branch, or removes it from the picture entirely in
+the novel branch's continuous formulation); R-131/R-133 (throttle an
+already-decided re-target post-hoc; this round changes the target
+computation itself, before any order logic runs).
+
+**What was done.** Pre-registration frozen in `experiments/r165_shared.py`
+(commit `66823d1`, pushed before either branch's implementation began) —
+direction, literature (Gârleanu & Pedersen 2013; Constantinides 1986;
+Davis & Norman 1990; Dao et al. 2016's single-signal EWMA framing, the
+methodology already validated once by R-65/R-67/R-68; a fresh 2026
+citation, Romero, *J. Applied Econometrics*, on deriving an EWMA rate from
+a series' own measured persistence rather than fitting it), the
+non-duplication argument above, and decision rule **D0-D6**: D0 risk-match
+gate (±10%); D1 paired stationary block-bootstrap (30-day blocks, 2,000
+resamples, `tradebot.inference.paired_bootstrap`) of log-growth/Sharpe vs
+`kelly_regime_v4` itself on holdout, both markets, PROMOTE requires one
+metric's 95% interval to exclude zero favourably on **both** markets; D2
+the advantage must grow at a 0.40% fee tier; D3 ETH-A (Bitfinex, 2016-03→
+2019-12) same-sign falsification; D4 turnover must actually fall; D5
+plateau not peak; D6 funding, conditional on D1-D5. Default REJECT.
+Splits: inner-train ≤2020-12-31, inner-validation 2021-01-01→2022-12-31,
+holdout ≥`OOS_START`.
+
+Two branches, disjoint files, dispatched in parallel, neither reading past
+2022-12-31 until its own config was frozen:
+
+- **Conservative** (`experiments/r165_conservative_boundary.py`,
+  `experiments/reports/r165_conservative_report.md`): inserts one internal
+  state `eff_scale` between v4's own `scale` and the product, tracked by a
+  proportional-cost no-trade region of half-width `sub=(1-k)*w` with a
+  trade-to-the-nearest-boundary destination; `desired = frac*eff_scale`
+  then feeds v4's own untouched deadband update. `k=1` (⇒`sub=0`) is v4
+  itself, reproduced bit-for-bit (regression check). Swept `k in
+  {0,0.25,0.5,0.75,1.0} x w in {0.05,0.10}` (10 parameterizations, 7
+  distinct after aliasing — an internal consistency check, since aliased
+  cells reproduced each other to every printed digit) on inner-train and
+  inner-validation, BTC spot and futures. Selection rule (S1 fills fall
+  both markets/splits, S2 risk-match ≤10%, then max inner-validation mean
+  Δlog) fixed before the sweep ran; independently replayed by the skeptic
+  from the sweep CSV and confirmed to select the same cell with no
+  tie-break needed.
+- **Novel** (`experiments/r165_novel_ewma.py`,
+  `experiments/reports/r165_novel_report.md`): replaces raw `scale[i]`
+  with `eff_scale[i] = (1-a)*eff_scale[i-1] + a*scale[i]`, deriving `a`
+  (not fitting it against any backtest number) by generalizing this
+  project's own L-05/L-06 band derivation
+  (`(sigma^2/2)(f-f*)^2` vs `fee*|Δf|`) from a discrete band width to a
+  continuous rate, modelling `scale` locally as a random walk with
+  measured per-bar innovation variance. Closed form
+  `a* = (sqrt(2)*A*s/B)^(2/3)`, measured on inner-train BTC alone (fee,
+  `E|frac|`, `E[frac^2]`, `sigma_bar^2`, `s=sd(Δscale)`): **a\*
+  = 9.933e-4/bar**, a 2.42-day EWMA half-life, three orders of magnitude
+  from v4's instant jump (`a=1`, reproduced bit-for-bit as the regression
+  check). `a=1` was the pre-registered falsification trigger (an
+  indistinguishable-from-v4 derived rate); it did not fire.
+
+**Configs evaluated: 122 backtest executions total** (conservative: 96 —
+10 parameterizations x {inner-train, inner-validation} x {spot, futures}
+arm cells plus paired v4 baselines, plus 8 freeze-time cells x paired
+baselines; novel: 26 — a 5-rate x 2-market x 2-split sensitivity sweep
+around the single derived `a*`, reported for plateau/robustness only and
+never used to select a different rate, plus D1/D2/D3 holdout cells).
+**Holdout consultations added: 20** (conservative 12: BTC spot+futures at
+0.10% and 0.40%, 2 D5 neighbours, and a `buy_and_hold` pairing, each
+matched with a v4 baseline; novel 8: BTC spot+futures at 0.10% and 0.40%,
+each matched with a v4 baseline; both branches' ETH-A reads are entirely
+pre-2020 and add 0, per this project's standing convention for that
+window). **Running total: ~735**, on top of R-157's ~715 (the most recent
+consultation — R-158 through R-164 read no holdout bar, per their own
+entries).
+
+**Result.**
+
+*Conservative — REJECT.* Frozen config `k=0.25, w=0.05` (sub-band 0.0375).
+D0 **PASS** — risk-matched cleanly (notional +0.24%/+1.20%, time-in-market
++0.00%, realized vol +0.22%/+1.13% vs v4), meaning R-64's own
+never-goes-flat exposure artifact is genuinely absent once the band sits
+on `scale` alone rather than on the whole product. D1 **FAIL** — holdout
+Δlog-growth −0.0023 [−0.0257,+0.0228] (spot), −0.0142 [−0.0616,+0.0302]
+(futures); no interval excludes zero either direction. D2 passes on the
+letter (the deficit shrinks from −0.0023 to −0.0006 at 0.40%) but that is
+a $1-of-$1,027 fee saving, not a meaningful cost mechanism. D3: BTC
+holdout Δlog is negative on both markets while ETH-A is positive
+(+0.2101); a literal same-sign reading makes this a **FAIL**, not a pass
+— the branch's own report reads it as vacuous/inapplicable given how small
+the BTC deficit is, and the skeptic flags that as the more honest label,
+but under the frozen rule's literal text it does not clear. D4 **PASS**
+(fills −4.2%/−0.6%). D5 **PASS** — neighbour Sharpe gaps 0.000/0.004
+against the ±0.2 floor, an indistinguishable plateau. **Mechanism
+explanation, measured not argued:** since `frac<=1`, a band of width `w`
+on `scale` alone perturbs the combined target by at most `w` — exactly
+what v4's own 0.10 deadband already absorbs downstream, so the arm and v4
+trade the same 51/51 round trips on holdout and differ only in a handful
+of fill timings. Spot inner-train/inner-validation rank correlation across
+the candidate grid: **-0.93** — the sweep surface itself announced the
+null before holdout was opened.
+
+*Novel — REJECT.* Frozen `a*=9.933e-4`. D0 **PASS** (time-in-market
+identical to 3dp on both markets, vol ratios 1.01/1.02). D1 **FAIL** — all
+four holdout intervals (log-growth and Sharpe, both markets) contain zero;
+point estimates are favourable (+0.06/+0.09 log-growth, +0.03/+0.03
+Sharpe) but sit far inside the ±0.2 Sharpe noise floor. D2 passes
+directionally (advantage grows at 0.40%) on a difference that remains
+indistinguishable from zero at either tier. D3 **FAIL** — BTC holdout
+positive on both markets, ETH-A negative on both (Δlog −0.1252 spot,
+−0.1506 futures; futures max drawdown worsens 35.1%→45.3%), a clean
+reversal under the frozen rule. D4 passes on the letter (fills −4%) but
+not the substance (ETH fills rose, 455 vs 448 and 231 vs 214). D5 fails on
+inner-validation (one neighbour 0.33 Sharpe below PRIMARY on spot, another
+0.21 above on futures) though inner-train is a plateau — moot, D5 only
+downgrades a PROMOTE. **Mechanism explanation, measured not argued (§5 of
+the report):** across a 16x change in `a`, the derivation's fee term moves
+4.0x as its `sqrt(a)` functional form requires, but realized traded-path
+turnover moves only **1.10x** (503→571 target jumps) — `eff_scale`
+supplies only ~14-24% of `desired`'s motion, the rest is the vote's
+discrete 0/⅓/⅔/1 flips, and the 10% deadband absorbs most of what is
+left. The derivation prices a fee term the strategy does not actually pay.
+
+**Skeptic reproduction.** Independent re-run, reading code rather than
+either report: the k=1/a=1 regression identities both reproduce v4
+bit-for-bit on the full and pre-holdout frames; every `prepare()`
+aggregation checked is causal (no full-series `.mean()`/`.std()` applied
+to early rows), truncation probes at three operator-chosen cut points
+reproduce both branches' prefixes exactly, and the novel EWMA's causal
+seed (first bar with `scale>0`) was verified directly; `pytest
+tests/test_causality_strict.py -q` — 55 (skeptic's run) / 536 (novel
+branch's own full-suite run) passed. The novel branch's frozen `a*` and
+every D1/D3 holdout number were independently re-derived and match to
+every printed digit; re-running D1 at a different bootstrap seed moves
+each interval by ≤0.015 and none newly excludes zero. The conservative
+branch's frozen-config selection was independently replayed from its
+sweep CSV and lands on the same cell (`k=0.25,w=0.05`) with no tie-break
+needed. **One correction the skeptic's re-run surfaced and this entry
+adopts:** R-64's non-duplication argument in `r165_shared.py` is fair on
+its literal claim (the multi-signal weight-collapse mechanism cannot
+apply to a scalar signal) but understates that R-64's novel arm carried a
+*second*, separable finding — "the smooth-rate object does nothing; the
+no-trade region does everything" — which is exactly what both R-165
+branches independently rediscovered on the new factor. **This round
+confirms R-64's rate-axis finding by a different route rather than
+escaping it**, and should be read that way rather than as an independent
+discovery.
+
+**Two disclosed defects in `experiments/r165_shared.py` itself, found by
+both implementation branches independently and confirmed by the skeptic
+— corrected here, not in the frozen file (per ROUTINE.md, additions after
+freezing may only tighten never loosen, and a factual correction to a
+measurement is recorded rather than silently edited into the frozen
+text):** (1) the pre-registration's stated 47.2-day causal half-life for
+`scale`'s feeding vol series does not reproduce from the file's own
+`causal_autocorr_halflife_days` helper at its own documented defaults —
+the correct figure, reproduced independently by both branches and the
+skeptic, is **38.77 days** (still an order of magnitude slower than the
+2.5-4.6-day anchors, so no gate depends on the error, but the
+number itself was wrong). (2) `order_of_magnitude_gap()`'s
+`falsification_test_fires` field implements a bare `ratio<10` rule, which
+does *not* match the file's own prose (a "1-15 day band" test) — at the
+correct 38.77-day figure the field returns `True` (fires) while the prose
+version does not; a latent inconsistency for any future round that reuses
+this helper, not something either R-165 branch's own verdict depended on
+(both were REJECT under every reading of the falsification test).
+
+**Verdict.** **NEGATIVE, both branches.** One-line lesson: **v4's 10%
+deadband already absorbs whatever a scale-only destination or rate change
+can save, because `scale`'s own contribution to the traded path's
+turnover is small next to the vote's discrete flips — the same
+"no-trade-region-does-everything, smooth-rate-object-does-nothing"
+result R-64 found on the whole product, now confirmed on its other
+factor.** Neither decision rule moved after any number was read; the
+conservative branch's one ambiguous clause (D3's same-sign reading) is
+recorded as inapplicable/borderline above rather than resolved into a
+pass. **Holdout counter: +20 this round; running total ~735.** **Next
+step:** this closes the destination/rate sub-family of the COST axis on
+`kelly_regime_v4` for both of its factors (vote: R-64; scale: this round);
+a further attempt on this specific mechanism should not be dispatched
+without new evidence that the vote's discrete flips, not scale's drift,
+can themselves be made less frequent without the SIZE-axis costs the
+last ~20 rounds have already ruled out.
 
 ### R-164 · 08-27 · NEGATIVE (both branches) — Risk-managed momentum on `kelly_regime_v4`'s SCALE: Barroso & Santa-Clara (2015) strategy-own-payoff-variance targeting (conservative) and a Daniel & Moskowitz (2016) two-sided trend+volatility panic/calm-bull multiplier (novel) both fail decisively — every non-zero grid cell is negative on inner-validation, exposure inflates on every cell, and the 0.40% fee-tier re-run makes it worse, not better
 
@@ -18272,6 +18489,29 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-27 after R-165 (NEGATIVE, both branches, 122 backtest
+executions, holdout read — +20, running total ~735).** The ranked list is
+unchanged — B-06, B-09, B-17, B-28 — since R-165 was a fresh
+literature-sweep round (Step 0b's consecutive-null-pass count was 1 at
+dispatch, squarely "0-2: normal") rather than work on a backlog item.
+R-64's destination/rate axis, isolated onto `kelly_regime_v4`'s `scale`
+factor alone, closed NEGATIVE on both branches: the conservative
+boundary-trade arm risk-matches cleanly (removing R-64's own
+never-goes-flat exposure artifact) but its holdout Δlog/ΔSharpe intervals
+both contain zero; the novel derived-rate EWMA arm's holdout intervals
+also all contain zero and its ETH-A falsification reverses sign on both
+markets. Both branches independently measured and the skeptic confirmed
+that `scale`'s own contribution to traded turnover is small next to the
+vote's discrete anchor flips (a 16x change in the novel branch's smoothing
+rate moved realized turnover by only 1.10x), so v4's existing 10% deadband
+already absorbs whatever either mechanism could have saved. This closes
+the destination/rate sub-family of the COST axis for both factors of
+`desired = frac*scale` (vote: R-64; scale: R-165) — see R-165 in section B
+for the full write-up, the skeptic's reproduction, and two disclosed
+defects in the round's own pre-registration (a mismeasured 47.2-vs-38.77
+day half-life, and a latent bug in its `order_of_magnitude_gap` helper),
+neither of which affected either branch's verdict.
+
 **Re-ranked 08-27 after R-164 (NEGATIVE, both branches, 52 configurations,
 holdout not read).** The ranked list is unchanged — B-06, B-09, B-17, B-28
 — since R-164 was a fresh literature-sweep round (Step 0b's consecutive-
@@ -23168,6 +23408,16 @@ Rules that the format exists to enforce:
 Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
+
+- **08-27 · ~735** — R-165: **+20** on top of R-157's ~715 (R-158 through
+  R-164 read no holdout bar). Conservative branch (+12: BTC spot and
+  futures at both the 0.10% and 0.40% fee tiers, 2 D5 neighbours, and one
+  `buy_and_hold` pairing, each candidate cell matched with a
+  `kelly_regime_v4` baseline cell). Novel branch (+8: BTC spot and futures
+  at both fee tiers, each matched with a `kelly_regime_v4` baseline cell).
+  Both branches' ETH-A falsification reused the pre-2020 Bitfinex window
+  and read no bar dated >=2023-01-01, adding 0 on its own, per this list's
+  standing convention.
 
 - **08-26 · ~715** — R-157: **+6** on top of R-156's ~709 (see below; both
   rounds consulted the holdout independently and neither knew of the

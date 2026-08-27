@@ -295,3 +295,28 @@ def order_of_magnitude_gap(halflife_days: float,
         "reference_days": reference_days,
         "falsification_test_fires": bool(same_band),
     }
+
+
+# ---------------------------------------------------------------------------
+# POST-HOC CORRECTION (added after both R-165 branches and the skeptic pass
+# reported; the measurement above is left unedited per this project's
+# "nothing is deleted, annotate in place" rule -- see docs/LEDGER.md, R-165):
+#
+# The docstring above states the causal half-life of `scale`'s feeding vol
+# series as 47.2 days. That number does not reproduce: calling
+# `causal_autocorr_halflife_days(realized_vol_series(close, 8*BARS_PER_DAY))`
+# on inner-train BTC at this file's own documented defaults returns
+# **38.77 days** (ACF(1d)=0.9677, n=1460 days), independently confirmed by
+# both implementation branches and the round's skeptic. The qualitative
+# claim survives (still an order of magnitude slower than the 2.5-4.6-day
+# anchor half-lives) and no decision-rule gate in this round depended on
+# the specific figure, but 47.2 was simply wrong; 38.77 is correct.
+#
+# Separately, `order_of_magnitude_gap()` above does NOT implement the "1-15
+# day band" test described in the docstring's falsification-test paragraph
+# -- it returns `falsification_test_fires=True` whenever `ratio < 10`
+# against the anchor half-lives, which fires (True) at the correct 38.77-day
+# figure even though the docstring's own band (1-15 days) would not. Any
+# future round reusing this helper should fix or retire it rather than
+# trust its `falsification_test_fires` field at face value.
+# ---------------------------------------------------------------------------
