@@ -17373,6 +17373,55 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-checked 08-27 (twentieth same-day/next-day session), no round
+dispatched (not an R-numbered entry — zero new configurations
+evaluated).** Step 0: `git fetch origin main` found `origin/main` at
+`bbc616f` (the nineteenth pass's ledger commit plus one automated
+paper-trading row), clean working tree — no in-flight round, no
+undispatched frozen pre-registration (`experiments/r*_shared.py`
+unchanged since R-156/R-157, newest still `r99_shared.py`). Backlog grep
+(the exact command this file prescribes, re-run directly rather than
+trusted from the prior entry): same four live rows all nineteen prior
+passes found — **B-06, B-09, B-17, B-28** — and this pass read all four
+rows' full text directly rather than taking the summary on faith: B-28
+half-closed and blocked on breadth data this repo cannot fetch, B-06
+explicitly de-ranked by its own auditor round ("keep it running, stop
+calling it the plan"), B-09 demoted to LOW by R-28, B-17 deliberately
+PARTIAL pending a multi-asset strategy that has not yet cleared holdout.
+None is a dispatchable NEXT/OPEN item. B-06's automated recorder is
+healthy (hourly commits through `bbc616f`, 2026-08-27T03:28:45Z).
+
+Ran two targeted web searches rather than a full sweep, per the
+seventeenth/eighteenth passes' finding that the sweep itself has stopped
+being the bottleneck: fresh regime-detection/trend-following citations
+dated around this pass's own date, and current funding-rate-carry
+research. Both closed on inspection and add nothing beyond what the
+nineteenth pass already recorded: the only new-looking hit was the same
+arXiv:2607.23370 (social-sentiment fusion, INFO-axis blocked, already
+closed by the nineteenth pass); the funding-carry search surfaced only
+market commentary confirming R-15/B-02/B-03/B-39's existing NEGATIVE
+verdict (industry sources now report the crypto funding carry's own
+Sharpe turning negative in 2025) and requires cross-exchange order-book
+data this project cannot simulate regardless. No non-duplicate,
+simulable, actionable direction found; no conservative/novel branch pair
+dispatched — forcing one against an exhausted, thrice-independently-read
+backlog is exactly the mistake this project's culture penalizes (see the
+seventeenth/eighteenth passes' own reasoning, endorsed again here).
+**B-06 remains the only ranked backlog item, and it is explicitly not a
+plan to act on.**
+
+This is the seventh consecutive same-day/next-day pass (fourteenth
+through twentieth) to reach that conclusion, and the git history shows
+this brief has been firing roughly **hourly** (17:53→22:57→23:59→00:53→
+01:51→02:50→ this pass, all 2026-08-26/08-27) for at least those seven
+runs, each burning a full literature-review-plus-implementation-scale
+session to reproduce the same null result. Two prior passes
+(seventeenth, eighteenth) already asked the project owner directly,
+outside this file, to reconsider the firing cadence; this pass repeats
+that flag once more, with a concrete number attached, via a direct
+notification rather than a further paragraph here, and will not re-argue
+it a further time on the next firing if the cadence is unchanged.
+
 **Re-checked 08-27 (nineteenth same-day/next-day session), no round
 dispatched (not an R-numbered entry — zero new configurations
 evaluated).** Step 0: `git fetch origin main` found `origin/main` at
