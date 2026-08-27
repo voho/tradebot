@@ -316,6 +316,8 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+IN PROGRESS: R-162 · 08-27 · Kaufman (1995) Efficiency Ratio as a two-sided SIZE-axis conviction modifier on `kelly_regime_v4` — pre-registration frozen in `experiments/r162_shared.py`, conservative (post-vote SCALE multiplier) and novel (per-anchor VOTE-weighting) branches dispatched, results pending.
+
 ### R-161 · 08-27 · NEGATIVE (both branches) — Conformal Risk Control (Angelopoulos et al. 2024) / RCPS (Bates et al. 2021) calibrating a multiplicative cap on `kelly_regime_v4`'s SCALE output; the conservative branch's own pre-registered bound has a hard sample-size floor that forces total shutdown at its primary setting, the novel branch stays too gentle to matter except when artificially cold-started, and neither clears the promotion bar on any of 15 configs
 
 **Direction.** This session's scheduled brief was the generic "propose an
