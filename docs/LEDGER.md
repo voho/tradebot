@@ -316,6 +316,8 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### IN PROGRESS: R-167 -- anytime-valid concentration bounds (Howard et al. 2021 peeled/doubling Hoeffding, conservative; Waudby-Smith & Ramdas 2024 fixed-fraction betting confidence sequence, novel) replacing R-161's fixed-sample Hoeffding UCB in the same RCPS multiplicative-cap architecture on `kelly_regime_v4`'s SCALE output; pre-registration frozen in `experiments/r167_shared.py`, holdout not yet read.
+
 ### R-166 · 08-27 · NEGATIVE (killed at Step 0, no branch built) — volatility-response sign inversion in `kelly_regime_v4`'s SCALE factor: R-10's own inverse-leverage-effect finding does not survive causal, inner-train-only re-measurement
 
 **Direction.** This session's scheduled brief was the generic "take the
