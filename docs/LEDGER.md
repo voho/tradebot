@@ -316,7 +316,159 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
-**IN PROGRESS: R-164 -- risk-managed-momentum overlay on `kelly_regime_v4`'s SCALE: Barroso & Santa-Clara (2015) strategy-own-variance targeting (conservative) vs. a Daniel & Moskowitz (2016) two-sided trend+volatility panic/calm-bull multiplier (novel).**
+### R-164 · 08-27 · NEGATIVE (both branches) — Risk-managed momentum on `kelly_regime_v4`'s SCALE: Barroso & Santa-Clara (2015) strategy-own-payoff-variance targeting (conservative) and a Daniel & Moskowitz (2016) two-sided trend+volatility panic/calm-bull multiplier (novel) both fail decisively — every non-zero grid cell is negative on inner-validation, exposure inflates on every cell, and the 0.40% fee-tier re-run makes it worse, not better
+
+**Direction.** This session's scheduled brief was the generic "propose an
+improvement, dispatch conservative/novel implementation branches, measure,
+promote the winner." Step 0 found no in-flight round (`HEAD == origin/main`
+@ `ec69a32`, unshallowed; newest `_shared.py` files matched section B) and
+Step 0b's saturation count was **1** consecutive null pass (the pass
+immediately after R-163's dispatch), squarely "0-2: normal," so a fresh
+literature sweep was warranted; the backlog grep returned the same four
+already-inactionable rows (B-06 de-ranked, B-09 LOW, B-17 PARTIAL, B-28
+blocked on data). A research sub-agent (Steps 1-2) confirmed the prior
+~24 sessions across 08-26/27 had already exhausted e-values/martingales,
+conformal/RCPS, online FDR, Bayesian/robust/Wasserstein-DRO Kelly, CPPI,
+Grossman-Zhou, CDaR, Kaufman ER, HRP, RL/online portfolio selection,
+quantile regression, meta-labeling, rough volatility, Hill/EVT, GP
+regression, particle filters, path-signatures, macro/on-chain/flow
+signals, and Turtle-style pyramiding (R-163) as duplicates or
+infeasible-by-construction, then found one candidate surviving the
+four-question filter: give `kelly_regime_v4`'s SCALE slot a
+**risk-managed-momentum** overlay instead of its shipped price-variance
+target. **Conservative** = Barroso, P. & Santa-Clara, P. (2015), "Momentum
+Has Its Moments," *Journal of Financial Economics* 116(1), 111-120
+(https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2041429) — scale
+exposure by `sqrt(target_var/realized_var)` of the **strategy's own**
+realized payoff (not price), 6-month trailing window, literal. **Novel** =
+Daniel, K. & Moskowitz, T. J. (2016), "Momentum Crashes," *Journal of
+Financial Economics* 122(2), 221-247
+(https://www.kentdaniel.net/papers/published/jfe_16.pdf) — a continuous,
+two-sided compound "panic" (bear + high vol) / "calm-bull" (bull + low
+vol) multiplier over a 24-month trend window. Supporting 2025 crypto
+context (cited for existence/direction only, paywalled, not for exact
+numbers): Grobys, Kolari, Sandretto, Shahzad & Äijö (2025), "Cryptocurrency
+momentum has (not) its moments," *Financial Markets and Portfolio
+Management* (https://link.springer.com/article/10.1007/s11408-025-00474-9).
+**Attacks SIZE** — no new external data source (both branches are pure
+functions of BTC/ETH's own OHLCV plus v4's own reused vol estimator), no
+calibrated statistical guarantee (not ERR), no throttle on an
+already-decided order (not COST). **Not a duplicate of** (full argument
+frozen in `experiments/r164_shared.py` before either branch was
+dispatched): R-93/R-152 (drawdown-budgeted exposure — driven by the
+equity curve's own trailing realized *drawdown*, not payoff *variance*);
+R-136 (HAR-RV/DVOL — improves the *forecast* of v4's existing price-vol
+input; this round replaces *what* is forecast, the strategy's own payoff
+variance); R-59/R-60 (self-normalizing *price*-vol ratio, a single scalar
+form); R-91 (turning-point states built from anchor-vote agreement, not
+trailing price returns); the closed never-increase-only bounded-brake
+architecture (both branches here are two-sided by construction, the same
+escape R-163's novel branch used); R-141 novel's equality-matching
+degeneracy (not applicable — neither branch is equality-matched); R-85's
+AND-gate collapse (avoided: a continuous product of two *slow* series, not
+a binary AND of fast alarms); R-53/54/73 (external macro/DVOL vs. this
+round's BTC-native-only inputs); R-146 (anchor statistic, leaves SCALE
+untouched); R-163 (episode-relative, vote-flip-resetting state vs. this
+round's slow calendar-time rolling/expanding windows that never reset). A
+ledger-wide grep for the cited authors/terms returned zero hits before
+this round.
+
+**What was done.** Operator-authored, frozen, read-only shared
+infrastructure: `experiments/r164_shared.py` — `vote_only_daily_return`
+(R-62's vote-only isolate, reused as the "strategy payoff" both
+conservative-branch variances are computed on), `bsc_realized_variance` /
+`bsc_target_variance` / `bsc_scale_multiplier` (conservative: causal
+rolling/expanding variance ratio, `.shift(1)` throughout), and
+`trailing_cum_return` / `trailing_vol_ratio` / `dm_panic_calm_score` /
+`dm_multiplier` (novel: a 24-month trailing return × a volatility-vs-its-
+own-1-year-median ratio, combined as a continuous two-sided product). The
+module's own dispatch verification caught a genuine same-day lookahead bug
+in an early draft of `trailing_vol_ratio` (the numerator wasn't day-lagged
+like the median denominator) via `causal_truncation_probe_series`, fixed
+before freezing. Two parallel, disjoint-file branches, neither committing:
+**conservative** (`experiments/r164_conservative_bsc.py`) —
+`BSC_WINDOW_GRID=(0,63,126,252)` trading days, `BSC_PRIMARY=126` (the
+paper's own 6-month default); **novel**
+(`experiments/r164_novel_dm.py`) — `NOVEL_KAPPA_GRID=(0.0,0.5,1.0,1.5)`,
+`NOVEL_PRIMARY=1.0`. Pre-registered falsification test (identical for
+both, per this project's most common SIZE-axis failure mode): ETH
+sign-replication at PRIMARY. Pre-registered decision table (2×2, `GATE_OK`
+× `CLEAR(spot)`/`CLEAR(futures)`) and kill switches A1 (identity)/A2
+(non-collinearity, R²<0.98)/A3 (exposure match, disclosed not calibrated)
+— identical shape to R-160 through R-163. **52 configurations total** (26
+per branch: 4 grid values × 2 markets × 3 slices = 24, + 2 fee-tier cells
+at 0.40%), the trials count for deflated Sharpe. **Holdout not read by
+either branch** — both assert the loaded frame's last timestamp precedes
+`OOS_START`, and neither script calls `ev(..., start=OOS_START)`.
+`pytest tests/test_causality_strict.py` passed for both (55 passed).
+**Operator skeptic check**: independently re-derived, from a from-scratch
+script (not copied from either branch), the A1 identity for both branches
+(bit-for-bit, exact) and the A2 non-collinearity R² for both — conservative
+reproduced exactly (0.396436 on inner-train, matching the branch's own
+number) and novel reproduced exactly (0.780414) **once computed on the
+same slice the novel branch itself used (full BTC pre-holdout history)**;
+an initial inner-train-only recomputation gave a different number
+(0.844164), which is a **disclosed methodological inconsistency between
+the two branches** (conservative's A2 is measured on inner-train, novel's
+on the full pre-holdout series) rather than a bug — both values sit well
+under the 0.98 cap regardless of slice, so it does not change either A2
+verdict, but a future round reusing this A2 pattern should fix the slice
+across branches before freezing.
+
+**Result.** **Both branches: clean REJECT, no ambiguity or fall-through
+this round.** Conservative: A1 exact (R²=1.0, max diff 0.0), A2 passes
+(R²=0.396–0.710 across the grid, all well under 0.98). Every non-zero
+`window_days` cell is **negative on both `d_log_growth` and `d_sharpe` on
+inner-validation, on both markets** (spot: −0.070 to −0.110; futures:
+−0.117 to −0.234), **none risk-matched** (exposure_ratio 1.22–1.41,
+vol_ratio 1.05–1.48 — the pre-registered unmatched-exposure artifact,
+failure mode 1, materializing on every cell), **none excluding zero on the
+winning side**. `CLEAR(spot)=False`, `CLEAR(futures)=False` →
+`GATE_OK` vacuously true (nothing cleared to falsify) → **REJECT**. The
+0.40% fee-tier re-run of PRIMARY (window_days=126) confirms rather than
+rescues: spot −0.147 [−0.320, +0.008], futures **−0.306 [−0.591, −0.037]**
+— excluding zero on the *losing* side. Novel: A1 exact, A2 passes
+(R²=0.780 at PRIMARY). Every non-zero `kappa` cell is likewise negative on
+both markets on inner-validation (spot −0.004 to −0.014; futures −0.040 to
+−0.066), exposure_ratio rising monotonically with kappa (1.00→1.15) —
+the two-sided construction leans mechanically toward *raising* exposure on
+this data rather than the a-priori-neutral case the pre-registration
+allowed for. `CLEAR(spot)=False`, `CLEAR(futures)=False` → REJECT. ETH
+falsification is vacuous for both branches (PRIMARY clears nowhere on
+either branch, so the sign-replication check never fires) — this is a
+disclosed non-finding, not a pass earned on the merits. The fee-tier
+re-run again confirms: spot −0.010 [−0.030, +0.001], futures −0.081
+[−0.238, +0.000]. Novel's disclosed activity diagnostic (failure mode 6):
+`fraction_nonzero=0.358` of BTC pre-holdout days carry a non-trivial
+panic/calm-bull score (694 calm-bull days, 91 panic days) — the mechanism
+is not degenerately inactive, it is active and still loses.
+
+**Verdict.** **NEGATIVE, both branches**, cleanly — unlike R-163, neither
+branch produced an apparent PROMOTE requiring a decision-rule
+fall-through; both REJECT rows were matched exactly as pre-registered.
+**One-line lesson:** the specific input R-136 forecasts (price variance)
+and the specific input this round targets (the strategy's own realized
+payoff variance, or a compound trend+vol state) are both, in the end,
+volatility-scaling mechanisms on `kelly_regime_v4`'s leveraged futures
+market, and R-136's own closing line — "the inverse-leverage-effect
+mechanism binds regardless of forecast quality or construction" — is
+confirmed a third time (after R-136 itself and, more loosely, every prior
+SIZE-axis vol-scale variant): futures is worse than spot on every single
+non-zero cell in both branches here, by 1.7–2.7×. A secondary, disclosed
+methods note: future rounds computing an A2 kill switch across two
+branches should freeze the same data slice for both, not let each branch
+choose its own (see skeptic check above). Holdout counter: **+0** (neither
+branch read it). Decision rule did not move after any result was seen —
+both REJECT rows were matched exactly as frozen. **Next step:** this
+closes the risk-managed-momentum / strategy-payoff-variance-targeting
+sub-family (both a literal Barroso-Santa Clara transplant and a Daniel-
+Moskowitz-style compound trend+vol state) on this vote architecture; a
+future session should not re-try scaling `kelly_regime_v4`'s SCALE factor
+by any variant of the strategy's own realized-return variance (in place of
+or alongside price variance) expecting a different window or kappa to
+rescue it on the leveraged market — R-136's inverse-leverage-effect finding
+is now the standing prior for *any* volatility-scaling substitution on
+this strategy's futures leg, regardless of what variance is targeted.
 
 ### R-163 · 08-27 · NEGATIVE (both branches) — Turtle-style pyramiding (Faith 2007 / Zarattini 2026) as a path-dependent, episode-relative SIZE mechanism on `kelly_regime_v4`; the novel branch clears nothing, and the conservative branch's mechanical "PROMOTE" is a decision-rule artifact — no pre-registered config clears both markets, and the literal Faith-2007 PRIMARY loses money with statistical confidence at a realistic fee tier
 
@@ -18003,6 +18155,8 @@ trip.
 
 | what | why | ref |
 |---|---|---|
+| A continuous, two-sided compound "panic/calm-bull" multiplier on `kelly_regime_v4`'s SCALE, `1+kappa*tanh(score/0.25)` where `score` = a 24-month trailing-return bull/bear component times a 1-year-median-relative volatility component (Daniel & Moskowitz 2016) | 26 configs (4 kappa in {0,0.5,1,1.5} x 2 markets x 3 slices = 24, +2 fee-tier). A1 exact, A2 passes (R²=0.780 at kappa=1.0 PRIMARY, full pre-holdout BTC). Every non-zero kappa cell is negative on `d_log_growth`/`d_sharpe` on inner-validation, both markets (spot −0.004 to −0.014, futures −0.040 to −0.066); exposure_ratio rises monotonically with kappa (1.00→1.15) rather than averaging near 1.0 as the two-sided construction's neutral case would predict. **0 of 24 sweep cells clear `clears_bar()`**; the 0.40% fee-tier re-run of PRIMARY confirms rather than rescues (spot −0.010 [−0.030,+0.001], futures −0.081 [−0.238,+0.000]). ETH falsification is vacuous (PRIMARY clears nowhere, so the sign-check never fires) — a disclosed non-finding, not a pass. The disclosed activity diagnostic shows the mechanism is genuinely active (35.8% of BTC pre-holdout days carry a non-trivial score, 694 calm-bull / 91 panic days) and still loses. Do not re-try a trend+volatility compound "panic/calm-bull" multiplier on this vote/scale architecture expecting a different kappa, trend window or vol-ratio reference to rescue it — the sign is stable and negative across the whole non-zero grid, and futures loses 6-10x more than spot on every cell, consistent with R-136's inverse-leverage-effect finding for any volatility-scaling substitution on this strategy's leveraged leg. | R-164 (novel) |
+| Barroso & Santa-Clara (2015) risk-managed-momentum: `kelly_regime_v4`'s SCALE multiplied by `sqrt(target_var/realized_var)` of the STRATEGY'S OWN realized payoff (v4's vote-only isolate), not price, 6-month trailing window (the paper's own default) vs. a causal expanding long-run target | 26 configs (4 window_days in {0,63,126,252} x 2 markets x 3 slices = 24, +2 fee-tier). A1 exact, A2 passes (R²=0.396–0.710 across the grid, inner-train). Every non-zero window_days cell is negative on `d_log_growth`/`d_sharpe` on inner-validation, both markets (spot −0.070 to −0.110, futures −0.117 to −0.234), **none risk-matched** (exposure_ratio 1.22–1.41, vol_ratio 1.05–1.48 — the R-33/R-141 unmatched-exposure-artifact pattern, on every cell), none excluding zero on the winning side. **0 of 24 sweep cells clear `clears_bar()`**; the 0.40% fee-tier re-run of PRIMARY (window_days=126) is decisively negative on futures (d_log_growth=−0.306, CI=[−0.591,−0.037], excluding zero on the losing side). Independently skeptic-reproduced (A1/A2 exact on both branches; see R-164 in section B for a disclosed A2-slice inconsistency between the two branches, immaterial to either verdict). Do not re-try scaling v4's SCALE by the strategy's own realized-payoff variance (Barroso-Santa Clara or any close variant) expecting a different trailing window to rescue it — the sign is stable and negative across the whole non-zero grid, worsens at realistic fees, and fails hardest on the leveraged futures market exactly where R-136's inverse-leverage-effect finding predicts. | R-164 (conservative) |
 | A continuous, two-sided episode-relative excursion multiplier on `kelly_regime_v4`'s SCALE (`1 + kappa*tanh(excursion_ATR_units/2.0)`, excursion measured since the current bullish episode began), Faith (2007)/Zarattini (2026)-motivated | 26 configs (4 kappa in {0,0.5,1,1.5} x 2 markets x 3 slices = 24, +2 fee-tier). A1/A2 pass (R²=−0.394, non-collinear). The multiplier is two-sided by construction but not symmetric in practice on real data (mean=1.456 at kappa=1.0 over the full pre-holdout series; 48.5% of bars sit above 1.0 vs. 2.8% below, because v4's own latching hysteresis flips the vote bearish before much adverse excursion accumulates). **0 of 24 sweep cells clear `clears_bar()` on inner-validation on either market**; `risk_matched=False` on all 24, exposure_ratio 1.70-1.74 and vol_ratio 1.39-1.81 at kappa=1.0; the 0.40% fee-tier re-run is decisively negative on both markets (spot d_log_growth=−0.899 [−1.703,−0.066], futures −0.712 [−1.398,−0.036], both excluding zero on the losing side). Do not re-try a continuous episode-relative excursion multiplier on this vote/scale architecture expecting a different kappa or reference-ATR constant to rescue it — the sign is stable and negative on inner-validation across the whole non-zero grid, and gets worse, not better, at realistic fees. | R-163 (novel) |
 | A literal Faith (2007) discrete 4-unit Turtle pyramid (add every 0.5N favorable ATR move, stop the stack at 2N from the newest unit's own entry) stacked additively on top of `kelly_regime_v4`'s own `frac*scale`, clipped to v4's own `max_leverage` | 26 configs (4 num_units_cap in {0,1,2,4} x 2 markets x 3 slices = 24, +2 fee-tier). A1/A2 pass (R²=−4.580174 at PRIMARY=4, non-collinear); the stack sits at its full 4-unit cap on 89.9% of all bullish bars, i.e. it behaves as a near-constant leverage-up of v4's own signal rather than a nuanced path-dependent mechanism. The pre-registered decision table mechanically outputs PROMOTE (`CLEAR(spot)` via num_units_cap∈{1,2}, `CLEAR(futures)` via num_units_cap∈{2,4}), but **no single config clears both markets** — PRIMARY itself (num_units_cap=4, the literal cited standard) clears futures (d_sharpe +0.283) but misses spot (+0.198, under the 0.2 floor) by construction, so the mechanical PROMOTE describes a never-jointly-frozen `num_units_cap=2` config, not PRIMARY. `risk_matched=False` on every non-zero cell on every market (exposure_ratio 1.6x-3.8x, vol_ratio 1.5x-3.0x), max-drawdown worse than control by +8.6 to +53.7 percentage points on every one of them, and no bootstrap CI excludes zero on the winning side anywhere in the sweep. The 0.40% fee-tier re-run of the literal PRIMARY config reverses sign on both markets, decisively on futures (d_log_growth=−1.700, CI=[−3.405,−0.004], excluding zero on the losing side). An independent skeptic reproduced every cited number bit-for-bit and concluded this is the R-33/R-141 unmatched-exposure artifact in its most complete form (100% of cells fail risk-matching) compounded by a decision-rule gap (`CLEAR(m)` was pre-registered per-market over any grid value rather than for one fixed config). Do not re-try discrete ATR-unit pyramiding on this architecture expecting a different `num_units_cap` to rescue it, and do not write a future decision table whose per-market CLEAR clauses can each be satisfied by a different, never-jointly-frozen grid value — require the same config to clear every market. | R-163 (conservative) |
 | Conformal Risk Control (Angelopoulos et al. 2024, ICLR, arXiv:2208.02814) / Risk-Controlling Prediction Sets (Bates et al. 2021, J. ACM, arXiv:2101.02703) calibrating a multiplicative cap `lambda` on `kelly_regime_v4`'s SCALE output (`frac*scale`, pre-deadband) — periodic batch RCPS refit (conservative) or Angelopoulos et al. §4's online distribution-shift recursion (novel), both against an identical causal per-day tail-loss functional (`1{|exposure*lambda*next_day_return| > tau}`), leaving the vote and vol-target estimator untouched | 15 configs (6 conservative: `tau x alpha` at CALIB_DAYS=365/REFIT_DAYS=90 = 4, +2 robustness at CALIB_DAYS=730 and REFIT_DAYS=180; 9 novel: `tau x alpha x eta={0.01,0.02}` = 8, +1 warm-start at lambda_0=0.8), 90 real-data `compare()` cells total (36+54), plus the novel branch's 48 Monte Carlo stress-window cells and 48 stationary-bootstrap resamples. Causal truncation probes PASS both branches. Calibration self-tests on synthetic known-tail-rate data (true_tail_prob=0.05) landed within 0.01-0.03 of ground truth both branches — not badly miscalibrated. **A hard defect in the conservative branch's own pre-registered bound surfaced first**: the disclosed plain-Hoeffding UCB needs n>=460.5 days to certify anything above lambda=0 at alpha=0.05 (`delta=0.10`), but the pre-registered primary CALIB_DAYS=365 sits below that floor — so 3 of 6 conservative configs (including PRIMARY) degenerate into a **binary total-shutdown** (lambda=1 through warmup, then exactly 0 forever), not a nuanced cap; the other 2 alpha=0.10 configs sit the opposite way and stay fully inert (lambda approx 1 always). Only the one robustness cell that happens to fix the floor (CALIB_DAYS=730, n=730>460.5) shows genuinely continuous calibration (lambda 0.50-0.83) and is the branch's only cell with any positive Sharpe delta anywhere (+0.10/+0.05, ETH-only, bootstrap point still negative). The novel branch's online recursion avoids that binary failure by construction but is consequently too gentle to move the exceedance-rate clause at all in 8 of 9 configs (cand exceedance == ctrl exceedance to 4 decimals on inner-validation); only an artificially cold-started variant (lambda_0=0.8, not something the recursion would choose on its own) binds meaningfully, and it fails on futures. **0 of 15 configs (0 of 90 real-data cells) clear the decision rule** (inner-validation tail-exceedance strictly lower AND d_sharpe>=+0.2-or-risk-matched-drawdown-improvement-or-CI-excludes-zero, both markets, reproducing on the branch's own falsification test). Falsification tests (ETH sign-replication / Monte Carlo stress-window survival) were not decisive tie-breakers for any config since the exceedance/Sharpe clauses failed first in every case; the novel branch's own Monte Carlo check on its primary config was mixed regardless (58-63% of windows favored candidate on Sharpe, only 37.5-50% on log-growth). A second, unrelated numerical-instability defect (`r161_shared.constant_cap_r2` divides by a near-zero denominator for any non-bit-identical lambda path, returning nan or huge-magnitude garbage) was found and disclosed, not fixed (module frozen); raw lambda mean/std/range was used as the credible non-degeneracy evidence instead. Holdout never consulted. Do not re-try Conformal Risk Control / RCPS on v4's SCALE output expecting a different (tau, alpha) grid point or a tighter concentration bound (Hoeffding-Bentkus in particular) to rescue it — the failure modes are structural on both sides (a hard sample-size floor vs. a convergence property that resists binding), not a calibration-precision artifact; a genuinely different guarantee family that needs no fixed calibration window (e.g. martingale/e-value-based risk control) remains untried. | R-161 (both branches) |
@@ -18115,6 +18269,27 @@ trip.
 ---
 
 ## D. Backlog (ranked)
+
+**Re-ranked 08-27 after R-164 (NEGATIVE, both branches, 52 configurations,
+holdout not read).** The ranked list is unchanged — B-06, B-09, B-17, B-28
+— since R-164 was a fresh literature-sweep round (Step 0b's consecutive-
+null-pass count was 1, squarely "0-2: normal") rather than work on a
+backlog item. Risk-managed momentum on `kelly_regime_v4`'s SCALE (Barroso
+& Santa-Clara 2015's strategy-own-payoff-variance target, conservative;
+Daniel & Moskowitz 2016's two-sided panic/calm-bull trend+vol multiplier,
+novel) closed NEGATIVE on both branches, cleanly (no decision-rule
+fall-through this round, unlike R-163): every non-zero grid cell on both
+branches is negative on inner-validation, on both markets; the
+conservative branch additionally fails risk-matching on 100% of cells
+(the R-33/R-141 unmatched-exposure signature) and reverses further,
+excluding zero on the losing side, at the 0.40% fee tier. Futures loses
+1.7–10x more than spot on every non-zero cell across both branches,
+consistent with R-136's inverse-leverage-effect finding — now confirmed a
+third time as the standing prior against *any* volatility-scaling
+substitution on this strategy's leveraged leg, regardless of what
+variance or state is targeted. See R-164 in section B for the full
+write-up and a disclosed methods note (an A2 kill-switch slice
+inconsistency between the two branches, immaterial to either verdict).
 
 **Re-ranked 08-27 after R-163 (NEGATIVE, both branches, 52 configurations,
 holdout not read).** The ranked list is unchanged — B-06, B-09, B-17, B-28
