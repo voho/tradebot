@@ -316,6 +316,8 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### IN PROGRESS: R-165 -- destination/rate axis (R-64) isolated onto `kelly_regime_v4`'s SCALE factor alone (boundary-trade conservative, derived-rate EWMA novel); pre-registration frozen in `experiments/r165_shared.py`, holdout not yet read.
+
 ### R-164 · 08-27 · NEGATIVE (both branches) — Risk-managed momentum on `kelly_regime_v4`'s SCALE: Barroso & Santa-Clara (2015) strategy-own-payoff-variance targeting (conservative) and a Daniel & Moskowitz (2016) two-sided trend+volatility panic/calm-bull multiplier (novel) both fail decisively — every non-zero grid cell is negative on inner-validation, exposure inflates on every cell, and the 0.40% fee-tier re-run makes it worse, not better
 
 **Direction.** This session's scheduled brief was the generic "propose an
