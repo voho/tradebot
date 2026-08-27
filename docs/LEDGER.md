@@ -316,6 +316,111 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### R-158 · 08-27 · METHOD — the routine had no stopping rule, and 20 null passes cost 1,285 lines and one deleted record
+
+**Direction.** Not a market mechanism: this round applies R-78's own
+standing rule — *cost the plan, not just the mechanism; a plan is a claim,
+and before believing it check what it would take for it to be wrong* — to
+[ROUTINE.md](ROUTINE.md) itself rather than to a backlog item. R-78 costed
+B-06 and found 18.9-years-to-never; this costs the routine's own firing
+loop and finds it has been running at zero yield for a full day. Attacks
+none of INFO / N≈3 / ERR / COST / SIZE — it is an instrument fix, the same
+category as **R-151** (the backlog table is the state, not the prose above
+it) and **B-44**. Not a duplicate of R-151: that round fixed four
+bold-but-closed *rows*; this one fixes the *format and the cadence* that
+have been burying the table those rows live in. Step 0 was run in full
+first — `origin/main` == HEAD at `fe1ead3`, `experiments/r99_shared.py` is
+the newest frozen pre-registration and R-99 is recorded, no round in
+flight, and the backlog grep returns the same four live rows (B-06, B-09,
+B-17, B-28) that all twenty-three prior passes found, none actionable.
+
+**What was done.** No strategy code, no data, no holdout. Measurement is
+over the repo's own git history and `docs/LEDGER.md`:
+
+| measured | value |
+|---|---|
+| verification-pass commits, 08-26 → 08-27 | **21** |
+| configurations evaluated across all of them | **0** |
+| R-numbered rounds produced by them | **0** |
+| lines added to `LEDGER.md` by them | **1,364** (`--numstat`) |
+| null-pass prose blocks at the head of section D | **20**, totalling **1,285** lines |
+| section D header, before its backlog table began | **4,556** lines |
+| firing cadence, from commit timestamps | **~hourly**, 21 consecutive |
+| records silently destroyed | **1** (53 lines) |
+
+The last item is the round's actual finding and was not visible from any
+single pass. Commit `fe1ead3` (pass 23) shows `82` insertions against `53`
+deletions on `LEDGER.md`: while writing its own block it **removed pass
+22's entire record**, and its surviving text still says *"see the
+twenty-second pass's entry immediately below for the full reasoning"* —
+a cross-reference now pointing at nothing. This is a direct violation of
+this file's "nothing is deleted" rule. It went unnoticed because twenty
+near-identical prose blobs are indistinguishable at a glance, which is the
+format failing, not the pass: the pass was reasoning correctly about its
+own content and had no way to see the collision.
+
+Three fixes, all in `docs/ROUTINE.md` and `docs/LEDGER.md`:
+
+1. **A saturation rule** — new ROUTINE.md **Step 0b**, deliberately
+   mechanical because every one of the twenty passes reasoned its way to
+   "one more sweep can't hurt" and each was locally right. 0–2 consecutive
+   null passes: proceed normally. 3+: no new literature sweep — proceed only
+   with a non-search direction (infrastructure, methodology, a measurement
+   that annotates an existing round, or newly-fetchable data), else append
+   one row and **stop**. 5+: the same, plus one notification to the project
+   owner, sent once and not re-argued each pass.
+2. **A record format for null passes** — new **section E**, a five-column
+   table, one row per pass. The signal in a null pass is *that it happened,
+   when, and that it found nothing*, which is one row wide. All 20 prose
+   blocks were moved verbatim into `E-archive` beneath it (nothing deleted;
+   pass 22's block **recovered from `3202787`** and restored to its
+   chronological slot). Section D's header drops 4,616 → 3,341 lines and now
+   carries a pointer instead. Net file delta **+142** lines — the migration
+   deletes nothing and recovers 60.
+3. **Two smaller repairs** — Step 0's command block now runs
+   `git fetch --unshallow` first, because on a shallow clone
+   `git merge-base` returns empty with no error and the one check that would
+   catch a real fork fails silently (pass 23 lost a session to exactly this);
+   and the backlog grep is bounded `/^## D\./,/^## E\./` so the new section
+   cannot leak into it. Verified: it still returns the same four live rows.
+
+**Configs evaluated: 0.** Holdout not touched; no market data was read.
+
+**Result.** The decision rule was fixed before the count was taken and did
+not move: *if the last R-numbered round is more than two passes back and the
+live backlog set is unchanged, the routine has no work and saying so is the
+correct output.* It resolved unambiguously — the last round (R-157) is 21
+passes back and the live set has been {B-06, B-09, B-17, B-28} for all of
+them. Falsification test, pre-registered: *if any of the twenty passes had
+evaluated ≥1 configuration or moved any backlog row, the "zero yield" claim
+is false and this round is withdrawn.* It did not fail, but the check
+was sharper than the claim and corrected it. `git show --name-only` over the
+21 commits returns **`docs/LEDGER.md` and nothing else** — no `src/`, no
+`experiments/`, no `reports/` — so no configuration was evaluated. The
+backlog half needed restating: the live set is **not** identical across the
+21, as first written here. It runs {B-06, B-09, B-10, B-17, B-28, B-45,
+B-46, B-47} → … → {B-06, B-09, B-17, B-28}, the last thirteen passes sharing
+the final set. But diffing every one of the 21 for changed `B-nn` table rows
+returns **zero** — the strikings were done by the interleaved R-numbered
+rounds (R-151 striking four bold-but-closed rows, R-157 striking B-10), not
+by any pass. So the claim that survives is the stronger and more specific
+one: **no verification pass has ever moved a backlog row or evaluated a
+configuration.** Reproduction: every number above is one command against
+this repo's git history, listed in the table or in this paragraph.
+
+**Verdict.** METHOD. **Holdout counter: +0; running total unchanged.** The
+decision rule did not move. One-line lesson: *a routine that fires faster
+than evidence arrives does not produce more research — it produces more
+prose about the absence of research, and enough of it to hide the loss of a
+record.* The twenty passes were not wasted effort by careless sessions; each
+was individually diligent, and the diligence is what made the pile. Next
+step: the cadence itself is the project owner's call and has now been raised
+four times from inside the loop (passes 17, 18, 20, and this round's
+notification); Step 0b is the part that can be fixed from in here, and it is
+fixed. The next session should hit Step 0b, find 0 consecutive null passes
+(this round is an R-numbered round, which resets the count), and proceed
+normally — if it finds nothing, it appends one row to E and stops, which is
+now a correct and complete run of this routine.
 ### R-157 · 08-26 · NEGATIVE (both branches) — deterministic Elliott Wave counter (B-10), and wave-confidence as a `kelly_regime_v4` SIZE dampener
 
 **Collision, disclosed.** This round was dispatched under the working ID
@@ -17373,627 +17478,26 @@ trip.
 
 ## D. Backlog (ranked)
 
-**Re-checked 08-27 (twenty-third same-day/next-day session), no round
-dispatched (not an R-numbered entry — zero new configurations
-evaluated).** Step 0: this session's initial `git fetch origin main`
-read `origin/main` as stale at `6d4f118` (R-113 era, 08-24) against this
-branch's own HEAD at the twenty-second pass's `3202787` — a 68/72-commit
-divergence with **no discoverable merge-base**, because the working copy
-was a shallow clone and the two refs' visible histories didn't overlap.
-Read naively this looked like ~44 rounds of unmerged work sitting off
-`main`, which would have been the most material finding of the whole
-same-day run. `git fetch --unshallow` resolved it: a concurrent
-process force-updated `origin/main` to this branch's exact HEAD
-(`3202787`) during the fetch, the same "force-updated between fetches"
-event the twenty-first pass's own entry already names, so the divergence
-was an artifact of a shallow clone's fetch race, not a real gap — after
-unshallowing, `origin/main` and HEAD are identical. **Methodology note
-for future passes:** a shallow clone's `git merge-base` can return empty
-against a genuinely-related ref with no error, which makes a step-0
-"does `origin/main` match HEAD" check silently unreliable exactly when it
-would matter most (a real fork). `git fetch --unshallow` (or at least a
-deeper `--depth`) before trusting that comparison costs one command and
-would have caught this immediately instead of via a false alarm. No
-undispatched frozen pre-registration (`experiments/r99_shared.py` already
-has its matching R-99 entry, newest unchanged since the twenty-first
-pass). Same four live backlog rows as all twenty-two prior passes —
-**B-06, B-09, B-17, B-28** — re-verified directly against their full row
-text, none actionable, same reasons as the twenty-second pass's entry
-immediately below.
+**Re-ranked 08-27 after R-158 (METHOD; 0 configurations, holdout not
+read).** The ranked list is unchanged — B-06 (de-ranked by its own audit,
+running unattended), B-09 (LOW), B-17 (deliberately PARTIAL), B-28 (blocked
+on unfetchable breadth data) — and R-158 did not add a row, because its
+follow-on is a cadence decision that belongs to the project owner rather
+than to this list. What changed is upstream of the list: ROUTINE.md now has
+a **Step 0b saturation check**, so a session meeting this same four-row
+state is no longer instructed to invent a direction. It appends one row to
+section E and stops, and that is a complete run. R-158 resets the
+consecutive-null-pass counter to 0.
 
-B-06's forward record: `reports/paper_trading/kelly_regime_v4_bitstamp.csv`
-is unchanged from the twenty-second pass's own check (still 206 rows,
-still ending 2026-08-27T03:20Z — no new unattended cadence tick landed
-between that pass and this one), so that check is not re-run; see the
-twenty-second pass's entry immediately below for the full reasoning
-(~0.01% of R-78's 18.9-year median horizon, orders of magnitude short of
-resolving anything).
-
-This pass dispatched one research-only sub-agent (per ROUTINE.md's
-"Running directions in parallel," a primary is dispatched before any
-skeptic — here the sub-agent *was* the primary, briefed with the full
-standing diagnosis, the current backlog state and the specific list of
-mechanism families the twenty-two prior passes had already closed, so it
-would not re-search them) with a brief narrower than the twenty-first and
-twenty-second passes' own: attack the "vote" component specifically
-(R-62's finding that the vote, not the volatility-scale factor, carries
-`kelly_regime_v4`'s whole edge), or the COST axis specifically (the one
-constraint R-65 showed can actually move). Seven searches (Theil-Sen /
-repeated-median robust slope estimators, recursive-least-squares and
-LMS adaptive filters, optimal-trading-rate extensions to Kelly sizing),
-each checked against section C and the closed-candidate lists by grep
-before being reported. Result: no qualifying candidate. RLS/LMS adaptive
-filters and ensemble Kalman are, mathematically, recursive linear
-regression / linear state-space filters — the same Levine & Pedersen
-(2016) equivalence class R-146 already closed for EMA/HP-filter/Kalman
-variants, and Kalman-LLT itself already failed as a regime detector
-(R-83, 1/6 → 2/6 on the six-episode gate). Theil-Sen / repeated-median
-slope estimation is not literally a linear filter, but it is a third
-instance of the axis R-146 named "close to exhausted" — a robust
-central-tendency *statistic* feeding the vote's comparison, which R-146
-found gets absorbed by v4's own 10% latching deadband before it ever
-reaches the traded target; a robust *slope* statistic is the same
-substitution shape and the sub-agent judged it did not honestly clear the
-non-duplicate bar. Fractional differentiation as a vote-input
-representation is already closed twice over (R-124, SIZE-axis and an
-11th regime-timing detector, both NEGATIVE). Almgren-Chriss execution
-timing on v4's own fills is already closed (R-77, fee savings real,
-Sharpe deltas inside the noise floor). Gârleanu-Pedersen partial
-adjustment on one instrument is already closed (R-64, no-trade region
-does everything, GP's own smooth-rate term ablates to ~0) — the 18x COST
-win this brief's own framing points to (R-65) is on the cross-sectional
-multi-asset panel, which is exactly what B-17/B-28 already flag as
-blocked. **No conservative/novel branch pair dispatched** — per
-ROUTINE.md, "not tested is not a negative result," and nothing cleared
-step 1.
-
-Tenth consecutive same-day/next-day pass (fourteenth through
-twenty-third) to reach this conclusion. Per the twenty-first and
-twenty-second passes' own statement that they would not re-argue the
-firing-cadence flag further without a material change, and since nothing
-about the cadence or its prior unactioned escalations has changed, this
-pass does not re-escalate and does not send a further notification —
-the shallow-clone methodology note above is new and worth a future
-session's attention, but is a process fix, not a finding that changes
-what the project owner needs to act on today. **B-06 remains the only
-ranked backlog item and is explicitly not a plan to act on.** Next
-session should not repeat this pass's seven searches; a genuinely new
-attempt still needs either a structurally different data source this
-repo cannot currently fetch (B-28), or B-06's own forward record to
-accumulate materially further.
-
-**Re-checked 08-27 (twenty-first same-day/next-day session), no round
-dispatched (not an R-numbered entry — zero new configurations
-evaluated).** Step 0: `git fetch origin main` found `origin/main` at
-`06d56b3`, matching this branch's own HEAD (a concurrent process had
-already force-synced `main` to this branch's tip between this session's
-first and second fetch — no in-flight round, no undispatched frozen
-pre-registration (`experiments/r*_shared.py` unchanged since R-156/R-157,
-newest still `r99_shared.py`). Same four live backlog rows as all twenty
-prior passes — **B-06, B-09, B-17, B-28** — none actionable, same reasons
-as the twentieth pass's entry immediately below.
-
-Rather than repeat the twentieth pass's own two generic searches, this
-pass dispatched a research-only sub-agent with a narrower brief: check
-six specific mechanism families a keyword grep against this file showed
-as under-explored (wavelet multi-resolution analysis — 0 prior hits;
-Gaussian process regression — 0; particle filters — 0; distributionally
-robust/Wasserstein-ambiguity Kelly — 0; EVT/tail-index sizing via
-Hill/POT-GPD — 1; meta-labeling / triple-barrier — 14, but never checked
-against this exact framing), across six distinct web searches, each
-evaluated against step 1's mechanism-SHAPE bar rather than citation
-recency. Result: every one collapses into a mechanism shape already
-closed. Wavelets split into forecasting preprocessing (categorical
-"another indicator" fail) or multiscale vol/regime estimation (duplicates
-the 21+ SIZE-axis retunes and the twelve regime-timing mechanisms already
-failing the six-episode gate). Gaussian processes and particle filters
-are, respectively, a forecaster or a sequential-Bayesian state filter —
-the latter inherits Kalman LLT's own named failure mode (lag on
-shock-driven episodes, which is exactly what the six-episode gate tests).
-DRO/Wasserstein-Kelly reduces to the same shrinkage/robustification shape
-as the closed Bayesian-Kelly and CDaR/Wasserstein-budget rounds. EVT
-tail-index sizing was already explicitly named closed in this file
-("Hill-estimator sizing ≡ closed POT/GPD and CDaR rounds"). Meta-labeling
-is a secondary classifier gating size — a forecaster, a duplicate of
-v4's own confidence-vote sizing, or both. No candidate survives; full
-reasoning and line citations in the sub-agent's own report, not
-reproduced here. **No conservative/novel branch pair dispatched** —
-forcing one against a backlog independently re-confirmed exhausted by
-twenty-one separate passes today would be exactly the mistake this
-project's culture penalizes.
-
-This is the eighth consecutive same-day/next-day pass (fourteenth through
-twenty-first) to reach that conclusion. Per the twentieth pass's own
-statement that it "will not re-argue [the firing-cadence flag] a further
-time on the next firing if the cadence is unchanged," and since nothing
-about the cadence or its two prior unactioned escalations has changed,
-this pass does not re-escalate and does not send a further notification —
-only a materially new finding would warrant one. **B-06 remains the only
-ranked backlog item, and it is explicitly not a plan to act on.** Next
-session should not repeat the six searches named above; a genuinely new
-attempt would need either a structurally different data source this repo
-cannot currently fetch (per B-28), or B-06's own forward record to
-accumulate further.
-
-**Re-checked 08-27 (twentieth same-day/next-day session), no round
-dispatched (not an R-numbered entry — zero new configurations
-evaluated).** Step 0: `git fetch origin main` found `origin/main` at
-`bbc616f` (the nineteenth pass's ledger commit plus one automated
-paper-trading row), clean working tree — no in-flight round, no
-undispatched frozen pre-registration (`experiments/r*_shared.py`
-unchanged since R-156/R-157, newest still `r99_shared.py`). Backlog grep
-(the exact command this file prescribes, re-run directly rather than
-trusted from the prior entry): same four live rows all nineteen prior
-passes found — **B-06, B-09, B-17, B-28** — and this pass read all four
-rows' full text directly rather than taking the summary on faith: B-28
-half-closed and blocked on breadth data this repo cannot fetch, B-06
-explicitly de-ranked by its own auditor round ("keep it running, stop
-calling it the plan"), B-09 demoted to LOW by R-28, B-17 deliberately
-PARTIAL pending a multi-asset strategy that has not yet cleared holdout.
-None is a dispatchable NEXT/OPEN item. B-06's automated recorder is
-healthy (hourly commits through `bbc616f`, 2026-08-27T03:28:45Z).
-
-Ran two targeted web searches rather than a full sweep, per the
-seventeenth/eighteenth passes' finding that the sweep itself has stopped
-being the bottleneck: fresh regime-detection/trend-following citations
-dated around this pass's own date, and current funding-rate-carry
-research. Both closed on inspection and add nothing beyond what the
-nineteenth pass already recorded: the only new-looking hit was the same
-arXiv:2607.23370 (social-sentiment fusion, INFO-axis blocked, already
-closed by the nineteenth pass); the funding-carry search surfaced only
-market commentary confirming R-15/B-02/B-03/B-39's existing NEGATIVE
-verdict (industry sources now report the crypto funding carry's own
-Sharpe turning negative in 2025) and requires cross-exchange order-book
-data this project cannot simulate regardless. No non-duplicate,
-simulable, actionable direction found; no conservative/novel branch pair
-dispatched — forcing one against an exhausted, thrice-independently-read
-backlog is exactly the mistake this project's culture penalizes (see the
-seventeenth/eighteenth passes' own reasoning, endorsed again here).
-**B-06 remains the only ranked backlog item, and it is explicitly not a
-plan to act on.**
-
-This is the seventh consecutive same-day/next-day pass (fourteenth
-through twentieth) to reach that conclusion, and the git history shows
-this brief has been firing roughly **hourly** (17:53→22:57→23:59→00:53→
-01:51→02:50→ this pass, all 2026-08-26/08-27) for at least those seven
-runs, each burning a full literature-review-plus-implementation-scale
-session to reproduce the same null result. Two prior passes
-(seventeenth, eighteenth) already asked the project owner directly,
-outside this file, to reconsider the firing cadence; this pass repeats
-that flag once more, with a concrete number attached, via a direct
-notification rather than a further paragraph here, and will not re-argue
-it a further time on the next firing if the cadence is unchanged.
-
-**Re-checked 08-27 (nineteenth same-day/next-day session), no round
-dispatched (not an R-numbered entry — zero new configurations
-evaluated).** Step 0: `git fetch origin main` found `origin/main` at
-`60884e2`, the eighteenth pass's own commit, clean working tree — no
-in-flight round, no undispatched frozen pre-registration
-(`experiments/r*_shared.py` unchanged since R-156/R-157). Backlog grep:
-same four live rows all eighteen prior passes found — **B-06, B-09, B-17,
-B-28** — none actionable. B-06's automated recorder is healthy (hourly
-commits through `b6ead3c`, 08-26T22:18:20Z).
-
-Ran two searches angled at ground the eighteenth pass's own two searches
-did not cover (regime-switching/HMM-family forecasting, and a broad
-2026 sweep for anything newly cited). Both closed on inspection: the one
-concretely new hit, arXiv:2607.23370 ("Bitcoin Price Direction Prediction
-via Regime-Aware Multi-Modal Fusion of Social Sentiment and Technical
-Features"), fuses price with social-sentiment data this project does not
-have and cannot fetch from its own committed files — INFO-axis blocked by
-the standing rule ("never proxy unavailable data out of price"), same as
-every social/on-chain-data candidate every prior pass has closed the same
-way. The regime-switching/HMM search surfaced only forecasting-framework
-variants of a mechanism *shape* this project has already tried six times
-over (HMM/BOCPD/Kalman-LLT/CSD/transfer-entropy/CUSUM, R-01/82/83/85/86/139,
-all 0-2/6 against the six-episode detection-lag gate) — grepped and
-confirmed against `docs/LEDGER.md` directly rather than taken on memory.
-No non-duplicate, simulable, actionable direction found; no
-conservative/novel branch pair dispatched. **B-06 remains the only
-ranked, unblocked backlog item.** This is the sixth consecutive
-same-day/next-day pass (fourteenth through nineteenth) to reach that
-conclusion; per the seventeenth/eighteenth passes' own request, the
-cadence question has been raised directly with the project owner outside
-this file rather than re-argued a nineteenth time.
-
-**Re-checked 08-27 (eighteenth same-day/next-day session), no round
-dispatched (not an R-numbered entry — zero new configurations
-evaluated).** Tasked independently with the same standard brief the
-seventeenth pass names below, this session ran ROUTINE.md Step 0 first:
-`git fetch origin main` found `origin/main` at `e208ce2`, the seventeenth
-pass's own commit, working tree clean — no in-flight round, no
-undispatched frozen pre-registration (`experiments/r*_shared.py`
-unchanged since R-156/R-157). The backlog grep found the same four live
-rows all seventeen prior passes found — **B-06, B-09, B-17, B-28** — none
-actionable, unchanged from the seventeenth pass's own characterization.
-
-Given the seventeenth pass's explicit finding that the literature sweep
-itself has stopped being the bottleneck, this session ran two targeted
-searches rather than a full sweep, chosen for genuine novelty against the
-closed-candidate lists rather than breadth: crypto position-sizing /
-volatility-management literature dated around August 2026, and bitcoin
-perpetual-futures funding-rate arbitrage (cross-exchange and
-spot-vs-perp), the one candidate direction of the two whose keyword had
-not been searched verbatim in any of the prior seventeen passes. Both
-closed on inspection. The sizing search surfaced only restated
-conventional wisdom (inverse-volatility position sizing, ATR-scaled
-stops) — the same mechanism *shape* as `kelly_regime_v4`'s own already-shipped
-volatility target, and the SIZE axis it would attack is the one R-59/R-60
-already spent 21 attempts on (0-for-21, standing diagnosis). The funding-arbitrage
-search is a literal duplicate of **R-15/B-02/B-03**: R-15 measured this
-exact cash-and-carry mechanism on this project's own data as far back as
-08-16, B-02 extended the funding series through 2026 (Deribit), and R-39
-closed the delta-neutral construction as NEGATIVE for the current era
-("this repo's missing perp price series makes basis risk structurally
-unmeasurable") — a cross-exchange variant would additionally require a
-second venue's simultaneous order book, which is outside this project's
-single-series OHLCV simulation capability (ROUTINE.md step 1, question 3)
-regardless of the mechanism's own merit. No non-duplicate, simulable,
-actionable direction found; no conservative/novel branch pair dispatched,
-for the same reason the seventeenth pass names — forcing one against a
-null screening result is the mistake this project's culture penalizes.
-**B-06 remains the only ranked, unblocked backlog item.**
-
-**Eighteenth independently-tasked session, eighteenth identical
-conclusion, still within the same trading day as the fourteenth through
-seventeenth.** This session endorses the seventeenth pass's recommendation
-to the project owner without repeating its reasoning at length: the two
-genuinely open paths are (a) let B-06's forward record accumulate
-unattended, or (b) a scope decision this brief cannot make for itself
-(order-book/queue simulation, or a materially different asset universe
-with real cross-sectional breadth) — and the cadence question the
-seventeenth pass raised is now five consecutive same-day/next-day
-sessions old (fourteenth through eighteenth) with zero incremental
-evidence produced by any of them. This entry is deliberately shorter than
-its predecessor's for the same reason: re-deriving the same
-recommendation at full length an eighteenth time is exactly the kind of
-low-value repetition the seventeenth pass flagged. Notifying the project
-owner directly rather than leaving an eighteenth ledger paragraph as the
-only record of it.
-
-**Re-checked 08-27 (seventeenth same-day/next-day session), no round
-dispatched (not an R-numbered entry — zero new configurations
-evaluated).** Tasked independently with the standard brief (take the best
-strategy — `kelly_regime_v4`, unchanged — propose an improvement vector,
-do the research, dispatch a conservative/novel branch pair, measure,
-promote the winner), this session ran ROUTINE.md Step 0 first: no
-undispatched frozen pre-registration on disk (newest
-`experiments/r*_shared.py` is `r156_shared.py`, unchanged since R-156/R-157,
-both of which have matching completed section-B entries; `git fetch origin
-main` confirmed `origin/main` at `ae90394`, the sixteenth pass's own
-commit, clean working tree — no in-flight round). The backlog-table grep
-found the same four live rows all sixteen prior passes found: **B-06,
-B-09, B-17, B-28**, none actionable (B-06 explicitly "keep it running,
-stop calling it the plan"; B-09 LOW; B-17 deliberately deferred with no
-strategy needing it; B-28 blocked on data this repo cannot fetch).
-
-This session ran three targeted web searches distinct in phrasing from the
-sixteen prior sweeps, checking specifically for anything published or
-surfaced since the sixteenth pass (fresh 2026 crypto trend-following /
-regime-detection papers; deep-RL and online-portfolio-selection position
-sizing; a market-commentary sanity sweep for any newly-cited mechanism).
-Nothing new: the one crypto-specific hit (arXiv:2602.11708, "AdaptiveTrend")
-is the same paper the fifteenth pass already closed (its trailing-stop,
-rolling-Sharpe-selection and asymmetric-allocation components map onto
-R-90, R-111/R-63 and R-89 respectively). The RL/online-portfolio-selection
-hits (SAC/DDPG cryptocurrency portfolio agents, a 12-asset 4-hour-rebalance
-framework, a June 2026 ACM Computing Surveys review of the field) all lean
-on cross-sectional breadth across 8–150 instruments — the same "diversify
-across many instruments" premise R-05 ruled deep-learning trend forecasting
-out on and R-63 later priced directly (Grinold breadth 1.47 of this
-project's own 8-instrument panel), and a black-box policy trained on one
-price series with N≈3 effective regime events is exactly the ERR/N≈3
-failure mode R-87's ACI wrapper and R-104's jackknife already diagnosed
-from the estimation side. No non-duplicate, simulable, actionable direction
-found — forcing a conservative/novel branch pair against a null screening
-result would be exactly the mistake this project's own culture penalizes
-(stated verbatim in the fifteenth pass's own entry below), so none was
-dispatched. **B-06 remains the only ranked, unblocked backlog item.**
-
-**Seventeenth independently-tasked session, seventeenth identical
-conclusion.** Worth naming explicitly, since no prior pass has: this
-verification brief has now run often enough, on the same trading day and
-the one before it, that the marginal session is reliably a rediscovery of
-the sixteen before it rather than new evidence — the literature search
-itself has stopped being the bottleneck, and re-running it more often does
-not change what it finds. Nothing here recommends slowing B-06's own
-unattended accumulation, which is real evidence and keeps running; but the
-*research* half of this brief (steps 1–4 of ROUTINE.md) has no new input
-to consume at this cadence, and the honest thing to do with that finding is
-say so once rather than repeat the same negative seventeen times running.
-This session's recommendation to the project owner, unchanged from the
-sixteenth pass's: the two genuinely open paths remain (a) let B-06's
-forward record accumulate, or (b) a scope decision outside what a single
-automated session can make for itself (order-book/queue simulation, or a
-materially different asset universe with real cross-sectional breadth) —
-and, new this pass, (c) consider whether this brief should fire on a
-longer interval than "same day or next," since the last four consecutive
-firings (thirteenth through seventeenth) have spanned under 24 hours and
-produced zero incremental evidence between them.
-
-**Re-checked 08-26 (sixteenth same-day/next-day session), no round
-dispatched (not an R-numbered entry — zero new configurations
-evaluated).** Tasked independently with the standard brief (take the best
-strategy, propose an improvement vector, do the research, dispatch a
-conservative/novel branch pair, measure, promote the winner), this
-session ran ROUTINE.md Step 0 first: no undispatched frozen
-pre-registration on disk (newest `experiments/r*_shared.py` unchanged
-since R-156; `git fetch origin main` confirmed `origin/main` at `110ef6b`,
-the fifteenth pass's own commit, clean working tree — no in-flight
-round). The backlog-table grep found the same four live rows all fifteen
-prior passes found: **B-06, B-09, B-17, B-28**, none actionable (B-06
-explicitly "keep it running, stop calling it the plan"; B-09 LOW; B-17
-deliberately deferred with no strategy needing it; B-28 blocked on data
-this repo cannot fetch).
-
-This session dispatched one research-only sub-agent, instructed to read
-the full standing diagnosis, the whole of section C, and section D, then
-search 2024–2026 literature angled specifically at the ERR and N≈3 axes
-(the least-mined relative to INFO, which is close to exhausted, and COST,
-already heavily mined by R-63/65/67) and at genuinely new SIZE-axis
-mechanism families, rather than repeating a fifth or sixth broad
-adjacent-fields sweep. Six candidates surfaced and every one mapped onto
-already-closed ground: **info-gap / robust-satisficing decision theory**
-(Ben-Haim) reduces, for a scalar sizing decision, to an
-uncertainty-derived exposure discount — the same mechanism *shape* as
-eight already-closed formalisms of it (R-104 bootstrap/PSR discount, R-87
-ACI/conformal dispersion, R-105 jackknife and ensemble-disagreement, R-147
-BMA ladder, R-114 hazard-rate regime-age discount, R-138 small-N
-permutation test), all of which either sit inert against BTC's ~55% vote
-hit-rate or invert sign on ETH (B4); **few-treated-units causal
-inference** (Alvarez-Ferman-Wüthrich-style 2025–2026 econometrics,
-arXiv:2506.14998) is the N≈3 problem in its purest form but this project
-already ran two structurally distinct formal small-N tests this year on
-the identical edge-concentration claim (R-138 permutation test,
-significant on BTC alone, failed ETH replication; R-140 synthetic-control
-placebo, appeared to confirm at p=0.0008 but failed a same-scale conformal
-permutation check) and no third design was found that isn't a
-re-parameterization of those two; **hierarchical Bayesian partial
-pooling** across the ~3 independent regime episodes collapses to
-prior-dominated with this little data — the identical failure mode R-87's
-ACI branch already diagnosed; **Hierarchical Risk Parity /
-correlation-clustering allocation** maps onto R-107's closed
-correlation-aware risk-parity reweighting ("giving it room to operate
-gutted the signal's selectivity") and onto R-63's breadth measurement
-(1.47 of 8 effective bets — the diversification gain is already priced
-and capped); **optimal-stopping / free-boundary trading-band
-constructions** (Zervos-Johnson-Alazemi, Dumas 1991) are the same
-theoretical clan as the Constantinides/Davis-Norman no-trade band already
-tried and killed on `hedge_experts` (R-128); a fresh 2026 arXiv crypto
-trend-following paper (2602.11708, "AdaptiveTrend") combines trailing
-stops, rolling-Sharpe asset selection and asymmetric long/short
-allocation, each individually already closed here (R-90, R-111/R-63,
-R-89). A seventh angle — a meta-level multiple-testing correction across
-the whole 157-round search itself, rather than within one strategy's
-parameters — was checked against R-29/R-30, which already wired
-trials-aware correction (bootstrap intervals, deflated Sharpe, purged CV)
-into the comparison table at the program level.
-
-**Sixteenth independently-tasked session, sixteenth identical
-conclusion, this one from an ERR/N≈3-angled search different from all
-fifteen before it.** No non-duplicate, simulable, actionable direction
-found — forcing a conservative/novel branch pair against a null screening
-result would be exactly the mistake this project's own culture penalizes
-(stated verbatim in the fifteenth pass's own entry below), so none was
-dispatched. **B-06 remains the only ranked, unblocked backlog item.**
-Sixteen independently-tasked sessions across three days, ten distinct
-literature-sweep angles, converging on the same conclusion: this
-project's searchable literature space against the *existing*
-`kelly_regime` family, and against every SIZE-axis and ERR-axis
-formalism this session could find a name for, is exhausted. The
-sub-agent's own recommendation, which this session endorses: the two
-genuinely open paths are (a) let B-06's forward paper-trading record
-accumulate — no formalism substitutes for real time passing — or (b) a
-scope decision by the project owner (order-book/queue simulation, or a
-materially different asset universe with real cross-sectional breadth
-beyond the BTC/ETH/eight-instrument crypto panel), both currently outside
-what a single automated session can decide for itself.
-
-**Re-checked 08-26 (fifteenth same-day/next-day session), no round
-dispatched (not an R-numbered entry — zero new configurations
-evaluated).** Tasked independently with the standard brief (take the best
-strategy, propose an improvement vector, do the research, dispatch a
-conservative/novel branch pair, measure, promote the winner), this
-session ran ROUTINE.md Step 0 first: no undispatched frozen
-pre-registration on disk (newest `experiments/r*_shared.py` unchanged
-since R-156; `git fetch origin main` confirmed `origin/main` at `fbabc82`,
-the fourteenth pass's own merge commit, clean working tree — no in-flight
-round). The backlog-table grep found the same four live rows all
-fourteen prior passes found: **B-06, B-09, B-17, B-28**, none actionable
-(B-06 explicitly "keep it running, stop calling it the plan"; B-09 LOW;
-B-17 deliberately deferred with no strategy needing it; B-28 blocked on
-data this repo cannot fetch).
-
-Rather than repeat the fourteenth pass's broad adjacent-fields sweep,
-this session narrowed deliberately to the one architectural surface R-62
-identifies as where `kelly_regime_v4`'s edge actually lives — the
-3-anchor trend **vote** and its combination/confidence-weighting, not the
-volatility-target scale factor — on the reasoning that a narrower,
-mechanism-specific search might surface something a broad sweep would
-miss. It read `kelly_regime.py`/`v3`/`v4` plus R-40, R-62, R-78, R-80,
-R-82, R-83, R-85, R-89, R-105, R-146 and R-147 in full, then ran targeted
-2024–2026 searches on horizon-combination weighting, confidence-weighted
-trend following, and fresh crypto momentum literature. Four genuinely new
-citations surfaced (Etienne, Ohana, Benhamou et al., Oct 2025,
-arXiv:2510.23150; Kang & Ryu 2026, *Risk Management*,
-10.1057/s41283-026-00234-7; Zarattini, Pagani & Barbon 2025, SSRN
-5209907; Grobys, Kolari, Sandretto, Shahzad & Äijö 2025, *Financial
-Markets and Portfolio Management*) and every one mapped onto ground
-already closed: Etienne et al.'s per-asset Bayesian-optimization horizon
-reweighting is the same mechanism family R-147's Bayesian-model-averaging
-branch closed NEGATIVE, and this project's 2-asset universe is exactly
-the thin-breadth regime R-63 already priced (Grinold breadth 1.47/8);
-Kang & Ryu's "slow signals beat fast because signal speed is an
-endogenous risk-management device" is the anchor-span axis, closed at
-R-06/R-07/R-40/R-45/R-89/R-92 (v4's 20/40/80 ladder already sits in that
-validated plateau); Zarattini et al.'s Donchian-ladder-plus-vol-target
-ensemble is structurally v4's own architecture; Grobys et al.'s
-cross-sectional crypto momentum-crash work is panel territory closed at
-R-63/R-33. A fifth angle — betting-style e-value combinators for
-per-anchor reliability weighting — was judged a likely duplicate of
-R-147's own diagnosis that "real movement away from equal-weight...lands
-in the same place regardless of formalism," on top of R-28/R-31 already
-finding an e-process framing loses on this exact gate.
-
-**Fifteenth independently-tasked session, fifteenth identical
-conclusion, this one from a narrower and different search than the
-fourteen before it.** No non-duplicate, simulable, actionable direction
-found on the vote/confidence-weighting axis either — forcing a
-conservative/novel branch pair against a null screening result would be
-exactly the mistake this project's own culture penalizes, so none was
-dispatched. **B-06 remains the only ranked, unblocked backlog item.**
-Fifteen independently-tasked sessions across two days, nine distinct
-literature-sweep angles, converging on the same conclusion: this
-project's searchable literature space against the *existing*
-`kelly_regime` family is exhausted. The next session tasked with this
-brief should treat that as evidence rather than re-running a tenth sweep
-angle against the same family, and should either (a) wait for B-06's
-forward paper-trading record to accumulate enough rows for its own
-anytime-valid tool to say something, or (b) widen scope past the
-`kelly_regime` lineage entirely to a structurally different mechanism
-family the ledger has not yet tried, since incremental refinements of
-this one are the surface that is exhausted, not necessarily every idea
-this repo could ever hold.
-
-**Re-checked 08-27 (fourteenth same-day/next-day session), no round
-dispatched (not an R-numbered entry — zero new configurations
-evaluated).** Tasked independently with the standard brief (take the best
-strategy, propose an improvement vector, do the research, dispatch a
-conservative/novel branch pair, measure, promote the winner), this
-session ran ROUTINE.md Step 0 first: no undispatched frozen
-pre-registration on disk (`experiments/r99_shared.py`-style newest files
-unchanged since R-156; `git fetch origin main` confirmed `origin/main` at
-`5e1953c`, the thirteenth pass's own commit, with a clean working tree —
-no in-flight round to complete). The backlog-table grep found the same
-four live rows the thirteenth pass found: **B-06, B-09, B-17, B-28**
-(B-10 stays struck, closed by R-156).
-
-Rather than re-run any of the eleven regime-timing bases, twenty-one
-SIZE-axis retunes, five-plus ERR-axis (conformal/ACI) variants, or ten
-INFO-signal categories the thirteen prior 08-26/08-27 sessions already
-closed, this session dispatched one research-only sub-agent (18 web
-searches) for a further fresh sweep, explicitly angled at fields adjacent
-to trading this project had not yet mined by name — anytime-valid/e-value
-sequential testing beyond B-06's own tool, robust/trimmed-mean
-estimation, rough volatility / fractional Brownian roughness, Wasserstein
-regime clustering, Hill-estimator tail-index sizing, quantile-regression
-sizing, path-signature portfolio weights, MDL/information-theoretic
-efficiency framing, and double machine learning / causal discovery for
-time series — and fed the full section C table plus all thirteen prior
-same-day closed-topic lists as the duplicate-check corpus. Every hit
-found was either a structural duplicate of an already-closed mechanism
-(anytime-valid e-values ≡ the retired e-process R-31 and B-06's own
-GRO tool; Bayesian Kelly ≡ R-38/R-40/R-93, already named and closed by
-the twelfth pass; robust/trimmed anchor estimation ≡ R-146's median-anchor
-NEGATIVE; momentum-crash vol-timing ≡ R-62's finding that the vol-target
-factor alone carries none of v4's edge; rough volatility / fBm roughness
-≡ the twice-closed Hurst-exponent family; Wasserstein regime clustering ≡
-the discrete-state basis HMM already closes; Hill-estimator sizing ≡
-closed POT/GPD and CDaR rounds; quantile-regression sizing ≡ R-87's
-conformal-quantile dispersion estimator; path-signature portfolio weights
-≡ path-signature regime detection, named and closed by the twelfth pass,
-or reduces price-only to "another indicator," which the standing
-diagnosis says attacks none of the four axes; replicator/evolutionary
-trading ≡ the already-registered, already-NEGATIVE `replicator_book`;
-on-chain SOPR/netflow/LTH-supply ≡ closed for data-availability reasons
-or duplicate of closed MVRV/active-address work), not simulable from 5m
-OHLCV alone per Step 1 Q3 (mean-field-game market-impact execution needs
-a price-impact model this simulator has none of; disposition-effect
-persistence needs wallet-level position data), or not an actionable
-trading mechanism at all (MDL/information-theoretic "efficiency" framing
-had no concrete tradeable construction; double machine learning /
-causal-discovery for time series is a testing methodology, already
-covered in substance by R-138's permutation test and R-140's synthetic
-control, in the same "audits the harness, not a strategy" category the
-ledger already flagged for the Implementation-Risk paper; SPRT is
-theoretical-only and substantively covered by B-06's own anytime-valid
-tool).
-
-**Fourteenth independently-tasked session, fourteenth identical
-conclusion.** No non-duplicate, simulable, actionable direction found —
-forcing a conservative/novel branch pair against a null screening result
-would be exactly the mistake this project's own culture penalizes, so
-none was dispatched. **B-06 remains the only ranked, unblocked backlog
-item and this project's standing recommendation**, unchanged by this
-pass. The honest read stated by the twelfth pass still holds and is now
-better evidenced: at fourteen independently-tasked sessions across two
-days converging on the same conclusion by eight distinct literature
-sweeps angled in different directions each time, this project's
-searchable literature space is exhausted until either new data becomes
-available (order-book, options, an asset class this repo cannot fetch)
-or B-06's forward record accumulates enough rows to say something on its
-own.
-
-**Re-checked 08-27 (thirteenth same-day/next-day session), no round
-dispatched (not an R-numbered entry — zero new configurations
-evaluated).** Tasked independently with the standard brief (take the best
-strategy, propose an improvement vector, do the research, dispatch a
-conservative/novel branch pair, measure, promote the winner), this
-session ran ROUTINE.md Step 0 first and found **R-156 already in
-flight**: `experiments/r156_shared.py` existed with its conservative
-branch (`elliott_wave_zigzag`) registered and its novel branch already
-NEGATIVE at Step-A, but the ledger still carried only the IN-PROGRESS
-stub — the conservative branch's holdout evaluation had not been read or
-recorded. Per Step 0 ("an undispatched/unfinished frozen pre-registration
-outranks both the backlog and any new idea"), this session installed the
-project's Python dependencies fresh (none were present in this
-container), then completed that holdout read itself: `elliott_wave_zigzag`
-loses to `buy_and_hold` out-of-sample on both markets (spot Δ-Sharpe
-−1.18 [−2.32,−0.14], futures Δ-Sharpe −1.74 [−2.83,−0.43], futures
-liquidated at 99.5% dead-tail) — the standard promotion bar's default
-REJECT, exactly as the round's own pre-registration expected. Before this
-session's own `python scripts/inference.py`/`tradebot run`/ledger-write
-sequence finished, a **concurrent session landed the identical
-completion first** (commit `fadd507`/`8cd78f6`, recorded as R-156,
-closing B-10) — with holdout numbers matching this session's own
-independent computation to the numbers quoted above. No new information
-survived to add (this session ran the same already-committed
-`r156_shared.py`/`elliott_wave_zigzag.py`, not an independently authored
-second implementation, so it is a mechanical re-run rather than R-153's
-kind of independent replication); this session's own in-progress commit
-was merged with origin/main's landed version and pushed, verified via a
-full `pytest -q` pass (526 passed) after the merge. See R-156's own
-section-B entry for the full write-up.
-
-With R-156 closed and no other undispatched pre-registration on disk,
-this session then ran the backlog-table grep (live set unchanged again:
-B-06, B-09, B-17, B-28 — **B-10 now struck**, closed by R-156) and, per
-the twelfth pass's own conclusion that the marginal value of re-running
-already-closed categories is approximately zero, dispatched one
-research-only sub-agent for its own fresh, independent 2024–2026
-literature sweep across all four constraints. It was hand-fed the
-instruction to first extract, from the ledger itself, the full list of
-candidates all twelve prior 08-26 passes had already checked and closed,
-then run ten further varied searches (game-theoretic/evolutionary sizing,
-sequential e-value/small-sample testing, BTC volatility/VRP forecasting,
-quadratic-cost optimal execution, deflated-Sharpe/multiple-testing
-methods, liquidation-cascade/order-flow microstructure, growth-optimal
-drawdown control, 2026 HMM/regime-switching work, synthetic-control
-small-sample causal inference, and effective-sample-size framing
-directly) before recommending anything. Every hit it found was either
-already named and closed today (Conformal Kelly, Bayesian
-Kelly/Grossman–Zhou, path-signature regime detection, cost-aware
-execution bandits, BOCPD/HSMM, RL sizing, TDA, stablecoin-copula,
-liquidation-cascade CSD, Fear & Greed/sentiment-regime, ZigZag/Elliott), a
-structural variant of an already-closed mechanism (REDD-COPS ≡
-Grossman–Zhou family, closed at R-93 in both fixed-α and online-adaptive
-form; a 2026 sentiment-regime paper ≡ the Fear-&-Greed series closed at
-R-95), or not simulable from this repo's committed data (order-book
-liquidity-state papers; options-skew/prediction-market papers with no
-free multi-year history). **Thirteenth independent confirmation that
-nothing clears the bar** — no non-duplicate, simulable direction found,
-so no conservative/novel branch pair was dispatched (forcing one against
-a null result would be exactly the mistake this project's own culture
-penalizes). B-06 remains the only ranked, unblocked backlog item.
-
-**Note added on reconciliation (this push):** this thirteenth-pass
-session's own text above did not know about **R-157**, a structurally
-different, independently-dispatched implementation of the same B-10 item
-(a different session again, running concurrently with both R-156 and
-this thirteenth pass) — see R-157's own collision note in section B and
-the combined B-10 backlog row below, which now cites both R-156 and
-R-157. Left unedited above rather than rewritten, per this file's own
-"nothing is deleted" rule; the combined row is the current truth.
+**Verification passes moved to section E (08-27, R-158).** Twenty passes
+that dispatched no round had deposited 1,285 lines of near-identical prose
+at the head of this section, burying the table below under 4,556 lines and
+hiding a silent deletion of one pass's record by the next. They are now one
+row each in [section E](#e-verification-passes-no-round-dispatched--newest-first),
+with the original prose archived verbatim underneath it. **A pass that
+dispatches no round appends a row there, not a paragraph here.** The
+`Re-ranked after R-nn` paragraphs below are unaffected — they record real
+rounds and stay.
 
 **Re-ranked 08-26, R-157 dispatched (two branches, 41 configurations
 evaluated).** A thirteenth same-day session ran ROUTINE.md Step 0 (no
@@ -18019,80 +17523,6 @@ the twelve 08-26 literature sweeps already ran, is either another
 targeted infrastructure/methodology item (if one surfaces) or a plainly
 labeled research-only pass — not a forced new implementation round.
 
-**Re-checked 08-26 (twelfth same-day session), no round dispatched (not
-an R-numbered entry — zero configurations evaluated).** Tasked
-independently with the standard brief (take the best strategy, propose
-an improvement vector, do the research, dispatch a conservative/novel
-branch pair, measure, promote the winner), this session ran ROUTINE.md
-Step 0 first — `r155_shared.py` is still the newest `_shared.py` file in
-`experiments/` and already has its matching section B entry at R-155;
-`origin/main` and the working branch were reconciled to the latest
-automated commit, `4132cfe` (R-155's own merge), before writing this
-entry — then the backlog-table grep (unchanged live set: B-06, B-09,
-B-10, B-17, B-28, the same five rows R-155's session found).
-
-Rather than re-run any of the eleven categories the eleven prior 08-26
-sessions already closed, this session dispatched one research-only
-sub-agent for a fresh, wide 2024–2026 literature sweep across all four
-constraints, handed the full 95-row section-C table and today's own
-closed-topic list, and instructed to check every hit against both before
-recommending anything. It surfaced and closed five:
-
-- **"Conformal Kelly"** (Ryan 2026, arXiv:2608.01494) — a conformal
-  quantile of residuals as fractional Kelly's dispersion denominator.
-  This is the exact construction R-87's novel branch already ran and
-  killed (ACI-calibrated conformal quantile replacing the trailing-EWM-vol
-  denominator); the paper's own out-of-sample collapse (Sharpe 1.34→0.45)
-  corroborates R-87's verdict rather than contradicting it. Duplicate.
-- **Bayesian Kelly / Bayesian Grossman–Zhou** (Sukhov, SSRN, Feb 2026) —
-  shrinks the Kelly fraction toward zero by posterior edge-uncertainty,
-  the G-Z variant combined with a drawdown cap. Same family as R-38
-  (risk-constrained/CRRA Kelly), R-40 (Bayesian-shrink of a bagged vote)
-  and R-93 (online-adaptive Grossman–Zhou, built for the identical
-  "sidestep a fixed α's fragility" reason and killed by its own
-  pre-registered stress test) — a posterior-based adaptation rule is not
-  a different enough mechanism from a multiplicative-weights one to
-  expect a different outcome from the same underlying drawdown-scale
-  fragility. Judged a likely duplicate; not worth the false-positive risk
-  of a round to confirm it.
-- **Path-signature regime detection** (rough-path signature features on
-  spot/basis/funding, 2026) — fails on two axes at once: it is a
-  regime-*timing* detector, the axis R-155 closed today across eleven
-  structurally distinct bases, and its inputs (perp basis, funding rate)
-  are INFO sources this ledger already ruled out (R-41 basis, R-39/R-16
-  funding). Duplicate.
-- **Cost-aware execution / no-trade-region bandit learning** (2026
-  market-making and execution literature) — structurally identical to
-  the no-trade-band family already closed here (Constantinides 1986;
-  Davis & Norman 1990; Gârleanu–Pedersen 2013; the asymmetric-band and
-  boundary-trading rows). Duplicate.
-- **"Implementation Risk in Portfolio Backtesting"** (arXiv:2603.20319)
-  — a real, not-yet-filed finding, but an audit of backtest-*engine*
-  correctness (undocumented transaction-cost-handling divergence between
-  simulators), not a trading mechanism; it produces nothing to run
-  through Step-0/A/B against `kelly_regime_v4`, so it does not fit the
-  routine's candidate template. Noted here so a future session does not
-  spend a round rediscovering that it isn't one, not filed as a backlog
-  row since this project's own harness is the thing it would need to
-  audit, not the strategy.
-
-No code changed, no strategy touched, no configuration evaluated, no
-implementation sub-agent dispatched — the research-only screen failed
-before any conservative/novel branch pair would have been justified, the
-twelfth same-day session in a row to reach that conclusion (R-150 through
-R-155's six dispatched rounds, plus six research-only passes including
-this one). **B-06 remains the only ranked, unblocked backlog item and
-this project's standing recommendation**, unchanged by this pass. Worth
-naming plainly for whoever reads this next: at twelve independently-
-tasked sessions in one calendar day converging on the identical
-conclusion by six different research sweeps, the marginal value of
-another same-day literature pass over this exact ground is now
-approximately zero — the honest read is that this project's searchable
-literature space, not merely today's obvious candidates, is exhausted
-until either new data becomes available (options, order-book, an asset
-class this repo cannot fetch) or B-06's forward record accumulates enough
-rows to say something on its own.
-
 **Re-checked 08-26, R-155 dispatched (one round, ten configurations
 evaluated).** An eleventh same-day session ran ROUTINE.md Step 0 (no
 undispatched frozen pre-registration; `origin/main` reconciled to
@@ -18108,437 +17538,6 @@ R-155 above). **B-06 remains the only ranked, unblocked backlog item and
 this project's standing recommendation** — unchanged by this pass, the
 detection-lag-gate line now reads as exhausted across eleven independent
 theoretical bases (see R-155's own "Next step").
-
-**Re-checked 08-26 (eighth pass), no round dispatched (not an R-numbered
-entry — zero configurations evaluated).** A ninth same-day session, tasked
-independently with the same brief as the eight preceding 08-26 sessions
-(take the best strategy, propose an improvement vector, do the research,
-dispatch a conservative/novel branch pair, measure, promote the winner),
-ran ROUTINE.md Step 0 first (no undispatched frozen pre-registration —
-`r151_shared.py` is still the newest `_shared.py` file in `experiments/`
-and already has its matching section B entry at R-151; `origin/main` and
-the working branch were reconciled to the latest automated paper-trading
-commit, `9bfdb2d`, before writing this entry) and the backlog-table grep
-second (unchanged live set: B-06, B-09, B-10, B-17, B-28, B-45, B-46,
-B-47 — the same eight rows the eight prior 08-26 passes found, none
-struck or re-ranked in the interim). Best registered strategy by the
-README's own ranking is unchanged: `kelly_regime_v4` ($66.8K spot /
-$156.2K futures_5x).
-
-Rather than re-run the categories the eight prior 08-26 sessions already
-swept, this session dispatched one research-only sub-agent for a fresh,
-differently-angled 2025–2026 literature sweep, explicitly told what the
-eight prior passes had already closed today and instructed to grep the
-ledger by name before treating any candidate as promising. It checked
-four candidate families and closed all four before any implementation
-was justified:
-
-- **Reinforcement-learning-based position sizing under transaction
-  costs** (fresh 2025–2026 leads: `FineFT` risk-aware ensemble RL for
-  futures, arXiv:2512.23773; positional-context intraday RL,
-  arXiv:2406.08013; systematic-FX RL, arXiv:2110.04745; a March-2026
-  breakeven-cost DL benchmark, arXiv:2603.01820) — not a duplicate by
-  name, but fails ROUTINE.md Step 1 Q4 at the design stage on the same
-  grounds R-05 already closed deep learning generally (2–3bps/88–100
-  instruments there vs. 10bps+/one instrument here), sharpened by R-144's
-  direct finding that this project's effective sample size (N≈3) is
-  already too thin for the existing, far simpler vote to generalize past
-  BTC — a fortiori too thin to fit a policy network without overfitting
-  to the same BTC/ETH sign-inversion pattern R-33/R-57/R-144 already
-  documented for simpler constructions.
-- **Bayesian online changepoint detection / hidden semi-Markov models for
-  the regime VOTE** — grepped exhaustively ("changepoint", "Bayesian
-  online", "BOCPD", "semi-Markov", 60+ hits). BOCPD itself is closed
-  twice (R-03, R-82), and the ledger's own running tally lists eleven-plus
-  structurally distinct regime-timing theoretical bases already scored
-  against the identical six-episode detection-lag gate (HMM/R-01,
-  BOCPD/R-03/R-82, Kalman LLT/R-83, CSD/R-85, transfer entropy/R-86,
-  Hawkes/R-96, POT/GPD/R-98, jump/QV decomposition/R-99, CUSUM/R-139,
-  LPPLS/R-141), none clearing ≥4/6. An HSMM is a discrete-state-switching
-  construction with an explicit sojourn distribution — the same basis as
-  R-01's family, not a new one. Closed as a duplicate.
-- **Robust/nonparametric estimation of the vote's response curve**
-  (distinct from R-147's combination-weight work and `kelly_regime_v2`'s
-  convex gamma) — the vote has only 4 support points (0/1/2/3 anchors
-  agreeing); with N≈3 effective regime events behind it, a nonparametric
-  fit over 4 states cannot carry more information than the 1-parameter
-  gamma already registered, and collapses into a reparameterization of
-  what R-146's own Levine & Pedersen (2016) linear-filter equivalence
-  argument already covers.
-- **Multi-timescale ensemble voting beyond the 3-anchor ladder** —
-  duplicate of R-40's bagging sweep and R-105/R-147's 5-member
-  alternative-ladder ensembles, all NEGATIVE with the same ETH
-  sign-inversion.
-
-Five further literature leads were surfaced, checked by name, and closed
-as already-covered or data-blocked: Baquero & Menezes' 2026 Bitcoin
-power-law paper (arXiv:2605.21316, too close to R-74/R-125's closed MVRV
-sub-axis), a social-sentiment/technical fusion regime model
-(arXiv:2607.23370, INFO-blocked — no sentiment data), a nonparametric
-regime-clustering method (same discrete-state basis as R-01, closed),
-`AdaptiveTrend` (arXiv:2602.11708, span/ensemble/response-curve
-territory already covered by R-06/R-07/R-40/R-105/R-146/R-147/R-59/R-60),
-and a CVaR/put-option tail-risk paper (arXiv:2607.00883, already checked
-and rejected in R-125 on options-data unavailability).
-
-No code changed, no strategy touched, no configuration evaluated, no
-implementation sub-agent dispatched — the research-only screen failed
-before any conservative/novel branch pair would have been justified,
-consistent with ROUTINE.md's own filter and with all eight prior 08-26
-passes. B-06's recorder was checked directly and is healthy
-(`reports/paper_trading/kelly_regime_v4_bitstamp.csv`, latest row
-2026-08-26T12:45:00Z, on its designed cadence). **B-06 remains the only
-ranked, unblocked backlog
-item and this project's standing recommendation**, unchanged by this
-pass — the ninth same-day session to reach it independently. The vote
-mechanism's span/statistic/combination-weight/response-curve/gamma/band
-axes and the regime-timing detector-basis axis both now read as
-exhausted; a tenth session should not re-search the terms named above
-without new evidence.
-
-**Re-checked 08-26 (seventh pass), no round dispatched (not an R-numbered
-entry — zero configurations evaluated).** An eighth same-day session, tasked
-independently with the same brief as the seven preceding 08-26 sessions
-(take the best strategy, propose an improvement vector, dispatch a
-conservative/novel branch pair, measure, promote the winner), ran
-ROUTINE.md Step 0 first (no undispatched frozen pre-registration —
-`r151_shared.py` is still the newest `_shared.py` file in `experiments/`
-and already has its matching section B entry at R-151; `origin/main` and
-the working branch are identical, both at the latest automated
-paper-trading commit, `b9991e7`) and the backlog-table grep second
-(unchanged live set: B-06, B-09, B-10, B-17, B-28, B-45, B-46, B-47 — the
-same eight rows the six prior 08-26 passes found, none struck or
-re-ranked in the interim). Best registered strategy by the README's own
-ranking is unchanged: `kelly_regime_v4` ($66.8K spot / $156.2K
-futures_5x, not distinguishably better than `buy_and_hold` on growth,
-drawdown property scoped to BTC/ETH only).
-
-Rather than re-run the categories the seven prior 08-26 sessions already
-swept (established microstructure/behavioral finance, on-chain, DeFi,
-prediction markets, ERR/COST/N≈3 methodology, Kelly/regime-switching
-preprints, liquidation-cascade critical slowing down), this session ran a
-fresh, narrowly-targeted web search for the newest crypto position-sizing
-and volatility-control literature dated after the prior passes' own
-search windows, and checked what it found by name against section C
-rather than trusting a category match:
-
-- **Jones, Matsui & Knottenbelt (2026), "Stablecoins as Dry Powder: A
-  Copula-Based Risk Analysis of Cryptocurrency Markets"** (arXiv:2603.23480,
-  also IEEE-published) — a copula model linking stablecoin **trading
-  volume and upside volatility** (a flow/activity measure, not the supply
-  level R-54/R-55/R-58 tested) to crypto market volatility, reporting a
-  reduced-MSE volatility forecast and lower realized risk when fed into a
-  volatility-*targeting* model's scale factor. Constructed differently
-  enough from the five registered stablecoin-supply variants (R-54/R-55/
-  R-58: mint/burn flow as a directional confirm/veto vote) that it is not
-  an automatic duplicate by name — but it fails the same test R-79's
-  research pass already applied to GARCH/HAR volatility forecasting and
-  closed for the identical reason: R-62 isolated `kelly_regime_v4`'s
-  conditional-volatility *scale* factor alone and found it carries none
-  of the matched-exposure drawdown property that is this project's one
-  surviving finding, so a better forecast of that scale factor — copula-
-  derived or otherwise — improves a quantity independently shown not to
-  carry the edge. Filed here by name so a future session grepping "copula"
-  or "dry powder" specifically, rather than trusting "stablecoin, closed"
-  as a category, does not re-open it without new evidence that R-62's
-  isolation finding has itself been overturned.
-- **"Talyxion: From Speculation to Optimization in Risk"** (arXiv:2511.13239)
-  and the Deep-MKV-TS McKean–Vlasov drawdown-control result surfaced in the
-  same sweep are both off-mechanism for this repo rather than closed
-  on the merits: the former is a general portfolio-risk-optimization
-  framework paper with no crypto-specific, simulable trading rule to
-  extract, and the latter trains a path-dependent generative control model
-  against equity-index futures — the deep-learning-needs-many-instruments
-  problem R-05 already closed this project's door on (one BTC series here
-  against dozens of instruments there).
-
-No code changed, no strategy touched, no configuration evaluated, no
-sub-agent dispatched — screening a direction against the ledger before
-building anything is itself the ROUTINE.md step-1 filter, and this
-direction failed it on citation (2) before any implementation would have
-been justified. B-06's recorder was checked directly and is healthy
-(`reports/paper_trading/kelly_regime_v4_bitstamp.csv`, latest row
-2026-08-26T11:40:00Z, on its designed cadence). **B-06 remains the only
-ranked, unblocked backlog item and this project's standing
-recommendation**, unchanged by this pass — the eighth same-day session to
-reach it independently.
-
-**Re-checked 08-26 (sixth pass), no round dispatched (not an R-numbered
-entry — zero configurations evaluated).** A seventh same-day session, tasked
-independently with the same brief as the six preceding 08-26 sessions
-(take the best strategy, propose an improvement vector, dispatch a
-conservative/novel branch pair, measure, promote the winner), ran
-ROUTINE.md Step 0 first (no undispatched frozen pre-registration —
-`r151_shared.py` is still the newest `_shared.py` file in `experiments/`
-and already has its matching section B entry at R-151; `origin/main` and
-the working branch are identical, both at the latest automated
-paper-trading commit) and the backlog-table grep second (unchanged live
-set: B-06, B-09, B-10, B-17, B-28, B-45, B-46, B-47). Best registered
-strategy by the README's own ranking is unchanged: `kelly_regime_v4`
-($66.8K spot / $156.2K futures_5x, not distinguishably better than
-`buy_and_hold` on growth, drawdown property scoped to BTC/ETH only).
-
-Rather than re-run the same literature categories the six prior 08-26
-sessions already swept (established microstructure/behavioral finance,
-on-chain, DeFi, prediction markets, ERR/COST/N≈3 methodology, Kelly/
-regime-switching preprints), this session did two narrower things:
-
-- **A live web search for the single newest angle available today** —
-  liquidation-cascade early-warning signals, since two new preprints
-  surfaced that none of the six prior passes' queries had returned:
-  arXiv:2607.27070 ("Where does the criticality live? Early-warning
-  signals are event-heterogeneous across seven crypto-perpetual
-  liquidation cascades") and its 2026 follow-up arXiv:2608.03616
-  ("Measuring the engine of a liquidation cascade: subcritical branching
-  inside a first-order transition"). Both study rolling variance and
-  lag-1 autocorrelation (critical-slowing-down statistics) on
-  minute-level BTC price around seven 2022–2025 liquidation cascades,
-  finding the signature present in 5 of 7 events and silent on the two
-  sudden-news shocks — event-heterogeneous, not event-invariant. This
-  reads as a fresh mechanism until a ledger grep for "critical slowing
-  down" shows it is not: **R-85 (08-21) already tried exactly this
-  statistic** (Scheffer et al. 2009 rising variance/autocorrelation) as a
-  regime-timing detector against this project's own six-episode
-  detection-lag gate — whose episodes are themselves dominated by sudden
-  news- and liquidation-driven shocks — and scored 1/6 single-indicator,
-  0/6 on a joint two-indicator AND-gate, the same partial-but-inconsistent
-  signature the new papers report on their own seven-event panel. The new
-  literature corroborates R-85's finding rather than reopening it: no new
-  door, independent confirmation from a source that did not exist when
-  R-85 ran.
-- **A direct grep check, rather than a category-level recall, of six
-  specific named signals this project's own broader closure statements
-  had described only by category:** open interest and top-trader
-  long/short ratio (R-81, both at native 5-minute cadence — NEGATIVE,
-  lags the anchor gate), hashrate (R-44/B-07 on-chain activity —
-  NEGATIVE), Google Trends and social-media discourse (closed NEGATIVE,
-  cited alongside the on-chain sweep), and DXY/VIX macro (closed NEGATIVE
-  in the same INFO-axis round). All six are confirmed already tried and
-  closed by name, not merely by category — closing the specific gap that
-  a future session grepping any one of these names by itself, rather than
-  trusting a category summary, might otherwise re-open by accident.
-
-No code changed, no strategy touched, no configuration evaluated, no
-sub-agent produced an implementable candidate. B-06's recorder was checked
-directly and is healthy (`reports/paper_trading/kelly_regime_v4_bitstamp.csv`,
-latest row 2026-08-26T10:10:00Z, on its designed cadence). **B-06 remains
-the only ranked, unblocked backlog item and this project's standing
-recommendation**, unchanged by this pass — the seventh same-day session to
-reach it independently, and the second to specifically test whether a
-brand-new (post-dating the day's earlier searches) literature result could
-change that answer. It could not: the new preprints sharpen the citation
-for R-85's existing verdict rather than opening a new mechanism.
-
-**Re-checked 08-26 (fifth pass), no round dispatched (not an R-numbered
-entry — zero configurations evaluated).** A sixth same-day session, tasked
-independently with the same brief as the five preceding 08-26 sessions
-(take the best strategy, propose an improvement vector, dispatch a
-conservative/novel branch pair, measure, promote the winner), ran
-ROUTINE.md Step 0 first (no undispatched frozen pre-registration —
-`r151_shared.py` is still the newest `_shared.py` and already has its
-matching section B entry; `origin/main` and the working branch are
-identical at `c41c889`) and the backlog-table grep second (unchanged live
-set: B-06, B-09, B-10, B-17, B-28, B-45, B-46, B-47 — B-45/46/47 remain
-`HybridBroker` code-precision items with no promotion waiting behind them,
-B-28's breadth clause remains blocked on data this repo cannot fetch, and
-B-09/B-10/B-17 are LOW/already-answered per their own rows). Best
-registered strategy by the README's own ranking is unchanged:
-`kelly_regime_v4` ($66.8K spot / $156.2K futures_5x, though **not**
-distinguishably better than `buy_and_hold` on growth — the table's own
-`≈` — and its drawdown property scoped to BTC/ETH only per R-33/R-57).
-
-Rather than force a conservative/novel *implementation* pair onto a
-direction not yet screened, this session ran its own fresh web literature
-sweep before writing any code, checking two angles distinct in wording
-(if not necessarily in substance) from the four/five prior 08-26 passes:
-
-- **Kelly / regime-switching / crypto position-sizing, August 2026.** The
-  only 2026 arXiv hit on-point is arXiv:2608.01494 "Conformal Kelly:
-  Conformal Prediction Intervals as the Scale in Fractional Kelly Position
-  Sizing" — already found and rejected by R-144 ("carries none of
-  `kelly_regime_v4`'s signature") and re-confirmed closed by the fourth
-  pass. Everything else returned (put-writing VIX/Kelly hybrids, an LLM
-  agentic-trading survey, generic Kelly explainers) is either off-market
-  (index options), off-mechanism (an LLM-agent architecture paper, not a
-  sizing rule), or non-technical content with nothing to test.
-- **Small-sample / effective-sample-size significance for regime change
-  in financial time series, 2026.** Nothing on-point and new: an
-  exponential-smoother effective-sample-size identity (a definitional
-  result, not a test this project lacks), an online-bootstrap trend
-  inference paper (a significance-procedure variant — the exact category
-  R-144's own line warns against re-trying on this claim), and a
-  test-time-adaptation paper for non-stationary series that is a
-  forecasting mechanism ("what happens next"), which the standing
-  diagnosis's one-line summary says loses to fees regardless of its
-  adaptation quality and which attacks none of the four listed
-  constraints — the same failure mode as "another indicator."
-
-Both searches terminate at leads already named and closed in this file
-(R-144, and the fourth pass's own established-literature/cross-disciplinary
-sweeps) rather than opening new ones. No code changed, no strategy
-touched, no configuration evaluated, no sub-agent produced an
-implementable candidate. B-06's recorder was checked directly and is
-healthy (`reports/paper_trading/kelly_regime_v4_bitstamp.csv`, latest row
-2026-08-26T09:35:00Z, on its designed cadence). **B-06 remains the only
-ranked, unblocked backlog item and this project's standing
-recommendation**, unchanged by this pass — the sixth same-day session to
-reach it independently. Per the fourth pass's own line, this is the
-expected outcome of a same-day re-run of this exact brief without new
-forward calendar time or a data source outside this project's stated
-constraints, and this pass adds nothing to that conclusion beyond
-independent confirmation.
-
-**Re-checked 08-26 (fourth pass), no round dispatched (not an R-numbered
-entry — zero configurations evaluated).** A fifth same-day session, tasked
-independently with the same brief as the four preceding 08-26 sessions
-(propose an improvement vector for the incumbent `kelly_regime_v4`, dispatch
-a conservative/novel branch pair, measure, promote the winner), ran
-ROUTINE.md Step 0 first (no undispatched frozen pre-registration — `r151_shared.py`
-is the newest and already has its matching section B entry) and the
-backlog-table grep second (unchanged live set: B-06, B-09, B-10, B-17, B-28,
-B-45, B-46, B-47; B-45/46/47 are HybridBroker code-precision items with no
-promotion waiting behind them per R-151's and B-47's own entries). Rather
-than force a conservative/novel implementation pair onto a direction not
-yet screened, this session dispatched one research-only sub-agent, explicitly
-briefed on everything the three prior 08-26 passes had already ruled out or
-found data-blocked, and pointed at the two axes this file's own standing
-diagnosis and R-144 describe as **less** exhausted than INFO: ERR and COST,
-plus the N≈3 effective-sample-size problem directly. It confirmed by grep
-against `docs/LEDGER.md` and live 2025–2026 web research that all three are
-in fact also saturated as of today's R-147–R-151:
-
-- **ERR.** 13+ configurations across five/six distinct notions of
-  uncertainty (sampling significance R-28/R-87/R-104; within-family and
-  cross-model-class specification disagreement R-105/R-106; distributional
-  novelty via Mahalanobis/kNN across five rounds R-109/R-112/R-115/R-121/
-  R-122; combination-weight shrinkage/Bayesian averaging closed today by
-  R-147). A recent (Aug 2026) preprint, arXiv:2608.01494 "Conformal Kelly:
-  Conformal Prediction Intervals as the Scale in Fractional Kelly Position
-  Sizing," is the closest on-point 2026 literature found — but R-144
-  (08-25) already tried and rejected this exact construction, finding it
-  "carries none of `kelly_regime_v4`'s signature." B-09's own standing note
-  (correctly-calibrated trust is already low; conformal would just say so
-  more slowly) applies to it unchanged.
-- **COST.** Closed across turnover corridors (R-131/R-133), Gârleanu–
-  Pedersen smoothing (R-64/R-128), the analytically-derived no-trade band
-  now registered as `kelly_regime_ev`/`kelly_regime_ev_fast` (R-66–69/
-  R-89/R-90), patient-limit/taker-fallback execution (R-56/R-77/B-24's full
-  sweep), Almgren–Chriss-style adaptive urgency (R-77 novel), and
-  funding-aware venue routing (R-145, today). Two 2025 papers checked
-  (an optimal-rebalancing-boundary result and arXiv:2603.01298 "Single-Asset
-  Adaptive Leveraged Volatility Control") both reduce to the
-  Constantinides/Davis–Norman no-trade-band family already shipped, or to
-  conditional volatility targeting already promoted as `kelly_regime_v3`.
-  Genuine order-placement COST work is not simulable here regardless
-  (L-14/15/16: no order-book/queue data to proxy from OHLCV).
-- **N≈3.** R-144 (today) is the decisive closure: an ETH-native event
-  calendar (not borrowed from BTC) re-run through the extended 9-episode
-  permutation test came back negative (p=0.96), and the BTC-only
-  significance was shown by an independent skeptic to hinge almost
-  entirely on a single episode (leave-one-out flips p to 0.109). R-144's
-  own line names the battery — permutation, Synthetic Control, jackknife,
-  bootstrap/PSR — "close to exhausted against the episode data this project
-  can construct without new forward time," and warns against "another
-  significance procedure on the same claim." Small-sample-inference
-  literature outside finance (clinical-trial historical-borrowing methods)
-  falls into exactly that category and was not treated as a candidate.
-
-No code changed, no strategy touched, no configuration evaluated, no
-sub-agent produced an implementable candidate. **B-06 remains the only
-ranked, unblocked backlog item and this project's standing recommendation**,
-unchanged by this pass — the fifth same-day session to reach it
-independently. The honest reading of five independent 08-26 sessions
-converging on the same conclusion by different search paths (established
-literature, recent/cross-disciplinary, and now a targeted ERR/COST/N≈3
-sweep) is that today's date has produced a genuinely exhaustive same-day
-search rather than five shallow ones: a sixth session re-running this
-brief without new forward calendar time (B-06) or a data source outside
-this project's stated constraints (order book, paid vendors) should expect
-the same answer.
-
-**Re-checked 08-26 (third pass), no round dispatched (not an R-numbered
-entry — zero configurations evaluated).** A fourth same-day session, tasked
-independently with the same brief as the two preceding 08-26 verification
-passes (propose an improvement vector for the incumbent `kelly_regime_v4`,
-dispatch a conservative/novel branch pair, measure, promote the winner),
-ran ROUTINE.md Step 0 first (no undispatched frozen pre-registration; the
-branch was already fast-forwarded to R-151 plus the latest automated
-paper-trading commit) and Step 0's backlog-table grep second (only B-06,
-B-09, B-10, B-17, B-28, B-45, B-46, B-47 are live; B-45/46/47 are HybridBroker
-code-precision items, not a strategy-improvement direction — R-151's own
-entry already says no promotion is waiting behind them). Rather than force a
-conservative/novel *implementation* pair onto a direction not yet screened —
-the specific failure this file's own parallel-round rules warn against
-("the single most likely way to manufacture a fake winner here is to run
-many searches and report the best one as though it were the only one," and
-its mirror, "running a known-losing search and dressing it up as new") —
-this session first dispatched two independent research-only sub-agents to
-find a direction that survives ROUTINE.md Step 1's four-question filter
-before any code was written, one screening established (non-2026-preprint)
-literature, one screening recent/cross-disciplinary work. Full detail in
-each sub-agent's own report; summarized here because neither produced an
-implementable candidate:
-
-- **Established-literature sweep.** Market-microstructure mechanisms (Roll
-  1984, Amihud 2002, Kyle 1985 λ, VPIN, Almgren–Chriss 2000 optimal
-  execution) either need order-book/impact data this project's bar-close
-  harness cannot express (fails Step 1 Q3), or are the specific trap
-  `camouflage_flow`/`stealth_trend`/`flow_regime` already paid for
-  (L-14/15/16: reconstructing order flow from OHLCV is a price transform,
-  not new information) and Gârleanu–Pedersen partial-adjustment execution
-  smoothing already closed as a category error against this project's
-  proportional (not quadratic) fee structure. Behavioral-finance mechanisms
-  (prospect-theory/loss-averse position sizing, disposition effect,
-  round-number anchoring) either need account/order-level data not present
-  in OHLCV, or are SIZE-axis reformulations of the `scale` factor that
-  R-62/R-87 (four independent replications) already showed carries none of
-  v4's edge — the vote does. White's (2000) Reality Check / Hansen's (2005)
-  SPA test for multiple-testing correction are genuinely untried in this
-  exact form but are an evaluation tool, not a strategy mechanism, and
-  target the same problem R-119 already closed for N≈3 ("the only two
-  remaining levers this ledger has ever named for N≈3 are a genuinely
-  different window… or forward evidence").
-- **Recent/cross-disciplinary sweep, with live data probes rather than
-  literature claims alone.** Bitcoin ETF creation/redemption flow data
-  fails Step 1 Q3 outright — flow data has only existed as a market force
-  since January 2024, entirely inside/after `OOS_START`, zero inner-train
-  or inner-validation coverage, a nonexistence problem rather than a
-  paywall. SOPR and NUPL fail Q2 (NUPL is an exact monotonic transform of
-  MVRV, and SOPR — computed only over coins that moved that day, with no
-  dormant-supply denominator diluting the coupling at all — is *more*
-  price-coupled than the mechanism R-74 already killed for exactly that
-  reason, not merely adjacent to it) **and** Q3, confirmed by a live query
-  against `bitcoin-data.com`'s free SOPR/NUPL endpoints: both return a hard
-  rolling window of exactly 1,461 rows starting 2022-08-26 regardless of
-  the requested date range, covering 0% of inner-train and ~4 months of
-  inner-validation — the same shape as R-143's Deribit-snapshot and the
-  Kalshi paid-vendor finding already in this section. **Two doors are
-  newly and specifically named here, checked live rather than assumed
-  closed by keyword association** (an R-126 ledger grep for "exchange
-  flow" had matched this file's own table-of-contents mention of the term
-  without a round ever building or measuring it): **exchange netflow**
-  (wallet-clustering-derived BTC flow onto/off exchanges — genuinely
-  distinct from MVRV/realized-cap, on-chain activity/B-07/R-44, and
-  stablecoin supply/R-54/R-55/R-58, so it clears Q2) and **DeFi lending
-  rate / stablecoin-yield-curve** (a *price* of USD-leverage demand,
-  distinct from R-54/R-58's aggregate supply-quantity signal, so it too
-  clears Q2) — both fail **Q3** on live checks: no free full-history
-  exchange-netflow endpoint exists on the one aggregator (bitcoin-data.com)
-  that does serve SOPR/NUPL/MVRV for free (every netflow/inflow/outflow/
-  reserve path 404s), and DeFi lending data fails on two independent
-  grounds — non-existence (Compound launched 2018-09, Aave 2020-01, so even
-  a perfect feed misses this project's 2018 stress episodes) and access
-  (DefiLlama's yields-history API returned `HTTP 402`, Aavescan gates
-  multi-year export behind a paid tier). Both are now named, specifically
-  diagnosed, and closed for a citable reason rather than silently retried
-  by a future session that greps the word "flow" and assumes it is settled.
-
-No code changed, no strategy touched, no configuration evaluated, no sub-agent
-produced an implementable candidate. **B-06 remains the only ranked,
-unblocked backlog item and this project's standing recommendation**,
-unchanged by this pass — the fourth same-day session to reach it
-independently, three of them (this one included) via a fresh literature
-sweep rather than by trusting an earlier pass's coverage claim.
 
 **Re-ranked 08-26 after R-151.** **The three preceding 08-26 sessions each
 concluded "B-06 is the only ranked, unblocked backlog item" and dispatched
@@ -18571,104 +17570,6 @@ item now has three named ones with their own numbers attached.
 highest-value item on merit**, unchanged by this round (R-78's audit
 still stands: keep it running, do not call it the plan). R-151 read no
 holdout bar and touched no registered strategy.
-
-**Re-checked 08-26 (second pass), no round dispatched (not an R-numbered
-entry — zero configurations evaluated).** A second same-day session, tasked
-independently with the same brief (propose an improvement vector for the
-incumbent `kelly_regime_v4`, dispatch a conservative/novel branch pair,
-measure, promote the winner), ran ROUTINE.md Step 0 first, found no
-undispatched frozen pre-registration, then re-read this section and the
-first 08-26 pass below before doing its own fresh literature sweep rather
-than trusting the earlier pass's coverage claim at face value. Three
-2025–2026 leads were checked and none opens a non-duplicate, simulable
-door:
-
-- **Prediction-market-implied crypto volatility** (arXiv:2604.01431,
-  "Do Prediction Markets Forecast Cryptocurrency Volatility? Evidence from
-  Kalshi Macro Contracts") is a genuinely different data class from the
-  DVOL level/momentum this project already closed (R-73/R-136) — it is
-  event-contract pricing, not options-implied vol. It fails the same gate
-  R-143 already found for Deribit's option chain: no free, sufficiently
-  long historical feed. Kalshi's crypto contracts are a 2025-era product
-  with third-party historical access sold by paid data vendors
-  (lycheedata.com, predexon.com), not a free public endpoint this
-  project's fetch scripts pattern (Wikimedia REST, Deribit, Binance) can
-  reach, and even a paid feed would cover at most ~1–2 years against the
-  2017–2026 backtest window — a coverage-gap problem, not a mechanism
-  problem, same shape as R-143's.
-- **Online conformal prediction via universal-portfolio algorithms**
-  (arXiv:2602.03168) reads, on its face, like a new ERR-axis primitive.
-  It is not a new *locus*: applying it here means wrapping error control
-  around a universal-portfolio-style exposure mixture, which is exactly
-  `universal_kelly`'s own SIZE mechanism, already given a dedicated round
-  and closed (R-149, "the first continuous-grid application of a mixing
-  primitive... found nothing to track"), on an ERR axis already closed in
-  five independent constructions (R-31, R-87 x2, plus the two regime-timing
-  families folded into ERR by the standing diagnosis). It attacks the
-  intersection of two already-closed loci, not a new one.
-- **CEX/DEX perpetual funding-rate two-tier arbitrage** (2025 study on
-  Binance/BitMEX vs. ApolloX/Drift funding spreads) needs DEX order-book
-  and funding data this project has never fetched from any venue — a new
-  external dependency, not a mechanism expressible on committed or
-  fetchable data, the same shape of blocker R-15's still-`BLOCKED`
-  funding-harvest/cash-and-carry direction already carries.
-
-No code changed, no strategy touched, no sub-agent dispatched — forcing a
-conservative/novel pair onto any of the three leads above would mean
-re-testing an axis already closed (the universal-portfolio case) or
-building unavailable-data infrastructure and calling the resulting
-proxy a signal, which L-14/L-15/L-16 already show the cost of.
-**B-06 remains the only ranked, unblocked backlog item and this
-project's standing recommendation**, unchanged by this pass.
-
-**Re-checked 08-26 (first pass), no round dispatched (not an R-numbered
-entry — zero configurations evaluated, so this is not a research round and
-is not filed as one, per ROUTINE.md's "not tested is not a negative
-result").**
-A session tasked with proposing a fresh improvement vector, dispatching a
-conservative/novel pair of branches and measuring them ran ROUTINE.md
-Step 0/1 first, as required, and found every candidate failed Step 1's
-own duplicate filter before any code was written:
-
-- A dedicated reconnaissance pass over Section C (ruled out) and this
-  section confirmed R-150's own conclusion independently: every axis of
-  every registered, profitable, multi-signal object (`kelly_regime_v4`,
-  `champions_council`, `hedge_experts`, `replicator_book`,
-  `universal_kelly`) is closed, and all 19 INFO-axis signals, 8
-  regime-timing detectors, 5 ERR-axis constructions and the COST-axis
-  turnover/execution work are each closed with a decisive verdict.
-- Fresh 2026 web literature was checked specifically for a data channel
-  or mechanism this project could not already construct (Kelly/vol-target
-  crypto trend research, funding/basis carry, options skew and
-  liquidation-cascade early-warning work). The one genuinely novel-looking
-  lead — 25-delta risk-reversal (put/call skew) as a forward-return
-  signal, distinct from the DVOL *level/momentum* this project already
-  tried and closed (R-73/R-136) — is not simulable here: R-143 already
-  checked live and found no historical Deribit option-chain endpoint,
-  only a trailing-day IV snapshot. Not a new finding, but independent
-  confirmation that this specific door is still shut.
-- Maker/limit-order execution (an execution-mechanism axis, orthogonal to
-  signal/sizing) looked promising until a ledger grep surfaced R-56:
-  already tried, both a conservative (100%-fill-on-touch) and a novel
-  (Cont & Kukanov 2017 queue-position fill-probability) branch, both
-  NEGATIVE, closed.
-- B-44 (the only other OPEN item) is a harness precision footnote in
-  `HybridBroker` that only matters if a future round reuses that specific
-  two-leg harness; R-145 itself found no economic reason to revisit
-  venue-routing on `kelly_regime_v4`, so fixing B-44 now would not unlock
-  any pending test.
-
-**B-06 is confirmed healthy** (`reports/paper_trading/`, latest record
-2026-08-26T04:40:28Z, ~30-90 minute cadence as designed) and remains the
-only ranked, unblocked backlog item and this project's standing
-recommendation. Forcing a conservative/novel dispatch onto an already-shut
-axis to produce an artifact would have duplicated closed work rather than
-added evidence, which ROUTINE.md's parallel-round rules treat as the
-specific failure mode to avoid ("the single most likely way to
-manufacture a fake winner here is to run many searches and report the
-best one as though it were the only one" — the inverse failure, running a
-known-losing search and dressing it as new, is the same dishonesty in the
-other direction). No code changed; no strategy touched.
 
 **Re-ranked 08-26 after R-150.** Off-backlog (the ranked list has held only
 B-06 since R-137's own re-ranking). `champions_council`'s own top-level
@@ -21982,7 +20883,1379 @@ which only forward paper trading can supply.
 
 ---
 
+## E. Verification passes (no round dispatched) — newest first
+
+A **verification pass** is a session that ran [ROUTINE.md](ROUTINE.md)
+Step 0, found the backlog unchanged with nothing actionable, evaluated
+**zero configurations**, and therefore produced no R-numbered round. It is
+not a round and never gets an R number — *not tested is not a negative
+result* — but it is worth recording, because the useful signal in a pass is
+not its prose: it is **that it happened, when, and that it found nothing**.
+
+That signal is one row wide. This section exists because for twenty of
+these passes it was written as ~64 lines of prose each instead, at the top
+of section D, and the cost of that is measured in R-158:
+
+- **1,285 lines** across 20 near-identical passes, which buried section D's
+  backlog table — *the state*, per R-151's own lesson — under **4,556 lines**
+  of header prose that Step 0 already tells you not to trust;
+- one pass (the twenty-third) **silently deleted its predecessor's entire
+  53-line record** while writing its own, violating this file's "nothing is
+  deleted" rule and leaving a dangling *"see the entry immediately below"*
+  cross-reference pointing at nothing. Twenty interchangeable prose blobs is
+  exactly the condition under which that deletion is invisible. R-158
+  recovered it from `3202787` and it is restored in the archive below.
+
+**So: a pass appends one row here and stops.** If a pass genuinely finds
+something a row cannot hold, that is evidence it was not a null pass, and it
+belongs in section B as a round.
+
+**Every session adds a row, including the ones that dispatch a round** —
+those use `—` in the `#` column and name the round. That is what makes
+ROUTINE.md Step 0b's counter a two-line `awk` over this table instead of a
+guess at `git log`: the consecutive-null count is the numbered rows above the
+first `—`, and a dispatched round resets it by construction.
+
+| # | committed (UTC) | step 0 | attempted | outcome |
+|---|---|---|---|---|
+| — | 08-27 (24th firing) | clean @ `fe1ead3`, unshallowed | **not a null pass** — costed the routine itself | **R-158**, section B: saturation rule, this section, pass 22's record recovered |
+| 23 | 08-27 06:58 | clean (see note) | sub-agent, vote + COST axis: Theil-Sen/repeated-median, RLS/LMS adaptive filters, optimal-trading-rate Kelly | all closed (R-146, R-83, R-124, R-77, R-64); **deleted pass 22's record** |
+| 22 | 08-27 05:56 | clean @ `c2a107c` | 6 searches (LPPLS+sentiment, liquidation CSD, GRO e-values, opinion dynamics, SIR contagion, H-infinity); B-06 forward record re-measured (206 rows / 7.2d) | all closed; B-06 ~0.01% of R-78's 18.9y horizon |
+| 21 | 08-27 04:55 | clean (force-synced mid-fetch) | 6 searches (wavelet MRA, GP regression, particle filters, Wasserstein-robust Kelly, EVT tail-index sizing, meta-labeling) | all closed (SIZE ×21, ERR ×12, regime-timing ×12) |
+| 20 | 08-27 03:51 | clean @ `bbc616f` | read all four live backlog rows in full; 2 searches (regime/trend citations, funding carry) | none actionable; both searches closed |
+| 19 | 08-27 02:50 | clean @ `60884e2` | 2 searches (regime-switching/HMM, broad 2026 sweep) | closed; one hit (arXiv:2607.23370) needs unfetchable sentiment data |
+| 18 | 08-27 01:51 | clean @ `e208ce2` | 2 searches (crypto position sizing, cross-exchange perp funding arb) | closed (SIZE 0-for-21; funding = R-15/B-02/B-03) |
+| 17 | 08-27 00:53 | clean @ `ae90394` | 3 searches (2026 trend/regime, deep-RL & online portfolio selection, market commentary) | all closed (R-05/R-63 breadth); first cadence flag raised |
+| 16 | 08-26 23:59 | clean @ `110ef6b` | sub-agent, ERR/N≈3 axes: info-gap robust satisficing, few-treated-unit causal inference, hierarchical Bayes partial pooling + 3 more | all closed |
+| 15 | 08-26 22:57 | clean @ `fbabc82` | sub-agent, vote/confidence axis: 4 citations (Etienne/Ohana/Benhamou 2025, Kang & Ryu 2026, Zarattini et al. 2025, Grobys et al. 2025) | all closed |
+| 14 | 08-26 21:53 | clean @ R-156 | sub-agent, 18 searches: e-values beyond B-06's tool, robust/trimmed estimation, rough volatility, Wasserstein regime clustering, Hill-estimator sizing | all closed |
+| 13 | 08-26 21:34 | **R-156 in flight** — completed it | sub-agent, 2024–26 sweep across all four axes | R-156 landed concurrently by another session with identical numbers; searches closed |
+| 12 | 08-26 17:56 | clean | sub-agent, 4-axis sweep: Conformal Kelly (arXiv:2608.01494), Bayesian Kelly/Grossman-Zhou, path-signature regime detection, cost-aware execution bandits, engine audit | all 5 closed as duplicates |
+| 8 | 08-26 12:59 | clean | sub-agent: RL position sizing, BOCPD/HSMM regime detection, nonparametric vote response curves, multi-timescale ensembles + 5 leads | all closed or N≈3-infeasible |
+| 7 | 08-26 11:53 | clean | Jones/Matsui/Knottenbelt 2026 copula stablecoin-volume signal + 2 off-mechanism candidates | closed by R-62's scale-factor isolation |
+| 6 | 08-26 10:54 | clean | 2 new liquidation-cascade CSD preprints; 6 named signals grepped | corroborates R-85, all closed |
+| 5 | 08-26 09:52 | clean | Kelly/regime-switching + small-sample-significance sweep | closed |
+| 4 | 08-26 08:55 | clean | sub-agent, ERR/COST/N≈3 sweep: Conformal Kelly + 2 execution/rebalancing papers | closed |
+| 3 | 08-26 08:01 | clean | 2 sub-agents (established literature + recent/cross-disciplinary) | closed; exchange netflow & DeFi lending rates newly confirmed **data-blocked** via live API checks |
+| 2 | 08-26 06:56 | clean | 3 fresh 2025–26 leads | none open a non-duplicate door |
+| 1 | 08-26 ~06:00 | clean | first same-day re-check after the ranked list emptied | nothing actionable |
+
+Passes 9–11 are absent by design: those sessions dispatched rounds and are
+recorded in section B, not here.
+
+**Step 0 note (from pass 23, kept because it is a real trap):** on a shallow
+clone, `git merge-base HEAD origin/main` can return **empty with no error**
+against a genuinely-related ref, which makes a "does `origin/main` match
+HEAD" check silently unreliable exactly when it matters most. Pass 23 read
+that as ~44 rounds of unmerged work sitting off `main`. Run
+`git fetch --unshallow` before trusting the comparison — it is now in
+ROUTINE.md Step 0's command block.
+
+---
+
+### E-archive — the original prose entries, moved verbatim
+
+Moved here from section D's header by R-158 (08-27), unedited. Nothing is
+deleted; pass 22's block is restored from commit `3202787`, where pass 23
+had removed it. Newest first, as everywhere else in this file.
+
+
+**Re-checked 08-27 (twenty-third same-day/next-day session), no round
+dispatched (not an R-numbered entry — zero new configurations
+evaluated).** Step 0: this session's initial `git fetch origin main`
+read `origin/main` as stale at `6d4f118` (R-113 era, 08-24) against this
+branch's own HEAD at the twenty-second pass's `3202787` — a 68/72-commit
+divergence with **no discoverable merge-base**, because the working copy
+was a shallow clone and the two refs' visible histories didn't overlap.
+Read naively this looked like ~44 rounds of unmerged work sitting off
+`main`, which would have been the most material finding of the whole
+same-day run. `git fetch --unshallow` resolved it: a concurrent
+process force-updated `origin/main` to this branch's exact HEAD
+(`3202787`) during the fetch, the same "force-updated between fetches"
+event the twenty-first pass's own entry already names, so the divergence
+was an artifact of a shallow clone's fetch race, not a real gap — after
+unshallowing, `origin/main` and HEAD are identical. **Methodology note
+for future passes:** a shallow clone's `git merge-base` can return empty
+against a genuinely-related ref with no error, which makes a step-0
+"does `origin/main` match HEAD" check silently unreliable exactly when it
+would matter most (a real fork). `git fetch --unshallow` (or at least a
+deeper `--depth`) before trusting that comparison costs one command and
+would have caught this immediately instead of via a false alarm. No
+undispatched frozen pre-registration (`experiments/r99_shared.py` already
+has its matching R-99 entry, newest unchanged since the twenty-first
+pass). Same four live backlog rows as all twenty-two prior passes —
+**B-06, B-09, B-17, B-28** — re-verified directly against their full row
+text, none actionable, same reasons as the twenty-second pass's entry
+immediately below.
+
+B-06's forward record: `reports/paper_trading/kelly_regime_v4_bitstamp.csv`
+is unchanged from the twenty-second pass's own check (still 206 rows,
+still ending 2026-08-27T03:20Z — no new unattended cadence tick landed
+between that pass and this one), so that check is not re-run; see the
+twenty-second pass's entry immediately below for the full reasoning
+(~0.01% of R-78's 18.9-year median horizon, orders of magnitude short of
+resolving anything).
+
+This pass dispatched one research-only sub-agent (per ROUTINE.md's
+"Running directions in parallel," a primary is dispatched before any
+skeptic — here the sub-agent *was* the primary, briefed with the full
+standing diagnosis, the current backlog state and the specific list of
+mechanism families the twenty-two prior passes had already closed, so it
+would not re-search them) with a brief narrower than the twenty-first and
+twenty-second passes' own: attack the "vote" component specifically
+(R-62's finding that the vote, not the volatility-scale factor, carries
+`kelly_regime_v4`'s whole edge), or the COST axis specifically (the one
+constraint R-65 showed can actually move). Seven searches (Theil-Sen /
+repeated-median robust slope estimators, recursive-least-squares and
+LMS adaptive filters, optimal-trading-rate extensions to Kelly sizing),
+each checked against section C and the closed-candidate lists by grep
+before being reported. Result: no qualifying candidate. RLS/LMS adaptive
+filters and ensemble Kalman are, mathematically, recursive linear
+regression / linear state-space filters — the same Levine & Pedersen
+(2016) equivalence class R-146 already closed for EMA/HP-filter/Kalman
+variants, and Kalman-LLT itself already failed as a regime detector
+(R-83, 1/6 → 2/6 on the six-episode gate). Theil-Sen / repeated-median
+slope estimation is not literally a linear filter, but it is a third
+instance of the axis R-146 named "close to exhausted" — a robust
+central-tendency *statistic* feeding the vote's comparison, which R-146
+found gets absorbed by v4's own 10% latching deadband before it ever
+reaches the traded target; a robust *slope* statistic is the same
+substitution shape and the sub-agent judged it did not honestly clear the
+non-duplicate bar. Fractional differentiation as a vote-input
+representation is already closed twice over (R-124, SIZE-axis and an
+11th regime-timing detector, both NEGATIVE). Almgren-Chriss execution
+timing on v4's own fills is already closed (R-77, fee savings real,
+Sharpe deltas inside the noise floor). Gârleanu-Pedersen partial
+adjustment on one instrument is already closed (R-64, no-trade region
+does everything, GP's own smooth-rate term ablates to ~0) — the 18x COST
+win this brief's own framing points to (R-65) is on the cross-sectional
+multi-asset panel, which is exactly what B-17/B-28 already flag as
+blocked. **No conservative/novel branch pair dispatched** — per
+ROUTINE.md, "not tested is not a negative result," and nothing cleared
+step 1.
+
+Tenth consecutive same-day/next-day pass (fourteenth through
+twenty-third) to reach this conclusion. Per the twenty-first and
+twenty-second passes' own statement that they would not re-argue the
+firing-cadence flag further without a material change, and since nothing
+about the cadence or its prior unactioned escalations has changed, this
+pass does not re-escalate and does not send a further notification —
+the shallow-clone methodology note above is new and worth a future
+session's attention, but is a process fix, not a finding that changes
+what the project owner needs to act on today. **B-06 remains the only
+ranked backlog item and is explicitly not a plan to act on.** Next
+session should not repeat this pass's seven searches; a genuinely new
+attempt still needs either a structurally different data source this
+repo cannot currently fetch (B-28), or B-06's own forward record to
+accumulate materially further.
+
+**Re-checked 08-27 (twenty-second same-day/next-day session), no round
+dispatched (not an R-numbered entry — zero new configurations
+evaluated).** Step 0: `git fetch origin main` found `origin/main` at
+`c2a107c`, matching this branch's own HEAD — no in-flight round, no
+undispatched frozen pre-registration (`experiments/r99_shared.py` already
+has its matching R-99 entry, newest unchanged since the twenty-first
+pass). Same four live backlog rows as all twenty-one prior passes —
+**B-06, B-09, B-17, B-28** — re-verified directly against their full row
+text, none actionable, same reasons as the twenty-first pass's entry
+immediately below.
+
+This pass added one data-driven check the prior twenty-one had not run
+directly: **B-06's own accumulated forward record.**
+`reports/paper_trading/kelly_regime_v4_bitstamp.csv` now covers
+2026-08-19T23:05Z→2026-08-27T03:20Z (~7.2 days, 206 rows; unattended
+cadence only since 08-26, matching R-78's own diagnosed gap). This is
+~0.01% of R-78's 18.9-year median horizon, and R-78's horizon is not a
+"not enough time has passed" problem: it is a direct function of the
+ratio between the strategy's daily effect size and the ~3.0%/day
+common-mode noise, and R-78 proved analytically that no valid test —
+sequential or fixed-`n` — clears that ratio below a 7.1-year floor. A
+quick sanity check confirms it here: the paired-difference standard error
+over 7 days (≈3%/√7 ≈ 1.1%/day) still swamps any plausible daily edge by
+orders of magnitude, so no cheaper test reads a verdict off this record
+yet. B-06's evidentiary status is unchanged from R-78/R-83 — recorded so
+a future pass does not re-ask the same question from zero.
+
+Six further web searches, each checked against section C and all
+twenty-one prior passes' closed-candidate lists rather than judged on
+citation recency: LPPLS+sentiment-index fusion (Cao/Wunkaew/Geman 2025;
+duplicates closed LPPLS (R-141, 0/6) plus closed sentiment/social-data —
+combines two already-closed shapes), a crypto-liquidation
+critical-slowing-down study (arXiv:2607.27070; already cited and closed
+inside R-85's CSD round and R-156's Elliott-wave annotation), GRO/
+numéraire optimal-e-value refinements (same anytime-valid-sequential
+shape as R-71/R-78/R-83 — R-78's floor argument forecloses any
+e-value construction, not just the one it tested), bounded-confidence
+opinion dynamics (would be a 13th price-derived early-warning signal
+against the same six-episode gate twelve mechanisms have already failed),
+SIR/epidemic contagion-cascade models (same "detect the cascade early"
+shape as CSD/Hawkes/BOCPD, same gate), and H∞/CVaR-relaxed robust-control
+sizing (closest to genuinely different math, but reduces to the same
+"shrink exposure under uncertainty" shape as the closed DRO/
+Wasserstein-Kelly and CDaR-budget rounds). No candidate survives step 1's
+non-duplicate test. **No conservative/novel branch pair dispatched** —
+per ROUTINE.md, "not tested is not a negative result," and none of the
+six passed step 1 far enough to be tested.
+
+Ninth consecutive same-day/next-day pass (fourteenth through
+twenty-second) to reach this conclusion. Per the twenty-first pass's own
+statement that it would not re-argue the firing-cadence flag further
+without a material change, and since nothing about the cadence or its
+prior unactioned escalations has changed, this pass does not re-escalate
+and does not send a further notification. **B-06 remains the only ranked
+backlog item and is explicitly not a plan to act on.** Next session
+should not repeat the six searches or the B-06 recheck above; either
+outcome (backlog status or B-06's horizon) needs materially more elapsed
+forward-trading time or a structurally new, currently-unfetchable data
+source (B-28) to move.
+
+**Re-checked 08-27 (twenty-first same-day/next-day session), no round
+dispatched (not an R-numbered entry — zero new configurations
+evaluated).** Step 0: `git fetch origin main` found `origin/main` at
+`06d56b3`, matching this branch's own HEAD (a concurrent process had
+already force-synced `main` to this branch's tip between this session's
+first and second fetch — no in-flight round, no undispatched frozen
+pre-registration (`experiments/r*_shared.py` unchanged since R-156/R-157,
+newest still `r99_shared.py`). Same four live backlog rows as all twenty
+prior passes — **B-06, B-09, B-17, B-28** — none actionable, same reasons
+as the twentieth pass's entry immediately below.
+
+Rather than repeat the twentieth pass's own two generic searches, this
+pass dispatched a research-only sub-agent with a narrower brief: check
+six specific mechanism families a keyword grep against this file showed
+as under-explored (wavelet multi-resolution analysis — 0 prior hits;
+Gaussian process regression — 0; particle filters — 0; distributionally
+robust/Wasserstein-ambiguity Kelly — 0; EVT/tail-index sizing via
+Hill/POT-GPD — 1; meta-labeling / triple-barrier — 14, but never checked
+against this exact framing), across six distinct web searches, each
+evaluated against step 1's mechanism-SHAPE bar rather than citation
+recency. Result: every one collapses into a mechanism shape already
+closed. Wavelets split into forecasting preprocessing (categorical
+"another indicator" fail) or multiscale vol/regime estimation (duplicates
+the 21+ SIZE-axis retunes and the twelve regime-timing mechanisms already
+failing the six-episode gate). Gaussian processes and particle filters
+are, respectively, a forecaster or a sequential-Bayesian state filter —
+the latter inherits Kalman LLT's own named failure mode (lag on
+shock-driven episodes, which is exactly what the six-episode gate tests).
+DRO/Wasserstein-Kelly reduces to the same shrinkage/robustification shape
+as the closed Bayesian-Kelly and CDaR/Wasserstein-budget rounds. EVT
+tail-index sizing was already explicitly named closed in this file
+("Hill-estimator sizing ≡ closed POT/GPD and CDaR rounds"). Meta-labeling
+is a secondary classifier gating size — a forecaster, a duplicate of
+v4's own confidence-vote sizing, or both. No candidate survives; full
+reasoning and line citations in the sub-agent's own report, not
+reproduced here. **No conservative/novel branch pair dispatched** —
+forcing one against a backlog independently re-confirmed exhausted by
+twenty-one separate passes today would be exactly the mistake this
+project's culture penalizes.
+
+This is the eighth consecutive same-day/next-day pass (fourteenth through
+twenty-first) to reach that conclusion. Per the twentieth pass's own
+statement that it "will not re-argue [the firing-cadence flag] a further
+time on the next firing if the cadence is unchanged," and since nothing
+about the cadence or its two prior unactioned escalations has changed,
+this pass does not re-escalate and does not send a further notification —
+only a materially new finding would warrant one. **B-06 remains the only
+ranked backlog item, and it is explicitly not a plan to act on.** Next
+session should not repeat the six searches named above; a genuinely new
+attempt would need either a structurally different data source this repo
+cannot currently fetch (per B-28), or B-06's own forward record to
+accumulate further.
+
+**Re-checked 08-27 (twentieth same-day/next-day session), no round
+dispatched (not an R-numbered entry — zero new configurations
+evaluated).** Step 0: `git fetch origin main` found `origin/main` at
+`bbc616f` (the nineteenth pass's ledger commit plus one automated
+paper-trading row), clean working tree — no in-flight round, no
+undispatched frozen pre-registration (`experiments/r*_shared.py`
+unchanged since R-156/R-157, newest still `r99_shared.py`). Backlog grep
+(the exact command this file prescribes, re-run directly rather than
+trusted from the prior entry): same four live rows all nineteen prior
+passes found — **B-06, B-09, B-17, B-28** — and this pass read all four
+rows' full text directly rather than taking the summary on faith: B-28
+half-closed and blocked on breadth data this repo cannot fetch, B-06
+explicitly de-ranked by its own auditor round ("keep it running, stop
+calling it the plan"), B-09 demoted to LOW by R-28, B-17 deliberately
+PARTIAL pending a multi-asset strategy that has not yet cleared holdout.
+None is a dispatchable NEXT/OPEN item. B-06's automated recorder is
+healthy (hourly commits through `bbc616f`, 2026-08-27T03:28:45Z).
+
+Ran two targeted web searches rather than a full sweep, per the
+seventeenth/eighteenth passes' finding that the sweep itself has stopped
+being the bottleneck: fresh regime-detection/trend-following citations
+dated around this pass's own date, and current funding-rate-carry
+research. Both closed on inspection and add nothing beyond what the
+nineteenth pass already recorded: the only new-looking hit was the same
+arXiv:2607.23370 (social-sentiment fusion, INFO-axis blocked, already
+closed by the nineteenth pass); the funding-carry search surfaced only
+market commentary confirming R-15/B-02/B-03/B-39's existing NEGATIVE
+verdict (industry sources now report the crypto funding carry's own
+Sharpe turning negative in 2025) and requires cross-exchange order-book
+data this project cannot simulate regardless. No non-duplicate,
+simulable, actionable direction found; no conservative/novel branch pair
+dispatched — forcing one against an exhausted, thrice-independently-read
+backlog is exactly the mistake this project's culture penalizes (see the
+seventeenth/eighteenth passes' own reasoning, endorsed again here).
+**B-06 remains the only ranked backlog item, and it is explicitly not a
+plan to act on.**
+
+This is the seventh consecutive same-day/next-day pass (fourteenth
+through twentieth) to reach that conclusion, and the git history shows
+this brief has been firing roughly **hourly** (17:53→22:57→23:59→00:53→
+01:51→02:50→ this pass, all 2026-08-26/08-27) for at least those seven
+runs, each burning a full literature-review-plus-implementation-scale
+session to reproduce the same null result. Two prior passes
+(seventeenth, eighteenth) already asked the project owner directly,
+outside this file, to reconsider the firing cadence; this pass repeats
+that flag once more, with a concrete number attached, via a direct
+notification rather than a further paragraph here, and will not re-argue
+it a further time on the next firing if the cadence is unchanged.
+
+**Re-checked 08-27 (nineteenth same-day/next-day session), no round
+dispatched (not an R-numbered entry — zero new configurations
+evaluated).** Step 0: `git fetch origin main` found `origin/main` at
+`60884e2`, the eighteenth pass's own commit, clean working tree — no
+in-flight round, no undispatched frozen pre-registration
+(`experiments/r*_shared.py` unchanged since R-156/R-157). Backlog grep:
+same four live rows all eighteen prior passes found — **B-06, B-09, B-17,
+B-28** — none actionable. B-06's automated recorder is healthy (hourly
+commits through `b6ead3c`, 08-26T22:18:20Z).
+
+Ran two searches angled at ground the eighteenth pass's own two searches
+did not cover (regime-switching/HMM-family forecasting, and a broad
+2026 sweep for anything newly cited). Both closed on inspection: the one
+concretely new hit, arXiv:2607.23370 ("Bitcoin Price Direction Prediction
+via Regime-Aware Multi-Modal Fusion of Social Sentiment and Technical
+Features"), fuses price with social-sentiment data this project does not
+have and cannot fetch from its own committed files — INFO-axis blocked by
+the standing rule ("never proxy unavailable data out of price"), same as
+every social/on-chain-data candidate every prior pass has closed the same
+way. The regime-switching/HMM search surfaced only forecasting-framework
+variants of a mechanism *shape* this project has already tried six times
+over (HMM/BOCPD/Kalman-LLT/CSD/transfer-entropy/CUSUM, R-01/82/83/85/86/139,
+all 0-2/6 against the six-episode detection-lag gate) — grepped and
+confirmed against `docs/LEDGER.md` directly rather than taken on memory.
+No non-duplicate, simulable, actionable direction found; no
+conservative/novel branch pair dispatched. **B-06 remains the only
+ranked, unblocked backlog item.** This is the sixth consecutive
+same-day/next-day pass (fourteenth through nineteenth) to reach that
+conclusion; per the seventeenth/eighteenth passes' own request, the
+cadence question has been raised directly with the project owner outside
+this file rather than re-argued a nineteenth time.
+
+**Re-checked 08-27 (eighteenth same-day/next-day session), no round
+dispatched (not an R-numbered entry — zero new configurations
+evaluated).** Tasked independently with the same standard brief the
+seventeenth pass names below, this session ran ROUTINE.md Step 0 first:
+`git fetch origin main` found `origin/main` at `e208ce2`, the seventeenth
+pass's own commit, working tree clean — no in-flight round, no
+undispatched frozen pre-registration (`experiments/r*_shared.py`
+unchanged since R-156/R-157). The backlog grep found the same four live
+rows all seventeen prior passes found — **B-06, B-09, B-17, B-28** — none
+actionable, unchanged from the seventeenth pass's own characterization.
+
+Given the seventeenth pass's explicit finding that the literature sweep
+itself has stopped being the bottleneck, this session ran two targeted
+searches rather than a full sweep, chosen for genuine novelty against the
+closed-candidate lists rather than breadth: crypto position-sizing /
+volatility-management literature dated around August 2026, and bitcoin
+perpetual-futures funding-rate arbitrage (cross-exchange and
+spot-vs-perp), the one candidate direction of the two whose keyword had
+not been searched verbatim in any of the prior seventeen passes. Both
+closed on inspection. The sizing search surfaced only restated
+conventional wisdom (inverse-volatility position sizing, ATR-scaled
+stops) — the same mechanism *shape* as `kelly_regime_v4`'s own already-shipped
+volatility target, and the SIZE axis it would attack is the one R-59/R-60
+already spent 21 attempts on (0-for-21, standing diagnosis). The funding-arbitrage
+search is a literal duplicate of **R-15/B-02/B-03**: R-15 measured this
+exact cash-and-carry mechanism on this project's own data as far back as
+08-16, B-02 extended the funding series through 2026 (Deribit), and R-39
+closed the delta-neutral construction as NEGATIVE for the current era
+("this repo's missing perp price series makes basis risk structurally
+unmeasurable") — a cross-exchange variant would additionally require a
+second venue's simultaneous order book, which is outside this project's
+single-series OHLCV simulation capability (ROUTINE.md step 1, question 3)
+regardless of the mechanism's own merit. No non-duplicate, simulable,
+actionable direction found; no conservative/novel branch pair dispatched,
+for the same reason the seventeenth pass names — forcing one against a
+null screening result is the mistake this project's culture penalizes.
+**B-06 remains the only ranked, unblocked backlog item.**
+
+**Eighteenth independently-tasked session, eighteenth identical
+conclusion, still within the same trading day as the fourteenth through
+seventeenth.** This session endorses the seventeenth pass's recommendation
+to the project owner without repeating its reasoning at length: the two
+genuinely open paths are (a) let B-06's forward record accumulate
+unattended, or (b) a scope decision this brief cannot make for itself
+(order-book/queue simulation, or a materially different asset universe
+with real cross-sectional breadth) — and the cadence question the
+seventeenth pass raised is now five consecutive same-day/next-day
+sessions old (fourteenth through eighteenth) with zero incremental
+evidence produced by any of them. This entry is deliberately shorter than
+its predecessor's for the same reason: re-deriving the same
+recommendation at full length an eighteenth time is exactly the kind of
+low-value repetition the seventeenth pass flagged. Notifying the project
+owner directly rather than leaving an eighteenth ledger paragraph as the
+only record of it.
+
+**Re-checked 08-27 (seventeenth same-day/next-day session), no round
+dispatched (not an R-numbered entry — zero new configurations
+evaluated).** Tasked independently with the standard brief (take the best
+strategy — `kelly_regime_v4`, unchanged — propose an improvement vector,
+do the research, dispatch a conservative/novel branch pair, measure,
+promote the winner), this session ran ROUTINE.md Step 0 first: no
+undispatched frozen pre-registration on disk (newest
+`experiments/r*_shared.py` is `r156_shared.py`, unchanged since R-156/R-157,
+both of which have matching completed section-B entries; `git fetch origin
+main` confirmed `origin/main` at `ae90394`, the sixteenth pass's own
+commit, clean working tree — no in-flight round). The backlog-table grep
+found the same four live rows all sixteen prior passes found: **B-06,
+B-09, B-17, B-28**, none actionable (B-06 explicitly "keep it running,
+stop calling it the plan"; B-09 LOW; B-17 deliberately deferred with no
+strategy needing it; B-28 blocked on data this repo cannot fetch).
+
+This session ran three targeted web searches distinct in phrasing from the
+sixteen prior sweeps, checking specifically for anything published or
+surfaced since the sixteenth pass (fresh 2026 crypto trend-following /
+regime-detection papers; deep-RL and online-portfolio-selection position
+sizing; a market-commentary sanity sweep for any newly-cited mechanism).
+Nothing new: the one crypto-specific hit (arXiv:2602.11708, "AdaptiveTrend")
+is the same paper the fifteenth pass already closed (its trailing-stop,
+rolling-Sharpe-selection and asymmetric-allocation components map onto
+R-90, R-111/R-63 and R-89 respectively). The RL/online-portfolio-selection
+hits (SAC/DDPG cryptocurrency portfolio agents, a 12-asset 4-hour-rebalance
+framework, a June 2026 ACM Computing Surveys review of the field) all lean
+on cross-sectional breadth across 8–150 instruments — the same "diversify
+across many instruments" premise R-05 ruled deep-learning trend forecasting
+out on and R-63 later priced directly (Grinold breadth 1.47 of this
+project's own 8-instrument panel), and a black-box policy trained on one
+price series with N≈3 effective regime events is exactly the ERR/N≈3
+failure mode R-87's ACI wrapper and R-104's jackknife already diagnosed
+from the estimation side. No non-duplicate, simulable, actionable direction
+found — forcing a conservative/novel branch pair against a null screening
+result would be exactly the mistake this project's own culture penalizes
+(stated verbatim in the fifteenth pass's own entry below), so none was
+dispatched. **B-06 remains the only ranked, unblocked backlog item.**
+
+**Seventeenth independently-tasked session, seventeenth identical
+conclusion.** Worth naming explicitly, since no prior pass has: this
+verification brief has now run often enough, on the same trading day and
+the one before it, that the marginal session is reliably a rediscovery of
+the sixteen before it rather than new evidence — the literature search
+itself has stopped being the bottleneck, and re-running it more often does
+not change what it finds. Nothing here recommends slowing B-06's own
+unattended accumulation, which is real evidence and keeps running; but the
+*research* half of this brief (steps 1–4 of ROUTINE.md) has no new input
+to consume at this cadence, and the honest thing to do with that finding is
+say so once rather than repeat the same negative seventeen times running.
+This session's recommendation to the project owner, unchanged from the
+sixteenth pass's: the two genuinely open paths remain (a) let B-06's
+forward record accumulate, or (b) a scope decision outside what a single
+automated session can make for itself (order-book/queue simulation, or a
+materially different asset universe with real cross-sectional breadth) —
+and, new this pass, (c) consider whether this brief should fire on a
+longer interval than "same day or next," since the last four consecutive
+firings (thirteenth through seventeenth) have spanned under 24 hours and
+produced zero incremental evidence between them.
+
+**Re-checked 08-26 (sixteenth same-day/next-day session), no round
+dispatched (not an R-numbered entry — zero new configurations
+evaluated).** Tasked independently with the standard brief (take the best
+strategy, propose an improvement vector, do the research, dispatch a
+conservative/novel branch pair, measure, promote the winner), this
+session ran ROUTINE.md Step 0 first: no undispatched frozen
+pre-registration on disk (newest `experiments/r*_shared.py` unchanged
+since R-156; `git fetch origin main` confirmed `origin/main` at `110ef6b`,
+the fifteenth pass's own commit, clean working tree — no in-flight
+round). The backlog-table grep found the same four live rows all fifteen
+prior passes found: **B-06, B-09, B-17, B-28**, none actionable (B-06
+explicitly "keep it running, stop calling it the plan"; B-09 LOW; B-17
+deliberately deferred with no strategy needing it; B-28 blocked on data
+this repo cannot fetch).
+
+This session dispatched one research-only sub-agent, instructed to read
+the full standing diagnosis, the whole of section C, and section D, then
+search 2024–2026 literature angled specifically at the ERR and N≈3 axes
+(the least-mined relative to INFO, which is close to exhausted, and COST,
+already heavily mined by R-63/65/67) and at genuinely new SIZE-axis
+mechanism families, rather than repeating a fifth or sixth broad
+adjacent-fields sweep. Six candidates surfaced and every one mapped onto
+already-closed ground: **info-gap / robust-satisficing decision theory**
+(Ben-Haim) reduces, for a scalar sizing decision, to an
+uncertainty-derived exposure discount — the same mechanism *shape* as
+eight already-closed formalisms of it (R-104 bootstrap/PSR discount, R-87
+ACI/conformal dispersion, R-105 jackknife and ensemble-disagreement, R-147
+BMA ladder, R-114 hazard-rate regime-age discount, R-138 small-N
+permutation test), all of which either sit inert against BTC's ~55% vote
+hit-rate or invert sign on ETH (B4); **few-treated-units causal
+inference** (Alvarez-Ferman-Wüthrich-style 2025–2026 econometrics,
+arXiv:2506.14998) is the N≈3 problem in its purest form but this project
+already ran two structurally distinct formal small-N tests this year on
+the identical edge-concentration claim (R-138 permutation test,
+significant on BTC alone, failed ETH replication; R-140 synthetic-control
+placebo, appeared to confirm at p=0.0008 but failed a same-scale conformal
+permutation check) and no third design was found that isn't a
+re-parameterization of those two; **hierarchical Bayesian partial
+pooling** across the ~3 independent regime episodes collapses to
+prior-dominated with this little data — the identical failure mode R-87's
+ACI branch already diagnosed; **Hierarchical Risk Parity /
+correlation-clustering allocation** maps onto R-107's closed
+correlation-aware risk-parity reweighting ("giving it room to operate
+gutted the signal's selectivity") and onto R-63's breadth measurement
+(1.47 of 8 effective bets — the diversification gain is already priced
+and capped); **optimal-stopping / free-boundary trading-band
+constructions** (Zervos-Johnson-Alazemi, Dumas 1991) are the same
+theoretical clan as the Constantinides/Davis-Norman no-trade band already
+tried and killed on `hedge_experts` (R-128); a fresh 2026 arXiv crypto
+trend-following paper (2602.11708, "AdaptiveTrend") combines trailing
+stops, rolling-Sharpe asset selection and asymmetric long/short
+allocation, each individually already closed here (R-90, R-111/R-63,
+R-89). A seventh angle — a meta-level multiple-testing correction across
+the whole 157-round search itself, rather than within one strategy's
+parameters — was checked against R-29/R-30, which already wired
+trials-aware correction (bootstrap intervals, deflated Sharpe, purged CV)
+into the comparison table at the program level.
+
+**Sixteenth independently-tasked session, sixteenth identical
+conclusion, this one from an ERR/N≈3-angled search different from all
+fifteen before it.** No non-duplicate, simulable, actionable direction
+found — forcing a conservative/novel branch pair against a null screening
+result would be exactly the mistake this project's own culture penalizes
+(stated verbatim in the fifteenth pass's own entry below), so none was
+dispatched. **B-06 remains the only ranked, unblocked backlog item.**
+Sixteen independently-tasked sessions across three days, ten distinct
+literature-sweep angles, converging on the same conclusion: this
+project's searchable literature space against the *existing*
+`kelly_regime` family, and against every SIZE-axis and ERR-axis
+formalism this session could find a name for, is exhausted. The
+sub-agent's own recommendation, which this session endorses: the two
+genuinely open paths are (a) let B-06's forward paper-trading record
+accumulate — no formalism substitutes for real time passing — or (b) a
+scope decision by the project owner (order-book/queue simulation, or a
+materially different asset universe with real cross-sectional breadth
+beyond the BTC/ETH/eight-instrument crypto panel), both currently outside
+what a single automated session can decide for itself.
+
+**Re-checked 08-26 (fifteenth same-day/next-day session), no round
+dispatched (not an R-numbered entry — zero new configurations
+evaluated).** Tasked independently with the standard brief (take the best
+strategy, propose an improvement vector, do the research, dispatch a
+conservative/novel branch pair, measure, promote the winner), this
+session ran ROUTINE.md Step 0 first: no undispatched frozen
+pre-registration on disk (newest `experiments/r*_shared.py` unchanged
+since R-156; `git fetch origin main` confirmed `origin/main` at `fbabc82`,
+the fourteenth pass's own merge commit, clean working tree — no in-flight
+round). The backlog-table grep found the same four live rows all
+fourteen prior passes found: **B-06, B-09, B-17, B-28**, none actionable
+(B-06 explicitly "keep it running, stop calling it the plan"; B-09 LOW;
+B-17 deliberately deferred with no strategy needing it; B-28 blocked on
+data this repo cannot fetch).
+
+Rather than repeat the fourteenth pass's broad adjacent-fields sweep,
+this session narrowed deliberately to the one architectural surface R-62
+identifies as where `kelly_regime_v4`'s edge actually lives — the
+3-anchor trend **vote** and its combination/confidence-weighting, not the
+volatility-target scale factor — on the reasoning that a narrower,
+mechanism-specific search might surface something a broad sweep would
+miss. It read `kelly_regime.py`/`v3`/`v4` plus R-40, R-62, R-78, R-80,
+R-82, R-83, R-85, R-89, R-105, R-146 and R-147 in full, then ran targeted
+2024–2026 searches on horizon-combination weighting, confidence-weighted
+trend following, and fresh crypto momentum literature. Four genuinely new
+citations surfaced (Etienne, Ohana, Benhamou et al., Oct 2025,
+arXiv:2510.23150; Kang & Ryu 2026, *Risk Management*,
+10.1057/s41283-026-00234-7; Zarattini, Pagani & Barbon 2025, SSRN
+5209907; Grobys, Kolari, Sandretto, Shahzad & Äijö 2025, *Financial
+Markets and Portfolio Management*) and every one mapped onto ground
+already closed: Etienne et al.'s per-asset Bayesian-optimization horizon
+reweighting is the same mechanism family R-147's Bayesian-model-averaging
+branch closed NEGATIVE, and this project's 2-asset universe is exactly
+the thin-breadth regime R-63 already priced (Grinold breadth 1.47/8);
+Kang & Ryu's "slow signals beat fast because signal speed is an
+endogenous risk-management device" is the anchor-span axis, closed at
+R-06/R-07/R-40/R-45/R-89/R-92 (v4's 20/40/80 ladder already sits in that
+validated plateau); Zarattini et al.'s Donchian-ladder-plus-vol-target
+ensemble is structurally v4's own architecture; Grobys et al.'s
+cross-sectional crypto momentum-crash work is panel territory closed at
+R-63/R-33. A fifth angle — betting-style e-value combinators for
+per-anchor reliability weighting — was judged a likely duplicate of
+R-147's own diagnosis that "real movement away from equal-weight...lands
+in the same place regardless of formalism," on top of R-28/R-31 already
+finding an e-process framing loses on this exact gate.
+
+**Fifteenth independently-tasked session, fifteenth identical
+conclusion, this one from a narrower and different search than the
+fourteen before it.** No non-duplicate, simulable, actionable direction
+found on the vote/confidence-weighting axis either — forcing a
+conservative/novel branch pair against a null screening result would be
+exactly the mistake this project's own culture penalizes, so none was
+dispatched. **B-06 remains the only ranked, unblocked backlog item.**
+Fifteen independently-tasked sessions across two days, nine distinct
+literature-sweep angles, converging on the same conclusion: this
+project's searchable literature space against the *existing*
+`kelly_regime` family is exhausted. The next session tasked with this
+brief should treat that as evidence rather than re-running a tenth sweep
+angle against the same family, and should either (a) wait for B-06's
+forward paper-trading record to accumulate enough rows for its own
+anytime-valid tool to say something, or (b) widen scope past the
+`kelly_regime` lineage entirely to a structurally different mechanism
+family the ledger has not yet tried, since incremental refinements of
+this one are the surface that is exhausted, not necessarily every idea
+this repo could ever hold.
+
+**Re-checked 08-27 (fourteenth same-day/next-day session), no round
+dispatched (not an R-numbered entry — zero new configurations
+evaluated).** Tasked independently with the standard brief (take the best
+strategy, propose an improvement vector, do the research, dispatch a
+conservative/novel branch pair, measure, promote the winner), this
+session ran ROUTINE.md Step 0 first: no undispatched frozen
+pre-registration on disk (`experiments/r99_shared.py`-style newest files
+unchanged since R-156; `git fetch origin main` confirmed `origin/main` at
+`5e1953c`, the thirteenth pass's own commit, with a clean working tree —
+no in-flight round to complete). The backlog-table grep found the same
+four live rows the thirteenth pass found: **B-06, B-09, B-17, B-28**
+(B-10 stays struck, closed by R-156).
+
+Rather than re-run any of the eleven regime-timing bases, twenty-one
+SIZE-axis retunes, five-plus ERR-axis (conformal/ACI) variants, or ten
+INFO-signal categories the thirteen prior 08-26/08-27 sessions already
+closed, this session dispatched one research-only sub-agent (18 web
+searches) for a further fresh sweep, explicitly angled at fields adjacent
+to trading this project had not yet mined by name — anytime-valid/e-value
+sequential testing beyond B-06's own tool, robust/trimmed-mean
+estimation, rough volatility / fractional Brownian roughness, Wasserstein
+regime clustering, Hill-estimator tail-index sizing, quantile-regression
+sizing, path-signature portfolio weights, MDL/information-theoretic
+efficiency framing, and double machine learning / causal discovery for
+time series — and fed the full section C table plus all thirteen prior
+same-day closed-topic lists as the duplicate-check corpus. Every hit
+found was either a structural duplicate of an already-closed mechanism
+(anytime-valid e-values ≡ the retired e-process R-31 and B-06's own
+GRO tool; Bayesian Kelly ≡ R-38/R-40/R-93, already named and closed by
+the twelfth pass; robust/trimmed anchor estimation ≡ R-146's median-anchor
+NEGATIVE; momentum-crash vol-timing ≡ R-62's finding that the vol-target
+factor alone carries none of v4's edge; rough volatility / fBm roughness
+≡ the twice-closed Hurst-exponent family; Wasserstein regime clustering ≡
+the discrete-state basis HMM already closes; Hill-estimator sizing ≡
+closed POT/GPD and CDaR rounds; quantile-regression sizing ≡ R-87's
+conformal-quantile dispersion estimator; path-signature portfolio weights
+≡ path-signature regime detection, named and closed by the twelfth pass,
+or reduces price-only to "another indicator," which the standing
+diagnosis says attacks none of the four axes; replicator/evolutionary
+trading ≡ the already-registered, already-NEGATIVE `replicator_book`;
+on-chain SOPR/netflow/LTH-supply ≡ closed for data-availability reasons
+or duplicate of closed MVRV/active-address work), not simulable from 5m
+OHLCV alone per Step 1 Q3 (mean-field-game market-impact execution needs
+a price-impact model this simulator has none of; disposition-effect
+persistence needs wallet-level position data), or not an actionable
+trading mechanism at all (MDL/information-theoretic "efficiency" framing
+had no concrete tradeable construction; double machine learning /
+causal-discovery for time series is a testing methodology, already
+covered in substance by R-138's permutation test and R-140's synthetic
+control, in the same "audits the harness, not a strategy" category the
+ledger already flagged for the Implementation-Risk paper; SPRT is
+theoretical-only and substantively covered by B-06's own anytime-valid
+tool).
+
+**Fourteenth independently-tasked session, fourteenth identical
+conclusion.** No non-duplicate, simulable, actionable direction found —
+forcing a conservative/novel branch pair against a null screening result
+would be exactly the mistake this project's own culture penalizes, so
+none was dispatched. **B-06 remains the only ranked, unblocked backlog
+item and this project's standing recommendation**, unchanged by this
+pass. The honest read stated by the twelfth pass still holds and is now
+better evidenced: at fourteen independently-tasked sessions across two
+days converging on the same conclusion by eight distinct literature
+sweeps angled in different directions each time, this project's
+searchable literature space is exhausted until either new data becomes
+available (order-book, options, an asset class this repo cannot fetch)
+or B-06's forward record accumulates enough rows to say something on its
+own.
+
+**Re-checked 08-27 (thirteenth same-day/next-day session), no round
+dispatched (not an R-numbered entry — zero new configurations
+evaluated).** Tasked independently with the standard brief (take the best
+strategy, propose an improvement vector, do the research, dispatch a
+conservative/novel branch pair, measure, promote the winner), this
+session ran ROUTINE.md Step 0 first and found **R-156 already in
+flight**: `experiments/r156_shared.py` existed with its conservative
+branch (`elliott_wave_zigzag`) registered and its novel branch already
+NEGATIVE at Step-A, but the ledger still carried only the IN-PROGRESS
+stub — the conservative branch's holdout evaluation had not been read or
+recorded. Per Step 0 ("an undispatched/unfinished frozen pre-registration
+outranks both the backlog and any new idea"), this session installed the
+project's Python dependencies fresh (none were present in this
+container), then completed that holdout read itself: `elliott_wave_zigzag`
+loses to `buy_and_hold` out-of-sample on both markets (spot Δ-Sharpe
+−1.18 [−2.32,−0.14], futures Δ-Sharpe −1.74 [−2.83,−0.43], futures
+liquidated at 99.5% dead-tail) — the standard promotion bar's default
+REJECT, exactly as the round's own pre-registration expected. Before this
+session's own `python scripts/inference.py`/`tradebot run`/ledger-write
+sequence finished, a **concurrent session landed the identical
+completion first** (commit `fadd507`/`8cd78f6`, recorded as R-156,
+closing B-10) — with holdout numbers matching this session's own
+independent computation to the numbers quoted above. No new information
+survived to add (this session ran the same already-committed
+`r156_shared.py`/`elliott_wave_zigzag.py`, not an independently authored
+second implementation, so it is a mechanical re-run rather than R-153's
+kind of independent replication); this session's own in-progress commit
+was merged with origin/main's landed version and pushed, verified via a
+full `pytest -q` pass (526 passed) after the merge. See R-156's own
+section-B entry for the full write-up.
+
+With R-156 closed and no other undispatched pre-registration on disk,
+this session then ran the backlog-table grep (live set unchanged again:
+B-06, B-09, B-17, B-28 — **B-10 now struck**, closed by R-156) and, per
+the twelfth pass's own conclusion that the marginal value of re-running
+already-closed categories is approximately zero, dispatched one
+research-only sub-agent for its own fresh, independent 2024–2026
+literature sweep across all four constraints. It was hand-fed the
+instruction to first extract, from the ledger itself, the full list of
+candidates all twelve prior 08-26 passes had already checked and closed,
+then run ten further varied searches (game-theoretic/evolutionary sizing,
+sequential e-value/small-sample testing, BTC volatility/VRP forecasting,
+quadratic-cost optimal execution, deflated-Sharpe/multiple-testing
+methods, liquidation-cascade/order-flow microstructure, growth-optimal
+drawdown control, 2026 HMM/regime-switching work, synthetic-control
+small-sample causal inference, and effective-sample-size framing
+directly) before recommending anything. Every hit it found was either
+already named and closed today (Conformal Kelly, Bayesian
+Kelly/Grossman–Zhou, path-signature regime detection, cost-aware
+execution bandits, BOCPD/HSMM, RL sizing, TDA, stablecoin-copula,
+liquidation-cascade CSD, Fear & Greed/sentiment-regime, ZigZag/Elliott), a
+structural variant of an already-closed mechanism (REDD-COPS ≡
+Grossman–Zhou family, closed at R-93 in both fixed-α and online-adaptive
+form; a 2026 sentiment-regime paper ≡ the Fear-&-Greed series closed at
+R-95), or not simulable from this repo's committed data (order-book
+liquidity-state papers; options-skew/prediction-market papers with no
+free multi-year history). **Thirteenth independent confirmation that
+nothing clears the bar** — no non-duplicate, simulable direction found,
+so no conservative/novel branch pair was dispatched (forcing one against
+a null result would be exactly the mistake this project's own culture
+penalizes). B-06 remains the only ranked, unblocked backlog item.
+
+**Note added on reconciliation (this push):** this thirteenth-pass
+session's own text above did not know about **R-157**, a structurally
+different, independently-dispatched implementation of the same B-10 item
+(a different session again, running concurrently with both R-156 and
+this thirteenth pass) — see R-157's own collision note in section B and
+the combined B-10 backlog row below, which now cites both R-156 and
+R-157. Left unedited above rather than rewritten, per this file's own
+"nothing is deleted" rule; the combined row is the current truth.
+
+**Re-checked 08-26 (twelfth same-day session), no round dispatched (not
+an R-numbered entry — zero configurations evaluated).** Tasked
+independently with the standard brief (take the best strategy, propose
+an improvement vector, do the research, dispatch a conservative/novel
+branch pair, measure, promote the winner), this session ran ROUTINE.md
+Step 0 first — `r155_shared.py` is still the newest `_shared.py` file in
+`experiments/` and already has its matching section B entry at R-155;
+`origin/main` and the working branch were reconciled to the latest
+automated commit, `4132cfe` (R-155's own merge), before writing this
+entry — then the backlog-table grep (unchanged live set: B-06, B-09,
+B-10, B-17, B-28, the same five rows R-155's session found).
+
+Rather than re-run any of the eleven categories the eleven prior 08-26
+sessions already closed, this session dispatched one research-only
+sub-agent for a fresh, wide 2024–2026 literature sweep across all four
+constraints, handed the full 95-row section-C table and today's own
+closed-topic list, and instructed to check every hit against both before
+recommending anything. It surfaced and closed five:
+
+- **"Conformal Kelly"** (Ryan 2026, arXiv:2608.01494) — a conformal
+  quantile of residuals as fractional Kelly's dispersion denominator.
+  This is the exact construction R-87's novel branch already ran and
+  killed (ACI-calibrated conformal quantile replacing the trailing-EWM-vol
+  denominator); the paper's own out-of-sample collapse (Sharpe 1.34→0.45)
+  corroborates R-87's verdict rather than contradicting it. Duplicate.
+- **Bayesian Kelly / Bayesian Grossman–Zhou** (Sukhov, SSRN, Feb 2026) —
+  shrinks the Kelly fraction toward zero by posterior edge-uncertainty,
+  the G-Z variant combined with a drawdown cap. Same family as R-38
+  (risk-constrained/CRRA Kelly), R-40 (Bayesian-shrink of a bagged vote)
+  and R-93 (online-adaptive Grossman–Zhou, built for the identical
+  "sidestep a fixed α's fragility" reason and killed by its own
+  pre-registered stress test) — a posterior-based adaptation rule is not
+  a different enough mechanism from a multiplicative-weights one to
+  expect a different outcome from the same underlying drawdown-scale
+  fragility. Judged a likely duplicate; not worth the false-positive risk
+  of a round to confirm it.
+- **Path-signature regime detection** (rough-path signature features on
+  spot/basis/funding, 2026) — fails on two axes at once: it is a
+  regime-*timing* detector, the axis R-155 closed today across eleven
+  structurally distinct bases, and its inputs (perp basis, funding rate)
+  are INFO sources this ledger already ruled out (R-41 basis, R-39/R-16
+  funding). Duplicate.
+- **Cost-aware execution / no-trade-region bandit learning** (2026
+  market-making and execution literature) — structurally identical to
+  the no-trade-band family already closed here (Constantinides 1986;
+  Davis & Norman 1990; Gârleanu–Pedersen 2013; the asymmetric-band and
+  boundary-trading rows). Duplicate.
+- **"Implementation Risk in Portfolio Backtesting"** (arXiv:2603.20319)
+  — a real, not-yet-filed finding, but an audit of backtest-*engine*
+  correctness (undocumented transaction-cost-handling divergence between
+  simulators), not a trading mechanism; it produces nothing to run
+  through Step-0/A/B against `kelly_regime_v4`, so it does not fit the
+  routine's candidate template. Noted here so a future session does not
+  spend a round rediscovering that it isn't one, not filed as a backlog
+  row since this project's own harness is the thing it would need to
+  audit, not the strategy.
+
+No code changed, no strategy touched, no configuration evaluated, no
+implementation sub-agent dispatched — the research-only screen failed
+before any conservative/novel branch pair would have been justified, the
+twelfth same-day session in a row to reach that conclusion (R-150 through
+R-155's six dispatched rounds, plus six research-only passes including
+this one). **B-06 remains the only ranked, unblocked backlog item and
+this project's standing recommendation**, unchanged by this pass. Worth
+naming plainly for whoever reads this next: at twelve independently-
+tasked sessions in one calendar day converging on the identical
+conclusion by six different research sweeps, the marginal value of
+another same-day literature pass over this exact ground is now
+approximately zero — the honest read is that this project's searchable
+literature space, not merely today's obvious candidates, is exhausted
+until either new data becomes available (options, order-book, an asset
+class this repo cannot fetch) or B-06's forward record accumulates enough
+rows to say something on its own.
+
+**Re-checked 08-26 (eighth pass), no round dispatched (not an R-numbered
+entry — zero configurations evaluated).** A ninth same-day session, tasked
+independently with the same brief as the eight preceding 08-26 sessions
+(take the best strategy, propose an improvement vector, do the research,
+dispatch a conservative/novel branch pair, measure, promote the winner),
+ran ROUTINE.md Step 0 first (no undispatched frozen pre-registration —
+`r151_shared.py` is still the newest `_shared.py` file in `experiments/`
+and already has its matching section B entry at R-151; `origin/main` and
+the working branch were reconciled to the latest automated paper-trading
+commit, `9bfdb2d`, before writing this entry) and the backlog-table grep
+second (unchanged live set: B-06, B-09, B-10, B-17, B-28, B-45, B-46,
+B-47 — the same eight rows the eight prior 08-26 passes found, none
+struck or re-ranked in the interim). Best registered strategy by the
+README's own ranking is unchanged: `kelly_regime_v4` ($66.8K spot /
+$156.2K futures_5x).
+
+Rather than re-run the categories the eight prior 08-26 sessions already
+swept, this session dispatched one research-only sub-agent for a fresh,
+differently-angled 2025–2026 literature sweep, explicitly told what the
+eight prior passes had already closed today and instructed to grep the
+ledger by name before treating any candidate as promising. It checked
+four candidate families and closed all four before any implementation
+was justified:
+
+- **Reinforcement-learning-based position sizing under transaction
+  costs** (fresh 2025–2026 leads: `FineFT` risk-aware ensemble RL for
+  futures, arXiv:2512.23773; positional-context intraday RL,
+  arXiv:2406.08013; systematic-FX RL, arXiv:2110.04745; a March-2026
+  breakeven-cost DL benchmark, arXiv:2603.01820) — not a duplicate by
+  name, but fails ROUTINE.md Step 1 Q4 at the design stage on the same
+  grounds R-05 already closed deep learning generally (2–3bps/88–100
+  instruments there vs. 10bps+/one instrument here), sharpened by R-144's
+  direct finding that this project's effective sample size (N≈3) is
+  already too thin for the existing, far simpler vote to generalize past
+  BTC — a fortiori too thin to fit a policy network without overfitting
+  to the same BTC/ETH sign-inversion pattern R-33/R-57/R-144 already
+  documented for simpler constructions.
+- **Bayesian online changepoint detection / hidden semi-Markov models for
+  the regime VOTE** — grepped exhaustively ("changepoint", "Bayesian
+  online", "BOCPD", "semi-Markov", 60+ hits). BOCPD itself is closed
+  twice (R-03, R-82), and the ledger's own running tally lists eleven-plus
+  structurally distinct regime-timing theoretical bases already scored
+  against the identical six-episode detection-lag gate (HMM/R-01,
+  BOCPD/R-03/R-82, Kalman LLT/R-83, CSD/R-85, transfer entropy/R-86,
+  Hawkes/R-96, POT/GPD/R-98, jump/QV decomposition/R-99, CUSUM/R-139,
+  LPPLS/R-141), none clearing ≥4/6. An HSMM is a discrete-state-switching
+  construction with an explicit sojourn distribution — the same basis as
+  R-01's family, not a new one. Closed as a duplicate.
+- **Robust/nonparametric estimation of the vote's response curve**
+  (distinct from R-147's combination-weight work and `kelly_regime_v2`'s
+  convex gamma) — the vote has only 4 support points (0/1/2/3 anchors
+  agreeing); with N≈3 effective regime events behind it, a nonparametric
+  fit over 4 states cannot carry more information than the 1-parameter
+  gamma already registered, and collapses into a reparameterization of
+  what R-146's own Levine & Pedersen (2016) linear-filter equivalence
+  argument already covers.
+- **Multi-timescale ensemble voting beyond the 3-anchor ladder** —
+  duplicate of R-40's bagging sweep and R-105/R-147's 5-member
+  alternative-ladder ensembles, all NEGATIVE with the same ETH
+  sign-inversion.
+
+Five further literature leads were surfaced, checked by name, and closed
+as already-covered or data-blocked: Baquero & Menezes' 2026 Bitcoin
+power-law paper (arXiv:2605.21316, too close to R-74/R-125's closed MVRV
+sub-axis), a social-sentiment/technical fusion regime model
+(arXiv:2607.23370, INFO-blocked — no sentiment data), a nonparametric
+regime-clustering method (same discrete-state basis as R-01, closed),
+`AdaptiveTrend` (arXiv:2602.11708, span/ensemble/response-curve
+territory already covered by R-06/R-07/R-40/R-105/R-146/R-147/R-59/R-60),
+and a CVaR/put-option tail-risk paper (arXiv:2607.00883, already checked
+and rejected in R-125 on options-data unavailability).
+
+No code changed, no strategy touched, no configuration evaluated, no
+implementation sub-agent dispatched — the research-only screen failed
+before any conservative/novel branch pair would have been justified,
+consistent with ROUTINE.md's own filter and with all eight prior 08-26
+passes. B-06's recorder was checked directly and is healthy
+(`reports/paper_trading/kelly_regime_v4_bitstamp.csv`, latest row
+2026-08-26T12:45:00Z, on its designed cadence). **B-06 remains the only
+ranked, unblocked backlog
+item and this project's standing recommendation**, unchanged by this
+pass — the ninth same-day session to reach it independently. The vote
+mechanism's span/statistic/combination-weight/response-curve/gamma/band
+axes and the regime-timing detector-basis axis both now read as
+exhausted; a tenth session should not re-search the terms named above
+without new evidence.
+
+**Re-checked 08-26 (seventh pass), no round dispatched (not an R-numbered
+entry — zero configurations evaluated).** An eighth same-day session, tasked
+independently with the same brief as the seven preceding 08-26 sessions
+(take the best strategy, propose an improvement vector, dispatch a
+conservative/novel branch pair, measure, promote the winner), ran
+ROUTINE.md Step 0 first (no undispatched frozen pre-registration —
+`r151_shared.py` is still the newest `_shared.py` file in `experiments/`
+and already has its matching section B entry at R-151; `origin/main` and
+the working branch are identical, both at the latest automated
+paper-trading commit, `b9991e7`) and the backlog-table grep second
+(unchanged live set: B-06, B-09, B-10, B-17, B-28, B-45, B-46, B-47 — the
+same eight rows the six prior 08-26 passes found, none struck or
+re-ranked in the interim). Best registered strategy by the README's own
+ranking is unchanged: `kelly_regime_v4` ($66.8K spot / $156.2K
+futures_5x, not distinguishably better than `buy_and_hold` on growth,
+drawdown property scoped to BTC/ETH only).
+
+Rather than re-run the categories the seven prior 08-26 sessions already
+swept (established microstructure/behavioral finance, on-chain, DeFi,
+prediction markets, ERR/COST/N≈3 methodology, Kelly/regime-switching
+preprints, liquidation-cascade critical slowing down), this session ran a
+fresh, narrowly-targeted web search for the newest crypto position-sizing
+and volatility-control literature dated after the prior passes' own
+search windows, and checked what it found by name against section C
+rather than trusting a category match:
+
+- **Jones, Matsui & Knottenbelt (2026), "Stablecoins as Dry Powder: A
+  Copula-Based Risk Analysis of Cryptocurrency Markets"** (arXiv:2603.23480,
+  also IEEE-published) — a copula model linking stablecoin **trading
+  volume and upside volatility** (a flow/activity measure, not the supply
+  level R-54/R-55/R-58 tested) to crypto market volatility, reporting a
+  reduced-MSE volatility forecast and lower realized risk when fed into a
+  volatility-*targeting* model's scale factor. Constructed differently
+  enough from the five registered stablecoin-supply variants (R-54/R-55/
+  R-58: mint/burn flow as a directional confirm/veto vote) that it is not
+  an automatic duplicate by name — but it fails the same test R-79's
+  research pass already applied to GARCH/HAR volatility forecasting and
+  closed for the identical reason: R-62 isolated `kelly_regime_v4`'s
+  conditional-volatility *scale* factor alone and found it carries none
+  of the matched-exposure drawdown property that is this project's one
+  surviving finding, so a better forecast of that scale factor — copula-
+  derived or otherwise — improves a quantity independently shown not to
+  carry the edge. Filed here by name so a future session grepping "copula"
+  or "dry powder" specifically, rather than trusting "stablecoin, closed"
+  as a category, does not re-open it without new evidence that R-62's
+  isolation finding has itself been overturned.
+- **"Talyxion: From Speculation to Optimization in Risk"** (arXiv:2511.13239)
+  and the Deep-MKV-TS McKean–Vlasov drawdown-control result surfaced in the
+  same sweep are both off-mechanism for this repo rather than closed
+  on the merits: the former is a general portfolio-risk-optimization
+  framework paper with no crypto-specific, simulable trading rule to
+  extract, and the latter trains a path-dependent generative control model
+  against equity-index futures — the deep-learning-needs-many-instruments
+  problem R-05 already closed this project's door on (one BTC series here
+  against dozens of instruments there).
+
+No code changed, no strategy touched, no configuration evaluated, no
+sub-agent dispatched — screening a direction against the ledger before
+building anything is itself the ROUTINE.md step-1 filter, and this
+direction failed it on citation (2) before any implementation would have
+been justified. B-06's recorder was checked directly and is healthy
+(`reports/paper_trading/kelly_regime_v4_bitstamp.csv`, latest row
+2026-08-26T11:40:00Z, on its designed cadence). **B-06 remains the only
+ranked, unblocked backlog item and this project's standing
+recommendation**, unchanged by this pass — the eighth same-day session to
+reach it independently.
+
+**Re-checked 08-26 (sixth pass), no round dispatched (not an R-numbered
+entry — zero configurations evaluated).** A seventh same-day session, tasked
+independently with the same brief as the six preceding 08-26 sessions
+(take the best strategy, propose an improvement vector, dispatch a
+conservative/novel branch pair, measure, promote the winner), ran
+ROUTINE.md Step 0 first (no undispatched frozen pre-registration —
+`r151_shared.py` is still the newest `_shared.py` file in `experiments/`
+and already has its matching section B entry at R-151; `origin/main` and
+the working branch are identical, both at the latest automated
+paper-trading commit) and the backlog-table grep second (unchanged live
+set: B-06, B-09, B-10, B-17, B-28, B-45, B-46, B-47). Best registered
+strategy by the README's own ranking is unchanged: `kelly_regime_v4`
+($66.8K spot / $156.2K futures_5x, not distinguishably better than
+`buy_and_hold` on growth, drawdown property scoped to BTC/ETH only).
+
+Rather than re-run the same literature categories the six prior 08-26
+sessions already swept (established microstructure/behavioral finance,
+on-chain, DeFi, prediction markets, ERR/COST/N≈3 methodology, Kelly/
+regime-switching preprints), this session did two narrower things:
+
+- **A live web search for the single newest angle available today** —
+  liquidation-cascade early-warning signals, since two new preprints
+  surfaced that none of the six prior passes' queries had returned:
+  arXiv:2607.27070 ("Where does the criticality live? Early-warning
+  signals are event-heterogeneous across seven crypto-perpetual
+  liquidation cascades") and its 2026 follow-up arXiv:2608.03616
+  ("Measuring the engine of a liquidation cascade: subcritical branching
+  inside a first-order transition"). Both study rolling variance and
+  lag-1 autocorrelation (critical-slowing-down statistics) on
+  minute-level BTC price around seven 2022–2025 liquidation cascades,
+  finding the signature present in 5 of 7 events and silent on the two
+  sudden-news shocks — event-heterogeneous, not event-invariant. This
+  reads as a fresh mechanism until a ledger grep for "critical slowing
+  down" shows it is not: **R-85 (08-21) already tried exactly this
+  statistic** (Scheffer et al. 2009 rising variance/autocorrelation) as a
+  regime-timing detector against this project's own six-episode
+  detection-lag gate — whose episodes are themselves dominated by sudden
+  news- and liquidation-driven shocks — and scored 1/6 single-indicator,
+  0/6 on a joint two-indicator AND-gate, the same partial-but-inconsistent
+  signature the new papers report on their own seven-event panel. The new
+  literature corroborates R-85's finding rather than reopening it: no new
+  door, independent confirmation from a source that did not exist when
+  R-85 ran.
+- **A direct grep check, rather than a category-level recall, of six
+  specific named signals this project's own broader closure statements
+  had described only by category:** open interest and top-trader
+  long/short ratio (R-81, both at native 5-minute cadence — NEGATIVE,
+  lags the anchor gate), hashrate (R-44/B-07 on-chain activity —
+  NEGATIVE), Google Trends and social-media discourse (closed NEGATIVE,
+  cited alongside the on-chain sweep), and DXY/VIX macro (closed NEGATIVE
+  in the same INFO-axis round). All six are confirmed already tried and
+  closed by name, not merely by category — closing the specific gap that
+  a future session grepping any one of these names by itself, rather than
+  trusting a category summary, might otherwise re-open by accident.
+
+No code changed, no strategy touched, no configuration evaluated, no
+sub-agent produced an implementable candidate. B-06's recorder was checked
+directly and is healthy (`reports/paper_trading/kelly_regime_v4_bitstamp.csv`,
+latest row 2026-08-26T10:10:00Z, on its designed cadence). **B-06 remains
+the only ranked, unblocked backlog item and this project's standing
+recommendation**, unchanged by this pass — the seventh same-day session to
+reach it independently, and the second to specifically test whether a
+brand-new (post-dating the day's earlier searches) literature result could
+change that answer. It could not: the new preprints sharpen the citation
+for R-85's existing verdict rather than opening a new mechanism.
+
+**Re-checked 08-26 (fifth pass), no round dispatched (not an R-numbered
+entry — zero configurations evaluated).** A sixth same-day session, tasked
+independently with the same brief as the five preceding 08-26 sessions
+(take the best strategy, propose an improvement vector, dispatch a
+conservative/novel branch pair, measure, promote the winner), ran
+ROUTINE.md Step 0 first (no undispatched frozen pre-registration —
+`r151_shared.py` is still the newest `_shared.py` and already has its
+matching section B entry; `origin/main` and the working branch are
+identical at `c41c889`) and the backlog-table grep second (unchanged live
+set: B-06, B-09, B-10, B-17, B-28, B-45, B-46, B-47 — B-45/46/47 remain
+`HybridBroker` code-precision items with no promotion waiting behind them,
+B-28's breadth clause remains blocked on data this repo cannot fetch, and
+B-09/B-10/B-17 are LOW/already-answered per their own rows). Best
+registered strategy by the README's own ranking is unchanged:
+`kelly_regime_v4` ($66.8K spot / $156.2K futures_5x, though **not**
+distinguishably better than `buy_and_hold` on growth — the table's own
+`≈` — and its drawdown property scoped to BTC/ETH only per R-33/R-57).
+
+Rather than force a conservative/novel *implementation* pair onto a
+direction not yet screened, this session ran its own fresh web literature
+sweep before writing any code, checking two angles distinct in wording
+(if not necessarily in substance) from the four/five prior 08-26 passes:
+
+- **Kelly / regime-switching / crypto position-sizing, August 2026.** The
+  only 2026 arXiv hit on-point is arXiv:2608.01494 "Conformal Kelly:
+  Conformal Prediction Intervals as the Scale in Fractional Kelly Position
+  Sizing" — already found and rejected by R-144 ("carries none of
+  `kelly_regime_v4`'s signature") and re-confirmed closed by the fourth
+  pass. Everything else returned (put-writing VIX/Kelly hybrids, an LLM
+  agentic-trading survey, generic Kelly explainers) is either off-market
+  (index options), off-mechanism (an LLM-agent architecture paper, not a
+  sizing rule), or non-technical content with nothing to test.
+- **Small-sample / effective-sample-size significance for regime change
+  in financial time series, 2026.** Nothing on-point and new: an
+  exponential-smoother effective-sample-size identity (a definitional
+  result, not a test this project lacks), an online-bootstrap trend
+  inference paper (a significance-procedure variant — the exact category
+  R-144's own line warns against re-trying on this claim), and a
+  test-time-adaptation paper for non-stationary series that is a
+  forecasting mechanism ("what happens next"), which the standing
+  diagnosis's one-line summary says loses to fees regardless of its
+  adaptation quality and which attacks none of the four listed
+  constraints — the same failure mode as "another indicator."
+
+Both searches terminate at leads already named and closed in this file
+(R-144, and the fourth pass's own established-literature/cross-disciplinary
+sweeps) rather than opening new ones. No code changed, no strategy
+touched, no configuration evaluated, no sub-agent produced an
+implementable candidate. B-06's recorder was checked directly and is
+healthy (`reports/paper_trading/kelly_regime_v4_bitstamp.csv`, latest row
+2026-08-26T09:35:00Z, on its designed cadence). **B-06 remains the only
+ranked, unblocked backlog item and this project's standing
+recommendation**, unchanged by this pass — the sixth same-day session to
+reach it independently. Per the fourth pass's own line, this is the
+expected outcome of a same-day re-run of this exact brief without new
+forward calendar time or a data source outside this project's stated
+constraints, and this pass adds nothing to that conclusion beyond
+independent confirmation.
+
+**Re-checked 08-26 (fourth pass), no round dispatched (not an R-numbered
+entry — zero configurations evaluated).** A fifth same-day session, tasked
+independently with the same brief as the four preceding 08-26 sessions
+(propose an improvement vector for the incumbent `kelly_regime_v4`, dispatch
+a conservative/novel branch pair, measure, promote the winner), ran
+ROUTINE.md Step 0 first (no undispatched frozen pre-registration — `r151_shared.py`
+is the newest and already has its matching section B entry) and the
+backlog-table grep second (unchanged live set: B-06, B-09, B-10, B-17, B-28,
+B-45, B-46, B-47; B-45/46/47 are HybridBroker code-precision items with no
+promotion waiting behind them per R-151's and B-47's own entries). Rather
+than force a conservative/novel implementation pair onto a direction not
+yet screened, this session dispatched one research-only sub-agent, explicitly
+briefed on everything the three prior 08-26 passes had already ruled out or
+found data-blocked, and pointed at the two axes this file's own standing
+diagnosis and R-144 describe as **less** exhausted than INFO: ERR and COST,
+plus the N≈3 effective-sample-size problem directly. It confirmed by grep
+against `docs/LEDGER.md` and live 2025–2026 web research that all three are
+in fact also saturated as of today's R-147–R-151:
+
+- **ERR.** 13+ configurations across five/six distinct notions of
+  uncertainty (sampling significance R-28/R-87/R-104; within-family and
+  cross-model-class specification disagreement R-105/R-106; distributional
+  novelty via Mahalanobis/kNN across five rounds R-109/R-112/R-115/R-121/
+  R-122; combination-weight shrinkage/Bayesian averaging closed today by
+  R-147). A recent (Aug 2026) preprint, arXiv:2608.01494 "Conformal Kelly:
+  Conformal Prediction Intervals as the Scale in Fractional Kelly Position
+  Sizing," is the closest on-point 2026 literature found — but R-144
+  (08-25) already tried and rejected this exact construction, finding it
+  "carries none of `kelly_regime_v4`'s signature." B-09's own standing note
+  (correctly-calibrated trust is already low; conformal would just say so
+  more slowly) applies to it unchanged.
+- **COST.** Closed across turnover corridors (R-131/R-133), Gârleanu–
+  Pedersen smoothing (R-64/R-128), the analytically-derived no-trade band
+  now registered as `kelly_regime_ev`/`kelly_regime_ev_fast` (R-66–69/
+  R-89/R-90), patient-limit/taker-fallback execution (R-56/R-77/B-24's full
+  sweep), Almgren–Chriss-style adaptive urgency (R-77 novel), and
+  funding-aware venue routing (R-145, today). Two 2025 papers checked
+  (an optimal-rebalancing-boundary result and arXiv:2603.01298 "Single-Asset
+  Adaptive Leveraged Volatility Control") both reduce to the
+  Constantinides/Davis–Norman no-trade-band family already shipped, or to
+  conditional volatility targeting already promoted as `kelly_regime_v3`.
+  Genuine order-placement COST work is not simulable here regardless
+  (L-14/15/16: no order-book/queue data to proxy from OHLCV).
+- **N≈3.** R-144 (today) is the decisive closure: an ETH-native event
+  calendar (not borrowed from BTC) re-run through the extended 9-episode
+  permutation test came back negative (p=0.96), and the BTC-only
+  significance was shown by an independent skeptic to hinge almost
+  entirely on a single episode (leave-one-out flips p to 0.109). R-144's
+  own line names the battery — permutation, Synthetic Control, jackknife,
+  bootstrap/PSR — "close to exhausted against the episode data this project
+  can construct without new forward time," and warns against "another
+  significance procedure on the same claim." Small-sample-inference
+  literature outside finance (clinical-trial historical-borrowing methods)
+  falls into exactly that category and was not treated as a candidate.
+
+No code changed, no strategy touched, no configuration evaluated, no
+sub-agent produced an implementable candidate. **B-06 remains the only
+ranked, unblocked backlog item and this project's standing recommendation**,
+unchanged by this pass — the fifth same-day session to reach it
+independently. The honest reading of five independent 08-26 sessions
+converging on the same conclusion by different search paths (established
+literature, recent/cross-disciplinary, and now a targeted ERR/COST/N≈3
+sweep) is that today's date has produced a genuinely exhaustive same-day
+search rather than five shallow ones: a sixth session re-running this
+brief without new forward calendar time (B-06) or a data source outside
+this project's stated constraints (order book, paid vendors) should expect
+the same answer.
+
+**Re-checked 08-26 (third pass), no round dispatched (not an R-numbered
+entry — zero configurations evaluated).** A fourth same-day session, tasked
+independently with the same brief as the two preceding 08-26 verification
+passes (propose an improvement vector for the incumbent `kelly_regime_v4`,
+dispatch a conservative/novel branch pair, measure, promote the winner),
+ran ROUTINE.md Step 0 first (no undispatched frozen pre-registration; the
+branch was already fast-forwarded to R-151 plus the latest automated
+paper-trading commit) and Step 0's backlog-table grep second (only B-06,
+B-09, B-10, B-17, B-28, B-45, B-46, B-47 are live; B-45/46/47 are HybridBroker
+code-precision items, not a strategy-improvement direction — R-151's own
+entry already says no promotion is waiting behind them). Rather than force a
+conservative/novel *implementation* pair onto a direction not yet screened —
+the specific failure this file's own parallel-round rules warn against
+("the single most likely way to manufacture a fake winner here is to run
+many searches and report the best one as though it were the only one," and
+its mirror, "running a known-losing search and dressing it up as new") —
+this session first dispatched two independent research-only sub-agents to
+find a direction that survives ROUTINE.md Step 1's four-question filter
+before any code was written, one screening established (non-2026-preprint)
+literature, one screening recent/cross-disciplinary work. Full detail in
+each sub-agent's own report; summarized here because neither produced an
+implementable candidate:
+
+- **Established-literature sweep.** Market-microstructure mechanisms (Roll
+  1984, Amihud 2002, Kyle 1985 λ, VPIN, Almgren–Chriss 2000 optimal
+  execution) either need order-book/impact data this project's bar-close
+  harness cannot express (fails Step 1 Q3), or are the specific trap
+  `camouflage_flow`/`stealth_trend`/`flow_regime` already paid for
+  (L-14/15/16: reconstructing order flow from OHLCV is a price transform,
+  not new information) and Gârleanu–Pedersen partial-adjustment execution
+  smoothing already closed as a category error against this project's
+  proportional (not quadratic) fee structure. Behavioral-finance mechanisms
+  (prospect-theory/loss-averse position sizing, disposition effect,
+  round-number anchoring) either need account/order-level data not present
+  in OHLCV, or are SIZE-axis reformulations of the `scale` factor that
+  R-62/R-87 (four independent replications) already showed carries none of
+  v4's edge — the vote does. White's (2000) Reality Check / Hansen's (2005)
+  SPA test for multiple-testing correction are genuinely untried in this
+  exact form but are an evaluation tool, not a strategy mechanism, and
+  target the same problem R-119 already closed for N≈3 ("the only two
+  remaining levers this ledger has ever named for N≈3 are a genuinely
+  different window… or forward evidence").
+- **Recent/cross-disciplinary sweep, with live data probes rather than
+  literature claims alone.** Bitcoin ETF creation/redemption flow data
+  fails Step 1 Q3 outright — flow data has only existed as a market force
+  since January 2024, entirely inside/after `OOS_START`, zero inner-train
+  or inner-validation coverage, a nonexistence problem rather than a
+  paywall. SOPR and NUPL fail Q2 (NUPL is an exact monotonic transform of
+  MVRV, and SOPR — computed only over coins that moved that day, with no
+  dormant-supply denominator diluting the coupling at all — is *more*
+  price-coupled than the mechanism R-74 already killed for exactly that
+  reason, not merely adjacent to it) **and** Q3, confirmed by a live query
+  against `bitcoin-data.com`'s free SOPR/NUPL endpoints: both return a hard
+  rolling window of exactly 1,461 rows starting 2022-08-26 regardless of
+  the requested date range, covering 0% of inner-train and ~4 months of
+  inner-validation — the same shape as R-143's Deribit-snapshot and the
+  Kalshi paid-vendor finding already in this section. **Two doors are
+  newly and specifically named here, checked live rather than assumed
+  closed by keyword association** (an R-126 ledger grep for "exchange
+  flow" had matched this file's own table-of-contents mention of the term
+  without a round ever building or measuring it): **exchange netflow**
+  (wallet-clustering-derived BTC flow onto/off exchanges — genuinely
+  distinct from MVRV/realized-cap, on-chain activity/B-07/R-44, and
+  stablecoin supply/R-54/R-55/R-58, so it clears Q2) and **DeFi lending
+  rate / stablecoin-yield-curve** (a *price* of USD-leverage demand,
+  distinct from R-54/R-58's aggregate supply-quantity signal, so it too
+  clears Q2) — both fail **Q3** on live checks: no free full-history
+  exchange-netflow endpoint exists on the one aggregator (bitcoin-data.com)
+  that does serve SOPR/NUPL/MVRV for free (every netflow/inflow/outflow/
+  reserve path 404s), and DeFi lending data fails on two independent
+  grounds — non-existence (Compound launched 2018-09, Aave 2020-01, so even
+  a perfect feed misses this project's 2018 stress episodes) and access
+  (DefiLlama's yields-history API returned `HTTP 402`, Aavescan gates
+  multi-year export behind a paid tier). Both are now named, specifically
+  diagnosed, and closed for a citable reason rather than silently retried
+  by a future session that greps the word "flow" and assumes it is settled.
+
+No code changed, no strategy touched, no configuration evaluated, no sub-agent
+produced an implementable candidate. **B-06 remains the only ranked,
+unblocked backlog item and this project's standing recommendation**,
+unchanged by this pass — the fourth same-day session to reach it
+independently, three of them (this one included) via a fresh literature
+sweep rather than by trusting an earlier pass's coverage claim.
+
+**Re-checked 08-26 (second pass), no round dispatched (not an R-numbered
+entry — zero configurations evaluated).** A second same-day session, tasked
+independently with the same brief (propose an improvement vector for the
+incumbent `kelly_regime_v4`, dispatch a conservative/novel branch pair,
+measure, promote the winner), ran ROUTINE.md Step 0 first, found no
+undispatched frozen pre-registration, then re-read this section and the
+first 08-26 pass below before doing its own fresh literature sweep rather
+than trusting the earlier pass's coverage claim at face value. Three
+2025–2026 leads were checked and none opens a non-duplicate, simulable
+door:
+
+- **Prediction-market-implied crypto volatility** (arXiv:2604.01431,
+  "Do Prediction Markets Forecast Cryptocurrency Volatility? Evidence from
+  Kalshi Macro Contracts") is a genuinely different data class from the
+  DVOL level/momentum this project already closed (R-73/R-136) — it is
+  event-contract pricing, not options-implied vol. It fails the same gate
+  R-143 already found for Deribit's option chain: no free, sufficiently
+  long historical feed. Kalshi's crypto contracts are a 2025-era product
+  with third-party historical access sold by paid data vendors
+  (lycheedata.com, predexon.com), not a free public endpoint this
+  project's fetch scripts pattern (Wikimedia REST, Deribit, Binance) can
+  reach, and even a paid feed would cover at most ~1–2 years against the
+  2017–2026 backtest window — a coverage-gap problem, not a mechanism
+  problem, same shape as R-143's.
+- **Online conformal prediction via universal-portfolio algorithms**
+  (arXiv:2602.03168) reads, on its face, like a new ERR-axis primitive.
+  It is not a new *locus*: applying it here means wrapping error control
+  around a universal-portfolio-style exposure mixture, which is exactly
+  `universal_kelly`'s own SIZE mechanism, already given a dedicated round
+  and closed (R-149, "the first continuous-grid application of a mixing
+  primitive... found nothing to track"), on an ERR axis already closed in
+  five independent constructions (R-31, R-87 x2, plus the two regime-timing
+  families folded into ERR by the standing diagnosis). It attacks the
+  intersection of two already-closed loci, not a new one.
+- **CEX/DEX perpetual funding-rate two-tier arbitrage** (2025 study on
+  Binance/BitMEX vs. ApolloX/Drift funding spreads) needs DEX order-book
+  and funding data this project has never fetched from any venue — a new
+  external dependency, not a mechanism expressible on committed or
+  fetchable data, the same shape of blocker R-15's still-`BLOCKED`
+  funding-harvest/cash-and-carry direction already carries.
+
+No code changed, no strategy touched, no sub-agent dispatched — forcing a
+conservative/novel pair onto any of the three leads above would mean
+re-testing an axis already closed (the universal-portfolio case) or
+building unavailable-data infrastructure and calling the resulting
+proxy a signal, which L-14/L-15/L-16 already show the cost of.
+**B-06 remains the only ranked, unblocked backlog item and this
+project's standing recommendation**, unchanged by this pass.
+
+**Re-checked 08-26 (first pass), no round dispatched (not an R-numbered
+entry — zero configurations evaluated, so this is not a research round and
+is not filed as one, per ROUTINE.md's "not tested is not a negative
+result").**
+A session tasked with proposing a fresh improvement vector, dispatching a
+conservative/novel pair of branches and measuring them ran ROUTINE.md
+Step 0/1 first, as required, and found every candidate failed Step 1's
+own duplicate filter before any code was written:
+
+- A dedicated reconnaissance pass over Section C (ruled out) and this
+  section confirmed R-150's own conclusion independently: every axis of
+  every registered, profitable, multi-signal object (`kelly_regime_v4`,
+  `champions_council`, `hedge_experts`, `replicator_book`,
+  `universal_kelly`) is closed, and all 19 INFO-axis signals, 8
+  regime-timing detectors, 5 ERR-axis constructions and the COST-axis
+  turnover/execution work are each closed with a decisive verdict.
+- Fresh 2026 web literature was checked specifically for a data channel
+  or mechanism this project could not already construct (Kelly/vol-target
+  crypto trend research, funding/basis carry, options skew and
+  liquidation-cascade early-warning work). The one genuinely novel-looking
+  lead — 25-delta risk-reversal (put/call skew) as a forward-return
+  signal, distinct from the DVOL *level/momentum* this project already
+  tried and closed (R-73/R-136) — is not simulable here: R-143 already
+  checked live and found no historical Deribit option-chain endpoint,
+  only a trailing-day IV snapshot. Not a new finding, but independent
+  confirmation that this specific door is still shut.
+- Maker/limit-order execution (an execution-mechanism axis, orthogonal to
+  signal/sizing) looked promising until a ledger grep surfaced R-56:
+  already tried, both a conservative (100%-fill-on-touch) and a novel
+  (Cont & Kukanov 2017 queue-position fill-probability) branch, both
+  NEGATIVE, closed.
+- B-44 (the only other OPEN item) is a harness precision footnote in
+  `HybridBroker` that only matters if a future round reuses that specific
+  two-leg harness; R-145 itself found no economic reason to revisit
+  venue-routing on `kelly_regime_v4`, so fixing B-44 now would not unlock
+  any pending test.
+
+**B-06 is confirmed healthy** (`reports/paper_trading/`, latest record
+2026-08-26T04:40:28Z, ~30-90 minute cadence as designed) and remains the
+only ranked, unblocked backlog item and this project's standing
+recommendation. Forcing a conservative/novel dispatch onto an already-shut
+axis to produce an artifact would have duplicated closed work rather than
+added evidence, which ROUTINE.md's parallel-round rules treat as the
+specific failure mode to avoid ("the single most likely way to
+manufacture a fake winner here is to run many searches and report the
+best one as though it were the only one" — the inverse failure, running a
+known-losing search and dressing it as new, is the same dishonesty in the
+other direction). No code changed; no strategy touched.
+
+---
+
 ## Appending an entry
+
+**First: does this session get an entry at all?** A session that evaluated
+**zero configurations** did not produce a round and must not write one. It
+appends a single row to
+[section E](#e-verification-passes-no-round-dispatched--newest-first) and
+stops — see ROUTINE.md Step 0b. Twenty sessions wrote 1,285 lines of prose
+instead, and one of them deleted another's record in the process (R-158).
+Everything below is for sessions that actually measured something.
 
 One session, one entry. Copy this skeleton to the **top** of
 [section B](#b-research-log-newest-first) — newest first, always — and

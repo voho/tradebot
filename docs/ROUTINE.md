@@ -24,10 +24,19 @@ behind is invisible to every other step here — the ledger has no section for
 it, so it reads as if nothing happened. Check for it:
 
 ```bash
+git fetch --unshallow 2>/dev/null || git fetch origin main   # SEE THE WARNING BELOW
 ls experiments/*_shared.py | tail -3        # newest frozen pre-registrations
 grep -c "R-<nn>" docs/LEDGER.md             # is that round recorded in section B?
 git log --oneline -5                        # a "WIP"/"dispatched" commit is the tell
+git rev-parse HEAD origin/main              # equal => nothing in flight elsewhere
 ```
+
+**Unshallow before you trust that last line.** On a shallow clone
+`git merge-base HEAD origin/main` returns **empty, with no error**, against a
+genuinely-related ref — so the one step-0 check that would catch a real fork
+fails silently exactly when it matters. Pass 23 (section E) read a
+fetch race this way and spent the session chasing "44 rounds of unmerged work
+off `main`" that did not exist. One command rules it out.
 
 An `r<nn>_shared.py` with no matching section B entry is an **undispatched
 frozen pre-registration, and executing it outranks both the backlog and any
@@ -88,7 +97,7 @@ paragraph can talk you out of it:
 
 ```bash
 # every backlog item still live, with its status cell
-awk '/^## D\. Backlog/,0' docs/LEDGER.md \
+awk '/^## D\. Backlog/,/^## E\./' docs/LEDGER.md \
   | grep -oE "^\| \*\*B-[0-9]+\*\* \|.*" \
   | awk -F'|' '{printf "%-9s %s\n", $2, substr($5,1,70)}'
 ```
@@ -112,6 +121,64 @@ opinion. The table is the state.
 **Multi-day threads are expected.** If today's work does not finish,
 write the state into the ledger with verdict `PARKED` and stop. Do not
 force a shippable strategy into a single session.
+
+---
+
+## Step 0b — The saturation check: is there anything to do at all?
+
+The routine above assumes each firing meets a backlog with work in it. When
+it does not, the instruction *"invent a new direction only when the backlog
+is empty"* becomes a standing order to manufacture one — and this brief
+fires roughly **hourly**, while research ideas do not arrive hourly. The
+result is measured in R-158: **twenty consecutive passes, 08-26 through
+08-27, evaluated zero configurations between them** and deposited 1,285
+lines of prose saying so. That is not a research program running slowly; it
+is a loop.
+
+So before Step 1, count. Section E's table is newest-first and every session
+adds a row to it — a null pass adds a numbered one, a session that dispatches
+a round adds a `—` row naming that round. So the consecutive-null count is
+exactly *the numbered rows above the first `—`*, and it needs no git parsing:
+
+```bash
+# consecutive null passes since the last dispatched round
+awk '/^## E\. Verification/,/^### E-archive/' docs/LEDGER.md \
+  | grep -E "^\|" \
+  | awk -F'|' '$2 ~ /^ *#/ || $2 ~ /^ *-+ *$/ {next}
+               $2 ~ /—/ {exit} {n++} END {print n+0}'
+```
+
+Do **not** count these from `git log` subject lines. Verification-pass commit
+subjects cite R-numbers themselves (pass 23's names five), so the obvious
+`git log --oneline | grep -m1 "R-1[0-9][0-9]"` matches a null pass and reports
+0 every time — it is wrong in the direction that keeps the loop running.
+
+Then apply the rule. It is mechanical on purpose — every one of those twenty
+passes reasoned its way to "one more sweep can't hurt," and each was locally
+right:
+
+| consecutive null passes | what this session does |
+|---|---|
+| **0–2** | Normal. Proceed to Step 1; a fresh sweep is reasonable. |
+| **3+** | **Do not open a new literature sweep.** The prior passes' searches are in section E — read the table, not the archive. Proceed to Step 1 only with a direction that is *not* a literature search: an infrastructure or methodology item, a measurement that annotates an existing round, or a genuine data channel newly become fetchable. If none exists, append one row to section E and **stop**. |
+| **5+** | The above, **plus notify the project owner once** that the firing cadence exceeds the rate at which evidence arrives here, with the pass count and the zero-configuration total. Do not re-argue it every pass afterwards — one notification per escalation, and say in the row that it was sent. |
+
+**Stopping is a valid outcome of this routine, and it is the honest one when
+the backlog is exhausted.** A pass that appends a row and stops has run the
+routine correctly and completely. The failure mode this rule exists to
+prevent is not idleness — it is a session that, finding nothing, writes a
+long entry *about* finding nothing and thereby looks productive to the next
+session, which then repeats it.
+
+Two things remain worth doing at any pass count, because they are cheap and
+they are how a null day still earns its keep:
+
+- **Verify, don't re-search.** Confirm the four live backlog rows against
+  their table text, confirm no in-flight pre-registration, confirm B-06's
+  recorder is still writing. That is the row's content.
+- **Fix the instrument.** If the routine, the ledger format or the harness
+  has a defect, that is a legitimate round with an R number — R-158 is one,
+  and so are R-151 and B-44. An exhausted backlog is the *best* time for it.
 
 ---
 
@@ -371,9 +438,24 @@ Then, by verdict:
   run; the ledger is the record now.
 - **BLOCKED / PARKED** → ledger entry with the blocker named and what
   would unblock it.
+- **No round dispatched at all** (Step 0b sent you here: zero configurations
+  evaluated) → **one row in section E**, and nothing anywhere else. Not an
+  R number, not a section in B, and *not* a paragraph at the head of section
+  D — that is the specific mistake R-158 had to undo, and the reason it went
+  unnoticed for twenty passes is that twenty interchangeable prose blobs look
+  like diligence. Five short cells: pass number, commit time, step-0 result,
+  what was attempted, what came of it. If the outcome genuinely does not fit
+  in a cell, it was not a null pass — write it up in B as a round.
 
 Finally, **re-rank the backlog** at the bottom of the ledger, then
 commit and push.
+
+**Re-ranking means editing the table, not appending a paragraph above it.**
+Section D's header carries one `Re-ranked after R-nn` paragraph per round and
+had grown to 4,556 lines — in a section whose whole point is a table that
+Step 0 makes you `grep` because nobody reads that far. If a round changes an
+item's status, change the item's status cell and strike it if it is closed;
+add a paragraph only when *why* it moved will not fit in the note column.
 
 ---
 
@@ -544,4 +626,11 @@ multiplier**, not a free speedup, and it has to be paid for:
   not in the file, it is not in the strategy.
 - **Report ranges, not points**, wherever a bootstrap is available.
 - One session, one idea, one ledger entry — a new section at the top of
-  the ledger's section B, never a row appended to a table.
+  the ledger's section B, never a row appended to a table. **Unless the
+  session had no idea to run**, in which case it is one row in section E and
+  no entry at all: the inverse rule matters just as much, because a session
+  with nothing to report that writes a section-B-sized write-up anyway is
+  how twenty passes produced 1,285 lines and zero measurements (R-158).
+- **The routine can return "nothing to do", and that is a pass, not a
+  failure.** Step 0b decides it. Every instruction above is written for a
+  session that has work; none of them is a reason to manufacture some.
