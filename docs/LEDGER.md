@@ -17373,65 +17373,94 @@ trip.
 
 ## D. Backlog (ranked)
 
-**Re-checked 08-27 (twenty-second same-day/next-day session), no round
+**Re-checked 08-27 (twenty-third same-day/next-day session), no round
 dispatched (not an R-numbered entry — zero new configurations
-evaluated).** Step 0: `git fetch origin main` found `origin/main` at
-`c2a107c`, matching this branch's own HEAD — no in-flight round, no
+evaluated).** Step 0: this session's initial `git fetch origin main`
+read `origin/main` as stale at `6d4f118` (R-113 era, 08-24) against this
+branch's own HEAD at the twenty-second pass's `3202787` — a 68/72-commit
+divergence with **no discoverable merge-base**, because the working copy
+was a shallow clone and the two refs' visible histories didn't overlap.
+Read naively this looked like ~44 rounds of unmerged work sitting off
+`main`, which would have been the most material finding of the whole
+same-day run. `git fetch --unshallow` resolved it: a concurrent
+process force-updated `origin/main` to this branch's exact HEAD
+(`3202787`) during the fetch, the same "force-updated between fetches"
+event the twenty-first pass's own entry already names, so the divergence
+was an artifact of a shallow clone's fetch race, not a real gap — after
+unshallowing, `origin/main` and HEAD are identical. **Methodology note
+for future passes:** a shallow clone's `git merge-base` can return empty
+against a genuinely-related ref with no error, which makes a step-0
+"does `origin/main` match HEAD" check silently unreliable exactly when it
+would matter most (a real fork). `git fetch --unshallow` (or at least a
+deeper `--depth`) before trusting that comparison costs one command and
+would have caught this immediately instead of via a false alarm. No
 undispatched frozen pre-registration (`experiments/r99_shared.py` already
 has its matching R-99 entry, newest unchanged since the twenty-first
-pass). Same four live backlog rows as all twenty-one prior passes —
+pass). Same four live backlog rows as all twenty-two prior passes —
 **B-06, B-09, B-17, B-28** — re-verified directly against their full row
-text, none actionable, same reasons as the twenty-first pass's entry
+text, none actionable, same reasons as the twenty-second pass's entry
 immediately below.
 
-This pass added one data-driven check the prior twenty-one had not run
-directly: **B-06's own accumulated forward record.**
-`reports/paper_trading/kelly_regime_v4_bitstamp.csv` now covers
-2026-08-19T23:05Z→2026-08-27T03:20Z (~7.2 days, 206 rows; unattended
-cadence only since 08-26, matching R-78's own diagnosed gap). This is
-~0.01% of R-78's 18.9-year median horizon, and R-78's horizon is not a
-"not enough time has passed" problem: it is a direct function of the
-ratio between the strategy's daily effect size and the ~3.0%/day
-common-mode noise, and R-78 proved analytically that no valid test —
-sequential or fixed-`n` — clears that ratio below a 7.1-year floor. A
-quick sanity check confirms it here: the paired-difference standard error
-over 7 days (≈3%/√7 ≈ 1.1%/day) still swamps any plausible daily edge by
-orders of magnitude, so no cheaper test reads a verdict off this record
-yet. B-06's evidentiary status is unchanged from R-78/R-83 — recorded so
-a future pass does not re-ask the same question from zero.
+B-06's forward record: `reports/paper_trading/kelly_regime_v4_bitstamp.csv`
+is unchanged from the twenty-second pass's own check (still 206 rows,
+still ending 2026-08-27T03:20Z — no new unattended cadence tick landed
+between that pass and this one), so that check is not re-run; see the
+twenty-second pass's entry immediately below for the full reasoning
+(~0.01% of R-78's 18.9-year median horizon, orders of magnitude short of
+resolving anything).
 
-Six further web searches, each checked against section C and all
-twenty-one prior passes' closed-candidate lists rather than judged on
-citation recency: LPPLS+sentiment-index fusion (Cao/Wunkaew/Geman 2025;
-duplicates closed LPPLS (R-141, 0/6) plus closed sentiment/social-data —
-combines two already-closed shapes), a crypto-liquidation
-critical-slowing-down study (arXiv:2607.27070; already cited and closed
-inside R-85's CSD round and R-156's Elliott-wave annotation), GRO/
-numéraire optimal-e-value refinements (same anytime-valid-sequential
-shape as R-71/R-78/R-83 — R-78's floor argument forecloses any
-e-value construction, not just the one it tested), bounded-confidence
-opinion dynamics (would be a 13th price-derived early-warning signal
-against the same six-episode gate twelve mechanisms have already failed),
-SIR/epidemic contagion-cascade models (same "detect the cascade early"
-shape as CSD/Hawkes/BOCPD, same gate), and H∞/CVaR-relaxed robust-control
-sizing (closest to genuinely different math, but reduces to the same
-"shrink exposure under uncertainty" shape as the closed DRO/
-Wasserstein-Kelly and CDaR-budget rounds). No candidate survives step 1's
-non-duplicate test. **No conservative/novel branch pair dispatched** —
-per ROUTINE.md, "not tested is not a negative result," and none of the
-six passed step 1 far enough to be tested.
+This pass dispatched one research-only sub-agent (per ROUTINE.md's
+"Running directions in parallel," a primary is dispatched before any
+skeptic — here the sub-agent *was* the primary, briefed with the full
+standing diagnosis, the current backlog state and the specific list of
+mechanism families the twenty-two prior passes had already closed, so it
+would not re-search them) with a brief narrower than the twenty-first and
+twenty-second passes' own: attack the "vote" component specifically
+(R-62's finding that the vote, not the volatility-scale factor, carries
+`kelly_regime_v4`'s whole edge), or the COST axis specifically (the one
+constraint R-65 showed can actually move). Seven searches (Theil-Sen /
+repeated-median robust slope estimators, recursive-least-squares and
+LMS adaptive filters, optimal-trading-rate extensions to Kelly sizing),
+each checked against section C and the closed-candidate lists by grep
+before being reported. Result: no qualifying candidate. RLS/LMS adaptive
+filters and ensemble Kalman are, mathematically, recursive linear
+regression / linear state-space filters — the same Levine & Pedersen
+(2016) equivalence class R-146 already closed for EMA/HP-filter/Kalman
+variants, and Kalman-LLT itself already failed as a regime detector
+(R-83, 1/6 → 2/6 on the six-episode gate). Theil-Sen / repeated-median
+slope estimation is not literally a linear filter, but it is a third
+instance of the axis R-146 named "close to exhausted" — a robust
+central-tendency *statistic* feeding the vote's comparison, which R-146
+found gets absorbed by v4's own 10% latching deadband before it ever
+reaches the traded target; a robust *slope* statistic is the same
+substitution shape and the sub-agent judged it did not honestly clear the
+non-duplicate bar. Fractional differentiation as a vote-input
+representation is already closed twice over (R-124, SIZE-axis and an
+11th regime-timing detector, both NEGATIVE). Almgren-Chriss execution
+timing on v4's own fills is already closed (R-77, fee savings real,
+Sharpe deltas inside the noise floor). Gârleanu-Pedersen partial
+adjustment on one instrument is already closed (R-64, no-trade region
+does everything, GP's own smooth-rate term ablates to ~0) — the 18x COST
+win this brief's own framing points to (R-65) is on the cross-sectional
+multi-asset panel, which is exactly what B-17/B-28 already flag as
+blocked. **No conservative/novel branch pair dispatched** — per
+ROUTINE.md, "not tested is not a negative result," and nothing cleared
+step 1.
 
-Ninth consecutive same-day/next-day pass (fourteenth through
-twenty-second) to reach this conclusion. Per the twenty-first pass's own
-statement that it would not re-argue the firing-cadence flag further
-without a material change, and since nothing about the cadence or its
-prior unactioned escalations has changed, this pass does not re-escalate
-and does not send a further notification. **B-06 remains the only ranked
-backlog item and is explicitly not a plan to act on.** Next session
-should not repeat the six searches or the B-06 recheck above; either
-outcome (backlog status or B-06's horizon) needs materially more elapsed
-forward-trading time or a structurally new, currently-unfetchable data
-source (B-28) to move.
+Tenth consecutive same-day/next-day pass (fourteenth through
+twenty-third) to reach this conclusion. Per the twenty-first and
+twenty-second passes' own statement that they would not re-argue the
+firing-cadence flag further without a material change, and since nothing
+about the cadence or its prior unactioned escalations has changed, this
+pass does not re-escalate and does not send a further notification —
+the shallow-clone methodology note above is new and worth a future
+session's attention, but is a process fix, not a finding that changes
+what the project owner needs to act on today. **B-06 remains the only
+ranked backlog item and is explicitly not a plan to act on.** Next
+session should not repeat this pass's seven searches; a genuinely new
+attempt still needs either a structurally different data source this
+repo cannot currently fetch (B-28), or B-06's own forward record to
+accumulate materially further.
 
 **Re-checked 08-27 (twenty-first same-day/next-day session), no round
 dispatched (not an R-numbered entry — zero new configurations
