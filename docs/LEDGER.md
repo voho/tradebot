@@ -316,6 +316,8 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### IN PROGRESS: R-163 -- Turtle-style pyramiding (Faith 2007 / Zarattini 2026), a path-dependent trade-level SIZE mechanism on kelly_regime_v4: a literal discrete 4-unit ATR stack (conservative) vs. a continuous two-sided episode-relative excursion multiplier (novel). Pre-registration frozen at `experiments/r163_shared.py`; conservative/novel branch agents dispatched, no verdict yet.
+
 ### R-162 · 08-27 · NEGATIVE (both branches) — Kaufman (1995) Efficiency Ratio as a two-sided SIZE-axis conviction modifier on `kelly_regime_v4`; on real BTC data the statistic sits so close to v4's own scale/vote that it fails the non-collinearity kill switch in both branches, and the (tiny) surviving deltas fail the plateau/ETH-sign gate anyway
 
 **Direction.** This session's scheduled brief was the generic "propose an
