@@ -316,6 +316,8 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+### IN PROGRESS: R-168 -- cross-venue price fusion (equal-weight Coinbase spot + Deribit BTC/ETH-PERPETUAL close, conservative; volatility-regime-conditioned fusion weight reusing `kelly_regime_v3`'s own hysteresis vol-state machine, novel) feeding `kelly_regime_v4`'s VOTE anchor construction -- the first INFO-axis round to change the vote's own price SOURCE rather than its statistic (R-146), combination weights (R-147), or add a spread-derived brake alongside it (R-41/R-42); SCALE is untouched in both branches. Pre-registration frozen in `experiments/r168_shared.py`, including a Step-0 non-degeneracy measurement (corr=0.9894 vs the unmodified vote on the 83.2% BTC overlap window, 3.22% of bars carry a full vote flip, discrete flip-count 240->204) run before dispatch. Holdout not touched.
+
 ### R-167 · 08-27/08-28 · NEGATIVE (both branches) — anytime-valid concentration bounds (Howard et al. 2021 peeled/doubling Hoeffding, conservative; Waudby-Smith & Ramdas 2024 fixed-fraction betting, novel) on R-161's own RCPS cap architecture; both engines close the "different guarantee family" escape hatch R-161's own entry named, via two different failure modes that share one root cause
 
 **Direction.** This session's scheduled brief was the generic "take the best
