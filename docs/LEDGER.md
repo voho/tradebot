@@ -316,6 +316,16 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+**IN PROGRESS: R-178** — synthetic, DVOL-priced Black-Scholes options
+overlay on `kelly_regime_v4` (conservative: literal rolling protective
+collar, Israelov & Klein 2016; novel: fitness-switched VRP harvest/hedge,
+buying convexity when v4's own vote reads bearish/uncertain and harvesting
+premium when it reads confidently bullish). Frozen pre-registration in
+`experiments/r178_direction.md` and `experiments/r178_shared.py`; both
+branches dispatched, not yet reported. This stub will be replaced by the
+full `### R-178` entry once both branches report, per R-131/R-133's
+collision-avoidance convention.
+
 ### R-177 · 08-28 · NEGATIVE (both branches) — a signed (long-short) exposure for `kelly_regime_v4`, the specific alternative R-37 built the machinery for and declined to run
 
 **Direction.** Off-backlog (still only **B-48**, a documentation/formatting
