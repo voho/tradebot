@@ -316,15 +316,207 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
-**IN PROGRESS: R-178** — synthetic, DVOL-priced Black-Scholes options
-overlay on `kelly_regime_v4` (conservative: literal rolling protective
-collar, Israelov & Klein 2016; novel: fitness-switched VRP harvest/hedge,
-buying convexity when v4's own vote reads bearish/uncertain and harvesting
-premium when it reads confidently bullish). Frozen pre-registration in
-`experiments/r178_direction.md` and `experiments/r178_shared.py`; both
-branches dispatched, not yet reported. This stub will be replaced by the
-full `### R-178` entry once both branches report, per R-131/R-133's
-collision-avoidance convention.
+### R-178 · 08-28 · NEGATIVE (both branches) — a synthetic, DVOL-priced Black-Scholes options overlay on `kelly_regime_v4`; the collar fails R-33 risk-matching and its own plateau requirement, and the VRP-harvest switch fails its own frozen falsification test outright
+
+**Direction.** Off-backlog (still only **B-48**, a documentation/formatting
+item, plus four already-inactionable rows). Step 0b's saturation count was
+**2** consecutive null passes since R-176's own dispatch ("0–2: normal").
+This session's scheduled brief was the generic "take the best strategy,
+propose an improvement direction, research it, dispatch conservative/novel
+sub-agents, measure, promote the winner" (same brief R-170/R-175's entries
+name). A background research sub-agent surveyed the standing diagnosis,
+section C's ruled-out table and recent rounds, ran real web searches, and
+proposed: layer a synthetic options structure, priced off REAL Deribit
+DVOL via Black-Scholes, additively on top of `kelly_regime_v4`'s own
+unmodified position — trading a per-*regime* (N≈3) detection problem for a
+per-*expiry* (N≈150–280 weekly cycles over DVOL's 2021-03-24→2026-08-21
+coverage) cost/premium problem. **Attacks N≈3** primarily, secondarily
+COST. **Not a duplicate of** R-73 (DVOL as a directional vote INPUT,
+NEGATIVE — here DVOL only PRICES a new instrument, never predicts
+anything), R-136 (DVOL blended into the SCALE volatility *estimate*,
+NEGATIVE — no volatility estimate is touched here), R-170 (VRP as one of
+four meta-labeling *features* gating v4's existing position multiplicatively
+— here nothing about v4's existing position is gated; a wholly separate
+position is opened alongside it). Confirmed independently by the operator
+with a direct grep of the ~25,900-line ledger for
+`black-scholes|protective put|covered call|\bcollar\b|synthetic
+option|strike price|option overlay|delta.hedg`: **zero hits** anywhere
+before this round. Full citations (Israelov & Klein 2016; Bakshi & Kapadia
+2003; Alexander & Imeraj 2021; Gârleanu, Pedersen & Poteshman 2009; Brock &
+Hommes 1998), the four-question Step 1 filter, the ETH data-source
+correction (this project's usual `ethusd_bitfinex_5m.csv.gz` falsification
+file ends 2019-12-31, entirely before DVOL exists — `ethusd_coinbase_spot_5m.csv.gz`
+is the correct series, named explicitly so both branches used the same
+one) and both branches' frozen falsification rules are in
+`experiments/r178_direction.md`, and the shared, self-tested engine
+(`vote_frac`, `simulate_overlay`, a no-scipy Black-Scholes pricer using the
+Abramowitz & Stegun 1964 normal-CDF approximation) is in
+`experiments/r178_shared.py` — both committed (`5e4fc8c`, "R-178 (WIP):
+announce in-progress round") before either branch was dispatched, per
+step 0's collision-avoidance convention. Two disclosed pre-dispatch fixes,
+made before any branch was dispatched or any number existed: the shared
+engine's original single `stance` array couldn't express the conservative
+branch's asymmetric collar legs without a hacky double-call, so it was
+replaced with independent `put_stance`/`call_stance` arrays (`588af99`)
+before either branch started; and the ETH data-source correction above
+(`0d8a817`).
+
+**Methodology note, disclosed up front.** DVOL's coverage (2021-03-24
+onward) starts *inside* ROUTINE.md's own inner-validation window and
+entirely after inner-train ends — an inner-train-only sweep would see 0%
+coverage. Following R-170's own precedent exactly, both branches iterated
+and selected on `[2021-03-24, 2022-12-31]` (DVOL's start through
+inner-validation's own end) rather than inner-train alone; the
+pre-registered holdout stayed exactly `OOS_START = 2023-01-01` onward,
+which DVOL covers in full.
+
+**What was done.** Two parallel unregistered variants on disjoint files,
+both calling the shared engine on `kelly_regime_v4`'s own unmodified,
+already-registered equity curve (byte-identical trades/sizing in both
+branches; only an additive overlay differs). **Conservative**
+(`experiments/r178_conservative_collar.py`): unconditional weekly
+protective collar (`put_stance≡+1, call_stance≡-1`, both 10% OTM).
+**Novel** (`experiments/r178_novel_vrp_switch.py`): stance switches every
+roll on v4's OWN existing vote (`frac≤1/3` → long strangle,
+`put_stance=call_stance=+1`, pay for convexity when v4's own read is
+bearish/uncertain; `frac≥2/3` → short strangle, `put_stance=call_stance=-1`,
+harvest the vol risk premium when v4's own read is confidently bullish).
+**Configs evaluated: 34** (conservative: 17 — 12-point
+`overlay_frac×moneyness×cost_bps` sweep + 1 frozen primary on BTC
+futures_5x, + 3 frozen-primary reads on BTC spot/ETH futures_5x/ETH spot,
++ 1 extra `cost_bps=100` stress point; novel: identical structure, 17).
+Both branches' own falsification tests were run on the DVOL-covered
+pre-holdout window, exactly as frozen: conservative's Monte Carlo-style
+bounded stress resample (`scripts/stress_test.py`'s own windows don't fit
+inside the DVOL-covered span, so a 30-trial bounded resampler was built
+per the frozen fallback clause, traded region confined to
+`[2021-03-24, 2022-12-31]`); novel's paired stationary-block-bootstrap 95%
+CI on Δlog-growth (block=864 bars/3d, n=2000, seed=178) vs. v4 alone, on
+BTC and ETH independently. An independent skeptic sub-agent then
+re-derived the conservative branch's numbers from scratch (own
+`run_backtest`/window-slicing/Sharpe/maxDD code, only `simulate_overlay`
+itself reused unmodified) before the operator read the holdout, per
+ROUTINE.md's "dispatch a skeptic only after the primary reports ≥1
+evaluated configuration" convention — the novel branch needed no separate
+skeptic pass since it already failed its own frozen falsification test
+decisively pre-holdout (see Result). The operator then ran the
+pre-registered holdout (`OOS_START="2023-01-01"` onward) once, directly,
+for both branches' frozen primary config, across all four market/asset
+combinations, in one script (`/tmp/.../r178_holdout.py`, not part of
+either branch's own files).
+
+**Result — conservative (collar).** Pre-holdout
+(`[2021-03-24, 2022-12-31]`, BTC futures_5x, frozen primary
+`overlay_frac=0.5, moneyness=(0.90,1.10), cost_bps=20`): combined +22.09%
+vs. v4-alone −21.08%, Sharpe 0.54 vs −0.43, max drawdown 21.11% vs 32.34%
+— a large apparent edge, and the bounded stress battery (30 trials) found
+median drawdown reduction +6.6pp and median Sharpe delta +1.40, both far
+outside the ±0.2 R-20 noise floor, 0% liquidation — **so the branch's own
+frozen falsification test formally PASSES.** The skeptic's independent
+re-derivation matched these numbers exactly (no discrepancy, no lookahead
+found — `align_dvol_causal` verified line-by-line, no full-series
+fit anywhere) but found three problems the falsification test alone does
+not catch: (1) **R-33 risk-matching fails, in the wrong direction** — the
+combined arm's realized volatility (28.4%/yr) is *higher* than v4-alone's
+(24.3%/yr), and the overlay's own average notional ($17,166) exceeds v4's
+own average notional ($10,759) — this is not a risk-reduced position, it
+is a larger, differently-shaped aggregate bet; (2) **the plateau
+requirement fails outright** — return scales monotonically with
+`overlay_frac` (−1.4% at 0.25, +22% at 0.50, +84% at 1.00), the signature
+of a fitted peak, not a region; (3) **the apparent drawdown protection is
+a second-half-of-the-window artifact** — splitting the inner-validation
+window in half, the **first** half (which contains the one acute crash in
+the span, the May 2021 −50% flash event) shows **zero** drawdown
+improvement (20.71% vs. v4-alone's own 21.11%, i.e. marginally worse);
+**all** of the headline +14pp reduction comes from the second half (the
+grinding 2022 Luna/3AC/FTX bear), so the 30-trial stress "replication" is
+correlated pseudo-replication of one macro event, not independent
+evidence, and the collar did not protect against the acute-crash episode
+it is nominally designed for. **Holdout** (`OOS_START=2023-01-01`
+onward, a predominantly bullish 3.5-year span): BTC futures_5x combined
++329.36% vs. v4-alone +374.33% (Sharpe 1.28 vs 1.36); BTC spot +215.56%
+vs. +242.87% (Sharpe 1.14 vs 1.23) — **the candidate underperforms v4
+alone on BOTH BTC markets**, and drawdown is not improved either (33.03%
+vs 32.97% futures; 28.27% vs 27.82% spot — both marginally *worse*),
+exactly the "gives up upside and pays the VRP for no matching payout"
+failure this round's own Step 1 named in advance and Israelov & Klein's
+own paper predicts outside a matching crash. ETH shows the opposite sign
+(candidate beats v4-alone on both ETH markets, return and Sharpe), the
+same market-inconsistency the pre-holdout window already showed on
+drawdown — never resolved, not investigated further since the BTC holdout
+result alone is decisive. No liquidation anywhere, any window, any market.
+
+**Result — novel (VRP switch).** Pre-holdout (`[2021-03-24, 2022-12-31]`,
+BTC futures_5x): the candidate **underperforms v4-alone at every one of
+its 13 swept configurations**, damage scaling monotonically with
+`overlay_frac` and tightening moneyness (frozen primary: $560 vs. v4-alone
+$789 from a $1,000-equivalent window-relative start; Sharpe −0.52 vs
+−0.43; max drawdown 54.4% vs 32.3%) — a plateau of harm, not a peak of
+benefit. Stance split confirmed non-degenerate (BTC 65% buyer/35% seller,
+ETH 51%/49% — both regimes genuinely exercised, the mechanism was given a
+fair test). The frozen falsification test: paired bootstrap Δlog-growth
+95% CI is **[−0.93, 0.23] on BTC** (contains zero) and **[−0.12, 1.15] on
+ETH** (contains zero), and the point estimates **disagree in sign** (BTC
+−0.34, ETH +0.51) — **both independently sufficient to fail the frozen
+rule, and both fire.** By ROUTINE.md's own promotion bar ("survives its
+pre-registered falsification test" is a required clause), **this branch
+was already NEGATIVE before any holdout number existed — the decision
+rule did not move, and none was needed.** The operator nonetheless read
+the pre-registered holdout for completeness (Step 5's own reporting
+requirement), and it is worth naming as a methodological lesson rather
+than silently omitting: on `OOS_START=2023-01-01` onward the candidate
+would have looked spectacular — BTC futures_5x combined +916.44% vs.
+v4-alone +374.33% (Sharpe 1.68 vs 1.36), BTC spot +637.76% vs +242.87%,
+both ETH markets ahead too, no liquidation anywhere. **This number is
+explicitly NOT evidence for the branch** — it is exactly the scenario
+pre-registration exists to guard against (a branch that already failed
+its own frozen kill switch would, if the kill switch were ignored and the
+operator "peeked ahead" to a friendlier-looking number, present as a
+promotable result) — and it is reported here, attached to that warning,
+rather than left out, per this project's "nothing is deleted, no finding
+smoothed over" convention.
+
+**Verdict.** **NEGATIVE, both branches — no strategy registered.**
+One-line lesson: pricing a real, additively-summed instrument off DVOL
+solves the causality/simulability problem cleanly (no lookahead found by
+an independent skeptic, in either branch), but neither construction
+survives contact with its own pre-registered promotion bar — the collar
+fails R-33 risk-matching and its own plateau requirement and then loses
+on holdout exactly where Israelov & Klein's own literature said it would
+(a sustained bull run with no matching crash to protect against), while
+the fitness-switched harvest/hedge fails its own frozen falsification test
+decisively pre-holdout, its enticing-looking holdout number notwithstanding.
+This closes the "price a real derivatives structure off DVOL" construction
+specifically (as distinct from R-73/R-136/R-170's "consume DVOL as a
+predictor," already closed) — a future round revisiting an options-style
+overlay on this strategy should engage directly with why a fixed collar's
+apparent protection here was concentrated in one grinding-decline regime
+and absent from the one acute-crash episode measured, rather than assuming
+a differently-tuned moneyness or roll frequency would rescue it, since the
+failure mode identified (R-33 risk mismatch, non-plateau parameter
+response) is a property of the *unconditional* weekly-collar construction
+itself, not of this round's specific strike/frequency choice. **Holdout
+counter: +2, running total ~766** (one consultation per branch — the
+operator's single script run, covering all four market/asset combinations
+per branch, counted once per branch per this project's "distinct
+battery-episode" convention, R-177's own precedent; ~764 was the running
+total after R-177). Neither branch's decision rule moved after any number
+was seen — the novel branch's striking-looking holdout number is
+explicitly disclaimed above, not treated as a reason to revisit its
+already-frozen NEGATIVE verdict. `uv run --extra dev pytest -q` re-run by
+the operator after both branches and the skeptic reported: full suite
+green (see commit for exact count), including `test_causality_strict.py`
+and `tests/test_ledger_format.py` against this entry — neither branch
+touched `src/` or a registered strategy. Code lives under `experiments/`
+per step 5 (`r178_shared.py`, `r178_direction.md`,
+`r178_conservative_collar.py`, `r178_novel_vrp_switch.py`; the operator's
+holdout script was scratch, not committed, since it added no reusable
+capability beyond what `r178_shared.py` already exposes). **Next step:**
+not filed as a new backlog item — this was an off-backlog
+literature-prompted round. **B-48 remains the only OPEN backlog row** (a
+documentation/formatting instrument fix, not a strategy-research item);
+B-06/B-09/B-17/B-28 remain blocked, low-value or deliberately partial —
+unchanged by this round.
 
 ### R-177 · 08-28 · NEGATIVE (both branches) — a signed (long-short) exposure for `kelly_regime_v4`, the specific alternative R-37 built the machinery for and declined to run
 
@@ -19234,6 +19426,7 @@ trip.
 
 | what | why | ref |
 |---|---|---|
+| Synthetic, causally DVOL-priced Black-Scholes options structure, additively summed on top of `kelly_regime_v4`'s own unmodified position — conservative: unconditional weekly protective collar (10% OTM put bought, 10% OTM call sold, Israelov & Klein 2016); novel: the same weekly roll but stance switches on v4's own vote (long strangle when `frac<=1/3`, short strangle harvesting VRP when `frac>=2/3`) | 34 configs total (17 each, a 12-point `overlay_frac x moneyness x cost_bps` sweep + frozen primary on 4 market/asset combos + 1 cost-stress point). Conservative's own frozen falsification test (a 30-trial bounded stress resample, DVOL-covered span) formally PASSES, but an independent skeptic found it fails R-33 risk-matching (combined-arm realized vol 28.4%/yr > v4-alone's 24.3%/yr; overlay's own average notional $17,166 > v4's own $10,759 — not a risk-reduced position), fails its own plateau requirement (return scales monotonically with `overlay_frac`: -1.4%/+22%/+84% at 0.25/0.50/1.00), and its inner-validation drawdown "improvement" is entirely a second-half-of-the-window artifact (zero protection in the half containing the one acute crash, May 2021; all of it from the 2022 grinding bear) — confirmed on the pre-registered holdout too: underperforms v4-alone on both BTC markets (futures_5x +329% vs +374%, spot +216% vs +243%), no drawdown improvement either (33.0% vs 33.0% futures, 28.3% vs 27.8% spot). Novel branch fails its own frozen falsification test outright pre-holdout (paired bootstrap 95% CI on Δlog-growth contains zero on both BTC `[-0.93,0.23]` and ETH `[-0.12,1.15]`, and the two markets disagree in sign) and underperforms v4-alone at all 13 swept BTC configurations — its holdout number, disclosed for completeness, is explicitly NOT evidence for the branch (a frozen kill switch that already fired is not reopened by a friendlier-looking later number). Do not re-try an unconditional weekly collar or a vote-conditioned strangle switch on this strategy expecting a different moneyness, roll frequency or strike selection to rescue either construction without first arguing why it would not inherit the same R-33 risk-mismatch (collar) or the same premium-bleed-through-chop failure (switch) measured here. | R-178 (both branches) |
 | Sign-symmetric remap of `kelly_regime_v4`'s own 3-anchor vote (`2*frac-1`), so the two bearish states short instead of flattening, times v4's own continuous vol-target scale, zero new parameters | 5 configs (1 frozen default + 4-point deadband sweep, futures_5x only). Falsified at its own frozen bar: ΔSharpe +0.176 vs v4 is inside the ±0.2 noise floor, at +66%/+135% higher realized vol/notional than v4 (unmatched exposure, R-33) and *worse* drawdown (36.9% vs 32.3%); underperforms v4 on the BTC futures control in the ETH falsification (Sharpe 1.52 vs 2.19); Monte Carlo stress median/worst-case drawdown both worse than v4's, though liquidation rate is unchanged at 0.0% for both. Do not re-try a fixed, sign-symmetric short extension of this vote expecting a different scale multiplier to rescue it — the failure is unmatched exposure and BTC-control underperformance, not the scale formula. | R-177 (conservative) |
 | R-37's own per-vote-state causal `mu_state/sigma_state**2` Kelly estimator, UNFLOORED at zero (bear/1-3 states now size a signed short directly, selected by the vote rather than gated by it) | 96 configs (32-point halflife x kelly_mult x stat_horizon grid on inner-train + the same grid on inner-validation, futures_5x). Per-state mu/kelly_f reproduce R-37's own published figures almost exactly, confirming the estimator is unchanged. Every grid cell underperforms or barely ties v4 at matched risk; the one nominally larger Sharpe gain (kelly_mult=0.75, +0.22) carries 3.4-3.9x v4's notional/vol, an exposure artifact. Frozen candidate loses to v4 on the BTC futures control by an order of magnitude in the ETH falsification (Sharpe 0.18 vs 2.19) and is Sharpe-negative on ETH itself — the identical overfitting signature R-37's own novel branch showed. Do not re-try removing this estimator's zero-floor on this or a differently-detected vote expecting a different halflife/kelly_mult to rescue it — the failure is data-hunger in the rarer bear states, inherited verbatim from R-37, now on both signs at once. | R-177 (novel) |
 | Calvet & Fisher (2001, *J. Econometrics* 105(1); 2004, *J. Financial Econometrics* 2(1)) binomial Markov-Switching Multifractal (MSM, `kbar=6`, grid-search Hamilton-filter MLE) substituted WHOLESALE for `kelly_regime_v4`'s single-span EWM `vol` estimator feeding `conditional_target_scale`'s hysteresis state machine, nothing else changed | 19 configs (6 `compare()` cells at the falsification gate [inner_train/inner_val/eth_replication x spot/futures_5x] + 1 R² relabeling check + 12 cells in a `REFIT_DAYS in {45,90,180}` robustness sweep, training-period only). Falsified at F1, its own frozen gate: BTC inner-validation futures_5x paired-bootstrap CI on `d_log_growth` is `[-0.814,-0.040]`, entirely negative (operator-reproduced exactly); spot does not exclude zero but only one market needs to fire. F2 (R²>0.98, mere relabeling) did NOT fire — R² = -0.9648, confirming MSM is a substantively different estimator, not a copy of the incumbent, and that difference is what hurts. Robust to the refit-cadence knob: the same sign fires at 45 and 90 days and only just misses at 180 (upper CI +0.004). Diagnostic: candidate runs 1.32-1.51x the incumbent's mean exposure on every cell (never risk-matched) — MSM's full decomposition reads volatility as systematically lower than v4's own EWM, driving more leverage rather than less. Holdout never read (fell at the pre-registered stop rule). This is the third distinct model family (after R-08's timescale blend and R-136's HAR-RV/DVOL blend) to independently confirm the same forecast-quality-inversion finding, and the first to rule out "the models are all just similar to each other" as the reason, since MSM is provably (R²) not a relabeling of the others' inputs. Do not re-try a volatility-*forecasting* substitution (of any model family) for this scale slot expecting a different estimator to rescue it without first arguing why it would not also increase mean exposure during BTC's inverse-leverage-effect (Baur & Dimpfl 2018) high-vol/high-forward-Sharpe windows. | R-175 (conservative) |
@@ -19357,6 +19550,23 @@ trip.
 ---
 
 ## D. Backlog (ranked)
+
+**Re-ranked 08-28 after R-178 (NEGATIVE, both branches, 34 configurations,
+holdout read — +2, running total ~766).** The ranked list is unchanged —
+B-06, B-09, B-17, B-28, B-48 — since R-178 was a fresh literature-sweep
+round (Step 0b's consecutive-null-pass count was 2 at dispatch, squarely
+"0-2: normal") rather than work on a backlog item. A synthetic,
+DVOL-priced Black-Scholes options overlay on `kelly_regime_v4` closed
+NEGATIVE: the conservative branch's unconditional weekly collar passes its
+own frozen falsification test but fails R-33 risk-matching and its own
+plateau requirement, and loses to v4-alone on holdout on both BTC markets;
+the novel branch's vote-conditioned VRP harvest/hedge switch fails its own
+frozen falsification test outright pre-holdout (both markets' CIs contain
+zero, signs disagree) — its own enticing-looking holdout number explicitly
+disclaimed as not evidence, since the branch was already dead by its own
+frozen rule. **B-48 remains the only OPEN backlog row** (a
+documentation/formatting instrument fix, not a strategy-research item);
+B-06/B-09/B-17/B-28 remain blocked, low-value or deliberately partial.
 
 **Re-ranked 08-28 after R-176 (NEGATIVE, both branches, 40 configurations,
 holdout not read).** The ranked list is unchanged — B-06, B-09, B-17,
@@ -24543,6 +24753,13 @@ Rules that the format exists to enforce:
 Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
+
+- **08-28 · ~766** — R-178: **+2** on top of R-177's ~764. One consultation
+  per branch (conservative, novel) — the operator's single script run per
+  branch, `OOS_START="2023-01-01"` onward, covering all four market/asset
+  combinations (BTC futures_5x/spot, ETH futures_5x/spot) on the frozen
+  primary config, counted once per branch per R-177's own "distinct
+  battery-episode" convention rather than once per market cell.
 
 - **08-28 · ~764** — R-177: **+3** on top of R-176's ~761 (R-174/R-175/R-176
   read no holdout bar). Conservative branch (+2: the pre-registered Monte
