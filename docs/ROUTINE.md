@@ -25,11 +25,23 @@ it, so it reads as if nothing happened. Check for it:
 
 ```bash
 git fetch --unshallow 2>/dev/null || git fetch origin main   # SEE THE WARNING BELOW
-ls experiments/*_shared.py | tail -3        # newest frozen pre-registrations
+# newest frozen pre-registrations -- NUMERIC sort, see the warning below
+ls experiments/*_shared.py | sed -E 's/.*r([0-9]+)_shared\.py/\1 &/' | sort -n | tail -3
 grep -c "R-<nn>" docs/LEDGER.md             # is that round recorded in section B?
 git log --oneline -5                        # a "WIP"/"dispatched" commit is the tell
 git rev-parse HEAD origin/main              # equal => nothing in flight elsewhere
 ```
+
+**Sort that listing numerically.** This check ran as a bare
+`ls experiments/*_shared.py | tail -3` from 08-20 to 08-28, and `ls` sorts
+lexicographically: with 168 rounds on disk it printed `r97, r98, r99` and
+never showed anything above `r99_shared.py` again. It was wrong by 69 rounds
+for eight days and nobody noticed, because it fails in the safe-looking
+direction — it names a file that *does* have a section B entry, so the check
+returns "nothing in flight" and looks like it worked. The one case it exists
+to catch, a freshly frozen `r1nn_shared.py` nobody dispatched, is exactly the
+case it cannot see. Pass 6 (section E) spotted it; R-169 fixed the command
+here.
 
 **Unshallow before you trust that last line.** On a shallow clone
 `git merge-base HEAD origin/main` returns **empty, with no error**, against a
@@ -417,6 +429,15 @@ Three rules the format exists to protect, learned by losing them:
   Sections A, C and D are short-cell registries and stay tables — if one
   of their cells starts wanting a paragraph, the paragraph goes in the
   round's section in B and the cell gets the ID.
+- **Escape every `|` you did not mean as a column: write `\|`.** The
+  `|basis|` shift above is not history — R-169 found it live in three rows
+  eight days later, where absolute-value bars in prose (`|Δf|`, `|Δleg|`,
+  `|exposure*lambda*next_day_return|`) had split them into 5, 5 and 9 cells
+  against 3- and 5-column headers. Markdown drops the surplus silently, so
+  B-46's row stops rendering at *"gross leg turnover (`Σ"* and R-154's
+  measured conclusion has never appeared on the page. `pytest
+  tests/test_ledger_format.py` checks every row in A, C, D and E against its
+  header width, which is the only reason anyone found out.
 - **Newest first, everywhere.** Section B and the holdout-consultation
   list are both appended at the top. Reading down either one reads
   backwards through the project.
@@ -446,6 +467,16 @@ Then, by verdict:
   like diligence. Five short cells: pass number, commit time, step-0 result,
   what was attempted, what came of it. If the outcome genuinely does not fit
   in a cell, it was not a null pass — write it up in B as a round.
+
+  **Exactly five cells, each at most 300 characters.**
+  `tests/test_ledger_format.py` fails CI otherwise, and it is written that
+  way because the prose version of this instruction did not hold: null rows
+  ran 84–246 characters when R-158 built the table and **3,359 on average
+  by 08-28**, a 28x inflation over 33 rows, while the seven newest carried a
+  *sixth* cell against a five-column header — which every Markdown renderer
+  drops silently, so nobody could see it. Both defects spread the same way,
+  by each pass copying the row above it, which is why neither was fixable by
+  asking future sessions to be brief (R-169). Write the row, don't grow it.
 
 Finally, **re-rank the backlog** at the bottom of the ledger, then
 commit and push.
