@@ -316,6 +316,14 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+**IN PROGRESS: R-177** — signed (long-short) exposure for `kelly_regime_v4`
+(conservative: sign-symmetric vote remap; novel: R-37's own per-state Kelly
+estimator, unfloored at zero). Frozen pre-registration in
+`experiments/r177_direction.md` and `experiments/r177_shared.py`; both
+branches dispatched, not yet reported. This stub will be replaced by the
+full `### R-177` entry once both branches report, per R-131/R-133's
+collision-avoidance convention.
+
 ### R-176 · 08-28 · NEGATIVE (both branches) — dollar-volume activity-clock resampling of `kelly_regime_v4`'s vote (conservative) and a dollar-bar arrival-rate crowding gate (novel); conservative falsified at its own inner-validation gate, novel survives its mechanism check but fails the promotion bar decisively, including on ETH
 
 **Direction.** Off-backlog (still only **B-48**, a documentation/formatting
