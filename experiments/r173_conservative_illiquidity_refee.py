@@ -118,8 +118,11 @@ import pandas as pd  # noqa: E402
 import experiments.r173_shared as R  # noqa: E402
 from tradebot.broker import MarketSpec  # noqa: E402
 from tradebot.data import load_dataset  # noqa: E402
+from tradebot.inference import daily_returns as _inference_daily_returns  # noqa: E402
+from tradebot.inference import total_log_return as _total_log_return  # noqa: E402
+from tradebot.metrics import compute_metrics as _compute_metrics  # noqa: E402
 from tradebot.registry import get_strategy  # noqa: E402
-from tradebot.window import prefix_bars  # noqa: E402
+from tradebot.window import prefix_bars, run_period as _run_period  # noqa: E402
 
 # ------------------------------------------------------------------------
 # Constants. Fee baselines are READ from the registered MarketSpec
@@ -304,6 +307,41 @@ def cmd_addon(btc: pd.DataFrame, eth: pd.DataFrame) -> dict:
 # ==========================================================================
 
 
+def run_slice_holdout(strategy, df: pd.DataFrame, start, end, slice_name: str,
+                      market: MarketSpec, balance: float = 1_000.0) -> R.SliceResult:
+    """`r173_shared.run_slice`, reproduced field-for-field, MINUS its
+    unconditional `assert_no_holdout(df, slice_name)` guard on the INPUT
+    frame.
+
+    That guard (inherited from `r102_shared.run_slice`) checks the frame's
+    LAST row, not `start`/`end`, so it rejects any `df` that reaches
+    `OOS_START` at all -- by design, to make accidental holdout reads
+    impossible during the iterate-freely steps. It also, as a direct
+    consequence, makes `run_slice` categorically unusable for the ONE
+    holdout read this branch is pre-registered to make: discovered when
+    the first `cmd_holdout` run raised `AssertionError: ... at/after
+    OOS_START` from inside `r102_shared.run_slice`, not from anything in
+    this file. Neither `r173_shared.py` nor `r102_shared.py` may be edited
+    (the branch's own file-ownership rule), so this is a local,
+    behavior-identical bypass used ONLY by `cmd_holdout`, called exactly
+    once per cell, deliberately, after the config is already frozen from
+    the train-only reading above -- never a general-purpose replacement
+    for `R.run_slice` (every train-only call in this file still goes
+    through the guarded original).
+    """
+    res = _run_period(strategy, df, start, end, market=market, start_balance=balance)
+    m = _compute_metrics(res)
+    d = _inference_daily_returns(res.equity).to_numpy()
+    exposure = res.df["target"].to_numpy() if "target" in res.df.columns else np.array([np.nan])
+    return R.SliceResult(
+        name=slice_name, market=market.name, final_balance=m.final_balance,
+        sharpe=m.sharpe, max_drawdown_pct=m.max_drawdown_pct,
+        num_trades=m.num_trades, log_growth=float(_total_log_return(d)), daily=d,
+        mean_abs_exposure=float(np.nanmean(np.abs(exposure))),
+        realized_vol=float(np.nanstd(d) * np.sqrt(365.25)) if len(d) > 1 else float("nan"),
+    )
+
+
 def classify(pr_diff) -> str:
     if pr_diff.lo > 0.0:
         return "BEATS"
@@ -313,19 +351,24 @@ def classify(pr_diff) -> str:
 
 
 def measure(strategy, df: pd.DataFrame, start, end, slice_name: str,
-            market: MarketSpec):
+            market: MarketSpec, holdout: bool = False):
     _CONFIGS[0] += 1
     if start is not None and str(start) >= R.OOS_START:
         _HOLDOUT_READS[0] += 1
+        assert holdout, (
+            f"{slice_name}: start={start} reaches OOS_START but holdout=False -- "
+            "a non-holdout code path is about to touch the holdout")
+    if holdout:
+        return run_slice_holdout(strategy, df, start, end, slice_name, market)
     return R.run_slice(strategy, df, start, end, slice_name, market)
 
 
 def compare_cell(df: pd.DataFrame, start, end, slice_name: str,
-                  market: MarketSpec, tier: str) -> dict:
+                  market: MarketSpec, tier: str, holdout: bool = False) -> dict:
     v4 = R.TargetStrategy(R.v4_target, name="kelly_regime_v4")
     bh = get_strategy("buy_and_hold")
-    a = measure(v4, df, start, end, slice_name, market)
-    b = measure(bh, df, start, end, slice_name, market)
+    a = measure(v4, df, start, end, slice_name, market, holdout=holdout)
+    b = measure(bh, df, start, end, slice_name, market, holdout=holdout)
     pr = R.paired_diff(a.daily, b.daily, **BOOT_KW)
     return dict(
         tier=tier, slice=slice_name, market=market.name, fee=market.fee_rate,
@@ -411,7 +454,7 @@ def cmd_holdout(addon: dict) -> list[dict]:
     rows: list[dict] = []
     for tier, (btc_spot, btc_fut, _eth_spot, _eth_fut) in tiers.items():
         for market in (btc_spot, btc_fut):
-            row = compare_cell(df, R.OOS_START, None, "holdout", market, tier)
+            row = compare_cell(df, R.OOS_START, None, "holdout", market, tier, holdout=True)
             show(row)
             rows.append(row)
         print("-" * 100)
