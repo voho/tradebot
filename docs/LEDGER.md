@@ -316,7 +316,171 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
-IN PROGRESS: R-176 — dollar-volume activity-clock resampling of `kelly_regime_v4`'s regime vote (conservative: dollar-time anchor windows) and a dollar-bar arrival-rate crowding gate (novel), both attacking INFO (the `volume` field already in the committed OHLCV file, unused by the whole `kelly_regime` family) with a SIZE-axis secondary effect on the vote's timing. Announced before either branch is dispatched, per ROUTINE.md Step 0's in-flight-discipline convention.
+### R-176 · 08-28 · NEGATIVE (both branches) — dollar-volume activity-clock resampling of `kelly_regime_v4`'s vote (conservative) and a dollar-bar arrival-rate crowding gate (novel); conservative falsified at its own inner-validation gate, novel survives its mechanism check but fails the promotion bar decisively, including on ETH
+
+**Direction.** Off-backlog (still only **B-48**, a documentation/formatting
+item, plus four already-inactionable rows — B-06/B-09/B-17/B-28). A
+background research sub-agent surveyed `docs/LEDGER.md` sections B (R-140
+through R-175) and C in full before any direction was picked, confirmed by
+a direct grep for zero prior hits on "dollar bar", "volume bar", "imbalance
+bar", "activity time", "tick imbalance" or "volume clock": every INFO-axis
+round to date (5 external data-source families, 12 regime-timing
+detectors) added a NEW feature computed from the SAME calendar-time-sampled
+`close` column, and no round has ever used the `volume` field already
+present in the committed OHLCV file for anything but flow-sign
+classification (`camouflage_flow`/`stealth_trend`'s BVC), nor changed the
+SAMPLING CLOCK underneath any statistic. This round attacks **INFO**
+(`volume`, an already-committed field the whole `kelly_regime` family has
+never consumed) with a **SIZE** secondary effect (both branches touch
+`frac`, which R-62 established carries v4's entire matched-exposure
+signature, or the `frac*scale` product directly). Mechanism, citations:
+Easley, Lopez de Prado & O'Hara (2012), "The Volume Clock," *JPM* 39(1);
+Lopez de Prado (2018), *Advances in Financial Machine Learning*, ch. 2
+(information-driven bars) — confirmed live by WebSearch this round.
+**Not a duplicate of** R-62 (factor isolation, never substitutes either
+factor's construction), R-99 (bipower-variation jump test, an additive
+alarm on a fixed calendar clock, explicitly untouching `scale`), R-102
+(signed semivariance, a different field — return sign, not volume),
+`camouflage_flow`/`stealth_trend` (signed flow classification for
+DIRECTION; both branches here are unsigned and never predict direction),
+`harsanyi_crowd` (crowding conditioned on trend age and volume-efficiency
+decay; the novel branch's gate is unconditional on trend age and measures
+arrival RATE instead), and R-175/R-136/R-08 (volatility forecast-quality
+substitutions on `scale`'s vol input; this round never changes that
+estimator). Full non-duplication argument, both branches' falsification
+tests (frozen before either branch was dispatched or any real-data
+performance number beyond an operator smoke-test was read), and the
+engine's causal-truncation self-tests (passed on real BTC data before
+dispatch): `experiments/r176_direction.md`, `experiments/r176_shared.py`.
+
+**What was done.** Shared engine `experiments/r176_shared.py` (operator-
+built, read-only, neither branch may edit it) exposes one dollar-volume
+primitive two ways: `dollar_time_anchor` (a rolling-mean anchor window
+sized to accumulate a target amount of dollar volume instead of a fixed
+calendar-day count, built via a single vectorized `searchsorted` over
+cumulative dollar volume — verified causal by construction and by
+`causal_truncation_probe_series` on real BTC data) for the **conservative**
+branch (`experiments/r176_conservative_dollar_anchor.py`: v4's own 3-anchor
+vote, anchors recomputed in dollar-time, `scale`/deadband/cap untouched);
+and `dollar_bar_intensity` → `crowding_haircut` (a latching 0.5/1.0
+hysteresis gate on the trailing rate of dollar-bar arrivals relative to
+its own causal baseline) for the **novel** branch
+(`experiments/r176_novel_crowding_gate.py`: v4's own unmodified
+`frac*scale`, multiplied by the gate). Both branches ran on BTC
+inner-train/inner-validation only (`compare()`'s own `assert_no_holdout`
+enforced this); neither branch, nor the operator, read a bar at or after
+`OOS_START`. **Configs evaluated: 40** (conservative: 26 — a 5-point sweep
+of `BASELINE_WINDOW_DAYS` ∈ {90,120,180,270,365} × 2 markets × 2 slices,
+plus the winner's 6-cell ETH-inclusive re-run; novel: 14 — the mechanism
+check plus a 12-point sweep of haircut ∈ {0.25,0.4,0.5,0.7} ×
+(high_in_q,high_out_q) ∈ {(.85,.55),(.90,.60),(.95,.70)}, plus the winner's
+ETH-inclusive re-run).
+
+**Pre-registered decision rule, as frozen** (`experiments/r176_direction.md`
+Step 1 Q4): conservative branch FALSIFIED if the paired-bootstrap CI on
+`d_log_growth`/`d_sharpe` (dollar-time vote vs. v4's calendar-time vote)
+excludes zero on the losing side on BTC inner-validation on either market,
+OR R² between the two votes exceeds 0.98 (mere relabeling). Novel branch
+FALSIFIED, decisively and independent of any performance number, if its
+crowding-state fraction on BTC inner-train falls outside (2%, 40%), OR if
+R² between its crowded-state indicator and v4's own volatility-breakout
+state indicator exceeds 0.5 (relabeling v4's existing hysteresis under a
+new name); only if neither fires does the standard four-clause promotion
+bar (ΔSharpe ≥ +0.2 or risk-matched drawdown improvement, both markets;
+plateau not peak; ETH sign-replication; survives the 0.40% taker tier)
+apply.
+
+**Result.**
+
+*Conservative* — **FALSIFIED** by the CI test: on BTC inner-validation the
+CI excludes zero on the losing side in 3 of 4 cells at the default/nearby
+windows (90/120 days, both markets) and again at 180-day/futures; every one
+of the 20 sweep cells is negative-to-flat, with no positive cell anywhere
+on either slice or market. (R² check passed cleanly at 0.73 — not mere
+relabeling, so the failure is a genuine, measured underperformance, not a
+degenerate no-op.) The least-bad configuration (`window_days=365`, chosen
+after the fact only to characterize the shape of the sweep, not as a
+promotion candidate) merely decays toward ≈0 (val d_sharpe −0.04/−0.03) as
+the dollar-time window widens enough to approximately reproduce calendar
+time; it is not risk-matched (vol_ratio 0.89–0.90) and fails outright on
+ETH replication (d_sharpe −1.08 spot / −0.73 futures, both excluding zero
+on the losing side).
+
+*Novel* — mechanism check **PASSES** on real BTC inner-train data: the
+crowding gate binds 24.2% of bars (inside the pre-registered (2%,40%)
+band) and its crowded-state indicator has R² of −0.70 (best-case ordering)
+against v4's own reconstructed volatility-breakout state — deeply
+uncorrelated, not a relabeling (the branch's own reconstruction of that
+internal state machine was independently verified bit-for-bit against
+`conditional_target_scale`'s real output before being trusted). So the
+gate is a genuinely distinct, non-degenerate, non-inert signal on this
+data. It nonetheless **fails the promotion bar decisively**: all 12 swept
+configurations are negative on BTC inner-train, excluding zero on the
+losing side; on inner-validation the best cell (haircut=0.25,
+high_in_q=0.85, high_out_q=0.55) reaches only d_sharpe +0.008 — three
+orders of magnitude below the ±0.2 noise floor, and a flat plateau rather
+than a peak (the runner-up scores −0.003). Every cell of every
+configuration is structurally unable to risk-match (a multiplicative
+haircut < 1.0 mechanically reduces exposure whenever it binds, so
+`risk_matched=False` throughout by construction — any apparent drawdown
+"improvement" here carries no evidential weight per this ledger's own
+standing rule). ETH replication fails hard on the winning configuration:
+d_sharpe −1.40 (spot) / −1.04 (futures), both excluding zero on the losing
+side.
+
+Neither branch's inner-validation numbers show any candidate edge large
+enough to justify consuming a holdout look (Step 3's own discipline:
+iterate against the inner split, not the holdout), so — consistent with
+R-128/R-163/R-164/R-174's own precedent of not reading holdout when
+training/inner-validation is decisively negative — **the holdout was not
+consulted this round.** `uv run -m pytest -q` (background, operator, after
+both branches reported): full suite green, including
+`test_causality_strict.py` and `tests/test_ledger_format.py` against this
+entry; neither branch touched `src/` or a registered strategy.
+
+**Verdict.** **NEGATIVE, both branches — no strategy registered.**
+One-line lesson: the `volume` column is not a free well the way three
+`kelly_regime_v4`-family rounds might have hoped — the novel branch's own
+mechanism check proves a genuinely new, non-degenerate signal *can* still
+be built from it this late in the project (24.2% crowded-state incidence,
+R² −0.70 against the existing hysteresis), which rules out "there is
+nothing left to extract from `volume`" as the explanation for its
+failure — the honest one is instead this ledger's now-repeated finding
+that dampening exposure on ANY real, non-degenerate signal that is not
+itself directly forecasting drift costs more in foregone return than it
+saves in drawdown on this asset's own realized path (the same shape as
+`harsanyi_crowd`'s and R-141's LPPLS dampener's own failures, now a third
+independent confirmation with a structurally different underlying
+statistic). The conservative branch adds a second, independent lesson:
+resampling the VOTE's own clock — the one factor R-62 showed carries v4's
+whole signature — still underperforms a plain fixed calendar window,
+which is a different failure shape than any of the ~28 already-closed
+SCALE-axis attempts (this one isn't collinear with the incumbent, R²=0.73,
+it is a genuinely different, and genuinely worse, timing rule). **Holdout
+counter: +0, running total unchanged at ~761** (R-172–R-175's own figure;
+neither branch cleared its own gate to reach it). Neither branch's decision
+rule was altered after seeing any number; both outcomes (a CI-excludes-zero
+falsification and a clean promotion-bar fall-through) are reported exactly
+as their own frozen rule defines them. Not registered — an ordinary-shape
+negative, not independently instructive enough for a table row (per step
+5's own threshold; unlike `minority_oracle`/`game_switch`, neither branch's
+failure mode is itself the noteworthy part of the finding — the mechanism
+check passing while performance still fails is informative but not
+table-row-instructive on its own). Code lives under `experiments/`:
+`r176_shared.py`, `r176_direction.md`,
+`r176_conservative_dollar_anchor.py`, `r176_novel_crowding_gate.py`.
+**Next step:** not filed as a new backlog item — this was an off-backlog
+literature-prompted round (Step 0b's consecutive-null-pass count was 1 at
+dispatch, "0–2: normal"). A future round on the `volume` field specifically
+should not retry a multiplicative exposure-dampener application (three
+independent constructions now closed that way: `harsanyi_crowd`, R-141,
+this round) — the open question the novel branch's own mechanism check
+leaves is whether a *non-dampening* use of the same crowding signal (e.g.
+as an ERR-axis confidence weight on the vote itself, rather than a SIZE-axis
+haircut on the product) fares differently, untested here. **B-48 remains
+the only OPEN backlog row** (a documentation/formatting instrument fix, not
+a strategy-research item); B-06/B-09/B-17/B-28 remain blocked, low-value or
+deliberately partial — unchanged by this round.
 
 ### R-175 · 08-28 · NEGATIVE (both branches, both falsified at their own pre-registered gate) — Markov-Switching Multifractal (MSM) volatility decomposition on `kelly_regime_v4`'s SCALE input
 
@@ -18987,6 +19151,23 @@ trip.
 ---
 
 ## D. Backlog (ranked)
+
+**Re-ranked 08-28 after R-176 (NEGATIVE, both branches, 40 configurations,
+holdout not read).** The ranked list is unchanged — B-06, B-09, B-17,
+B-28, B-48 — since R-176 was a fresh literature-sweep round (Step 0b's
+consecutive-null-pass count was 1 at dispatch, squarely "0-2: normal")
+rather than work on a backlog item. Dollar-volume activity-clock
+resampling of `kelly_regime_v4`'s vote (conservative) and a dollar-bar
+arrival-rate crowding gate (novel) closed NEGATIVE: the conservative
+branch's dollar-time anchors are falsified at their own inner-validation
+gate (CI excludes zero on the losing side, 3 of 4 cells near the default
+window); the novel branch's crowding gate survives its own decisive
+mechanism check (a genuinely new, non-degenerate signal, R²=−0.70 against
+v4's existing hysteresis) but fails the promotion bar on every one of 12
+swept configurations, structurally unable to risk-match. **B-48 remains
+the only OPEN backlog row** (a documentation/formatting instrument fix, not
+a strategy-research item); B-06/B-09/B-17/B-28 remain blocked, low-value or
+deliberately partial.
 
 **Re-ranked 08-28 after R-173 (NEGATIVE, both branches, 86 configurations,
 holdout read — +12, running total ~761).** The ranked list is unchanged —
