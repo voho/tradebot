@@ -23939,6 +23939,13 @@ stops — see ROUTINE.md Step 0b. Twenty sessions wrote 1,285 lines of prose
 instead, and one of them deleted another's record in the process (R-158).
 Everything below is for sessions that actually measured something.
 
+**That row is exactly five cells, each ≤300 characters**, and every table in
+this file must match its own header's column count — escape any other `|` as
+`\|`. `pytest tests/test_ledger_format.py` enforces both, because the prose
+version of both rules failed: section E's rows still inflated 28x over 33
+passes, and three rows in sections C and D have been silently dropping their
+own conclusions on render since 08-20 (R-169).
+
 One session, one entry. Copy this skeleton to the **top** of
 [section B](#b-research-log-newest-first) — newest first, always — and
 fill every field. A field with nothing to report says so (`none`, `+0`,
