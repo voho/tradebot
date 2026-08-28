@@ -424,33 +424,58 @@ def cmd_holdout(addon: dict) -> list[dict]:
 # ==========================================================================
 
 
-def apply_decision_rule(rows: list[dict], label: str) -> dict:
+def apply_decision_rule(rows: list[dict], label: str,
+                        primary_slices: tuple[str, ...] | None = None) -> dict:
+    """`r173_direction.md`'s Step 4 CONSERVATIVE rule, applied mechanically.
+
+    Keyed by `(slice, market)`, NOT `market` alone: BTC and ETH cells share
+    the same `MarketSpec.name` ("spot"/"futures_5x"), so collapsing on
+    market alone would silently let the last-processed slice overwrite
+    every earlier one for that market -- caught by inspecting this
+    function's own first draft's output against the per-row table above it
+    before trusting the aggregate. `primary_slices` names which slice(s)
+    the frozen rule's "OOS-analog reading" refers to (inner_val for the
+    train-only call, matching `r173_direction.md`'s own "inner-val, then
+    holdout once frozen" wording); every other slice is reported for
+    context but does not by itself drive the verdict.
+    """
     print(f"\n{'=' * 100}\nDECISION RULE (r173_direction.md Step 4, CONSERVATIVE, frozen) "
           f"-- {label}\n{'=' * 100}")
-    by_market: dict[str, dict[str, str]] = {}
+    by_cell: dict[tuple[str, str], dict[str, str]] = {}
     for r in rows:
-        by_market.setdefault(r["market"], {})[r["tier"]] = r["verdict"]
+        by_cell.setdefault((r["slice"], r["market"]), {})[r["tier"]] = r["verdict"]
 
-    flips: list[str] = []
-    for market, tiers in by_market.items():
+    print(f"  {'slice':16} {'market':11} {'baseline':>10} {'illiq_adj':>10} {'0.40%_sens':>10}  flip?")
+    all_flips: list[str] = []
+    primary_flips: list[str] = []
+    for (slice_name, market), tiers in sorted(by_cell.items()):
         base = tiers.get("baseline")
         adj = tiers.get("illiquidity_adjusted")
         sens = tiers.get("sensitivity_0.40pct")
-        print(f"  {market:11} baseline={base:>10} illiquidity_adjusted={adj:>10} "
-              f"0.40%_sensitivity={sens:>10}")
-        if adj is not None and base is not None and adj != base:
-            flips.append(f"{market}: {base} -> {adj}")
+        flipped = bool(adj is not None and base is not None and adj != base)
+        print(f"  {slice_name:16} {market:11} {base:>10} {adj:>10} {sens:>10}  "
+              f"{'FLIP' if flipped else '-'}")
+        if flipped:
+            tag = f"{slice_name}/{market}: {base} -> {adj}"
+            all_flips.append(tag)
+            if primary_slices is None or slice_name in primary_slices:
+                primary_flips.append(tag)
 
-    if flips:
+    if primary_flips:
         verdict = "POSITIVE finding, filed as a new cost caveat"
-        print(f"\n  SIGN FLIP on: {', '.join(flips)}")
+        print(f"\n  SIGN FLIP on the PRIMARY (OOS-analog) slice(s): {', '.join(primary_flips)}")
     else:
         verdict = "NEGATIVE / no new caveat"
-        print("\n  No sign flip on any market: the illiquidity-adjusted tier "
-              "reads the same qualitative verdict (BEATS/LOSES/COIN-FLIP) as "
-              "the existing baseline/0.40% tiers.")
+        which = (f"the pre-registered OOS-analog slice(s) {primary_slices}"
+                if primary_slices else "every slice")
+        print(f"\n  No sign flip on {which}: the illiquidity-adjusted tier reads "
+              "the same qualitative verdict (BEATS/LOSES/COIN-FLIP) as the "
+              "existing baseline/0.40% tiers.")
+    if all_flips and not primary_flips:
+        print(f"  (disclosed, non-decisive: a flip DID occur on a non-primary slice: "
+              f"{', '.join(all_flips)})")
     print(f"\n  VERDICT ({label}): {verdict}")
-    return dict(by_market=by_market, flips=flips, verdict=verdict)
+    return dict(by_cell=by_cell, all_flips=all_flips, primary_flips=primary_flips, verdict=verdict)
 
 
 # ==========================================================================
@@ -568,14 +593,17 @@ def main(argv: list[str] | None = None) -> None:
     train_rows: list[dict] = []
     if cmd in ("all", "train"):
         train_rows = cmd_train(btc, eth, addon)
-        train_verdict = apply_decision_rule(train_rows, "TRAIN-ONLY (inner_train+inner_val+ETH)")
+        train_verdict = apply_decision_rule(
+            train_rows, "TRAIN-ONLY (inner_train+inner_val+ETH)",
+            primary_slices=("inner_val",))
     if cmd == "train":
         return
 
     if cmd in ("all", "holdout"):
         print(f"\nconfigs evaluated before the holdout was touched: {_CONFIGS[0]}")
         hold_rows = cmd_holdout(addon)
-        hold_verdict = apply_decision_rule(hold_rows, "HOLDOUT (2023+, one read)")
+        hold_verdict = apply_decision_rule(hold_rows, "HOLDOUT (2023+, one read)",
+                                           primary_slices=("holdout",))
 
     print("\n" + "=" * 100)
     print(f"Configurations evaluated (this branch) : {_CONFIGS[0]}")
