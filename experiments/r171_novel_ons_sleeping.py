@@ -394,10 +394,7 @@ def _build_from_series(series: pd.Series, name: str):
     return _build
 
 
-def monte_carlo_windows(df: pd.DataFrame, n_states: int, market, *,
-                        span_start: str | None = None, span_end: str | None = None,
-                        n_windows: int = N_MC_WINDOWS, seed: int = MC_SEED,
-                        min_start_offset_days: int = MC_MIN_START_OFFSET_DAYS) -> dict:
+def _mc_span(df: pd.DataFrame, span_start: str | None, span_end: str | None) -> pd.DataFrame:
     if span_start is not None or span_end is not None:
         lo = 0 if span_start is None else int(df.index.searchsorted(pd.Timestamp(span_start, tz="UTC")))
         hi = len(df) if span_end is None else int(df.index.searchsorted(pd.Timestamp(span_end, tz="UTC"), side="right"))
@@ -405,11 +402,18 @@ def monte_carlo_windows(df: pd.DataFrame, n_states: int, market, *,
     else:
         span = df
     assert_no_holdout(span, "monte_carlo_windows(): span")
-    n = len(span)
+    return span
 
-    pipe = build_pipeline(span, n_states)
-    cand_series = pd.Series(pipe["target"], index=span.index)
-    ctrl_series = pd.Series(v4_target(span), index=span.index)
+
+def monte_carlo_windows_from_series(span: pd.DataFrame, cand_series: pd.Series, ctrl_series: pd.Series,
+                                    n_states: int, market, *, n_windows: int = N_MC_WINDOWS,
+                                    seed: int = MC_SEED,
+                                    min_start_offset_days: int = MC_MIN_START_OFFSET_DAYS) -> dict:
+    """Same window logic as `monte_carlo_windows` but takes an ALREADY-BUILT
+    candidate/control target series (computed once per asset, shared across
+    both SPOT and FUTURES) -- an efficiency refactor only, no change to the
+    windowing/kill-outcome logic itself."""
+    n = len(span)
     cand_strategy = TargetStrategy(_build_from_series(cand_series, "cand"),
                                    name=f"ons_sleeping_{n_states}s_mc", warmup=0)
     ctrl_strategy = TargetStrategy(_build_from_series(ctrl_series, "ctrl"),
@@ -451,13 +455,23 @@ def run_falsification(btc_full: pd.DataFrame, eth_full: pd.DataFrame, n_states: 
     """Both BTC (inner-train+inner-val span) and ETH (its own whole
     pre-holdout span), both market specs -- design doc S3's "on either
     market" read as BTC-vs-ETH per the task's own re-statement, with SPOT
-    and FUTURES both run for robustness (see module docstring)."""
+    and FUTURES both run for robustness (see module docstring). The causal
+    pipeline (the expensive part: the per-bar sleeping-ONS loop) is built
+    ONCE per asset and its resulting target series is reused across both
+    market specs -- target values do not depend on the market spec, only
+    the backtest engine's fee/leverage handling does."""
     out = {}
-    for market in (SPOT, FUTURES):
-        out[("BTC", market.name)] = monte_carlo_windows(
-            btc_full, n_states, market, span_start=INNER_TRAIN_START, span_end=INNER_VAL_END)
-        out[("ETH", market.name)] = monte_carlo_windows(
-            eth_full, n_states, market, span_start=None, span_end=None)
+    for asset_name, full_df, span_start, span_end in (
+        ("BTC", btc_full, INNER_TRAIN_START, INNER_VAL_END),
+        ("ETH", eth_full, None, None),
+    ):
+        span = _mc_span(full_df, span_start, span_end)
+        pipe = build_pipeline(span, n_states)
+        cand_series = pd.Series(pipe["target"], index=span.index)
+        ctrl_series = pd.Series(v4_target(span), index=span.index)
+        for market in (SPOT, FUTURES):
+            out[(asset_name, market.name)] = monte_carlo_windows_from_series(
+                span, cand_series, ctrl_series, n_states, market)
     trips = any(v["trips"] for v in out.values())
     return {"n_states": n_states, "cells": out, "trips": trips}
 
