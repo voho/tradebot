@@ -316,13 +316,199 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
-**IN PROGRESS: R-177** — signed (long-short) exposure for `kelly_regime_v4`
-(conservative: sign-symmetric vote remap; novel: R-37's own per-state Kelly
-estimator, unfloored at zero). Frozen pre-registration in
-`experiments/r177_direction.md` and `experiments/r177_shared.py`; both
-branches dispatched, not yet reported. This stub will be replaced by the
-full `### R-177` entry once both branches report, per R-131/R-133's
-collision-avoidance convention.
+### R-177 · 08-28 · NEGATIVE (both branches) — a signed (long-short) exposure for `kelly_regime_v4`, the specific alternative R-37 built the machinery for and declined to run
+
+**Direction.** Off-backlog (still only **B-48**, a documentation/formatting
+item, plus four already-inactionable rows — B-06/B-09/B-17/B-28). Step 0b's
+saturation count was **2** consecutive null passes since R-176's own
+dispatch ("0–2: normal"). A background research sub-agent surveyed section
+C's ~75-row ruled-out table and section B's most recent rounds (R-160
+through R-176) in full, ran real web searches, and proposed this direction;
+confirmed independently by the operator with a direct grep of the full
+25,600-line ledger for `\bshort\b` (excluding "shorter"/"shortfall") and
+separately for `negative exposure`/`inverse position`/`long-short`: no
+round in 176 prior rounds has ever given `kelly_regime_v4` or any of its
+SIZE-axis variants a directional short against its own vote's bear state.
+Confirmed at the code level too — `kelly_regime.py`'s own class docstring
+states the strategy "stands flat rather than shorting a historically
+upward-drifting asset," and `kelly_regime_v6_state_kelly.py` (R-37's own
+novel branch) hard-codes `kelly_f = np.clip(kelly_f, 0.0, None)` with the
+inline comment "never short a state; mirrors v4." **Attacks SIZE**
+(primary, only) — detection (the vote's anchors/band/hysteresis) is
+byte-identical to v4 in both branches; only the response to a given vote
+state changes. **Not a duplicate of** R-37/R-38 (R-37's novel branch built
+the exact per-state causal `mu_state/sigma_state**2` estimator this round's
+novel branch reuses, and *measured* the bear state's own forward drift at
+≈−62%/yr and the 1/3 state at ≈−101%/yr — genuinely negative — but floored
+`kelly_f` at zero and multiplied by `frac` (itself 0 in the bear state),
+so the measured negative number was reported and discarded, never acted
+on; this round is that named, declined alternative), L-22/L-25
+(`macd_cross`/`rsi_reversion` already mirror a short on futures, but as
+raw threshold-crossing signals at full notional with no Kelly/vol-target
+sizing, no hysteresis, no deadband — a different execution regime from a
+signed, vol-targeted, deadbanded Kelly fraction on a 3-anchor latched
+vote), R-63 (its own "long-short... which this round cannot run" refers to
+a multi-instrument shared-margin book with no cross-asset margin model,
+not a net short on one instrument's own already-supported
+`MarketSpec.futures(allow_short=True)` broker), R-76 (pairs trading uses
+long/short only as a market-neutral spread between two assets, net
+exposure ≈0, never a net directional short on one asset's own bear state),
+R-89/R-90 (timing/exit mechanisms on the existing long-only exposure,
+neither touches sign). Full citations, the four-question Step 1 filter
+answered in writing, and both branches' frozen falsification rule are in
+`experiments/r177_direction.md`, and the shared, self-tested engine
+(`signed_vote_frac`, `state_kelly_stats`) is in `experiments/r177_shared.py`
+— both written and committed (`460944e`, "R-177 (WIP): announce
+in-progress round") before either branch was dispatched, per step 0's
+collision-avoidance convention. A CI gap was found and fixed the same
+session: the announce commit froze the shared engine and direction doc but
+omitted the `IN PROGRESS: R-177` ledger stub `tests/test_ledger_format.py`
+requires — caught by the operator's own `pytest` run, fixed in a follow-up
+commit (`8ae93cc`) before either branch reported.
+
+**What was done.** Two parallel unregistered variants on disjoint files,
+dispatched only after `git fetch origin main` confirmed no collision.
+**Conservative** (`experiments/r177_conservative_signed_vote.py`):
+`target = signed_vote_frac(close) * scale`, where `signed_vote_frac` is
+v4's own 3-anchor vote remapped `[0,1] -> [-1,1]` (`2*frac-1`, zero new
+parameters) and `scale` is the same continuous `min(target_vol/vol,
+max_leverage)` formula `kelly_regime.py`'s own base class uses. **Novel**
+(`experiments/r177_novel_state_kelly_short.py`): `target = clip(kelly_mult
+* kelly_f_state, -max_leverage, max_leverage)` directly, where
+`kelly_f_state` is R-37's own per-vote-state causal `mu_state/sigma_state**2`
+estimator (`r177_shared.state_kelly_stats`, `floor_at_zero=False`) —
+identical to `kelly_regime_v6_state_kelly.py` except the floor is removed
+and the vote fraction no longer multiplies the result (the vote instead
+selects which state's estimate applies, exactly as R-37's construction
+already did for the long side). **Configs evaluated: 101** (conservative:
+5 — 1 frozen default + a 4-point deadband sweep on inner-train, futures_5x
+only, since shorting is mechanically impossible on spot; novel: 96 — 32 on
+R-37's own halflife x kelly_mult x stat_horizon grid on inner-train,
+futures_5x, + 64 on the same grid on inner-validation, futures_5x and
+spot). Both branches ran the pre-registered falsification battery (Monte
+Carlo stress test, liquidation rate reported explicitly; ETH Bitfinex
+replication with a same-pipeline BTC control) and a causality probe
+(tamper-based truncation, all prepared columns/orders/equity bit-identical
+before the cut on both branches — **PASS**).
+
+**A construction discrepancy found and disclosed, not silently fixed.**
+The conservative branch's own honesty check caught that `r177_shared.py`'s
+and `r177_direction.md`'s description of "v4's own scale, unmodified" is
+imprecise: registered `kelly_regime_v4` inherits `kelly_regime_v3`'s
+CONDITIONAL (hysteresis-banded, `[0.55,1.70]`/`[0.85,1.20]`) volatility
+targeting, not the plain continuous `min(target_vol/vol, max_leverage)`
+formula both branches actually built (which is `kelly_regime.py`'s base
+scale, the same simplification R-37's own novel branch made for the
+identical reason — see `kelly_regime_v6_state_kelly.py`). The vote anchors
+tested (20/40/80-day ladder) are correctly v4's own; the sizing formula
+tested is one step back the family tree, v1's rather than v3/v4's. This is
+a pre-registration-level imprecision, not a goalpost move — neither
+branch's frozen decision rule changed after seeing any number — and it is
+judged not to rescue either direction: both branches' actual failure modes
+(unmatched exposure inflation, BTC-control losses, stress-panel tail
+deterioration) are properties of adding a signed/short leg itself, not of
+which continuous-vs-conditional vol-targeting formula multiplies it. Named
+here as an open loose end rather than smoothed over: a future round
+wanting to close the "signed *registered* v4" question precisely, rather
+than "signed base-Kelly-scale with v4's anchors," would need to rebuild
+against `kelly_regime_v3`'s actual conditional-targeting scale.
+
+**Result.**
+
+*Conservative, futures_5x, inner-validation (2021-2022):* candidate $1,197
+vs v4 $1,064 (Sharpe 0.43 vs 0.25, Δ+0.176 — **inside the ±0.2 noise
+floor**); vol/notional **+66%/+135%** vs v4 (R-33-style exposure mismatch,
+not risk-matched) and max drawdown is *worse* (36.9% vs 32.3%), so this is
+not a risk-matched tail win either. Spot does not reproduce v4 bar-for-bar
+as the pre-registration assumed it would (`clip(candidate,0,None) != v4`
+on 54.4% of bars) — the sign flip on the merely-1-of-3-anchors-bullish
+state (1/3) changes spot behavior too, since v4 itself holds a small long
+there that the candidate flattens. Monte Carlo stress (40 windows,
+futures_5x): candidate median return +79.3% vs v4's +95.9%, worse median
+(31.1% vs 23.6%) and worst-case (41.4% vs 34.6%) drawdown; **liquidation
+rate unchanged at 0.0% for both** (the specific pre-registered concern
+about liquidation frequency did not materialize, but every other tail
+metric is worse). ETH/BTC-control falsification: candidate **underperforms
+v4 on the BTC control itself** on futures (Sharpe 1.52 vs 2.19), beats v4
+on ETH futures only at ~84% more notional (an unmatched-exposure effect,
+not a clean edge). Bonus check (real BTC funding, 2020-2023): candidate
+pays *less* aggregate funding than v4 ($970 vs $1,382) — the short leg
+nets some funding receipts that partly offset the long leg's cost in
+aggregate, though this does not rule out the pre-registered concern about
+adverse timing at the individual-episode level.
+
+*Novel, futures_5x, inner-validation (2021-2022), full 32-config grid:*
+per-state mu/kelly_f reproduces R-37's own published figures almost to the
+digit (bear ≈−62%/yr -> kelly_f −0.686; 1/3 ≈−101%/yr -> kelly_f −2.050;
+2/3 ≈+174%/yr -> kelly_f +2.934; unanimous ≈+154%/yr -> kelly_f +2.262),
+confirming the estimator itself is unchanged from R-37's own construction.
+Every config underperforms or barely ties v4; the frozen candidate
+(halflife=365d, kelly_mult=0.25, matching R-37's own selected corner):
+final $1,096 vs v4 $1,064 (Δ Sharpe +0.07, inside the noise floor), max
+drawdown *worse* (34.5% vs 32.3%), turnover 1.6-2x v4's, notional/vol ≈1.4x
+v4's — not risk-matched. The one nominally larger grid cell (kelly_mult
+0.75, ΔSharpe +0.22, just over the noise floor) carries notional/vol
+≈3.4-3.9x v4's, a textbook R-33 exposure artifact, disqualified on sight.
+ETH/BTC-control falsification: candidate loses on the **BTC control** by
+an order of magnitude (futures $1,059 vs v4 $25,681, Sharpe 0.18 vs 2.19)
+and turns Sharpe-negative on ETH (−0.49 futures vs v4's +1.25), trading
+nearly inert (7-15 trades) — the identical overfitting signature R-37's
+own novel branch showed. Monte Carlo stress: candidate median return
++4.1% vs v4's +62.2% vs buy-and-hold's +154.1%; **liquidation rate
+unchanged at 0.0% for both** candidate and v4 across all 40 windows.
+
+**Falsification rule (frozen in `r177_direction.md`, all four clauses
+required), applied exactly as written, to both branches:** (1) beats
+buy-and-hold out-of-sample — roughly holds for both, similarly to v4; (2)
+improvement clears the ±0.2 Sharpe noise floor OR is a risk-matched
+drawdown/tail win — **FAILS for both**, every nominal Sharpe gain is
+either inside the noise floor or an exposure artifact, and drawdown is
+worse, not better, in every frozen candidate; (3) survives the
+pre-registered falsification test — **FAILS for both**, worse stress-panel
+tails and BTC-control losses in the ETH check; (4) plateau, not peak — not
+established for the conservative branch (noisy deadband sweep) and
+**decisively fails** for the novel branch (a fitted peak, catastrophic
+elsewhere in the grid). Neither branch's decision rule was altered after
+seeing any number; both fall-throughs are genuine, reported as such.
+
+**Verdict.** **NEGATIVE, both branches, against their own frozen R-177
+rules — no strategy registered.** One-line lesson: giving `kelly_regime_v4`'s
+vote a signed range converts "stand aside in a bad regime" into "take a
+genuinely larger, unmatched, actively-managed position that loses more on
+BTC itself and on this project's own stress panel than it gains" — the
+same whipsaw/exposure-artifact failure mode nearly every directional
+predictor in this ledger's comparison table has already shown, now
+confirmed specifically for the one construction (a signed extension of an
+already-validated, already-trusted vote/estimator) explicitly measured but
+declined by R-37 for 160 rounds. **This closes the directional-short
+sub-axis of the SIZE family** — a future SIZE-axis round on this
+architecture should not retry converting any bearish vote state into a
+short, on this vote or a differently-detected one, expecting a different
+sizing rule to rescue it without first arguing why that rule's short leg
+would not also inherit the same whipsaw/funding-timing/exposure-mismatch
+combination measured here on two structurally different constructions (a
+fixed sign-symmetric map and a fitted per-state magnitude). **Holdout
+counter: +3, running total ~764** (conservative: 2 — the pre-registered
+Monte Carlo stress-test battery on futures_5x, which samples windows into
+2025, plus the bonus funding check through 2023-12-31; novel: 1 — its own
+stress-test battery; ETH/Bitfinex data pre-dates 2017 and is not holdout;
+~761 was the running total after R-176). Neither branch's decision rule
+moved after any number was seen. `uv run --extra dev pytest -q` re-run by
+the operator after both branches reported: **540 passed**, including
+`test_causality_strict.py` and `tests/test_ledger_format.py` against this
+entry — neither branch touched `src/` or a registered strategy. Code lives
+under `experiments/` per step 5 (`r177_shared.py`, `r177_direction.md`,
+`r177_conservative_signed_vote.py`, `r177_novel_state_kelly_short.py`, plus
+CSV reports under `reports/r177_novel_state_kelly_short/`). **Next step:**
+not filed as a new backlog item — this was an off-backlog
+literature-prompted round (Step 0b's consecutive-null-pass count was 2 at
+dispatch, "0-2: normal"). The one open loose end named above (redo against
+v3/v4's actual conditional-targeting scale rather than the base continuous
+formula) is disclosed, not filed, since the failure modes measured are
+judged properties of the sign change rather than the scale formula.
+**B-48 remains the only OPEN backlog row** (a documentation/formatting
+instrument fix, not a strategy-research item); B-06/B-09/B-17/B-28 remain
+blocked, low-value or deliberately partial — unchanged by this round.
 
 ### R-176 · 08-28 · NEGATIVE (both branches) — dollar-volume activity-clock resampling of `kelly_regime_v4`'s vote (conservative) and a dollar-bar arrival-rate crowding gate (novel); conservative falsified at its own inner-validation gate, novel survives its mechanism check but fails the promotion bar decisively, including on ETH
 
@@ -19038,6 +19224,8 @@ trip.
 
 | what | why | ref |
 |---|---|---|
+| Sign-symmetric remap of `kelly_regime_v4`'s own 3-anchor vote (`2*frac-1`), so the two bearish states short instead of flattening, times v4's own continuous vol-target scale, zero new parameters | 5 configs (1 frozen default + 4-point deadband sweep, futures_5x only). Falsified at its own frozen bar: ΔSharpe +0.176 vs v4 is inside the ±0.2 noise floor, at +66%/+135% higher realized vol/notional than v4 (unmatched exposure, R-33) and *worse* drawdown (36.9% vs 32.3%); underperforms v4 on the BTC futures control in the ETH falsification (Sharpe 1.52 vs 2.19); Monte Carlo stress median/worst-case drawdown both worse than v4's, though liquidation rate is unchanged at 0.0% for both. Do not re-try a fixed, sign-symmetric short extension of this vote expecting a different scale multiplier to rescue it — the failure is unmatched exposure and BTC-control underperformance, not the scale formula. | R-177 (conservative) |
+| R-37's own per-vote-state causal `mu_state/sigma_state**2` Kelly estimator, UNFLOORED at zero (bear/1-3 states now size a signed short directly, selected by the vote rather than gated by it) | 96 configs (32-point halflife x kelly_mult x stat_horizon grid on inner-train + the same grid on inner-validation, futures_5x). Per-state mu/kelly_f reproduce R-37's own published figures almost exactly, confirming the estimator is unchanged. Every grid cell underperforms or barely ties v4 at matched risk; the one nominally larger Sharpe gain (kelly_mult=0.75, +0.22) carries 3.4-3.9x v4's notional/vol, an exposure artifact. Frozen candidate loses to v4 on the BTC futures control by an order of magnitude in the ETH falsification (Sharpe 0.18 vs 2.19) and is Sharpe-negative on ETH itself — the identical overfitting signature R-37's own novel branch showed. Do not re-try removing this estimator's zero-floor on this or a differently-detected vote expecting a different halflife/kelly_mult to rescue it — the failure is data-hunger in the rarer bear states, inherited verbatim from R-37, now on both signs at once. | R-177 (novel) |
 | Calvet & Fisher (2001, *J. Econometrics* 105(1); 2004, *J. Financial Econometrics* 2(1)) binomial Markov-Switching Multifractal (MSM, `kbar=6`, grid-search Hamilton-filter MLE) substituted WHOLESALE for `kelly_regime_v4`'s single-span EWM `vol` estimator feeding `conditional_target_scale`'s hysteresis state machine, nothing else changed | 19 configs (6 `compare()` cells at the falsification gate [inner_train/inner_val/eth_replication x spot/futures_5x] + 1 R² relabeling check + 12 cells in a `REFIT_DAYS in {45,90,180}` robustness sweep, training-period only). Falsified at F1, its own frozen gate: BTC inner-validation futures_5x paired-bootstrap CI on `d_log_growth` is `[-0.814,-0.040]`, entirely negative (operator-reproduced exactly); spot does not exclude zero but only one market needs to fire. F2 (R²>0.98, mere relabeling) did NOT fire — R² = -0.9648, confirming MSM is a substantively different estimator, not a copy of the incumbent, and that difference is what hurts. Robust to the refit-cadence knob: the same sign fires at 45 and 90 days and only just misses at 180 (upper CI +0.004). Diagnostic: candidate runs 1.32-1.51x the incumbent's mean exposure on every cell (never risk-matched) — MSM's full decomposition reads volatility as systematically lower than v4's own EWM, driving more leverage rather than less. Holdout never read (fell at the pre-registered stop rule). This is the third distinct model family (after R-08's timescale blend and R-136's HAR-RV/DVOL blend) to independently confirm the same forecast-quality-inversion finding, and the first to rule out "the models are all just similar to each other" as the reason, since MSM is provably (R²) not a relabeling of the others' inputs. Do not re-try a volatility-*forecasting* substitution (of any model family) for this scale slot expecting a different estimator to rescue it without first arguing why it would not also increase mean exposure during BTC's inverse-leverage-effect (Baur & Dimpfl 2018) high-vol/high-forward-Sharpe windows. | R-175 (conservative) |
 | The same MSM(6) decomposition, but using only the lowest `N_PERSIST` of 6 components (the most persistent, longest-half-life ones), deliberately dropping the fast/transient component(s), on the hypothesis that reacting to transient vol spikes specifically (not vol forecasting in general) is what hurt R-08/R-136 | 3 configs (`N_PERSIST` in `{1,2,3}`, 18 episode-comparisons total, zero backtest cells — the mechanism gate stopped the branch before any `compare()` call). Falsified at its own pre-registered, performance-number-independent mechanism gate: candidate is less de-risked (strictly higher mean `\|exposure\|`) than `kelly_regime_v4` in only 2 of the project's six named stress episodes (2021-11 top, 2022-11 FTX) against a required >=4/6, and this is a genuine plateau, not a knife-edge — `N_PERSIST` in `{1,2,3}` all land at exactly 2/6, with the identical episodes passing and failing at every cutoff (operator-reproduced exactly). Two of the four failing episodes (COVID crash, Terra/Luna) are tied at 0.0000 mean exposure for both candidate and control — both strategies are already fully flat there, leaving the mechanism nothing to differentiate. Closes the specific causal story ("it's the transient component, not the forecast quality") this round was built to test directly: even isolating and discarding the fast component does not keep this architecture more exposed through a real historical vol spike, at any persistence cutoff tried. Do not re-try a persistence-filtered or component-isolated volatility construction on this architecture's SCALE input expecting a different cutoff fraction to rescue the mechanism — the plateau result means the fraction is not the free parameter that matters here. | R-175 (novel) |
 | Causal microstructure spread estimation — Roll (1984, JF 39(4)) implicit effective spread from close-to-close covariance and Corwin & Schultz (2012, JF 67(2)) high-low range spread, both `.shift(1)`-lagged, CS smoothed 1-day for 5-minute resolution — conservative: re-price `kelly_regime_v4`'s own realized rebalance history at the CS-measured illiquidity add-on (pure cost audit, no strategy change); novel: `apply_deadband_dynamic`, widening v4's 10% re-target threshold in proportion to the causal CS spread's own trailing percentile, `k∈{0.5,1,2,4}` | 86 configs total (conservative: 48 — 3 fee tiers x 2 markets x 2 slices x candidate+control = 36 train-only + 12 holdout; novel: 38 — 5 k-values x 6 `compare()` cells = 30 + 8 train-period buy_and_hold legs). Step-0: both estimators non-degenerate at 5-minute resolution (Roll 76.3% of windows defined, CS 63.2% raw/99.99% smoothed); median stress-episode elevation ratio 1.31x clears the frozen >1.0 falsification gate (4/6 episodes individually elevated). Conservative: illiquidity add-on 3.86bps BTC / 3.41bps ETH (Corwin-Schultz, primary; Roll cross-check 4.48/5.61bps, correlation 0.68/0.37); re-pricing `kelly_regime_v4` at this add-on flips no sign vs `buy_and_hold` at any tier, any market, train-only or on the one frozen holdout read (BTC 2023-01-01 onward) — NEGATIVE, no new cost caveat. Novel: `k=0` reproduces control exactly (independently re-verified bit-for-bit); k*=4.0 selected on BTC inner-validation, plateau-checked; Stage-A 4-clause gate: 2 of 4 clear (ETH replication, plateau) and 2 fail (train-period beats-hold CI, ΔSharpe/risk-matched-DD bar) — apparent gains at k=2/4 are an R-33 unmatched-risk artifact (vol_ratio 1.11-1.39, drawdown worse by 4-11pp, concentrated on ETH as trade count collapses 75→37) reproducing this ledger's own named COST-throttle failure (R-56/R-77/R-131/R-133) rather than escaping it; holdout never read (no k cleared the training bar). Both branches' key numbers independently re-run by the operator against the actual committed files (not just the reports) and matched exactly. Do not re-try Roll/Corwin-Schultz (or a similar purely price/range-based spread estimator) as a COST-axis re-pricing or execution-throttle on this strategy expecting a different smoothing window or `k` to rescue it — the measured illiquidity (~3.5-4.5bps) is simply too small, relative to v4's own trade frequency, to move any comparison's sign, and any throttle built on it inherits the same unmatched-risk failure mode every prior COST-axis throttle on this architecture has hit. | R-173 (both branches) |
@@ -24345,6 +24533,13 @@ Rules that the format exists to enforce:
 Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
+
+- **08-28 · ~764** — R-177: **+3** on top of R-176's ~761 (R-174/R-175/R-176
+  read no holdout bar). Conservative branch (+2: the pre-registered Monte
+  Carlo stress-test battery on futures_5x, which samples windows into
+  2025, plus a bonus funding check through 2023-12-31). Novel branch
+  (+1: its own stress-test battery). ETH/Bitfinex data pre-dates 2017 and
+  is not holdout.
 
 - **08-28 · ~761** — R-173: **+12** on top of R-172's ~749. Conservative
   branch (+12: BTC spot and futures_5x candidate+control, at all three fee
