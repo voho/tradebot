@@ -173,11 +173,12 @@ strategy in both branches; only an additive overlay differs.
 
 **Mechanism.** Every 7 days, buy one OTM put (10% out of the money) and
 sell one OTM call (10% out of the money) against `overlay_frac` of the
-account's combined equity, unconditionally — a standard protective collar,
-`stance ≡ +1` on the put leg and `stance ≡ -1` on the call leg (implemented
-as two `simulate_overlay` calls, put-only and call-only legs, summed).
-Converts an undetected regime break into a bounded, pre-paid cost instead
-of a raw drawdown, at the price of Israelov & Klein's documented VRP drag.
+account's combined equity, unconditionally — a standard protective collar:
+`put_stance ≡ +1` (long), `call_stance ≡ -1` (short), one `simulate_overlay`
+call (the shared engine takes independent per-leg stance arrays so a
+collar's asymmetric legs need no second call or leg-splitting). Converts
+an undetected regime break into a bounded, pre-paid cost instead of a raw
+drawdown, at the price of Israelov & Klein's documented VRP drag.
 
 **Sweep (inner-validation window, 2021-03-24 → 2022-12-31, futures_5x and
 spot, BTC):** `overlay_frac ∈ {0.25, 0.50, 1.00}` × `moneyness ∈ {(0.90,
@@ -197,19 +198,19 @@ VRP has bought nothing and the branch is dead.
 
 ### Novel branch — fitness-switched VRP harvest/hedge
 
-**Mechanism.** Every 7 days, read v4's own vote `frac_frac` at the roll's
+**Mechanism.** Every 7 days, read v4's own vote `frac` at the roll's
 opening bar (from `r178_shared.vote_frac`, unmodified). If `frac ≤ 1/3`
 (bearish or genuinely uncertain — the same two states v4 itself treats as
-"stand mostly or fully aside"): open a long strangle (`stance=+1` on both
-legs) — pay for convexity exactly when the account's own risk read says it
-is least confident. If `frac ≥ 2/3` (confidently bullish): open a short
-strangle (`stance=-1` on both legs) — harvest Bakshi-Kapadia/Alexander-Imeraj's
+"stand mostly or fully aside"): open a long strangle (`put_stance=call_stance=+1`)
+— pay for convexity exactly when the account's own risk read says it is
+least confident. If `frac ≥ 2/3` (confidently bullish): open a short
+strangle (`put_stance=call_stance=-1`) — harvest Bakshi-Kapadia/Alexander-Imeraj's
 BVRP exactly when v4's own vote is not hedging anything already. Same
 moneyness/roll/cost mechanics as the conservative branch, via the identical
-shared `simulate_overlay` primitive, called once with `stance = where(frac
-<= 1/3, +1, -1)` array (no explicit branch needed for the two full-agreement
-states beyond the ≤1/3 / ≥2/3 split, since v4's own vote only ever takes the
-four values {0, 1/3, 2/3, 1}).
+shared `simulate_overlay` primitive, called once with
+`put_stance = call_stance = where(frac <= 1/3, +1, -1)` (no explicit
+third case needed beyond the ≤1/3 / ≥2/3 split, since v4's own vote only
+ever takes the four values {0, 1/3, 2/3, 1}).
 
 **Sweep (identical window/markets):** `overlay_frac ∈ {0.25, 0.50, 1.00}` ×
 `moneyness ∈ {(0.90,1.10), (0.95,1.05)}` × `cost_bps ∈ {10, 30}` = 12

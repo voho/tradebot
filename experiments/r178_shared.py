@@ -177,27 +177,29 @@ def bs_price(S: np.ndarray, K: float, T: np.ndarray, sigma: np.ndarray, is_call:
 
 
 def simulate_overlay(close: np.ndarray, sigma: np.ndarray, base_equity: np.ndarray,
-                      stance: np.ndarray, overlay_frac: float,
+                      put_stance: np.ndarray, call_stance: np.ndarray, overlay_frac: float,
                       put_moneyness: float = 0.90, call_moneyness: float = 1.10,
                       roll_bars: int = DEFAULT_ROLL_BARS,
                       cost_bps: float = 0.0, r: float = 0.0) -> dict:
     """Causal, weekly-rolling synthetic options overlay, vectorized per cycle.
 
-    `stance[i]` in {-1, +1}, read only at each cycle's OPENING bar `i0`:
-    +1 = long put + long call (pay premium for convexity); -1 = short put
-    + short call (receive premium, harvest the vol risk premium). A
-    conservative COLLAR (long put / short call -- opposite signs per leg)
-    is built by the caller as the SUM of two calls to this function with
-    disjoint legs (see r178_conservative's own wrapper) rather than a
-    third sign convention here, so this one primitive covers both
-    branches without a hidden third case.
+    `put_stance[i]`/`call_stance[i]` in {-1, 0, +1}, read only at each
+    cycle's OPENING bar `i0`, independently per leg: +1 = long that leg
+    (pay premium), -1 = short that leg (receive premium), 0 = leg not
+    traded this cycle. A collar is `put_stance≡+1, call_stance≡-1`; a
+    long/short strangle is `put_stance==call_stance` (both +1 or both -1)
+    on the same cycle. Both legs always use the SAME `qty` (one notional
+    budget per cycle, `overlay_frac * combined equity so far`), so a
+    collar's put and call sides are sized identically, matching the
+    literal Israelov & Klein (2016) construction.
 
     Returns `combined_equity` (base_equity + cumulative overlay P&L, same
     length as `base_equity`), `overlay_pnl` (per-bar delta), `num_rolls`,
     `total_cost`.
     """
     n = len(close)
-    assert len(sigma) == n and len(base_equity) == n and len(stance) == n
+    assert len(sigma) == n and len(base_equity) == n
+    assert len(put_stance) == n and len(call_stance) == n
     overlay_pnl = np.zeros(n)
     total_cost = 0.0
     num_rolls = 0
@@ -213,7 +215,8 @@ def simulate_overlay(close: np.ndarray, sigma: np.ndarray, base_equity: np.ndarr
         qty = notional_budget / S0 if S0 > 0 else 0.0
         K_put = S0 * put_moneyness
         K_call = S0 * call_moneyness
-        leg_stance = float(stance[i0])
+        put_sign = float(put_stance[i0])
+        call_sign = float(call_stance[i0])
 
         T = (i1 - idx) / BARS_PER_YEAR  # T[0] ~= roll_bars/BARS_PER_YEAR, T[-1] = 0.0
         S = close[idx]
@@ -222,9 +225,9 @@ def simulate_overlay(close: np.ndarray, sigma: np.ndarray, base_equity: np.ndarr
         call_vals = bs_price(S, K_call, T, sig, is_call=True, r=r)
         prev_put = np.concatenate(([put_vals[0]], put_vals[:-1]))
         prev_call = np.concatenate(([call_vals[0]], call_vals[:-1]))
-        cycle_pnl = leg_stance * qty * ((put_vals - prev_put) + (call_vals - prev_call))
+        cycle_pnl = qty * (put_sign * (put_vals - prev_put) + call_sign * (call_vals - prev_call))
 
-        open_cost = cost_bps * 1e-4 * qty * (put_vals[0] + call_vals[0])
+        open_cost = cost_bps * 1e-4 * qty * (abs(put_sign) * put_vals[0] + abs(call_sign) * call_vals[0])
         cycle_pnl[0] -= open_cost
         total_cost += open_cost
         num_rolls += 1
