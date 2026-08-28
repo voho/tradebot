@@ -226,6 +226,17 @@ cross-instrument replication convention, R-57). If either market's CI
 contains zero, or the two markets disagree in sign, the branch is dead
 regardless of the pooled headline number.
 
+**ETH data source, fixed here before either branch runs.** This project's
+*usual* ETH falsification file, `data/ethusd_bitfinex_5m.csv.gz`, ends
+2019-12-31 — entirely before DVOL exists anywhere (R-170 already disclosed
+this exact gap for its own VRP feature). The correct ETH price series for
+this round is `data/ethusd_coinbase_spot_5m.csv.gz` (2019-03-14 →
+2026-08-19, confirmed by direct load — fully overlaps `eth_dvol_daily.csv.gz`'s
+2021-03-24 → 2026-08-21 coverage), the same panel file R-63's multi-asset
+work already established as this project's Coinbase-sourced alternative.
+Both branches must use it, not the Bitfinex file, for every ETH number in
+this round.
+
 ## Promotion bar (both branches, ROUTINE.md's default)
 
 Promote only if **all** hold: beats `kelly_regime_v4` (not merely
