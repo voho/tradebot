@@ -316,6 +316,28 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+**IN PROGRESS: R-180** — a third meta-label (López de Prado 2018)
+attempt on `kelly_regime_v4`'s `frac*scale`, this time with features
+genuinely exogenous to price and to the vote: macro risk-off stress
+(VIX+DXY z-score) and on-chain valuation (MVRV level z-score) — the
+specific feature-source requirement R-179's own closing line named, and
+disjoint from R-170's (funding/VRP/illiquidity/excursion) and R-179's own
+(vol_ratio/vote_strength/regime_duration) feature sets. Conservative
+branch: literal reuse of R-179's fixed-window walk-forward
+classifier/veto architecture, feature swap only. Novel branch: a
+sequential, anytime-valid "testing by betting" confidence process (Shafer
+2021; Waudby-Smith & Ramdas 2024) replacing the fixed refit calendar.
+Falsification pre-registered at a well-powered Step-A discriminative-skill
+gate (computed to need ~600–1,670 resolved daily checkpoints, reachable
+against R-179's measured yield of several thousand), not at the
+Sharpe/log-growth clause (computed, per R-179's own measured bootstrap CI
+width, to need ~13.6 years of inner-validation-equivalent data this
+project does not have). Full Step 1/Step 2 design in
+`experiments/r180_direction.md`; shared, read-only engine in
+`experiments/r180_shared.py`, smoke-tested on the real dataset (caught and
+fixed a real bug: VIX/DXY's business-day holiday gaps silently zeroed a
+naive row-count rolling z-score) before either branch is dispatched.
+
 ### R-179 · 08-29 · NEGATIVE (both branches) — a daily-checkpoint meta-label (López de Prado 2018) confidence layer on `kelly_regime_v4`'s `frac*scale`: the classifier finds signal this time, but it is R-162's own collinearity failure wearing a probability, not new information
 
 **Direction.** This session's scheduled brief was the generic "take the
