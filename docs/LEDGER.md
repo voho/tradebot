@@ -316,20 +316,211 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
-**IN PROGRESS: R-179** — a meta-label (López de Prado 2018) confidence
-gate on `kelly_regime_v4`'s own vote+scale signal: a secondary
-logistic-regression classifier, fit walk-forward on daily triple-barrier-
-labeled outcomes, predicting P(holding the current exposure over the next
-`horizon_days` is profitable). Conservative branch: literal binary
-bet/no-bet veto on the classifier's threshold. Novel branch: continuous
-sigmoid-based confidence sizing (Joubert, Barziy & Meyer 2022), scaling
-exposure up or down rather than gating it. Attacks ERR — the first
-*supervised* (labeled-outcome) attempt among this ledger's fourteen prior
-ERR-axis rounds, all of which fit an unsupervised statistic to the signal
-rather than a classifier to realized outcomes. Frozen pre-registration in
-`experiments/r179_direction.md` and `experiments/r179_shared.py`; both
-branches dispatched, not yet reported. This stub will be replaced by the
-full `### R-179` entry once both branches report.
+### R-179 · 08-29 · NEGATIVE (both branches) — a daily-checkpoint meta-label (López de Prado 2018) confidence layer on `kelly_regime_v4`'s `frac*scale`: the classifier finds signal this time, but it is R-162's own collinearity failure wearing a probability, not new information
+
+**Direction.** This session's scheduled brief was the generic "take the
+best strategy, propose an improvement direction, research it, dispatch
+conservative/novel sub-agents, measure, promote the winner" (same brief
+R-170/R-176/R-178's entries name). Step 0: HEAD == `origin/main` @
+`902552a`, no undispatched `_shared.py` (`r178_shared.py` newest, matching
+`### R-178`). Step 0b: 2 consecutive null passes since R-176's dispatch
+("0–2: normal"). Backlog: still only **B-48** (a formatting item) live;
+B-06/B-09/B-17/B-28 blocked/low/partial — no unblocked strategy-research
+item, so a fresh direction was in scope.
+
+Idea: wrap `kelly_regime_v4`'s vote+scale signal in a meta-label — a
+secondary classifier fit on triple-barrier-labeled historical outcomes,
+predicting P(holding the current exposure over the next `horizon_days` is
+profitable) — and use it to gate (conservative: binary veto) or
+continuously size (novel: sigmoid confidence multiplier, Joubert, Barziy &
+Meyer 2022, *J. Financial Data Science* 5(2)) the primary signal. Attacks
+**ERR**: framed at design time as the first *supervised* attempt among
+this ledger's fourteen prior ERR-axis rounds (R-104/R-105/R-106/
+R-109–R-123/R-114/R-116/R-147/R-160/R-172), all of which fit an
+unsupervised statistic to the signal rather than a classifier to labeled
+outcomes.
+
+**A citation this round's own Step 1 should have caught before dispatch,
+found only while writing this entry.** `docs/LEDGER.md` already has
+**R-170** — 08-28, same day, same scheduled brief — "multiplicative
+meta-labeling confidence layer on `kelly_regime_v4`'s `frac*scale`", killed
+at its own Step-0 AUC-vs-permutation-null gate before any strategy code
+was written. `r179_direction.md`'s non-duplication case (Step 1 Q2) named
+the fourteen ERR-axis rounds, the ten regime-timing detectors and R-6x's
+SCALE-only conformal estimator, but never re-read R-170 specifically
+despite it being the literal same idea one round-number range away — the
+same failure mode R-151/R-158 named for the backlog table, now on section
+B's own citation list. Reconciling it here rather than silently: **it is
+not a strict duplicate**, on the one axis this round actually varies —
+R-170's labels were event-triggered (triple-barrier at each vote-flip
+only, n=153 admissible samples, because v4 rebalances just ~150–280 times
+in nine years) and its four features (funding z-score, DVOL-minus-realized
+VRP, Amihud illiquidity, R-163's episode-excursion) were deliberately
+chosen **not** derived from price/vote anchors, "to avoid R-162's
+collinearity failure" in its own words. This round instead labels at a
+**daily** checkpoint regardless of whether v4 rebalances (~3,400 labels,
+addressing the same N≈3 sample-size problem a different way — see
+`r179_shared.py`'s docstring) and its three features (`vol_ratio`,
+`vote_strength`, `log1p(regime_duration)`) are exactly the
+price/vote-anchor-derived family R-170 avoided. That is a real,
+pre-registered variable (daily vs. event labeling), but it means this
+round walked directly into the collinearity risk R-170 and R-162 both
+named — see Result below for what that produced. Full Step 1/Step 2
+design, the four-question filter and both branches' frozen falsification
+rules: `experiments/r179_direction.md`.
+
+**What was done.** Shared, read-only engine `experiments/r179_shared.py`
+(operator-authored, frozen before either branch, smoke-tested on the real
+dataset): `vote_frac`/`conditional_scale` reproduce v4's own two factors
+verbatim; `daily_triple_barrier_labels` builds long-only triple-barrier
+labels at every UTC-day close; `newton_logreg` is a pure-numpy (no
+scipy/sklearn in this environment, R-118/R-125's finding re-confirmed)
+ridge-penalized Newton-Raphson logistic regression; `walk_forward_meta_prob`
+drives the whole causal walk-forward fit/purge/embargo/predict loop,
+forward-filling one probability-per-bar array from each refit, never
+reading a label before its own horizon+embargo has resolved. Frozen
+falsification **clause A** (Step 1 Q4): the mechanism is inconclusive by
+construction, regardless of any backtest number, if the classifier's
+resolved-sample count per refit stays below 50 for a majority of
+training-period checkpoints, or its coefficients' max |Wald z| stays under
+1.0 for a majority of refits.
+
+Two branches, each in its own file, dispatched in parallel, neither
+touching the shared engine or each other's file, neither committing:
+
+- **Conservative** (`experiments/r179_conservative.py`): binary bet/no-bet
+  veto — v4's own sequential deadband loop, unchanged, except `pos =
+  desired` only fires when the current bar's meta-probability clears a
+  `threshold` (gate defaults open while `prob` is NaN, i.e. during
+  classifier warmup). 16 configs (`threshold` ∈ {0.45,0.50,0.55,0.60} ×
+  `refit_days` ∈ {30,90} × `horizon_days` ∈ {1,3}, `k=1.0`,
+  `embargo_days=3`), each on SPOT and futures_5x on inner-validation = 32
+  backtests.
+- **Novel** (`experiments/r179_novel.py`): continuous sigmoid confidence
+  sizing — `final_desired = frac*scale*clip(1 + steepness*(p-0.5), 0,
+  cap)`, capped at v4's own `max_leverage`, `m=1.0` while `prob` is NaN,
+  v4's own deadband applied to `final_desired`. 13 distinct parameter
+  tuples (4 exploratory `(refit_days,horizon_days)` corners for the clause-A
+  scan, then 6 `steepness×cap` configs and 3 robustness configs at other
+  corners, both markets) = 22 backtests.
+
+**Configs evaluated: 29 distinct parameter tuples, 54 backtests total**
+across both branches (16/32 conservative + 13/22 novel) — the trials count
+for deflated Sharpe at the program level.
+
+**Result.**
+
+*Clause A (falsification, pre-registered) — clears for both branches.*
+Conservative: at all 4 `(horizon_days, refit_days)` pairs, no pair has a
+majority-bad refit rate (worst case 41% at `horizon_days=3, refit_days=90`,
+still a minority); average `n_at_refit` 743–760, average max|z| 1.22–1.45.
+Novel: the winning corner (`refit_days=90, horizon_days=3`) had 16/17
+checkpoints refit, median n=758 (min 83), median max|z|=1.10; a stricter
+reading that also counts warmup checkpoints as failing gives 41% bad,
+still short of the >50% trigger. **The classifier is not statistically
+indistinguishable from its own ridge prior on this feature set** — the
+opposite of R-170's finding, and, per the citation note above, exactly
+because these features are the ones R-170 deliberately avoided.
+
+*Conservative — best risk-matched config* (`threshold=0.50,
+horizon_days=1, refit_days=90`; 6 of 16 grid cells were excluded as R-33
+unmatched-exposure artifacts before this selection, including the single
+largest raw Sharpe delta — see Verdict):
+
+| | spot cand | spot v4 | futures cand | futures v4 |
+|---|---|---|---|---|
+| final ($1,000 start) | $1,096 | $998 | $1,215 | $1,064 |
+| Sharpe | 0.30 | 0.14 | 0.49 | 0.25 |
+| Max DD | 27.1% | 33.2% | 23.1% | 32.3% |
+| realized vol | 29.1% | 29.1% | 28.4% | 28.7% |
+| time-in-market | 66.7% | 55.6% | 66.7% | 55.6% |
+| avg notional | 0.313 | 0.289 | 0.313 | 0.289 |
+
+ΔSharpe: spot +0.162, futures +0.235. Δlog-growth: spot +0.094, futures
++0.133.
+
+*Novel — best config* (`refit_days=90, horizon_days=3, steepness=2.0,
+cap=2.0`):
+
+| | spot cand | spot v4 | futures cand | futures v4 |
+|---|---|---|---|---|
+| final ($1,000 start) | $1,109 | $998 | $1,197 | $1,064 |
+| Sharpe | 0.32 | 0.14 | 0.43 | 0.25 |
+| Max DD | 33.7% | 33.2% | 32.6% | 32.3% |
+| realized vol | 34.7% | 29.1% | 35.1% | 28.7% |
+| avg notional | 0.327 | 0.283 | 0.332 | 0.289 |
+| time-in-market | 55.6% | 55.6% | 55.6% | 55.6% |
+
+ΔSharpe: spot +0.181, futures +0.180. Δlog-growth: spot +0.106, futures
++0.118. Paired block-bootstrap 95% CI on Δlog-growth (30-day block,
+n=2000): spot `[-0.129, +0.415]` (not significant, p(diff>0)=0.765);
+futures `[-0.099, +0.379]` (not significant, p=0.832).
+
+**Outcome of the pre-registered decision rule (Step 1 Q4/Step 4 promotion
+bar — improvement must exceed v4's own ±0.2 Sharpe noise floor,
+risk-matched, on both BTC markets, before a holdout read is even
+considered):** **falls through on both branches, for related but distinct
+reasons.** Conservative clears the ±0.2 floor on futures (+0.235) but not
+spot (+0.162) — the bar requires both, so this fails on the point estimate
+alone; no bootstrap was needed to see it. Novel fails risk-matching
+outright (R-33): realized vol runs 19–23% hot and average notional
+15–16% hot vs v4-alone on both markets, so its ΔSharpe cannot be
+distinguished from simply running hotter than v4 — and even setting that
+aside, its own paired-bootstrap CI on Δlog-growth includes zero on both
+markets. **Neither branch reaches the pre-registered holdout gate; the
+2023+ holdout was not read by either branch or by this entry.**
+
+**What actually broke each branch, observed rather than merely
+predicted.** Conservative: at higher thresholds the gate does not
+"skip a bad trade, take a good one later" — `gate_open` sits at 0–1% of
+bars after warmup, i.e. it locks in whatever exposure was held when it
+first closed and mechanically never reopens, converting the meta-label
+into a one-time de-lever rather than an ongoing filter (exactly the R-33
+confound that excluded 6 of 16 grid cells, including the highest raw
+Sharpe delta at `threshold=0.60`). Novel: the fitted probabilities skew
+above 0.5 more often than below across this window, so the sigmoid
+multiplier acts as a near-constant leverage increase rather than a
+genuinely confidence-*conditional* rescaling — mechanically inflating
+notional and vol together with whatever Sharpe gain shows up. **Both
+failure modes are the same underlying fact stated two ways: the
+classifier's clause-A "signal" is not independent information about
+whether the current bet will pay off — it is a smoothed re-statement of
+the vote/scale inputs it was fed, which are already known (R-62's own
+factor-isolation finding) to carry v4's entire return-timing edge.**
+Feed a classifier features derived from the anchors and vote it is
+grading, and it will "discriminate" by rediscovering the trend it is
+already riding — which is why average-probability-above-half looks like
+skill in a mostly-recovering 2021-2022 window and simply relevers the
+existing position instead of adding orthogonal confidence. This is R-162's
+own A2 non-collinearity kill switch, generalized: R-162 caught it as a
+literal linear-algebra degeneracy on a single indicator; here, with a
+learned nonlinear classifier and three engineered features instead of one
+raw one, it does not trip a hard kill switch — it just quietly reproduces
+the input it was fed, and the tell is exclusively in the R-33 risk-match
+check, not in clause A.
+
+**Verdict.** **NEGATIVE, both branches.** One-line lesson: meta-labeling on
+this architecture is now closed on **both** available feature families —
+R-170 showed non-price-anchor-derived features (funding/VRP/illiquidity/
+excursion) carry no discriminative skill at all; this round shows
+price/vote-anchor-derived features do "clear" a naive discrimination check,
+but only because they re-encode the vote's own trend signal, which shows up
+downstream as unmatched risk (R-33) rather than as new, tradeable
+information. A future attempt would need to name a feature source that is
+simultaneously (a) available from this project's committed data, (b)
+structurally independent of `kelly_regime_v4`'s own price anchors and
+volatility estimator, and (c) not already one of R-170's four rejected
+channels — and should argue that case explicitly rather than repeat either
+this round's or R-170's feature family. **Holdout counter: +0, running
+total unchanged at ~766** (R-178's own figure; neither branch here reached
+Step 4). Neither the frozen clause-A gate nor the never-reached Step-4
+decision rule moved after any number was seen. `pytest -q` was not
+re-run against the full suite (no registered strategy or shared framework
+code was touched; both branches independently ran the project's standard
+causal-truncation probe against their own `prepare()` and it passed).
+**Next step:** not filed as a new backlog item — this is a literature-sweep
+closure, not backlog work. **B-48 remains the only OPEN backlog row**;
+B-06/B-09/B-17/B-28 remain blocked, low-value or deliberately partial.
 
 ### R-178 · 08-28 · NEGATIVE (both branches) — a synthetic, DVOL-priced Black-Scholes options overlay on `kelly_regime_v4`; the collar fails R-33 risk-matching and its own plateau requirement, and the VRP-harvest switch fails its own frozen falsification test outright
 
@@ -19441,6 +19632,7 @@ trip.
 
 | what | why | ref |
 |---|---|---|
+| A meta-label (López de Prado 2018) confidence layer on `kelly_regime_v4`'s `frac*scale`, with DAILY (not event-triggered) triple-barrier labels and price/vote-anchor-derived features (`vol_ratio`, `vote_strength`, `log1p(regime_duration)`) — conservative: binary bet/no-bet veto; novel: continuous sigmoid confidence multiplier (Joubert, Barziy & Meyer 2022) | 29 configs total (16 conservative, 13 novel; 54 backtests), holdout not read. Falsification clause A (resolved-sample count and coefficient significance per walk-forward refit) CLEARS for both branches — unlike R-170's event-triggered/non-price-anchor feature set, which found no discriminative skill at all. But that "signal" turns out to be the vote's own trend re-encoded rather than new information (R-162's collinearity failure, generalized to a learned classifier): conservative clears the ±0.2 Sharpe floor on futures (+0.235) but not spot (+0.162); novel fails R-33 risk-matching outright (realized vol 19-23% hot, notional 15-16% hot vs v4-alone on both markets) and its own paired-bootstrap CI on Δlog-growth includes zero on both markets regardless. Do not re-try a meta-label on this architecture using price/vote-anchor-derived features (this round) or funding/VRP/illiquidity/episode-excursion features (R-170) expecting a different label construction or classifier to rescue it, without first naming a feature source structurally independent of v4's own anchors and not already one of R-170's four rejected channels. | R-179 (both branches) |
 | Synthetic, causally DVOL-priced Black-Scholes options structure, additively summed on top of `kelly_regime_v4`'s own unmodified position — conservative: unconditional weekly protective collar (10% OTM put bought, 10% OTM call sold, Israelov & Klein 2016); novel: the same weekly roll but stance switches on v4's own vote (long strangle when `frac<=1/3`, short strangle harvesting VRP when `frac>=2/3`) | 34 configs total (17 each, a 12-point `overlay_frac x moneyness x cost_bps` sweep + frozen primary on 4 market/asset combos + 1 cost-stress point). Conservative's own frozen falsification test (a 30-trial bounded stress resample, DVOL-covered span) formally PASSES, but an independent skeptic found it fails R-33 risk-matching (combined-arm realized vol 28.4%/yr > v4-alone's 24.3%/yr; overlay's own average notional $17,166 > v4's own $10,759 — not a risk-reduced position), fails its own plateau requirement (return scales monotonically with `overlay_frac`: -1.4%/+22%/+84% at 0.25/0.50/1.00), and its inner-validation drawdown "improvement" is entirely a second-half-of-the-window artifact (zero protection in the half containing the one acute crash, May 2021; all of it from the 2022 grinding bear) — confirmed on the pre-registered holdout too: underperforms v4-alone on both BTC markets (futures_5x +329% vs +374%, spot +216% vs +243%), no drawdown improvement either (33.0% vs 33.0% futures, 28.3% vs 27.8% spot). Novel branch fails its own frozen falsification test outright pre-holdout (paired bootstrap 95% CI on Δlog-growth contains zero on both BTC `[-0.93,0.23]` and ETH `[-0.12,1.15]`, and the two markets disagree in sign) and underperforms v4-alone at all 13 swept BTC configurations — its holdout number, disclosed for completeness, is explicitly NOT evidence for the branch (a frozen kill switch that already fired is not reopened by a friendlier-looking later number). Do not re-try an unconditional weekly collar or a vote-conditioned strangle switch on this strategy expecting a different moneyness, roll frequency or strike selection to rescue either construction without first arguing why it would not inherit the same R-33 risk-mismatch (collar) or the same premium-bleed-through-chop failure (switch) measured here. | R-178 (both branches) |
 | Sign-symmetric remap of `kelly_regime_v4`'s own 3-anchor vote (`2*frac-1`), so the two bearish states short instead of flattening, times v4's own continuous vol-target scale, zero new parameters | 5 configs (1 frozen default + 4-point deadband sweep, futures_5x only). Falsified at its own frozen bar: ΔSharpe +0.176 vs v4 is inside the ±0.2 noise floor, at +66%/+135% higher realized vol/notional than v4 (unmatched exposure, R-33) and *worse* drawdown (36.9% vs 32.3%); underperforms v4 on the BTC futures control in the ETH falsification (Sharpe 1.52 vs 2.19); Monte Carlo stress median/worst-case drawdown both worse than v4's, though liquidation rate is unchanged at 0.0% for both. Do not re-try a fixed, sign-symmetric short extension of this vote expecting a different scale multiplier to rescue it — the failure is unmatched exposure and BTC-control underperformance, not the scale formula. | R-177 (conservative) |
 | R-37's own per-vote-state causal `mu_state/sigma_state**2` Kelly estimator, UNFLOORED at zero (bear/1-3 states now size a signed short directly, selected by the vote rather than gated by it) | 96 configs (32-point halflife x kelly_mult x stat_horizon grid on inner-train + the same grid on inner-validation, futures_5x). Per-state mu/kelly_f reproduce R-37's own published figures almost exactly, confirming the estimator is unchanged. Every grid cell underperforms or barely ties v4 at matched risk; the one nominally larger Sharpe gain (kelly_mult=0.75, +0.22) carries 3.4-3.9x v4's notional/vol, an exposure artifact. Frozen candidate loses to v4 on the BTC futures control by an order of magnitude in the ETH falsification (Sharpe 0.18 vs 2.19) and is Sharpe-negative on ETH itself — the identical overfitting signature R-37's own novel branch showed. Do not re-try removing this estimator's zero-floor on this or a differently-detected vote expecting a different halflife/kelly_mult to rescue it — the failure is data-hunger in the rarer bear states, inherited verbatim from R-37, now on both signs at once. | R-177 (novel) |
@@ -19565,6 +19757,29 @@ trip.
 ---
 
 ## D. Backlog (ranked)
+
+**Re-ranked 08-29 after R-179 (NEGATIVE, both branches, 29 configurations
+across 54 backtests, holdout not read).** The ranked list is unchanged —
+B-06, B-09, B-17, B-28, B-48 — since R-179 was a fresh literature-sweep
+round (Step 0b's consecutive-null-pass count was 2 at dispatch, squarely
+"0-2: normal") rather than work on a backlog item. A daily-checkpoint
+meta-label (López de Prado 2018) confidence layer on `kelly_regime_v4`
+closed NEGATIVE: unlike R-170's non-price-anchor feature set (no
+discriminative skill at all), this round's price/vote-anchor-derived
+features do clear the classifier's own falsification gate — but the
+"confidence" turns out to be a re-encoding of the vote's own trend rather
+than new information, surfacing as an R-33 unmatched-exposure failure
+(novel branch) or a one-market-only Sharpe improvement that a mechanical,
+near-permanent gate closure produces rather than genuine discrimination
+(conservative branch). This closes meta-labeling on this architecture for
+both feature families this project's data supports (price/vote-anchor
+here, funding/VRP/illiquidity/excursion in R-170); see R-179 in section B
+and section C for the closure row, including a disclosed citation miss
+(this round's own Step 1 should have found R-170 as the same-day, same-idea
+prior attempt and did not, until writing the entry). **B-48 remains the
+only OPEN backlog row** (a documentation/formatting instrument fix, not a
+strategy-research item); B-06/B-09/B-17/B-28 remain blocked, low-value or
+deliberately partial.
 
 **Re-ranked 08-28 after R-178 (NEGATIVE, both branches, 34 configurations,
 holdout read — +2, running total ~766).** The ranked list is unchanged —
@@ -23185,6 +23400,7 @@ first `—`, and a dispatched round resets it by construction.
 
 | # | committed (UTC) | step 0 | attempted | outcome |
 |---|---|---|---|---|
+| — | 08-29 0x:xx | clean, HEAD == `origin/main` @ `902552a` (R-178's own second verification-pass commit), unshallowed, no undispatched `_shared.py` (`r178_shared.py` newest, matching `### R-178`); 2 null passes since R-176's dispatch, under the 3-pass threshold | R-179 (NEGATIVE, both branches): a daily-checkpoint meta-label (López de Prado 2018) confidence layer on `kelly_regime_v4`'s `frac*scale` -- binary veto (conservative) and continuous sigmoid sizing (novel); 29 configurations, 54 backtests | full detail under R-179 in section B and section C; resets the consecutive-null-pass counter to 0 per this section's own construction rule |
 | 2 | 08-28 23:5x | clean, HEAD == `origin/main` @ `02e61cf` (this session's own prior pass-1 row); unshallowed; no undispatched `_shared.py` (`r178_shared.py` newest, matching `### R-178`); 1 null pass since R-178, under the 3-pass threshold | scheduled brief (best strategy, propose direction, research, dispatch conservative/novel sub-agents, measure, promote); dispatched a research sub-agent: section C + R-160-178 re-read, fresh web search across INFO/SIZE/ERR/COST/N=3 for `kelly_regime_v4` | Verdict: nothing survives Step 1's filter -- liquidation-cascade CSD collides w/ R-85, drawdown-bucket sizing w/ R-152/153 CDaR, adaptive-lookback w/ 21+ closed SIZE retunes, options skew fails Q3 (no strike data). No branch dispatched. `pytest` 540 passed; B-06 fresh (~2.5h). |
 | 1 | 08-28 23:0x | clean, HEAD == `origin/main` @ `c17be69` (R-178's own commit), unshallowed, no undispatched `_shared.py` (`r178_shared.py` newest, has a matching `### R-178` entry); 0 null passes since R-178's dispatch, well under the 3-pass threshold | scheduled brief (best strategy, propose direction, research, dispatch conservative/novel sub-agents, measure, promote); dispatched a research sub-agent: full section C read, R-171-R-178 re-read, fresh 2025-26 web search across INFO/N=3/ERR/COST for `kelly_regime_v4` | Verdict: nothing survives Step 1's filter -- TDA regime detection collides w/ R-155, small-N causal inference w/ R-138/R-140, Kelly+VIX-hybrid sizing w/ 30+ closed SIZE retunes, funding-forecast/liquidation-cascade w/ closed CSD family. No branch dispatched. `pytest` 540 passed; B-06 fresh. |
 | — | 08-28 22:3x | *(backfilled by this session's own pass-1 row above -- R-178 dispatched a round but did not add its own row here at the time)* | R-178 (NEGATIVE, both branches): a synthetic DVOL-priced Black-Scholes options overlay on `kelly_regime_v4` -- a protective collar (conservative) and a VRP-harvest switch (novel); 34 configurations across both branches | full detail under R-178 in section B; resets the consecutive-null-pass counter to 0 per this section's own construction rule |

@@ -508,9 +508,9 @@ def main() -> None:
               "cannot be distinguished from simply running hotter or cooler than v4. Not scored as a win.")
     elif promote:
         print("PROMOTE-CANDIDATE (inner-validation only; holdout not read by this branch) -- clause A "
-              "clears, the realized-risk profile is matched to v4-alone within +/-15% on both markets, and "
-              "the paired-bootstrap 95% CI on d_log_growth excludes zero on the winning side on BOTH BTC "
-              "markets.")
+              "clears, the realized-risk profile is matched to v4-alone within +/-10% (notional and vol) "
+              "on both markets, and the paired-bootstrap 95% CI on d_log_growth excludes zero on the "
+              "winning side on BOTH BTC markets.")
     else:
         print("NEGATIVE -- clause A clears and risk is matched, but the pre-registered bar (paired-bootstrap "
               "plausible improvement on BOTH markets, risk-matched) is not met. See the comparison table "
