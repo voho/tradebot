@@ -27,6 +27,30 @@ EXPERIMENTS = Path(__file__).resolve().parents[1] / "experiments"
 #: than the shape it protects and would never have bound a working pass.
 CELL_CAP = 300
 
+#: Sections A, C and D are registries, not one-row-per-pass logs, so they get
+#: a looser cap than E -- but a cap, which is B-48/R-183's whole point. Before
+#: it, C ran a 1,004-character median and a 3,234 maximum in the `why` column
+#: and D a 759 median, in the two tables Step 0 sends every session to read.
+#:
+#: 500 is not a round number picked to bind gently. It is what the row needs
+#: to keep doing its job: C's `why` column carries a "do not re-try X without
+#: Y" ruling in 95 of 123 rows, median 281 characters, and its lede (the
+#: configuration count) runs a 167 median -- so 500 holds a full ruling plus a
+#: full lede with room to spare, and forces only the evidence recital out.
+#:
+#: Forcing that recital out is safe because R-183 measured where it already
+#: lives: across the 111 C rows and 43 D rows carrying three or more distinct
+#: numbers, a MEDIAN OF 100% of those numbers already appear in the section B
+#: entry the row's own `ref` cell points at (>=80% on 108/111 and 42/43). The
+#: registry prose was a paraphrase of the round, never a second source. That
+#: is why the cap is a cap and not the content migration B-48 assumed it would
+#: have to be -- there was nothing to migrate.
+REGISTRY_CELL_CAP = 500
+
+#: Which cap governs which section.
+CAPS = {"A": REGISTRY_CELL_CAP, "C": REGISTRY_CELL_CAP,
+        "D": REGISTRY_CELL_CAP, "E": CELL_CAP}
+
 #: A row of a Markdown table splits on unescaped pipes only.
 _PIPE = re.compile(r"(?<!\\)\|")
 
@@ -104,16 +128,45 @@ def test_registry_tables_match_their_header_width():
                 "Write it `\\|`.")
 
 
-def test_section_e_cells_stay_within_the_cap():
-    """One row wide, per section E's own opening paragraph."""
-    header, rows = _section_e_rows()
-    for cells in rows:
-        for name, cell in zip(header, cells):
-            assert len(cell) <= CELL_CAP, (
-                f"section E row {cells[0]!r}, column {name!r} is "
-                f"{len(cell)} characters against a {CELL_CAP} cap. A pass "
-                "that needs more than this did not find nothing -- write it "
-                "up in section B as a round. See R-169.")
+def test_table_cells_stay_within_their_section_cap():
+    """No table cell in this file may hold a paragraph.
+
+    Section E has been capped since R-169; R-183 extended the same rule to the
+    registries after B-48. The failure both caps exist to stop is identical
+    and spreads identically -- each new row is written by copying the row
+    above it, so neither is fixable by asking future sessions to be brief.
+
+    When this fires, the fix is never to squeeze the prose into fewer words.
+    It is to put the paragraph where the file already says it goes: in the
+    round's own section B entry, leaving the cell the ruling and the `ref`.
+    """
+    for section, cap in CAPS.items():
+        header, rows = _table(section)
+        for lineno, cells in rows:
+            for name, cell in zip(header, cells):
+                assert len(cell) <= cap, (
+                    f"docs/LEDGER.md:{lineno}: section {section} row "
+                    f"{cells[0][:40]!r}, column {name!r} is {len(cell)} "
+                    f"characters against a {cap} cap. The paragraph belongs "
+                    "in the round's section B entry; the cell keeps the "
+                    "ruling and the ref. See R-169 (section E) and R-183 "
+                    "(sections A, C, D).")
+
+
+def test_capped_sections_keep_a_verbatim_archive():
+    """Nothing is deleted -- the pre-cap rows stay, verbatim, below the table.
+
+    R-169 established the shape (`### E-verbose`) and R-183 reused it for the
+    registries. The archive is what makes the cap a trim rather than a loss,
+    and what lets a capped cell end in a bare `...` without that ellipsis
+    hiding anything.
+    """
+    text = LEDGER.read_text()
+    for section in CAPS:
+        assert re.search(rf"^### {section}-verbose\b", text, re.M), (
+            f"section {section} is capped but has no `### {section}-verbose` "
+            "archive. A cap without one deletes evidence, which this file "
+            "does not do.")
 
 
 def test_section_e_pass_numbers_descend_within_the_live_block():
