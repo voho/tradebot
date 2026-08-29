@@ -316,6 +316,21 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+**IN PROGRESS: R-179** — a meta-label (López de Prado 2018) confidence
+gate on `kelly_regime_v4`'s own vote+scale signal: a secondary
+logistic-regression classifier, fit walk-forward on daily triple-barrier-
+labeled outcomes, predicting P(holding the current exposure over the next
+`horizon_days` is profitable). Conservative branch: literal binary
+bet/no-bet veto on the classifier's threshold. Novel branch: continuous
+sigmoid-based confidence sizing (Joubert, Barziy & Meyer 2022), scaling
+exposure up or down rather than gating it. Attacks ERR — the first
+*supervised* (labeled-outcome) attempt among this ledger's fourteen prior
+ERR-axis rounds, all of which fit an unsupervised statistic to the signal
+rather than a classifier to realized outcomes. Frozen pre-registration in
+`experiments/r179_direction.md` and `experiments/r179_shared.py`; both
+branches dispatched, not yet reported. This stub will be replaced by the
+full `### R-179` entry once both branches report.
+
 ### R-178 · 08-28 · NEGATIVE (both branches) — a synthetic, DVOL-priced Black-Scholes options overlay on `kelly_regime_v4`; the collar fails R-33 risk-matching and its own plateau requirement, and the VRP-harvest switch fails its own frozen falsification test outright
 
 **Direction.** Off-backlog (still only **B-48**, a documentation/formatting
