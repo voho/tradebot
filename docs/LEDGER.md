@@ -316,6 +316,12 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
+<!-- IN PROGRESS: R-183 backlog item B-48 — cap the prose-in-a-table-cell
+defect in sections C and D (METHOD/instrument). Announced before the work
+lands, per Step 0's collision-avoidance convention. -->
+
+IN PROGRESS: R-183 — B-48: capping sections C and D's table cells.
+
 ### R-182 · 08-29 · NEGATIVE (both branches) — a signed core-satellite venue split for `kelly_regime_v4` (COST axis): the cost-ratio fix works exactly as designed, but the same hysteresis fix that confirms and repairs its own diagnosed side effect (transition-doubling) still fails risk-matching, by construction
 
 **Direction.** This session's scheduled brief was the generic "take the best strategy, propose an improvement direction, research it, dispatch conservative/novel sub-agents, measure, promote the winner" (same brief R-170/R-176/R-178/R-179/R-180/R-181's entries name). Step 0: `HEAD == origin/main` @ `8fd4ef3` (R-181's own commit), no undispatched `r<nn>_shared.py`. Step 0b: 1 consecutive null pass since R-181's own dispatch ("0–2: normal"). Backlog: still only **B-48** (a documentation/formatting item) live; B-06/B-09/B-17/B-28 blocked/low/partial — no unblocked strategy-research item, so a fresh direction was in scope.
