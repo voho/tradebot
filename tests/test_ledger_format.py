@@ -51,6 +51,23 @@ REGISTRY_CELL_CAP = 500
 CAPS = {"A": REGISTRY_CELL_CAP, "C": REGISTRY_CELL_CAP,
         "D": REGISTRY_CELL_CAP, "E": CELL_CAP}
 
+#: How much prose may sit between a registry's heading and its own table.
+#: Capping the cells does not help if the table is unreachable: R-183 found
+#: **82 per-round "Re-ranked after R-nn" paragraphs -- 2,440 lines, 174,922
+#: characters** stacked above section D's table, more than sections C and D's
+#: tables carry between them, in the section Step 0 sends every session to
+#: read for the ranked list. ROUTINE.md Step 5 had already forbidden this in
+#: prose since R-158 and the paragraphs kept arriving, which is the same
+#: lesson as every other number in this file: the rule has to be mechanical.
+#:
+#: 3,000 is set against what a *standing* note costs, not against what the
+#: accumulation cost: A and C carry none, D's new one is 903 characters and
+#: E's -- the format explainer R-158 and R-169 wrote once -- is 2,426. So the
+#: cap leaves every legitimate preamble room to be edited and still fires
+#: after roughly one appended round-paragraph, two orders of magnitude below
+#: the 174,922 characters it exists to prevent.
+SECTION_PREAMBLE_CAP = 3000
+
 #: A row of a Markdown table splits on unescaped pipes only.
 _PIPE = re.compile(r"(?<!\\)\|")
 
@@ -151,6 +168,32 @@ def test_table_cells_stay_within_their_section_cap():
                     "in the round's section B entry; the cell keeps the "
                     "ruling and the ref. See R-169 (section E) and R-183 "
                     "(sections A, C, D).")
+
+
+def test_registry_tables_are_not_buried_under_their_own_preamble():
+    """A registry's table must start near its heading.
+
+    The cell cap makes each row readable; this keeps the rows reachable. Both
+    failures are the same one -- prose accumulating one round at a time in a
+    place the routine promises is a table -- and R-158 already had to undo it
+    once at 4,556 lines before it grew back to 2,440.
+
+    Per-round commentary belongs in the round's own section B entry, or, when
+    it is genuinely about how the backlog moved, in `### D-rerank-archive`
+    below the table. The status cell carries the state.
+    """
+    for section in ("A", "C", "D", "E"):
+        lines = LEDGER.read_text().splitlines()
+        start = next(i for i, l in enumerate(lines) if l.startswith(f"## {section}."))
+        table = next(i for i, l in enumerate(lines[start:], start) if l.startswith("|"))
+        preamble = "\n".join(lines[start + 1:table])
+        assert len(preamble) <= SECTION_PREAMBLE_CAP, (
+            f"docs/LEDGER.md:{start + 1}: section {section} has "
+            f"{len(preamble)} characters of prose between its heading and its "
+            f"table, against a {SECTION_PREAMBLE_CAP} cap. A round's "
+            "commentary goes in its section B entry; a backlog re-ranking "
+            "goes in the item's own status cell, and its reasoning -- if it "
+            "truly needs a paragraph -- in `### D-rerank-archive`. See R-183.")
 
 
 def test_capped_sections_keep_a_verbatim_archive():

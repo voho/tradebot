@@ -109,10 +109,18 @@ paragraph can talk you out of it:
 
 ```bash
 # every backlog item still live, with its status cell
-awk '/^## D\. Backlog/,/^## E\./' docs/LEDGER.md \
+awk '/^## D\. Backlog/,/^### /' docs/LEDGER.md \
   | grep -oE "^\| \*\*B-[0-9]+\*\* \|.*" \
   | awk -F'|' '{printf "%-9s %s\n", $2, substr($5,1,70)}'
 ```
+
+**Stop the range at the first `###`, not at `## E.`.** Sections C, D and E
+each keep their pre-cap rows verbatim in a `### <X>-verbose` archive below
+their own table (R-169, R-183), and an archived row is still a row: ranging to
+`## E.` sweeps them up and prints **8** live-looking backlog items where there
+are 4, with their *original* status cells — including `B-48` as `**OPEN**`
+three hours after it was closed. `### ` is where every table in this file
+ends; `tests/test_ledger_format.py` parses them the same way.
 
 Then **strike what that prints as already done** (`~~B-nn~~`, the file's
 own convention) before reading the list, because a row whose status says
@@ -154,7 +162,7 @@ exactly *the numbered rows above the first `—`*, and it needs no git parsing:
 
 ```bash
 # consecutive null passes since the last dispatched round
-awk '/^## E\. Verification/,/^### E-archive/' docs/LEDGER.md \
+awk '/^## E\. Verification/,/^### /' docs/LEDGER.md \
   | grep -E "^\|" \
   | awk -F'|' '$2 ~ /^ *#/ || $2 ~ /^ *-+ *$/ {next}
                $2 ~ /—/ {exit} {n++} END {print n+0}'
@@ -429,6 +437,19 @@ Three rules the format exists to protect, learned by losing them:
   Sections A, C and D are short-cell registries and stay tables — if one
   of their cells starts wanting a paragraph, the paragraph goes in the
   round's section in B and the cell gets the ID.
+
+  **This is now a number, not an exhortation: 500 characters per cell in A,
+  C and D** (300 in E), enforced by `pytest tests/test_ledger_format.py`.
+  Asking sessions to be brief did not hold — C reached a 1,004-character
+  median and a 3,234 maximum, D a 759 median (B-48/R-183). Write the row to
+  three things and it fits comfortably: the **lede** (what was run, how many
+  configurations), the **ruling** (`do not re-try X without Y`), and the
+  **outcome**. Everything else — the evidence recital — goes in the round's
+  section B entry, which the `ref` cell already points at. R-183 measured
+  that this costs nothing: a median **100%** of the distinct numbers in the
+  old registry prose were *already* in that entry. Use `…` for a dropped
+  middle, and never delete: pre-cap rows live verbatim in `### C-verbose`
+  and `### D-verbose`.
 - **Escape every `|` you did not mean as a column: write `\|`.** The
   `|basis|` shift above is not history — R-169 found it live in three rows
   eight days later, where absolute-value bars in prose (`|Δf|`, `|Δleg|`,
@@ -482,11 +503,20 @@ Finally, **re-rank the backlog** at the bottom of the ledger, then
 commit and push.
 
 **Re-ranking means editing the table, not appending a paragraph above it.**
-Section D's header carries one `Re-ranked after R-nn` paragraph per round and
-had grown to 4,556 lines — in a section whose whole point is a table that
-Step 0 makes you `grep` because nobody reads that far. If a round changes an
-item's status, change the item's status cell and strike it if it is closed;
-add a paragraph only when *why* it moved will not fit in the note column.
+If a round changes an item's status, change the item's **status cell** and
+strike its ID (`~~B-nn~~`) if it is closed. That is the whole of it.
+
+R-158 wrote that rule after clearing 4,556 lines of `Re-ranked after R-nn`
+paragraphs from section D's header, and it did not hold: by 08-29 the stack
+had grown back to **82 paragraphs, 2,440 lines, 174,922 characters** — more
+than sections C and D's tables carry between them — sitting between the
+heading and the table Step 0 makes you `grep` because nobody reads that far.
+R-183 moved them to `### D-rerank-archive` and put a **3,000-character bound
+on the prose between any registry's heading and its own table** into
+`tests/test_ledger_format.py`, because this is the third time the same defect
+has been fixed by asking and the first time it has been fixed by measuring.
+If *why* an item moved genuinely will not fit in its note column, it goes in
+that archive or in the round's own section B entry — not above the table.
 
 ---
 
