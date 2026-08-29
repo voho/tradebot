@@ -20018,6 +20018,54 @@ trip.
 
 ## D. Backlog (ranked)
 
+**Re-ranked 08-29 after R-182 (NEGATIVE, both branches, 45 configurations
+total, holdout not read).** The ranked list is unchanged — B-06, B-09, B-17,
+B-28, B-48 — since R-182 was a fresh literature-sweep round (Step 0b's
+consecutive-null-pass count was 1 at dispatch, "0–2: normal") rather than
+work on a backlog item. A signed core-satellite venue split (a slow BASE
+held on spot, a signed deviation held on futures) for `kelly_regime_v4`'s
+COST axis closed NEGATIVE on both branches: the split's own targeted
+cost-ratio mechanism confirms exactly as designed (extra-fee/funding-saved
+ratio falls to 0.048–0.430 at the real 0.40% tier, well under R-145's
+0.931), and both branches' `d_sharpe` point estimates flip positive on
+inner-validation relative to the design-time inner-train measurement — but
+neither clears the +0.20 floor, and the novel branch's own hysteresis fix,
+whose diagnostics confirm the diagnosed transition-doubling mechanism
+directly (real-broker co-firing bars 49→5, an 89.8% reduction, monotone
+across every swept `H`), fails risk-matching instead: widening the
+persistence window to suppress co-firing necessarily widens the realized
+in-market window by the same construction, mismatching time-in-market by
+11–56% relative even at the smallest swept `H`. This closes the venue-
+routing research line opened by R-145 and continued through R-151/R-154:
+two structurally different split functions (magnitude-threshold, and this
+round's time-scale/BASE) have now both failed, the second for a genuinely
+diagnosed, mechanism-level reason rather than an unexplained residual. See
+R-182 in section B and section C for the closure row. **B-48 remains the
+only OPEN backlog row** (a documentation/formatting instrument fix, not a
+strategy-research item); B-06/B-09/B-17/B-28 remain blocked, low-value or
+deliberately partial.
+
+**Re-ranked 08-29 after R-181 (NEGATIVE, both branches, 10 configurations,
+holdout not read).** The ranked list is unchanged — B-06, B-09, B-17, B-28,
+B-48 — since R-181 was a fresh literature-sweep round (Step 0b's
+consecutive-null-pass count was 1 at dispatch, "0–2: normal") rather than
+work on a backlog item. Implementing R-174's own named fix (a
+shorter-resolution-time evidence statistic) for its asymmetric ERR-axis gate
+on `kelly_regime_v4` closed NEGATIVE on both branches: the conservative
+branch's daily-lagged SPRT still needs 227–472x longer than an episode
+survives to reach significance, so no gate was ever built past its own
+reachability precheck; the novel branch's TSRV-corrected GROW e-value is the
+first ERR-axis construction on this architecture to demonstrably bind
+(kill switches pass, R-squared against the control is genuinely low) rather
+than degenerate to a no-op — and still fails, because the same
+responsiveness that lets it bind also suppresses mean exposure so far
+outside the risk-matching band that the promotion bar fails on 5 of 6
+cells. This closes the twelfth and thirteenth ERR-axis constructions on
+this vote/scale architecture (0 of 13 promoted). See R-181 in section B for
+the full write-up. **B-48 remains the only OPEN backlog row** (a
+documentation/formatting instrument fix, not a strategy-research item);
+B-06/B-09/B-17/B-28 remain blocked, low-value or deliberately partial.
+
 **Re-ranked 08-29 after R-180 (NEGATIVE, both branches, 28 distinct
 configurations, holdout not read).** The ranked list is unchanged — B-06,
 B-09, B-17, B-28, B-48 — since R-180 was a fresh literature-sweep round
