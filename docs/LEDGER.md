@@ -316,27 +316,208 @@ the most expensive repeated mistake in this table.
 
 ## B. Research log (newest first)
 
-**IN PROGRESS: R-180** — a third meta-label (López de Prado 2018)
-attempt on `kelly_regime_v4`'s `frac*scale`, this time with features
-genuinely exogenous to price and to the vote: macro risk-off stress
-(VIX+DXY z-score) and on-chain valuation (MVRV level z-score) — the
-specific feature-source requirement R-179's own closing line named, and
-disjoint from R-170's (funding/VRP/illiquidity/excursion) and R-179's own
-(vol_ratio/vote_strength/regime_duration) feature sets. Conservative
-branch: literal reuse of R-179's fixed-window walk-forward
-classifier/veto architecture, feature swap only. Novel branch: a
-sequential, anytime-valid "testing by betting" confidence process (Shafer
-2021; Waudby-Smith & Ramdas 2024) replacing the fixed refit calendar.
-Falsification pre-registered at a well-powered Step-A discriminative-skill
-gate (computed to need ~600–1,670 resolved daily checkpoints, reachable
-against R-179's measured yield of several thousand), not at the
-Sharpe/log-growth clause (computed, per R-179's own measured bootstrap CI
-width, to need ~13.6 years of inner-validation-equivalent data this
-project does not have). Full Step 1/Step 2 design in
-`experiments/r180_direction.md`; shared, read-only engine in
-`experiments/r180_shared.py`, smoke-tested on the real dataset (caught and
-fixed a real bug: VIX/DXY's business-day holiday gaps silently zeroed a
-naive row-count rolling z-score) before either branch is dispatched.
+### R-180 · 08-29 · NEGATIVE (both branches) — exogenous-feature meta-labeling (macro stress + MVRV) on `kelly_regime_v4`: Step-A skill gate fails outright on the conservative branch, and the novel branch's sequential betting process finds real training-period edge but fails R-33 risk-matching on both markets
+
+**Direction.** This session's scheduled brief was the generic "take the
+best strategy, propose an improvement direction, research it, dispatch
+conservative/novel sub-agents, measure, promote the winner" (same brief
+R-170/R-176/R-178/R-179's entries name). Step 0: HEAD == `origin/main` @
+`3879b42`, no undispatched `_shared.py` (`r179_shared.py` newest, matching
+`### R-179`). Step 0b: 0 consecutive null passes (R-179 was a dispatched
+round). Backlog: still only **B-48** (a formatting item) live;
+B-06/B-09/B-17/B-28 blocked/low/partial — no unblocked strategy-research
+item, so a fresh direction was in scope.
+
+Idea: a third meta-label (López de Prado 2018) attempt on `kelly_regime_v4`'s
+`frac*scale` decision, this time with features genuinely exogenous to price
+and to the vote — macro risk-off stress (VIX level + DXY level, equal-weight
+rolling z-score) and on-chain valuation (MVRV level, rolling z-score) — the
+specific feature-source requirement R-179's own closing line named
+("simultaneously (a) available from this project's committed data, (b)
+structurally independent of `kelly_regime_v4`'s own price anchors and
+volatility estimator, and (c) not already one of R-170's four rejected
+channels"). Attacks **ERR**: neither feature is asked "which way should the
+position move" (that already failed as an INFO-axis signal — VIX/DXY as a
+directional veto/vote in R-53/R-54/B-21, MVRV level/rate-of-change as a
+directional confirming vote in R-74) — both are asked "how much should I
+trust the position the vote already chose," a downstream reliability
+question. Not a duplicate of R-170's four features (funding z-score,
+DVOL-minus-realized VRP, Amihud illiquidity, episode-excursion) or R-179's
+three (`vol_ratio`, `vote_strength`, `log1p(regime_duration)`) — set
+intersection is empty on both counts, checked explicitly. Not a duplicate
+of R-87 (unsupervised ACI on the vote's own confidence, no labeled outcome,
+no exogenous feature) or R-161/R-167 (unsupervised RCPS/CRC caps on SCALE's
+own history). Not a duplicate of R-174 (sequential e-value gate on `frac*
+scale`'s own re-sizing timing, anchored to BTC's raw per-bar drift — closed
+because that ratio's natural resolution timescale is 2–3 orders of
+magnitude longer than a deadband episode's own lifetime): this round's
+novel branch also uses a sequential/anytime-valid betting construction, but
+on a structurally different, coarser statistic (a daily Bernoulli-like
+triple-barrier hit/miss, not raw per-bar drift), with its own reachable-n
+computed rather than assumed. Zero of 17 prior ERR-axis rounds on this
+architecture have promoted. Full Step 1/Step 2 design, the four-question
+filter, the reachable-power computation (Step 1 Q4: the Sharpe/log-growth
+promotion clause would need ~13.6 years of inner-validation-equivalent data
+to resolve an effect the size R-179 already measured twice, which this
+dataset does not have — falsification is therefore pre-registered at the
+well-powered Step-A discriminative-skill gate instead, computed to need
+~600–1,670 resolved daily checkpoints, reachable against R-179's own
+measured yield of several thousand) and both branches' frozen falsification
+rules: `experiments/r180_direction.md`.
+
+**What was done.** Shared, read-only engine `experiments/r180_shared.py`
+(operator-authored, frozen before either branch, smoke-tested on the real
+dataset before dispatch — the self-test caught and the operator fixed one
+real bug: VIX/DXY are business-day series with holiday gaps, and a naive
+row-count `rolling(365, min_periods=365)` z-score requires zero holidays in
+every window, so it silently produced an all-NaN feature; fixed with a
+calendar-day time-based window, `min_periods` relaxed to 70% of the
+expected 5-day-week observation count). Exposes `macro_stress_z`/`mvrv_z`
+(the two new causal feature builders), a generalization of R-179's own
+walk-forward classifier parameterized on an arbitrary feature matrix
+(`walk_forward_meta_prob`/`walk_forward_from_checkpoints`, mechanically
+identical to R-179's — purge/embargo, expanding-window refit, forward-fill
+— reused rather than re-derived), and a label-permutation AUC Step-A gate
+(`step_a_permutation_gate`); `vote_frac`/`conditional_scale`/
+`daily_checkpoints`/`daily_triple_barrier_labels`/`newton_logreg`/
+`predict_logreg` are re-exported unedited from `r179_shared.py`.
+
+Two branches, each in its own file, dispatched in parallel, neither
+touching the shared engine or each other's file, neither committing:
+
+- **Conservative** (`experiments/r180_conservative.py`): literal reuse of
+  R-179's conservative binary bet/no-bet veto architecture, feature swap
+  only (`macro_stress_z`, `mvrv_z` in place of `vol_ratio`/`vote_strength`/
+  `regime_duration`). Identity/no-op probe passes (threshold=0.0 and a
+  never-fitting classifier both reproduce `kelly_regime_v4`-alone's
+  `target` array exactly, bit for bit). Step-A permutation gate run first,
+  4 `(horizon_days, refit_days)` corners ∈ {1,3}×{30,90}, `n_perm=500` each
+  (2,000 permutation refits + 4 true-label fits, 80s wall time), on
+  2017–2020 training data only.
+- **Novel** (`experiments/r180_novel.py`): sequential online-logistic
+  "testing by betting" capital process (Shafer 2021, *Testing by Betting*,
+  JRSS-A 184(2); Waudby-Smith & Ramdas 2024, *Estimating Means of Bounded
+  Random Variables by Betting*, JRSS-B 86(1)) — one SGD update per newly
+  resolved daily checkpoint, no batch refit calendar; `log(wealth_t)` drives
+  a bounded `clip(1 + kappa*tanh(log(wealth_t)/3.0), 0, cap)` multiplier on
+  v4's own `frac*scale`. Falsification checked first: terminal
+  training-period wealth must exceed `1/alpha=20`. Swept `lr∈{0.01,0.03,
+  0.1,0.3} × kelly_mult∈{0.25,0.5,1.0,2.0}` (16 configs, train, spot) to
+  find clause-clearing corners, then `kappa∈{0.5,1.0,2.0} × cap∈{1.5,2.0}`
+  (6 configs) at the mildest clearing corner on inner-validation both
+  markets, plus 2 robustness corners at other (lr, kelly_mult) pairs.
+
+**Configs evaluated: conservative 4 (Step-A corners only — the
+inner-validation sweep was pre-registered as skippable on Step-A failure
+and was skipped) + novel 24 distinct parameter tuples (32 backtests: 16
+train/spot falsification-gate + 6×2-market kappa/cap sweep + 2×2-market
+robustness) = 28 distinct configurations** across both branches — the
+trials count for deflated Sharpe at the program level. The operator
+independently re-ran both branches' scripts verbatim (not merely reading
+their reports) and reproduced every number below to the same precision;
+`pytest -q` (full suite, 540 tests) passed after both branches' files were
+added.
+
+**Result.**
+
+*Conservative — Step-A discriminative-skill gate (the decisive,
+pre-registered falsification test): FAILS.*
+
+| horizon_days | refit_days | true AUC | null p95 | p-value | clears? |
+|---|---|---|---|---|---|
+| 1 | 30 | 0.5337 | 0.5210 | 0.008 | yes |
+| 1 | 90 | 0.5189 | 0.5239 | 0.070 | no |
+| 3 | 30 | 0.4840 | 0.5182 | 0.734 | no |
+| 3 | 90 | 0.4888 | 0.5202 | 0.628 | no |
+
+Only 1 of 4 corners (25%) clears the null's 95th percentile — not a
+majority. Per the pre-registration, this makes the branch NEGATIVE by
+construction; the fuller inner-validation sweep was not required and was
+not run. Only the shortest-horizon, most-frequently-refit corner shows a
+marginal, isolated positive signal; the other three sit inside the
+permutation null, two of them (`horizon_days=3`) actually below chance.
+
+*Novel — falsification clause: CLEARS* (12 of 16 `(lr, kelly_mult)`
+combinations exceed wealth > 20 on 2017–2020 training data, spot; the 4
+`kelly_mult=2.0` combos over-bet and ruin instead, wealth → ~1e-7–0;
+~1,400 resolved checkpoints used, comfortably inside the pre-registered
+600–1,670 requirement — the well-powered clearance the pre-registration
+expected, not R-174's unreachable-n story). Two independent causality
+checks before trusting this: a truncation probe (bars before a synthetic
+future cut are bit-identical regardless of what happens after it) and a
+label-permutation check (shuffling the resolved outcomes collapses
+terminal wealth from ~3.6e7 to ~1.2e-7 on the same slice) — both pass, so
+the mechanism is genuinely fitting the real label sequence. Terminal wealth
+is disclosed as sensitive to `lr` in a way that looks like unregularized
+SGD drift (32.7 up to ~7.8e32 across the clearing grid) rather than a
+converged estimate — a real property of this construction, not a bug,
+flagged for any future attempt at this mechanism.
+
+*Novel — best risk-matched-attempt config* (`lr=0.01, kelly_mult=0.25,
+kappa=1.0, cap=1.5`, chosen as the mildest clause-clearing corner, not the
+most extreme):
+
+| | spot cand | spot v4 | futures cand | futures v4 |
+|---|---|---|---|---|
+| final ($1,000 start) | $1,004 | $998 | $1,042 | $1,064 |
+| Sharpe | 0.19 | 0.14 | 0.25 | 0.25 |
+| Max DD | 40.5% | 33.2% | 42.3% | 32.3% |
+| realized vol | 0.373 | 0.291 | 0.385 | 0.287 |
+| avg notional | 0.373 | 0.283 | 0.395 | 0.289 |
+| time-in-market | 55.6% | 55.6% | 55.6% | 55.6% |
+
+ΔSharpe: spot +0.050, futures −0.005 (neither clears the ±0.2 floor even on
+the point estimate). Vol ratio 1.28×/1.34×, notional ratio 1.32×/1.36× —
+**no config in the sweep achieved R-33 risk-matching**; the closest grid
+point still ran 14–18% hot on both axes on both markets. Paired
+block-bootstrap 95% CI on Δlog-growth (30-day block, n=2000): spot
+`[-0.184, +0.229]` (not significant, p=0.514); futures `[-0.259, +0.224]`
+(not significant, p=0.442) — both include zero regardless of the
+risk-matching failure. Mechanistically, the wealth-multiplier saturates
+near `cap` within the first ~50–300 training-period days and stays pinned
+there for nearly the entire run — a near-constant leverage boost, not a
+genuinely time-varying confidence signal, the same qualitative failure
+R-179's own novel branch produced (19–23% hot) reproduced here in worse
+form (28–36% hot) by a different mechanism.
+
+**Outcome of the pre-registered decision rule:** falls through on both
+branches. Conservative fails at Step-A itself, before any backtest number
+is read — the classifier shows essentially no discriminative skill on the
+exogenous macro/MVRV features at 3 of 4 tested corners. Novel clears its
+own falsification clause (a real result: the sequential process does find
+training-period edge) but fails R-33 risk-matching outright on both markets
+and its own paired-bootstrap CI includes zero regardless. **Neither branch
+reaches the pre-registered holdout gate; the 2023+ holdout was not read by
+either branch or by this entry.**
+
+**Verdict.** **NEGATIVE, both branches.** One-line lesson: naming an
+exogenous feature source structurally independent of v4's own anchors (the
+fix R-179 itself called for) produces a classifier with no real
+discriminative skill on the conservative fixed-window architecture, and a
+sequential betting process that does find edge on the same features but
+cannot translate it into a risk-matched sizing signal — it saturates into a
+near-constant leverage change instead, the identical failure shape
+R-179's novel branch hit via a different mechanism. This closes
+meta-labeling on this architecture for a third feature family (price/
+vote-anchor: R-179; funding/VRP/illiquidity/excursion: R-170; macro/
+on-chain: this round) and — more specifically — closes the "swap the
+architecture's fixed-refit-calendar classifier for a sequential/
+anytime-valid betting process" idea this round and R-179 both tried in
+different forms: both produced a monotone, saturating confidence score that
+degenerates into leverage inflation rather than genuine time-varying
+discrimination, regardless of whether the underlying classifier is
+fixed-window or online. A future ERR-axis attempt on this architecture
+would need either a feature source not yet named in this ledger, or a
+mechanism that provably cannot saturate into a constant exposure multiplier
+— and should argue that case explicitly rather than repeat this round's,
+R-170's or R-179's construction. **Holdout counter: +0, running total
+unchanged at ~766** (R-178's own figure; no round since has reached Step 4).
+Neither branch's frozen decision rule moved after any number was seen.
+`pytest -q` (full suite, 540 tests) passed; no registered strategy or
+shared framework code was touched. **Next step:** not filed as a new
+backlog item — this is a literature-sweep closure, not backlog work.
+**B-48 remains the only OPEN backlog row**; B-06/B-09/B-17/B-28 remain
+blocked, low-value or deliberately partial.
 
 ### R-179 · 08-29 · NEGATIVE (both branches) — a daily-checkpoint meta-label (López de Prado 2018) confidence layer on `kelly_regime_v4`'s `frac*scale`: the classifier finds signal this time, but it is R-162's own collinearity failure wearing a probability, not new information
 
@@ -19654,6 +19835,7 @@ trip.
 
 | what | why | ref |
 |---|---|---|
+| A meta-label (López de Prado 2018) confidence layer on `kelly_regime_v4`'s `frac*scale`, with macro risk-off stress (VIX+DXY rolling z-score) and on-chain valuation (MVRV level rolling z-score) as the two features — structurally exogenous to price/vote, the specific feature-source requirement R-179's own closure named — conservative: literal reuse of R-179's fixed-window walk-forward classifier/veto, feature swap only; novel: a sequential online-logistic "testing by betting" capital process (Shafer 2021; Waudby-Smith & Ramdas 2024) replacing the fixed refit calendar | 28 distinct configs total (4 conservative Step-A corners, 24 novel; operator independently reproduced every number), holdout not read. Conservative fails its own Step-A discriminative-skill permutation gate outright (only 1 of 4 tested corners clears the label-permutation null's 95th percentile — not a majority), so the branch is NEGATIVE by construction before any backtest is read. Novel's own falsification clause CLEARS (terminal training-period wealth exceeds 1/alpha=20, verified causal via truncation and label-permutation checks) but the mechanism saturates near its cap within the first ~50-300 training days and behaves as a near-constant leverage boost rather than time-varying confidence — fails R-33 risk-matching outright (realized vol 28-34% hot, notional 32-36% hot vs v4-alone on both markets) and its own paired-bootstrap CI on delta-log-growth includes zero on both markets regardless. Do not re-try a meta-label on this architecture using macro-stress/MVRV features (this round), price/vote-anchor-derived features (R-179) or funding/VRP/illiquidity/episode-excursion features (R-170) expecting a different label construction, classifier or sequential-updating scheme to rescue it, without first naming a feature source not yet in this list or a confidence mechanism that provably cannot saturate into a constant exposure multiplier. | R-180 (both branches) |
 | A meta-label (López de Prado 2018) confidence layer on `kelly_regime_v4`'s `frac*scale`, with DAILY (not event-triggered) triple-barrier labels and price/vote-anchor-derived features (`vol_ratio`, `vote_strength`, `log1p(regime_duration)`) — conservative: binary bet/no-bet veto; novel: continuous sigmoid confidence multiplier (Joubert, Barziy & Meyer 2022) | 29 configs total (16 conservative, 13 novel; 54 backtests), holdout not read. Falsification clause A (resolved-sample count and coefficient significance per walk-forward refit) CLEARS for both branches — unlike R-170's event-triggered/non-price-anchor feature set, which found no discriminative skill at all. But that "signal" turns out to be the vote's own trend re-encoded rather than new information (R-162's collinearity failure, generalized to a learned classifier): conservative clears the ±0.2 Sharpe floor on futures (+0.235) but not spot (+0.162); novel fails R-33 risk-matching outright (realized vol 19-23% hot, notional 15-16% hot vs v4-alone on both markets) and its own paired-bootstrap CI on Δlog-growth includes zero on both markets regardless. Do not re-try a meta-label on this architecture using price/vote-anchor-derived features (this round) or funding/VRP/illiquidity/episode-excursion features (R-170) expecting a different label construction or classifier to rescue it, without first naming a feature source structurally independent of v4's own anchors and not already one of R-170's four rejected channels. | R-179 (both branches) |
 | Synthetic, causally DVOL-priced Black-Scholes options structure, additively summed on top of `kelly_regime_v4`'s own unmodified position — conservative: unconditional weekly protective collar (10% OTM put bought, 10% OTM call sold, Israelov & Klein 2016); novel: the same weekly roll but stance switches on v4's own vote (long strangle when `frac<=1/3`, short strangle harvesting VRP when `frac>=2/3`) | 34 configs total (17 each, a 12-point `overlay_frac x moneyness x cost_bps` sweep + frozen primary on 4 market/asset combos + 1 cost-stress point). Conservative's own frozen falsification test (a 30-trial bounded stress resample, DVOL-covered span) formally PASSES, but an independent skeptic found it fails R-33 risk-matching (combined-arm realized vol 28.4%/yr > v4-alone's 24.3%/yr; overlay's own average notional $17,166 > v4's own $10,759 — not a risk-reduced position), fails its own plateau requirement (return scales monotonically with `overlay_frac`: -1.4%/+22%/+84% at 0.25/0.50/1.00), and its inner-validation drawdown "improvement" is entirely a second-half-of-the-window artifact (zero protection in the half containing the one acute crash, May 2021; all of it from the 2022 grinding bear) — confirmed on the pre-registered holdout too: underperforms v4-alone on both BTC markets (futures_5x +329% vs +374%, spot +216% vs +243%), no drawdown improvement either (33.0% vs 33.0% futures, 28.3% vs 27.8% spot). Novel branch fails its own frozen falsification test outright pre-holdout (paired bootstrap 95% CI on Δlog-growth contains zero on both BTC `[-0.93,0.23]` and ETH `[-0.12,1.15]`, and the two markets disagree in sign) and underperforms v4-alone at all 13 swept BTC configurations — its holdout number, disclosed for completeness, is explicitly NOT evidence for the branch (a frozen kill switch that already fired is not reopened by a friendlier-looking later number). Do not re-try an unconditional weekly collar or a vote-conditioned strangle switch on this strategy expecting a different moneyness, roll frequency or strike selection to rescue either construction without first arguing why it would not inherit the same R-33 risk-mismatch (collar) or the same premium-bleed-through-chop failure (switch) measured here. | R-178 (both branches) |
 | Sign-symmetric remap of `kelly_regime_v4`'s own 3-anchor vote (`2*frac-1`), so the two bearish states short instead of flattening, times v4's own continuous vol-target scale, zero new parameters | 5 configs (1 frozen default + 4-point deadband sweep, futures_5x only). Falsified at its own frozen bar: ΔSharpe +0.176 vs v4 is inside the ±0.2 noise floor, at +66%/+135% higher realized vol/notional than v4 (unmatched exposure, R-33) and *worse* drawdown (36.9% vs 32.3%); underperforms v4 on the BTC futures control in the ETH falsification (Sharpe 1.52 vs 2.19); Monte Carlo stress median/worst-case drawdown both worse than v4's, though liquidation rate is unchanged at 0.0% for both. Do not re-try a fixed, sign-symmetric short extension of this vote expecting a different scale multiplier to rescue it — the failure is unmatched exposure and BTC-control underperformance, not the scale formula. | R-177 (conservative) |
@@ -19779,6 +19961,28 @@ trip.
 ---
 
 ## D. Backlog (ranked)
+
+**Re-ranked 08-29 after R-180 (NEGATIVE, both branches, 28 distinct
+configurations, holdout not read).** The ranked list is unchanged — B-06,
+B-09, B-17, B-28, B-48 — since R-180 was a fresh literature-sweep round
+(Step 0b's consecutive-null-pass count was 0 at dispatch) rather than work
+on a backlog item. A third meta-label (López de Prado 2018) attempt on
+`kelly_regime_v4`, this time with macro-stress/MVRV features exogenous to
+price and the vote (the specific requirement R-179's own closure named),
+closed NEGATIVE on both branches: the conservative branch fails its own
+Step-A discriminative-skill gate outright (only 1 of 4 corners clears the
+label-permutation null); the novel branch's sequential betting process does
+find real training-period edge but saturates into a near-constant leverage
+boost and fails R-33 risk-matching on both markets. This closes
+meta-labeling on this architecture for a third feature family (macro/
+on-chain here, price/vote-anchor in R-179, funding/VRP/illiquidity/
+excursion in R-170) and closes the "swap the fixed-refit classifier for a
+sequential/anytime-valid process" idea specifically, since both this
+round's novel branch and R-179's own novel branch produced the same
+saturating-confidence failure shape via different mechanisms. See R-180 in
+section B and section C for the closure row. **B-48 remains the only OPEN
+backlog row**; B-06/B-09/B-17/B-28 remain blocked, low-value or
+deliberately partial.
 
 **Re-ranked 08-29 after R-179 (NEGATIVE, both branches, 29 configurations
 across 54 backtests, holdout not read).** The ranked list is unchanged —
