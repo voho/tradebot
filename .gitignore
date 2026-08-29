@@ -205,3 +205,12 @@ uv.lock
 # pre-registered rules were read in the order the ledger claims.
 !/reports/r69_entry_only_raw/
 !/reports/r69_entry_only_raw/*.csv
+# R-184 (the PBO/CSCV hyperparameter-overfitting audit): the receipt is
+# the summary + per-config contribution, not the regenerable return-matrix
+# cache (experiments/r184_returns_matrix.csv.gz, ~4m39s to rebuild) — same
+# reasoning as reports/inference/daily_returns*.csv.gz staying ignored.
+!/reports/r184_pbo/
+!/reports/r184_pbo/*.txt
+!/reports/r184_pbo/*.csv
+# the regenerable PBO/CSCV return-matrix cache the shared engine writes
+/experiments/r184_returns_matrix.csv.gz

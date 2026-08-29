@@ -1,0 +1,72 @@
+R-184 -- PBO/CSCV overfitting audit of kelly_regime_v4's own hyperparameters
+Grid: H1 in {16,18,20,22,24,26,28} days x deadband in {0.05,0.075,0.10,0.15,0.20} (35 configs)
+Data: BTC spot, 2017-01-01..2022-12-31 (train period only, no holdout read)
+CSCV: n_groups=10, k_test=2, purge=embargo=100d -> 45 splits
+
+PBO(grid) point estimate = 0.5778
+Block-bootstrap 95% CI (500 resamples, resample the 10 CSCV groups with replacement, seed=183):
+  mean=0.3000  lo=0.0222  hi=0.7111
+Pre-registered Stage-0 gate: proceed only if CI lower bound >= 0.3
+Gate result: STOP -- REJECT both branches, NEGATIVE-BY-CONSTRUCTION
+
+Shipped config (h20_d0.1) picked as in-sample winner: 0/45 splits
+Shipped config PBO-contribution: 0.0000
+
+In-sample-winner pick distribution across all 45 splits:
+h26_d0.15     19
+h26_d0.1       5
+h26_d0.2       4
+h26_d0.05      4
+h28_d0.1       3
+h24_d0.1       3
+h24_d0.2       2
+h24_d0.05      2
+h28_d0.15      2
+h24_d0.075     1
+
+Per-split logits (CSCV split index -> logit of shipped-grid selection procedure):
+  split  0: picked=h28_d0.1     logit=+0.715
+  split  1: picked=h28_d0.1     logit=-0.847
+  split  2: picked=h26_d0.2     logit=-1.137
+  split  3: picked=h26_d0.2     logit=-0.847
+  split  4: picked=h26_d0.2     logit=+0.000
+  split  5: picked=h24_d0.2     logit=-2.197
+  split  6: picked=h24_d0.2     logit=-0.588
+  split  7: picked=h24_d0.05    logit=+0.847
+  split  8: picked=h26_d0.2     logit=+0.000
+  split  9: picked=h26_d0.05    logit=-0.847
+  split 10: picked=h26_d0.1     logit=+1.137
+  split 11: picked=h28_d0.1     logit=-0.346
+  split 12: picked=h26_d0.05    logit=+0.346
+  split 13: picked=h26_d0.1     logit=+1.914
+  split 14: picked=h24_d0.05    logit=-0.346
+  split 15: picked=h26_d0.05    logit=+0.847
+  split 16: picked=h26_d0.05    logit=+0.346
+  split 17: picked=h26_d0.15    logit=-1.137
+  split 18: picked=h26_d0.15    logit=-2.565
+  split 19: picked=h26_d0.1     logit=-0.588
+  split 20: picked=h26_d0.15    logit=-0.847
+  split 21: picked=h28_d0.15    logit=+0.465
+  split 22: picked=h26_d0.1     logit=+0.000
+  split 23: picked=h26_d0.1     logit=-0.588
+  split 24: picked=h26_d0.15    logit=-0.715
+  split 25: picked=h26_d0.15    logit=+0.230
+  split 26: picked=h26_d0.15    logit=+0.346
+  split 27: picked=h26_d0.15    logit=+0.987
+  split 28: picked=h26_d0.15    logit=+0.000
+  split 29: picked=h26_d0.15    logit=+0.114
+  split 30: picked=h26_d0.15    logit=-0.114
+  split 31: picked=h26_d0.15    logit=-0.114
+  split 32: picked=h28_d0.15    logit=-0.114
+  split 33: picked=h26_d0.15    logit=-0.230
+  split 34: picked=h26_d0.15    logit=-0.588
+  split 35: picked=h26_d0.15    logit=+1.299
+  split 36: picked=h26_d0.15    logit=+0.987
+  split 37: picked=h26_d0.15    logit=+1.137
+  split 38: picked=h26_d0.15    logit=+0.588
+  split 39: picked=h24_d0.1     logit=-1.680
+  split 40: picked=h24_d0.1     logit=+0.114
+  split 41: picked=h26_d0.15    logit=+1.137
+  split 42: picked=h24_d0.1     logit=-1.680
+  split 43: picked=h24_d0.075   logit=-2.565
+  split 44: picked=h26_d0.15    logit=+1.137
