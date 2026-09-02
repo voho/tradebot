@@ -1278,6 +1278,97 @@ low-turnover way to use it — a gate that stands flat when funding is in
 its top decile — is backlog item B-05; the high-turnover standalone
 reversal use is where strategies go to die (R-12).
 
+## Ten candidates against the protocol in one round (R-188)
+
+An operator-directed round in September 2026 built five game-theoretic /
+state-of-the-art rules (`robust_kelly`, `coin_betting`, `level_k`,
+`focal_levels`, `mfg_crowding`) and five intraday rules trading one to ten
+times a day (`noise_area_breakout`, `intraday_momentum`, `session_drift`,
+`vwap_reversion`, `jump_momentum`), and ran all ten through the protocol
+above: a 31-configuration grid on 2017–2020, selection on 2021–2022, then
+**one** holdout pass on 2023-01-01 → 2026-08-12 against a keep rule frozen
+and committed before any holdout bar was read (`experiments/r188_shared.py`,
+commit `e23cf76`). The rule: PROMOTE if the frozen configuration beats
+`buy_and_hold`'s holdout spot Sharpe by more than the ±0.2 noise floor on
+both inner-validation and holdout with a lower drawdown; KEEP (register
+with an interval) if it is profitable on both and within the noise floor of
+holding; DROP otherwise. **All ten were dropped.** The literature and the
+reading are in [RESEARCH.md](RESEARCH.md#ten-more-in-one-round-game-theory-beyond-no-regret-and-intraday-r-188);
+the full record is `docs/LEDGER.md` R-188. The tables are reproduced here
+because they are the round's evidence.
+
+### Holdout, one pass, frozen configurations
+
+Spot is 0.10% taker, fresh $1,000 from 2023-01-01 via `run_period`; the
+two right-hand fee cells are the pre-named falsification test, run in the
+same pass. `buy_and_hold` on spot: $3,839, Sharpe 1.03, 54% max drawdown.
+
+| candidate | frozen config | spot $ | spot Sharpe | spot max DD | trades/day | futures_5x $ | futures Sharpe | spot +1bp slip $ | spot @0.20% $ | inner-val spot $ | verdict |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `robust_kelly` | kappa0.5 | $600 | -0.82 | 43% | 0.27 | $961 | 0.10 | $559 | $296 | $884 | **DROP** |
+| `coin_betting` | day_d0.99_s3 | $1,148 | 0.63 | 6% | 0.01 | $1,068 | 0.29 | $1,147 | $1,145 | $1,055 | **DROP** |
+| `level_k` | follow_f12 | $5 | -7.24 | 100% | 2.20 | $5 | -5.55 | $5 | $5 | $5 | **DROP** |
+| `focal_levels` | breakout_h24_s5 | $79 | -4.09 | 92% | 1.09 | $40 | -3.66 | $59 | $5 | $60 | **DROP** |
+| `mfg_crowding` | gamma0.5 | $1,100 | 0.23 | 41% | 0.23 | $1,181 | 0.31 | $1,041 | $631 | $561 | **DROP** |
+| `noise_area_breakout` | band1.5 | $312 | -1.89 | 77% | 0.95 | $363 | -1.10 | $253 | $38 | $542 | **DROP** |
+| `intraday_momentum` | h4 | $656 | -0.92 | 50% | 0.28 | $717 | -0.48 | $610 | $317 | $670 | **DROP** |
+| `session_drift` | lb90_t2.5 | $633 | -3.74 | 38% | 0.14 | $654 | -2.79 | $610 | $436 | $975 | **DROP** |
+| `vwap_reversion` | z3.0 | $436 | -1.16 | 61% | 0.30 | $176 | -1.71 | $403 | $199 | $544 | **DROP** |
+| `jump_momentum` | a0.01_h12 | $551 | -1.49 | 50% | 0.41 | $685 | -0.57 | $495 | $188 | $918 | **DROP** |
+| `buy_and_hold` | — | $3,839 | 1.03 | 54% | 0.00 | $15,176 | 1.44 | — | $3,835 | $574 | benchmark |
+
+The closest miss is `coin_betting`, profitable on both periods with a
+Sharpe 0.40 below holding — twice the noise floor. Its 6% drawdown against
+54% is the exposure artefact R-33 documented: the KT bet on a nearly fair
+coin is nearly zero, so it held about 15% of equity on average.
+
+### The fee-free ceiling, training slices only
+
+The same frozen configurations with the fee set to zero, on the two
+training slices (no holdout bar is read). A rule that loses gross has no
+signal; one that wins gross and loses net has a signal smaller than the fee.
+
+| candidate | inner-train net $ | inner-train gross $ (Sharpe) | inner-val net $ | inner-val gross $ (Sharpe) | trades/day | gross edge? |
+|---|---|---|---|---|---|---|
+| `robust_kelly` | $3,317 | $5,356 (1.43) | $884 | $1,096 (0.32) | 0.17 | both slices |
+| `coin_betting` | $2,121 | $2,127 (0.96) | $1,055 | $1,057 (0.24) | 0.01 | both slices |
+| `level_k` | $5 | $5,258 (1.12) | $5 | $1,017 (0.22) | 5.22 | both slices |
+| `focal_levels` | $7 | $936 (0.17) | $60 | $1,000 (0.19) | 1.68 | one slice |
+| `mfg_crowding` | $7,154 | $12,605 (1.67) | $561 | $726 (-0.28) | 0.14 | one slice |
+| `noise_area_breakout` | $250 | $1,381 (0.55) | $542 | $1,071 (0.32) | 1.06 | both slices |
+| `intraday_momentum` | $903 | $2,007 (0.95) | $670 | $973 (0.02) | 0.27 | one slice |
+| `session_drift` | $662 | $851 (-0.62) | $975 | $1,001 (0.02) | 0.09 | one slice |
+| `vwap_reversion` | $2,148 | $6,186 (1.28) | $544 | $869 (0.02) | 0.36 | one slice |
+| `jump_momentum` | $898 | $2,721 (1.25) | $918 | $1,657 (1.33) | 0.38 | both slices |
+| `buy_and_hold` | $29,803 | $29,833 (1.38) | $574 | $575 (0.08) | 0.00 | benchmark |
+
+Five of the seven candidates trading more than 0.25 times a day have a
+positive gross edge on at least one training slice; none has one larger
+than the fee it pays. At a 0.10% taker one round trip costs 0.20% of
+notional — 73% of notional a year at one trade a day, 365% at five — which
+is the ledger's COST constraint measured on ten fresh mechanisms.
+
+### The comparison table's own view, 2017–2026 (informational)
+
+Full period, $1,000, both markets, same fees as the README table. None of
+these rows enters that table: it is for registered strategies, each of
+which carries a bootstrap interval, and a point estimate beside rows with
+error bars reads as a better number than it is.
+
+| candidate | spot $ | spot Sharpe | spot max DD | futures_5x $ | futures Sharpe | futures max DD | trades/day (spot) |
+|---|---|---|---|---|---|---|---|
+| `robust_kelly` | $1,889 | 0.39 | 61% | $6,190 | 0.68 | 60% | 0.20 |
+| `coin_betting` | $2,904 | 0.73 | 28% | $2,984 | 0.66 | 35% | 0.01 |
+| `level_k` | $5 | -2.31 | 100% | $5 | -1.65 | 100% | 0.84 |
+| `focal_levels` | $5 | -1.73 | 100% | $5 | -1.83 | 100% | 0.82 |
+| `mfg_crowding` | $4,433 | 0.62 | 58% | $8,112 | 0.72 | 51% | 0.20 |
+| `noise_area_breakout` | $42 | -1.92 | 96% | $50 | -1.16 | 95% | 0.98 |
+| `intraday_momentum` | $397 | -0.46 | 67% | $994 | 0.12 | 54% | 0.27 |
+| `session_drift` | $409 | -1.99 | 59% | $397 | -1.64 | 60% | 0.09 |
+| `vwap_reversion` | $509 | -0.03 | 91% | $255 | -0.09 | 98% | 0.33 |
+| `jump_momentum` | $455 | -0.36 | 70% | $481 | -0.14 | 64% | 0.40 |
+| `buy_and_hold` | $66,044 | 0.95 | 84% | $18 💀 | -0.19 | 99% | 0.00 |
+
 ## Known limitations
 
 - **Funding is modelled but only partly measured.** The engine charges it

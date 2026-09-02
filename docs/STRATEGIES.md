@@ -823,3 +823,32 @@ decisive battery failed hard as a result (D5 gross signal retention +0.061
 against a +0.3415 bar — the construction barely clears even at zero fees).
 Not registered — a NEGATIVE result without a table row, per the routine's
 usual default; full detail in `docs/LEDGER.md` R-107.
+
+---
+
+## Evaluated and not registered (R-188)
+
+Ten further strategies were built, tuned on 2017–2020, selected on
+2021–2022 and judged once on the 2023+ holdout against a rule frozen in
+advance (`experiments/r188_shared.py`), in September 2026. All ten were
+**dropped** — none beat `buy_and_hold` on the holdout within the ±0.2
+Sharpe noise floor — so none appears in the table above, and their code
+lives under `experiments/r188_*.py` instead of the strategy package.
+
+| candidate | one line | trades/day (holdout) | holdout spot from $1,000 |
+|---|---|---|---|
+| `robust_kelly` | distributionally robust Kelly: bet the worst-case drift over 10/30/90-day windows | 0.27 | $600 |
+| `coin_betting` | Krichevsky–Trofimov coin-betting fraction on daily returns (Orabona & Pál 2016) | 0.01 | $1,148 (Sharpe 0.63 vs 1.03) |
+| `level_k` | cognitive-hierarchy best response to the level currently paying (Camerer–Ho–Chong 2004) | 2.2 | $5 |
+| `focal_levels` | round-number focal points, breakout mode (Schelling 1960; Osler 2003) | 1.1 | $79 |
+| `mfg_crowding` | mean-field-game inventory: slow trend minus the crowd's chase (Casgrain & Jaimungal 2020) | 0.23 | $1,100 (Sharpe 0.23 vs 1.03) |
+| `noise_area_breakout` | time-of-day noise band breakout, flat by day end (Zarattini, Barbon & Aziz 2024) | 0.95 | $312 |
+| `intraday_momentum` | first four UTC hours predict the last four (Gao, Han, Li & Zhou 2018) | 0.28 | $656 |
+| `session_drift` | adaptive hour-of-day seasonality, t-stat gated | 0.14 | $633 |
+| `vwap_reversion` | fade 3-sigma deviations from the session VWAP when they clear the fee | 0.30 | $436 |
+| `jump_momentum` | follow a Lee–Mykland (2008) jump for an hour | 0.41 | $551 |
+
+Buy-and-hold on spot over the same holdout: $3,839, Sharpe 1.03, 54% max
+drawdown. Literature and the per-strategy reading: [RESEARCH.md](RESEARCH.md#ten-more-in-one-round-game-theory-beyond-no-regret-and-intraday-r-188);
+full numbers, training slices, fee-free ceilings and the frozen rule:
+`docs/LEDGER.md` R-188.

@@ -1,0 +1,11 @@
+strategy,config,mean_sharpe,trades,params
+coin_betting,day_d0.99_s3,0.27406933027525093,25,"{'round_bars': 288, 'discount': 0.99, 'scale': 3.0}"
+focal_levels,breakout_h24_s5,-3.194485305665455,4174,"{'mode': 'breakout', 'hold_bars': 24, 'spacing_frac': 0.05}"
+intraday_momentum,h4,-0.4415034662593945,544,"{'first_hours': 4, 'last_hours': 4}"
+jump_momentum,a0.01_h12,0.03957365827870535,898,"{'alpha': 0.01, 'hold_bars': 12}"
+level_k,follow_f12,-6.200638620867311,6994,"{'anticipate': False, 'fast_bars': 12}"
+mfg_crowding,gamma0.5,-0.3185830220580469,509,{'gamma': 0.5}
+noise_area_breakout,band1.5,-1.472657313407132,1918,{'band_mult': 1.5}
+robust_kelly,kappa0.5,-0.10183389154261266,385,{'kappa': 0.5}
+session_drift,lb90_t2.5,-0.9325172140790043,128,"{'lookback_days': 90, 't_min': 2.5}"
+vwap_reversion,z3.0,-0.36064116199491103,683,{'entry_z': 3.0}

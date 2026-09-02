@@ -418,3 +418,131 @@ two negative results that invert the textbook reading.
   gave −1.2pp drawdown for roughly zero cost. Klass & Nowicki (2005)
   predicted the former: the cushion rule is not optimal in discrete time
   and systematically sells low in a mean-reverting-drawdown asset.
+
+---
+
+# Ten more, in one round: game theory beyond no-regret, and intraday (R-188)
+
+An operator-directed round (September 2026) asked for five more
+game-theoretic or state-of-the-art rules and five intraday rules trading
+one to ten times a day, all run through the same pre-registered protocol
+(ROUTINE.md: tune on 2017–2020, select on 2021–2022, decide once on 2023+
+against a rule frozen in advance). **All ten were dropped by the frozen
+rule**; the code lives in `experiments/r188_*.py`, the harness and the
+frozen rules in `experiments/r188_shared.py`, the numbers in
+`docs/LEDGER.md` R-188 and `docs/VALIDATION.md`. What the survey found,
+and what the data then said about it:
+
+## Game theory and state-of-the-art sizing
+
+- **Distributionally robust Kelly** — Rujeerapaiboon, Kuhn & Wiesemann
+  (2016, Management Science 62(7)), "Robust Growth-Optimal Portfolios";
+  Sun & Boyd (2018, arXiv:1812.10371), "Distributional Robust Kelly
+  Gambling"; Baker & McHale (2013, Decision Analysis 10(3)), "Optimal
+  Betting Under Parameter Uncertainty". Against nature choosing the
+  return distribution inside an ambiguity set, the growth-optimal bet is
+  Kelly on the *worst-case* drift; with estimation error it is Kelly on
+  the drift's lower confidence bound. `robust_kelly` bet fraction-Kelly on
+  `min_W(mu_W − kappa·sigma_W/sqrt(W))` over 10/30/90-day windows. **Bar-
+  visible consequence:** BTC's daily drift is about a twentieth of its
+  daily volatility, so the bound is positive only in the strongest bull
+  runs — at `kappa=1` the rule sat flat on 90% of bars, and at the frozen
+  `kappa=0.5` it was in the market 18% of the time and still lost to
+  holding on both training slices and the holdout. Robustness to
+  estimation error is bought entirely with time out of the market, which
+  is R-33's exposure lesson arriving from the theory side.
+- **Coin betting / parameter-free online learning** — Orabona & Pál
+  (2016, NeurIPS), "Coin Betting and Parameter-Free Online Learning";
+  Krichevsky & Trofimov (1981); Cutkosky & Orabona (2018). A bettor who
+  wagers the KT fraction `S_t/t` of wealth on an adversarial coin is
+  within `sqrt(t)` of the best constant bet with no learning rate.
+  `coin_betting` did this on daily rounds with a 0.99 forgetting factor.
+  It was the only candidate profitable on the holdout at spot ($1,148
+  from $1,000; 6% max drawdown) — and its Sharpe (0.63) sat 0.40 below
+  buy-and-hold's (1.03), twice the noise floor, because a nearly fair
+  coin earns a nearly zero KT bet: mean exposure ~15%. Sizing that is
+  provably safe against every sequence is, on this sequence, mostly cash.
+- **Level-k / cognitive hierarchy** — Nagel (1995, AER 85(5)); Camerer,
+  Ho & Chong (2004, QJE 119(3)); Hommes (2011, JEDC) for the
+  learning-to-forecast evidence. `level_k` tracked the fee-charged PnL of
+  a slow-trend chaser (level 0), a fast front-runner (level 1) and a fader
+  of level 1 (level 2), and played the best response to the level
+  currently paying. **Finding:** the anticipating rule lost to its own
+  follow-the-leader control on both markets in inner-validation, and both
+  died of fees (2–5 trades a day at 0.10%: $5 from $1,000 on every slice).
+  Gross of fees the follow-the-leader version made 5x on 2017–2020 and
+  +2% on 2021–2022, so there is a fast-horizon signal — worth less than one
+  taker fee per trade.
+- **Round-number focal points** — Schelling (1960), *The Strategy of
+  Conflict*; Osler (2003, J. Finance 58(5)), "Currency Orders and
+  Exchange Rate Dynamics", whose order-book evidence is that take-profit
+  orders cluster at round numbers and stop-losses just beyond them.
+  `focal_levels` traded both predictions (bounce at a level; breakout
+  through one) on a 1-2-5 grid of round BTC prices. **Neither survives
+  even gross of fees** ($936 and $1,000 from $1,000 on the two training
+  slices at zero fee, breakout mode); with fees, 1–3 trades a day is fee
+  death. Osler's mechanism needs order-book position; the price footprint
+  alone carries nothing tradeable here.
+- **Mean-field-game crowding** — Casgrain & Jaimungal (2020, Mathematical
+  Finance 30(3)), "Mean-field games with differing beliefs for algorithmic
+  trading"; Cardaliaguet & Lehalle (2018). The equilibrium inventory leans
+  into one's own drift belief net of the crowd's transient impact.
+  `mfg_crowding` held `tanh(20-day trend) − gamma·tanh(2-day trend)`. The
+  `gamma=0` control made 22x on 2017–2020; every `gamma>0` made less, and
+  on inner-validation `gamma=0.5` won the selection only by losing least
+  (−0.32 mean Sharpe). On the holdout it was profitable ($1,100) at a
+  Sharpe 0.80 below holding. Subtracting the crowd's chase is a
+  de-levering of the trend, and R-62's lesson holds: the trend vote
+  carries the signature, the scale factor does not.
+
+## Intraday, one to ten trades a day
+
+- **Noise-area breakout** — Zarattini, Barbon & Aziz (2024, SSRN
+  4824172), "Beat the Market: An Effective Intraday Momentum Strategy for
+  the S&P500 ETF (SPY)" (Sharpe 1.33 vs 0.60 for holding SPY, ~one trade a
+  day, ~$0.0035/share commissions). `noise_area_breakout` reproduced the
+  band construction on UTC sessions. It lost on every slice with fees and
+  made +38%/+7% *gross* on the two training slices at ~1 trade a day: the
+  edge exists and is roughly a third of one round-trip taker fee per trade.
+- **Market intraday momentum** — Gao, Han, Li & Zhou (2018, JFE 129(2)):
+  the first half-hour predicts the last half-hour on SPY. `intraday_
+  momentum` traded the last four UTC hours in the direction of the first
+  four. Gross it doubled on 2017–2020 and was flat on 2021–2022; net it
+  lost on all three slices at 0.28 trades a day.
+- **Hour-of-day drift** — Eross, McGroarty, Urquhart & Wolfe (2019, RIBAF
+  49); Baur, Cahill, Godfrey & Liu (2019, FRL 31). R-75 had found BTC's
+  hour-of-day *volatility* real and its day-of-week *return* pattern
+  noise. This round measured the hour-of-day *return* dispersion the same
+  way: observed 2.34e-5 against a block-shift null with mean 2.17e-5 and
+  p95 2.53e-5, empirical p = 0.32 — **not distinguishable from noise**,
+  and `session_drift` lost on every slice accordingly, gross included
+  (−15% gross on 2017–2020). Calendar/session return effects on this
+  series are now closed on both axes the timestamp offers.
+- **VWAP price pressure** — Hendershott & Menkveld (2014, JFE 114(3)),
+  "Price pressures"; Kakushadze & Serur (2018), *151 Trading Strategies*.
+  `vwap_reversion` faded 3-sigma deviations from the session VWAP only
+  when the deviation exceeded 1.5 round-trip fees. Gross it made 6x on
+  2017–2020 (mostly the 2017–2018 chop) and lost on 2021–2022; net it
+  lost everywhere. Reversion to an intraday anchor is real in the
+  high-volatility years and absent since.
+- **Post-jump continuation** — Lee & Mykland (2008, RFS 21(6)) for the
+  test; Scaillet, Treccani & Trevisan (2020, J. Financial Econometrics
+  18(2)) for Bitcoin's jump dynamics. `jump_momentum` followed a flagged
+  5.4-sigma jump for an hour. **The one intraday rule with a clean gross
+  edge on both training slices** (Sharpe 1.25 and 1.33 at zero fee, 0.4
+  trades a day) — and the sign of the holdout was against it net of fees
+  ($551), so continuation after a jump is either fee-sized or absent in
+  2023+. `overshoot_fade` (L-13) was the mirror image; both directions are
+  now recorded.
+
+## The arithmetic the round confirms
+
+At a 0.10% taker fee a round trip costs 0.20% of notional. One trade a day
+is 73% of notional a year in fees; five a day is 365%. Of the seven
+candidates trading above 0.25 times a day, five had a positive gross edge
+on at least one training slice and **none** had one larger than the fee it
+paid. That is the ledger's COST constraint measured on a fresh set of
+mechanisms: the signals exist at the hour-to-day horizon, and each one is
+smaller than one taker fee. Intraday trading on this venue tier would need
+maker fills or a fee tier near zero before any of these rules could be
+retested with a different expectation.
