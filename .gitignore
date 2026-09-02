@@ -214,3 +214,9 @@ uv.lock
 !/reports/r184_pbo/*.csv
 # the regenerable PBO/CSCV return-matrix cache the shared engine writes
 /experiments/r184_returns_matrix.csv.gz
+# R-188 (ten candidates, all dropped): the sweep, selection, holdout,
+# decision, fee-free and full-period tables docs/LEDGER.md and
+# docs/VALIDATION.md quote. Small CSVs; regenerable with
+# experiments/r188_shared.py but committed as the round's receipt.
+!/reports/r188_candidates/
+!/reports/r188_candidates/*.csv

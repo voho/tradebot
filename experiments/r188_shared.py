@@ -32,6 +32,8 @@ Usage::
     python experiments/r188_shared.py hourly     # Step-A hour-of-day dispersion gate
     python experiments/r188_shared.py holdout    # ONE pass, frozen configs, 2023+
     python experiments/r188_shared.py decide     # apply the frozen keep rule
+    python experiments/r188_shared.py gross      # fee-free ceiling, training slices only
+    python experiments/r188_shared.py fullperiod # 2017-2026 comparison-table view (informational)
 
 Outputs land in ``reports/r188_candidates/``.
 """
@@ -62,6 +64,7 @@ SLICES = {
     "inner_train": ("2017-01-01", "2020-12-31"),
     "inner_val": ("2021-01-01", "2022-12-31"),
     "holdout": ("2023-01-01", None),
+    "full": (None, None),
 }
 MARKETS = {"spot": MarketSpec.spot(), "futures": MarketSpec.futures(leverage=5.0)}
 BENCHMARK = "buy_and_hold"
@@ -362,6 +365,39 @@ def decide() -> pd.DataFrame:
     return out
 
 
+def gross(procs: int = 4) -> pd.DataFrame:
+    """The fee-free ceiling of every frozen candidate on the two TRAINING slices.
+
+    Separates "the signal is absent" from "the signal cannot pay a 0.10%
+    taker": a rule that loses with fees set to zero has no edge to rescue by
+    cheaper execution. Spot only; no holdout bar is read.
+    """
+    params = frozen_params()
+    jobs = [(name, "frozen_fee0", p, s, "spot", 0.0, 0.0)
+            for name, p in params.items() for s in ("inner_train", "inner_val")]
+    jobs += [(BENCHMARK, "default_fee0", {}, s, "spot", 0.0, 0.0)
+             for s in ("inner_train", "inner_val")]
+    frame = _run_jobs(jobs, procs)
+    frame.to_csv(OUT / "gross.csv", index=False)
+    return frame
+
+
+def fullperiod(procs: int = 4) -> pd.DataFrame:
+    """The README comparison table's own view - 2017-01-01 to the last bar,
+    $1,000, both markets - for every frozen candidate. Informational: the
+    decision was made by ``decide`` on the holdout, and none of these rows
+    enters the README table (that would need an interval from
+    ``scripts/inference.py``, and the table is for registered strategies).
+    """
+    params = frozen_params()
+    jobs = [(name, "frozen", p, "full", mk, None, 0.0)
+            for name, p in params.items() for mk in MARKETS]
+    jobs += [(BENCHMARK, "default", {}, "full", mk, None, 0.0) for mk in MARKETS]
+    frame = _run_jobs(jobs, procs)
+    frame.to_csv(OUT / "full_period.csv", index=False)
+    return frame
+
+
 def hourly_gate(n_boot: int = 2_000, seed: int = 0) -> dict:
     """Step-A measurement for session_drift: is BTC's hour-of-day mean-return
     dispersion on inner-train distinguishable from a block-bootstrap null?
@@ -412,5 +448,9 @@ if __name__ == "__main__":
         decide()
     elif cmd == "decide":
         decide()
+    elif cmd == "gross":
+        gross()
+    elif cmd == "fullperiod":
+        fullperiod()
     else:
         print(__doc__)

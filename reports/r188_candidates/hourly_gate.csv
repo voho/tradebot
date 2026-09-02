@@ -1,0 +1,7 @@
+,0
+observed_sd_across_hours,2.336203198700131e-05
+null_mean,2.174017204705325e-05
+null_p95,2.5281208943768755e-05
+empirical_p,0.3245
+best_hour_utc,1.0
+worst_hour_utc,8.0
