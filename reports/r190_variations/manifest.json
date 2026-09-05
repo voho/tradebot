@@ -1,0 +1,100 @@
+{
+  "frozen_at_utc": "2026-09-05T15:13:42.811641+00:00",
+  "protocol": "experiments/r190_protocol.md",
+  "primary_candidates": [
+    "r190_v4_b05",
+    "r190_v4_b10",
+    "r190_v4_b20",
+    "r190_v3_b05",
+    "r190_v3_b10",
+    "r190_v3_b20",
+    "r190_base_b05",
+    "r190_base_b10",
+    "r190_base_b20",
+    "r190_blend_b10"
+  ],
+  "auxiliary_neighbours": [
+    "r190_blend_b05",
+    "r190_blend_b20"
+  ],
+  "prior_consultations_approx": 1503,
+  "core_evaluations": 784,
+  "core_holdout_evaluations": 736,
+  "local_configurations": 12,
+  "sd_trials": 0.418538,
+  "validation_lead": "r190_v3_b20",
+  "validation_ranking": [
+    {
+      "strategy": "r190_v3_b20",
+      "mean_validation_sharpe": 0.18161962840984636,
+      "spot_fills": 117
+    },
+    {
+      "strategy": "r190_v3_b10",
+      "mean_validation_sharpe": 0.164241122853583,
+      "spot_fills": 149
+    },
+    {
+      "strategy": "r190_v3_b05",
+      "mean_validation_sharpe": 0.15735358075013556,
+      "spot_fills": 159
+    },
+    {
+      "strategy": "r190_v4_b20",
+      "mean_validation_sharpe": 0.1539334841574837,
+      "spot_fills": 143
+    },
+    {
+      "strategy": "r190_base_b05",
+      "mean_validation_sharpe": 0.0797402513611271,
+      "spot_fills": 182
+    },
+    {
+      "strategy": "r190_base_b10",
+      "mean_validation_sharpe": 0.0696793807232252,
+      "spot_fills": 162
+    },
+    {
+      "strategy": "r190_v4_b05",
+      "mean_validation_sharpe": 0.06445071477269959,
+      "spot_fills": 205
+    },
+    {
+      "strategy": "r190_v4_b10",
+      "mean_validation_sharpe": 0.058147197388068346,
+      "spot_fills": 197
+    },
+    {
+      "strategy": "r190_base_b20",
+      "mean_validation_sharpe": 0.0496987977798375,
+      "spot_fills": 113
+    },
+    {
+      "strategy": "r190_blend_b10",
+      "mean_validation_sharpe": -0.0186565496163652,
+      "spot_fills": 165
+    }
+  ],
+  "hashes": {
+    "experiments/r190_protocol.md": "dbea5b3021134e3eaa4ed2a769d6f163c1e3e13d9540675fcd8752f7a072dd27",
+    "docs/R190_RESEARCH.md": "3f0f2ca9be1399d28f7d82e490bf34e5b1449a16b5c6999e6a992cfdd50f2390",
+    "experiments/r190_variations.py": "2c69ce04b005e6887d39e4ab1d2ad68e9dca35853ac1acaddc1c9e7575ad092e",
+    "experiments/r190_eval.py": "d626585aeb94bc4d9f38222d26a074efbff6f5096969b3f2d7b8c443756f8a75",
+    "experiments/r190_matched.py": "4ea6f8bda190c4432a5dd31cb204aa23aaeda0bfff9bafc5cac8c71aac57498b",
+    "experiments/matched_hold.py": "4c87806e2f33eb209aef52c04100ef3bcb3d4e6b04eebd71688ecb0995732a0d",
+    "src/tradebot/strategies/kelly_regime.py": "d5daf1e03b65553e4ec6d4abe3cdadca8bf82a8acf5e30f776ef26392f6548e3",
+    "src/tradebot/strategies/kelly_regime_v3.py": "69b0669db67dc8c7e881aa43c87bc5dd82ba6170dafc98ac4b9aa79c7ea1f491",
+    "src/tradebot/strategies/kelly_regime_v4.py": "8020ae2fe134f61f875ae7c6bca838c0781d03efeb86617ffcca15656ead6fcb",
+    "src/tradebot/strategies/buy_and_hold.py": "59c78e3836d8e70a7a034e761e1aff256aaf4f11c23d5b81a60a9b3207b22106",
+    "src/tradebot/engine.py": "2f3ed4a0ab483409434f71174e0b448755b58630d09db8d51108133b4fe46169",
+    "src/tradebot/broker.py": "6f4d7717fd9b34749e114f74fd4bbd137030d76bbb2f0701f8f5e2c2acc188e5",
+    "src/tradebot/data.py": "d5de38323ced21fb312ad88648118290ae412b1323587514bb9a36fe46d6ad7d",
+    "src/tradebot/inference.py": "a25fb493bcd6b653f17e19dfb067d50b5c1419c99ae4252f181da570f1367d69",
+    "src/tradebot/metrics.py": "24677ecc43fbfb462c3a9689838e3a05138822b1ed71a80f99bcf68aabb10b35",
+    "src/tradebot/strategy.py": "75e0de3f38cab10f9e0d8f493db82b170a0005deb695e1636f48b6d8c691663a",
+    "data/btcusd_spot_5m.csv.gz": "6d30c90859616598c329ea5f89ad954bcb45d0a4891795213a87a683a1d1a16d",
+    "data/btcusdt_deribit_perp_5m.csv.gz": "a85443b1877575ce1001d3ac5193f5715625a394e0f91f9146681fdb2b8d4e60",
+    "data/ethusd_coinbase_spot_5m.csv.gz": "e6c4a4867396d530733cbee94f9930cd4153b5a74a80231d9877162b91f06511",
+    "data/btcusdt_deribit_perp_funding_8h.csv.gz": "e7a4f22b74ec30b3c190994861a6f840b088e6c9dc91580e95af7379a169ba73"
+  }
+}
