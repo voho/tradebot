@@ -867,6 +867,22 @@ usual default; full detail in `docs/LEDGER.md` R-107.
 
 ---
 
+## Evaluated and not registered (R-190)
+
+Ten variations of the three PROMOTED parents (`kelly_regime_v4`,
+`kelly_regime_v3`, `kelly_regime`) revisit unchanged targets at UTC four-hour
+slots, comparing them with actual account exposure. Each parent has
+0.05/0.10/0.20 equity-notional execution bands; the tenth averages the three
+targets with a 0.10 band. Two auxiliary blend bands test its neighbourhood.
+They inherit the Kelly/game-theory basis and add a cost/execution experiment,
+not a new directional information source.
+
+All ten failed the frozen promotion rule and achieved only 0.17–0.29
+fills/day. Code stays in [r190_variations.py](../experiments/r190_variations.py)
+per ROUTINE Step 5. See [research and sources](R190_RESEARCH.md),
+[the protocol](../experiments/r190_protocol.md), and
+[complete results and chart](../reports/r190_variations/README.md).
+
 ## Evaluated and not registered (R-188)
 
 Ten further strategies were built, tuned on 2017–2020, selected on

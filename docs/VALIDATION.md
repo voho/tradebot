@@ -1397,6 +1397,33 @@ error bars reads as a better number than it is.
   that already performed well on this data. Its OOS split is reported
   above precisely because its in-sample rank is not evidence.
 
+## R-190: ten accepted-parent variations, no promotion
+
+The operator-requested round follows [the frozen routine protocol](../experiments/r190_protocol.md):
+ten fixed variants of the three PROMOTED parents, two auxiliary blend
+neighbours, native controls, 40bp spot entry fees, funding, ETH replication,
+24 identical windows per market, actual-broker risk matching and paired
+30-day stationary bootstrap intervals. [Full results](../reports/r190_variations/README.md)
+contain all **879 evaluations** and all failed gates. All ten remain
+unregistered experiments; existing strategy defaults and historical
+comparison cells are unchanged.
+
+The validation-selected v3/b20 ends $2,226 versus native v3 $2,210 on spot,
+Δ daily-return Sharpe **+0.013 [−0.101, +0.133]**; funded $2,759 versus
+$2,772, Δ Sharpe **+0.003 [−0.144, +0.141]**. The few-trades-per-day goal is
+not met: 0.17–0.29 fills/day and 0.035–0.039 completed round trips/day.
+All ten spot parent intervals contain zero. At matched risk, the apparent
+changes still fail the predeclared growth and Sharpe rules. Three v3 funded
+passive matches miss the 2% tolerance and are invalid, not evidence either way.
+
+The final count is 784 core cells, 87 matching attempts and eight independent
+reproductions; holdout consultations increase by 787 to approximately 2,290.
+No global DSR exceeds 0.205. The inner-validation noise calculation projected
+6.26–22.36 years to detect the inherited +0.20 hurdle at 80% power, assuming
+stationary noise. An independent target/accounting implementation reproduces
+eight results within $1.28e-11; all ten pass real training-data causality
+checks, and the final full suite passes **718 tests**.
+
 ## R-189: ten game-theory candidates, no promotion
 
 Ten fixed rules received 684 main evaluations plus 24 historical chart

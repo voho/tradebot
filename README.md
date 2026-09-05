@@ -35,7 +35,7 @@ anything not listed here has been folded into one of these:
 | document | its one job |
 |---|---|
 | **[docs/ROUTINE.md](docs/ROUTINE.md)** | **The process.** The single procedure for researching and adding a strategy — from idea selection through holdout evaluation to the ledger record, including the mechanics of registering one. |
-| **[docs/LEDGER.md](docs/LEDGER.md)** | **The memory.** Everything already tried — 37 registered strategies, and a research log of 189 rounds, newest first — the four binding constraints, the ruled-out list, and the ranked backlog. Read before a session, appended after it. |
+| **[docs/LEDGER.md](docs/LEDGER.md)** | **The memory.** Everything already tried — 37 registered strategies, and a research log of 190 rounds, newest first — the four binding constraints, the ruled-out list, and the ranked backlog. Read before a session, appended after it. |
 | **[docs/VALIDATION.md](docs/VALIDATION.md)** | **The evidence.** The single comparison protocol and benchmark, and every robustness result: walk-forward, bootstrap intervals, deflated Sharpe, Monte Carlo stress windows, fees, funding, and the ETH replication test. |
 | **[docs/STRATEGIES.md](docs/STRATEGIES.md)** | **The strategies.** What each registered strategy is, how it works, and the principles it rests on, with citations. |
 | **[docs/RESEARCH.md](docs/RESEARCH.md)** | **The literature.** The survey behind the strategies, and the methodology findings that changed how this repo tests. |
@@ -245,6 +245,32 @@ ideas being re-tried blind. Explore variants with
 `walkforward`) rather than by editing a registered strategy's defaults,
 so the comparison table stays a stable record.
 
+## Ten variations of the accepted Kelly parents (R-190)
+
+Kelly v4, Kelly v3 and the original Kelly regime strategy received ten
+fixed execution variations: three actual-account bands per parent and one
+equal-weight blend, all evaluated at four-hour UTC decision slots.
+**All ten are NEGATIVE under the frozen routine; no parent was replaced.**
+
+Across **879 evaluations**, the validation-selected `r190_v3_b20` turns
+$1,000 into $2,226 on the 2023–2026 spot holdout, versus its parent's
+$2,210, using 0.40% taker fees and 1bp slippage. Its Sharpe improvement is
+**+0.013 [−0.101, +0.133]**, below the +0.20 noise floor. It slightly trails
+its parent on funded futures and ETH. The ten variants make only
+**0.17–0.29 fills/day**, with 0.035–0.039 completed round trips/day.
+
+[All ten results, intervals and reproduction commands](reports/r190_variations/README.md)
+include the 24 paired windows per market, actual risk-matching attempts,
+trial adjustment and independent audit. The variants remain experiments;
+the registered comparison above retains its historical conventions.
+
+![R-190 candidate comparison and trading cadence](reports/r190_variations/candidates.png)
+
+_The dotted spot curve is fully invested holding ($3,827), at a different
+risk level. Passive risk-matched controls and invalid matches are reported
+separately. Perpetual curves include funding; liquidated 5x holding is a
+stress case and is omitted from that panel._
+
 ## Ten new game-theory candidates (R-189)
 
 All ten are implemented and included above as **research results**. The
@@ -292,7 +318,7 @@ funding and at the real fee tier, by more than the ±0.2 Sharpe noise
 floor, and survive a falsification test chosen in advance.
 
 Everything already tried — 37 registered strategies, a research log of
-189 rounds, the ruled-out list and the ranked backlog — is in
+190 rounds, the ruled-out list and the ranked backlog — is in
 **[docs/LEDGER.md](docs/LEDGER.md)**, which is read before a session
 starts and appended to when it ends. A documented negative result is a
 successful session; most of the value in this repo is the record of what

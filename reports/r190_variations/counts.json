@@ -1,0 +1,11 @@
+{
+  "candidate_configurations": 10,
+  "auxiliary_configurations": 2,
+  "core_evaluations": 784,
+  "matching_evaluations": 87,
+  "audit_train_evaluations": 4,
+  "audit_holdout_evaluations": 4,
+  "total_evaluations": 879,
+  "holdout_consultations": 787,
+  "cumulative_consultations_approx": 2290
+}

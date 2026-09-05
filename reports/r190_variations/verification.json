@@ -1,0 +1,18 @@
+{
+  "pre_registration_commit": "c9a29af",
+  "pre_holdout_freeze_commit": "2da272c",
+  "frozen_source_and_data_hashes_verified": 20,
+  "initial_report_sha256": "28d2815ccdbff31d272de4e7b92260e9e399438685d9b5e31801286abae0bf43",
+  "final_report_sha256": "a263ed592f8e05997fcd4a9c903f49bc890fba2559fb49b97316cf99e494f4e2",
+  "post_freeze_report_changes": [
+    "Draw percentile CI endpoints directly; a percentile interval need not contain its point estimate.",
+    "Label the spot buy-and-hold curve."
+  ],
+  "financial_logic_or_decision_changes": false,
+  "full_test_suite": {
+    "passed": 718,
+    "seconds": 182.63
+  },
+  "real_training_causality_candidates": 10,
+  "independent_reproduction_cells": 8
+}

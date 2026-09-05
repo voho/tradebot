@@ -216,13 +216,16 @@ def chart(cells, boot):
                 ls="-" if i < 10 else "--", alpha=.8, lw=1.2 if i < 10 else 2, label=name)
         if cell == "holdout":
             r = daily["buy_and_hold", cell]
-            ax.plot(pd.to_datetime(r.index), 1000 * (1 + r).cumprod(), color="navy", lw=2, ls=":", label="buy_and_hold")
+            benchmark, = ax.plot(pd.to_datetime(r.index), 1000 * (1 + r).cumprod(), color="navy", lw=2, ls=":", label="buy_and_hold")
+            ax.legend(handles=[benchmark], fontsize=8, loc="upper left")
         ax.set(title=title, ylabel="Account value ($), log scale", yscale="log")
         ax.grid(alpha=.2)
     axes[0, 1].legend(fontsize=7, ncol=2)
     b = boot[(boot.cell == "holdout") & (boot.control == "parent")].set_index("strategy").loc[list(CANDIDATES)]
     y = np.arange(10)
-    axes[1, 0].errorbar(b.d_sharpe, y, xerr=[b.d_sharpe - b.d_sharpe_lo, b.d_sharpe_hi - b.d_sharpe], fmt="o", capsize=3)
+    # A percentile interval need not enclose its original point estimate.
+    axes[1, 0].hlines(y, b.d_sharpe_lo, b.d_sharpe_hi, color="tab:blue")
+    axes[1, 0].scatter(b.d_sharpe, y, color="tab:blue")
     for i, valid in enumerate(b.risk_valid):
         if not valid:
             axes[1, 0].plot(b.d_sharpe.iloc[i], i, "rx", ms=10)

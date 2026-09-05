@@ -348,32 +348,106 @@ and loses nothing that the `ref` does not already reach.
 
 ## B. Research log (newest first)
 
-### R-190 · 09-05 · IN PROGRESS — ten execution variations of the promoted Kelly parents
+### R-190 · 09-05 · NEGATIVE — ten execution variations of the promoted Kelly parents
 
 **Direction.** Operator-requested COST/ERR replication: preserve L-01
-Kelly v4, L-02 Kelly v3 and L-04 original Kelly, and test actual-account
-execution at UTC four-hour slots. L-03 v2 is explicitly not promoted.
-The overlap with R-37/R-64/R-66/R-72/R-131/R-133/R-147/R-186 is deliberate;
-the mechanism and primary-source scope are in [R190_RESEARCH.md](R190_RESEARCH.md).
+Kelly v4, L-02 Kelly v3 and L-04 original Kelly, and compare actual-account
+exposure with the target at fixed UTC four-hour slots. L-03 v2 is explicitly
+NOT PROMOTED. Nine candidates use 0.05/0.10/0.20 equity bands; the tenth
+averages the three parent targets at 0.10. Davis–Norman (1990, Math. OR)
+and de Lataillade–Chaouki (2020) motivate the cost mechanism, without
+promising these empirical bands are optimal. Overlap with L-05/L-06,
+R-37/R-40/R-64/R-66/R-72/R-131/R-133/R-147/R-186 is deliberate, not a new
+information claim. [Research and source scope](R190_RESEARCH.md).
 
-**What was done.** Ten fixed candidates (three 0.05/0.10/0.20 bands per
-parent, one equal-weight blend), two auxiliary blend neighbours, four
-native controls. The [frozen protocol](../experiments/r190_protocol.md)
-defines the exact exhaustive promotion conjunction, 40bp spot entry tier,
-funding and ETH falsification, 24 paired windows per market, risk matching,
-plateau and cumulative-trials DSR. Planned core evaluations: 784, plus
-counted actual-broker risk-matching attempts. Code is in
-`experiments/r190_variations.py` and `experiments/r190_eval.py`; defaults
-of registered parents are untouched. This stub announces the round before
-financial evaluation; 28 synthetic implementation/harness checks passed.
+**What was done.** The [exact protocol](../experiments/r190_protocol.md)
+was committed with an IN PROGRESS entry in `c9a29af`; source/data hashes
+and validation-only selection were committed in `2da272c` before holdout.
+Ten candidate configurations, two auxiliary blend-band neighbours, and
+four native controls. **879 evaluated cells**: 784 core (48 train, 736
+holdout), 87 actual-broker matching attempts (40 train, 47 holdout), eight
+independent reproductions (four train, four holdout). The ten candidates
+account for 550 core cells; every auxiliary, control and failed matching
+attempt is also retained. No parameter search or post-result retuning.
 
-**Result.** Pending inner splits, freeze manifest, holdout and independent
-reproduction. No R-190 financial configuration evaluated at this commit.
+Explicit Bitstamp BTC / Deribit BTC prices plus matching 8h funding /
+Coinbase ETH data end 2026-08-12 00:40 UTC. Train 2017–2020, validation
+2021–2022, holdout 2023 onward; fresh $1,000 accounts retain earlier causal
+features. Native parents receive an initial held target at a fresh boundary.
+Spot primary is 40bp +1bp slippage with $10 minimum; 10bp is a separate
+high-volume discount scenario. ETH is a 40bp stress; funded perpetuals
+retain the generic 5x broker at 5bp +1bp and native execution deadband.
+Each candidate and native control receives the same 24 random 120–365-day
+windows per market. Sources, contract-model limits and exact outputs are
+in [the report](../reports/r190_variations/README.md).
 
-**Verdict.** IN PROGRESS. Default is NEGATIVE unless every frozen condition
-passes. Current inherited holdout counter ~1,503, increment still zero.
-Backlog table checked: B-06 ongoing, B-09 low, B-17 partial, B-28 blocked;
-none displaced by this explicitly requested round.
+Frozen promotion is a conjunction: >+0.20 daily Sharpe versus both native
+parent and actually simulated risk-matched hold on validation AND holdout,
+both markets; positive 95% lower Sharpe/growth differences on holdout;
+profitable fee/ETH/funding checks and ETH Sharpe >= parent; 2–6 actual
+fills/day; program DSR >=.95; >=13/24 beta wins that pass each window's
+parent-risk match in both markets; a profitable, <=.20-Sharpe-spread family
+plateau with at least two bands beating the parent. Otherwise NEGATIVE.
+Parent risk tolerance is 5%; passive hold tolerance 2%, at most three
+counted attempts from c=0.5. No tail-only escape or forced round trips.
+
+**Result.** All ten are NEGATIVE. Balances below start from $1,000; spot
+columns include the 40bp entry fee. Sharpe is annualized from daily returns.
+
+| candidate | inner train spot | inner val spot | holdout spot | daily Sharpe | fills/day | completed/day | funded holdout |
+|---|---|---|---|---|---|---|---|
+| `r190_v4_b05` | $12,855 | $909 | $2,305 | 0.886 | 0.227 | 0.037 | $3,055 |
+| `r190_v4_b10` | $13,707 | $899 | $2,324 | 0.894 | 0.217 | 0.037 | $3,055 |
+| `r190_v4_b20` | $15,234 | $956 | $2,389 | 0.917 | 0.199 | 0.037 | $3,055 |
+| `r190_v3_b05` | $12,369 | $1,016 | $2,163 | 0.823 | 0.203 | 0.035 | $2,759 |
+| `r190_v3_b10` | $13,453 | $1,023 | $2,181 | 0.831 | 0.196 | 0.035 | $2,759 |
+| `r190_v3_b20` | $12,703 | $1,010 | $2,226 | 0.848 | 0.183 | 0.035 | $2,759 |
+| `r190_base_b05` | $10,157 | $911 | $2,070 | 0.783 | 0.221 | 0.035 | $2,943 |
+| `r190_base_b10` | $10,221 | $903 | $2,127 | 0.806 | 0.204 | 0.035 | $2,943 |
+| `r190_base_b20` | $11,446 | $871 | $2,255 | 0.855 | 0.170 | 0.035 | $2,943 |
+| `r190_blend_b10` | $13,042 | $939 | $2,218 | 0.846 | 0.290 | 0.039 | $2,916 |
+
+Training-only lead **`r190_v3_b20`** has mean validation spot/funded Sharpe
+0.182. Its holdout spot $2,226 versus native v3 $2,210 is **ΔSharpe +0.013
+[−0.101, +0.133]**, log-growth +0.007 [−0.119, +0.150]. Funded $2,759 is below
+native $2,772, ΔSharpe +0.003 [−0.144, +0.141]. At 10bp it ends $2,944 versus
+parent $2,981; on ETH $1,541 versus $1,554. The tiny spot gain therefore
+fails both the noise floor and its ETH/funding falsification. Native v4
+ends $2,454 and fully invested spot holding $3,827. All ten spot parent
+Sharpe intervals contain zero; the largest point gain is original Kelly's
+b20, +0.068 [−0.060, +0.186].
+
+Actual spot cadence is **0.170–0.290 fills/day, 0.035–0.039 completed round
+trips/day**. No variant supplies a few trades/day. All three bands within
+each single-parent family produce identical funded holdout paths: the native 5x
+broker's 0.25-equity target band dominates the candidate's narrower bands.
+The blend's b20 funded path differs; the broker still permits smaller
+entries and full closures. All native-parent primary holdout comparisons
+match within 5%; passive holds match 20/20 validation and 17/20 holdout.
+The three v3 funded matches miss at 2.061% and are **INVALID**, not wins.
+Daily bootstrap DD and bar-close DD are explicitly different resolutions.
+
+Four candidates meet the matched-parent beta count, but no candidate meets
+any plateau or the global DSR gate. Global DSR is at most 0.205, local
+12-configuration DSR at most 0.746. Before holdout, the inherited +0.20
+Sharpe floor implied roughly **6.26–22.36 years** at measured validation
+noise (stationary-noise projection), against two validation years. No
+claim is made that overlapping windows add independent market history.
+Independent target reconstruction and a separate quote-cash accounting
+book reproduce eight cells and every daily equity value to <1.28e-11 USD;
+all ten also pass real training-data prefix/future-perturbation checks.
+**718 tests pass**. The only post-freeze reporting edits draw percentile
+interval endpoints safely and label the holding line; no statistic,
+strategy, frozen decision or evaluation source changed.
+
+**Verdict.** **NEGATIVE; no registration or parent-default changes.**
+The same slow signals with scheduled actual-account bands give small,
+uncertain differences and keep the parents' low trading cadence. Results
+and the chart are linked from README; negative code stays in `experiments/`
+per ROUTINE Step 5. **Holdout counter +787, cumulative ~2,290**: 736 core,
+47 matching attempts, four independent reproductions. B-06 remains ongoing,
+B-09 low, B-17 partial, B-28 data-blocked; the backlog ranking is unchanged.
+This result gives no basis for another band retune on the same data.
 
 ### R-189 · 09-05 · NEGATIVE — ten intraday council games, all retained as research
 
@@ -20190,6 +20264,7 @@ trip.
 
 | what | why | ref |
 |---|---|---|
+| Four-hour actual-account bands 0.05/0.10/0.20 on promoted Kelly v4/v3/original, plus their equal-weight blend | Ten candidates, two auxiliary neighbours, 879 total cells. Largest spot parent ΔSharpe +0.068, all intervals include zero; 0.17–0.29 fills/day. All fail the frozen rule. Do not re-try these bands expecting a few trades/day or established improvement without new evidence. | R-190 |
 | Distributionally robust / lower-confidence-bound Kelly as a standalone strategy: fraction-Kelly on `min_W(mu_W − kappa·sigma_W/sqrt(W))` over 10/30/90-day windows (Rujeerapaiboon–Kuhn–Wiesemann 2016; Sun & Boyd 2018; Baker & McHale 2013), `robust_kelly` | 3 kappa configs + 1 smoke. Holdout spot $600 (Sharpe −0.82 vs hold 1.03), futures $961; in market 18% of bars at kappa 0.5, 10% at kappa 1. Do not re-try a confidence-bound gate on BTC drift expecting exposure: with daily vol ~20x daily drift the bound is positive only in the strongest bull runs, and the robustness is bought with time out of the market (R-33's exposure line, from the theory side). | R-188 |
 | Krichevsky–Trofimov coin-betting fraction (Orabona & Pál 2016) as a position sizer on daily rounds with a forgetting factor, `coin_betting` | 3 configs + 1 smoke. The round's closest miss: holdout spot $1,148 and inner-val $1,055, but Sharpe 0.63 vs hold 1.03 fails the ±0.20 KEEP clause by exactly 0.20; 6% max DD is the ~15% mean-exposure artefact. Do not re-try KT betting for growth without a leverage multiplier well above 3, which is no longer parameter-free. | R-188 |
 | Level-k / cognitive-hierarchy best response over slow-trend, fast-trend and fader levels selected by fee-charged recent PnL (Nagel 1995; Camerer–Ho–Chong 2004), `level_k` | 4 configs + 1 smoke. Fee death on every slice ($5 from $1,000; 2–5 trades a day), and the anticipating rule lost to its own follow-the-leader control on both markets in inner-validation. Gross of fees the control made 5.3x on 2017–2020 and +2% on 2021–2022, so the fast-horizon signal exists and is worth less than one taker fee per trade. Do not re-try at a 0.10% taker. | R-188 |
@@ -24969,6 +25044,7 @@ first `—`, and a dispatched round resets it by construction.
 
 | # | committed (UTC) | step 0 | attempted | outcome |
 |---|---|---|---|---|
+| — | 09-05 | Operator-directed R-190; R-189 complete; four live backlog rows unchanged. | Ten accepted-parent variations, 784 core +87 matching +8 audit cells; frozen before holdout. | NEGATIVE: 0/10 promoted; 0.17–0.29 fills/day. Chart and complete evidence under R-190. |
 | — | 09-05 | Operator-directed R-189; R-188 completed; staged market files preserved. | Ten fixed games, 708 evaluation cells, all registered with intervals and chart. | NEGATIVE: no promotion; two fill-cadence matches, no few-round-trip/day match. See R-189. |
 | — | 09-02 06:0x | clean, HEAD == `origin/main` @ `02311f1` (B-06 auto-commit), no undispatched `_shared.py` (`r187_shared.py` newest, matching `### R-187`); 2 null passes since R-187, under the 3-pass bar; operator-directed brief, not the scheduled one | R-188 (NEGATIVE, all ten dropped): five game-theory / SOTA and five intraday candidates through the full pre-registered protocol; 41 configurations, 224 candidate evaluations; pre-registration committed (`e23cf76`, "IN PROGRESS: R-188") before the holdout was read | full detail under R-188 in section B, ten rulings added to section C; resets the consecutive-null-pass counter to 0 per this section's own construction rule |
 | 2 | 08-29 11:01 | clean, HEAD == `origin/main` @ `fe9a450` (B-06 auto-commit), unshallowed, no undispatched `_shared.py` (`r186_shared.py` newest, matching `### R-186`); 1 null pass since R-186's dispatch, under the 3-pass threshold | scheduled brief (best strategy, direction, research, dispatch conservative/novel sub-agents); backlog re-check (B-06/B-09/B-17/B-28, none actionable); researched Binance forced-liquidation order flow as a COST-axis execution-urgency trigger for R-77/C-v62's own named untested N>=72 gap | Infeasible: `data.binance.vision`'s USDS-M `liquidationSnapshot` archive is empty for BTCUSDT/ETHUSDT (only COIN-M quarterly contracts have it, confirmed by direct S3 listing) -- not simulable on this project's actual instrument. No branch dispatched. `pytest` 542 passed; B-06 fresh (10:15 UTC). |
@@ -26583,6 +26659,8 @@ Rules that the format exists to enforce:
 Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
+
+- **09-05 · ~2,290** — R-190: **+787** = 736 core holdout cells, 47 actual-broker risk-matching attempts and four independent holdout reproductions. Ten candidates plus two auxiliary configurations, no retuning. Overlapping windows and fitted controls are dependent; the cumulative DSR count is deliberately conservative.
 
 - **09-05 · ~1,503** — R-189: **+672** on top of ~831. Main frozen battery +648 holdout-touching cells (54 ×12, including overlapping descriptive windows and full-period chart cells), then +24 historical holdout interval cells. Repeated windows are not independent trials; ten fixed configurations, no retuning.
 

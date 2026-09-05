@@ -7,6 +7,15 @@ docstring carries its own citations, and the mapping is in the
 All input is 5m OHLCV bars only (no order book), so each mechanism below
 is stated together with its bar-visible footprint.
 
+The **R-190 variation round** tests actual-account execution bands on the
+three promoted Kelly parents, plus their equal-weight blend. Its
+[source review](R190_RESEARCH.md) separates Bell–Cover's theoretical
+competitive-optimality result from Davis–Norman and de Lataillade–Chaouki's
+transaction-cost bands. These sources motivate the experiment; they do not
+derive its fixed bands or promise BTC profits. All ten variants remain
+unregistered after 879 evaluations, with small uncertain differences and
+0.17–0.29 fills/day. [Results](../reports/r190_variations/README.md).
+
 The **R-189 intraday game round** adds ten registered research candidates;
 see the [source review](R189_RESEARCH.md) for primary 2024–2026 research,
 foundational algorithms, implementable equations and precise adaptation limits.

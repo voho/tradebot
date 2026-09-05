@@ -1,0 +1,334 @@
+{
+  "train_evaluations": 4,
+  "holdout_evaluations": 4,
+  "method": "Independent parent factor reconstruction and quote-cash book; no engine/evaluator/broker replay",
+  "primary_train_cells": 48,
+  "preparation": [
+    {
+      "asset": "spot",
+      "max_prepared_timestamp": "2022-12-31 23:55:00+00:00",
+      "parent_target_max_error": 0.0
+    },
+    {
+      "asset": "perp",
+      "max_prepared_timestamp": "2022-12-31 23:55:00+00:00",
+      "parent_target_max_error": 0.0
+    }
+  ],
+  "reproductions": [
+    {
+      "strategy": "r190_v4_b10",
+      "cell": "inner_val",
+      "metrics": {
+        "final_balance": 899.3246324331806,
+        "fees_paid": 239.37641169231676,
+        "funding_paid": 0.0,
+        "fills": 197,
+        "completed_round_trips": 45,
+        "decision_requests": 280,
+        "max_drawdown_pct": 40.619532767480145,
+        "mean_abs_exposure": 0.2911748636328907,
+        "daily_sharpe": -0.03354442234587459,
+        "annualized_volatility": 0.29478957026370695
+      },
+      "metric_errors": {
+        "final_balance": 1.8189894035458565e-12,
+        "fees_paid": 8.526512829121202e-14,
+        "funding_paid": 0.0,
+        "fills": 0.0,
+        "completed_round_trips": 0.0,
+        "decision_requests": 0.0,
+        "max_drawdown_pct": -1.1368683772161603e-13,
+        "mean_abs_exposure": 0.0,
+        "daily_sharpe": 4.711508960753008e-15,
+        "annualized_volatility": -5.551115123125783e-17
+      },
+      "max_daily_equity_error": 1.9326762412674725e-12,
+      "first_fill": "2021-01-01 00:05:00+00:00"
+    },
+    {
+      "strategy": "kelly_regime_v4",
+      "cell": "inner_val",
+      "metrics": {
+        "final_balance": 868.8281668632291,
+        "fees_paid": 275.5632212158677,
+        "funding_paid": 0.0,
+        "fills": 259,
+        "completed_round_trips": 52,
+        "decision_requests": 269,
+        "max_drawdown_pct": 42.640041466403595,
+        "mean_abs_exposure": 0.29162076393557135,
+        "daily_sharpe": -0.0768492064370041,
+        "annualized_volatility": 0.3060205926488177
+      },
+      "metric_errors": {
+        "final_balance": -4.547473508864641e-13,
+        "fees_paid": -1.7053025658242404e-13,
+        "funding_paid": 0.0,
+        "fills": 0.0,
+        "completed_round_trips": 0.0,
+        "decision_requests": 0.0,
+        "max_drawdown_pct": 4.973799150320701e-14,
+        "mean_abs_exposure": 5.551115123125783e-17,
+        "daily_sharpe": -1.2073675392798577e-15,
+        "annualized_volatility": 1.1102230246251565e-16
+      },
+      "max_daily_equity_error": 1.5916157281026244e-12,
+      "first_fill": "2021-01-01 00:05:00+00:00"
+    },
+    {
+      "strategy": "r190_v4_b10",
+      "cell": "funded_val",
+      "metrics": {
+        "final_balance": 1005.3324824639286,
+        "fees_paid": 23.49536470389716,
+        "funding_paid": 129.00785380796768,
+        "fills": 122,
+        "completed_round_trips": 45,
+        "decision_requests": 1002,
+        "max_drawdown_pct": 35.86232157662339,
+        "mean_abs_exposure": 0.27755790076247305,
+        "daily_sharpe": 0.14983881712201114,
+        "annualized_volatility": 0.28309446188746346
+      },
+      "metric_errors": {
+        "final_balance": -7.958078640513122e-13,
+        "fees_paid": 0.0,
+        "funding_paid": 5.684341886080802e-14,
+        "fills": 0.0,
+        "completed_round_trips": 0.0,
+        "decision_requests": 0.0,
+        "max_drawdown_pct": 4.973799150320701e-14,
+        "mean_abs_exposure": 5.551115123125783e-17,
+        "daily_sharpe": -4.85722573273506e-15,
+        "annualized_volatility": -5.551115123125783e-17
+      },
+      "max_daily_equity_error": 1.1368683772161603e-12,
+      "first_fill": "2021-01-01 00:05:00+00:00"
+    },
+    {
+      "strategy": "kelly_regime_v4",
+      "cell": "funded_val",
+      "metrics": {
+        "final_balance": 982.5557470956765,
+        "fees_paid": 26.497888425283335,
+        "funding_paid": 131.04326084148704,
+        "fills": 146,
+        "completed_round_trips": 51,
+        "decision_requests": 265,
+        "max_drawdown_pct": 34.56459861016198,
+        "mean_abs_exposure": 0.2897577350118739,
+        "daily_sharpe": 0.11720806225776141,
+        "annualized_volatility": 0.2951159078423812
+      },
+      "metric_errors": {
+        "final_balance": 3.296918293926865e-12,
+        "fees_paid": 4.618527782440651e-14,
+        "funding_paid": -8.526512829121202e-14,
+        "fills": 0.0,
+        "completed_round_trips": 0.0,
+        "decision_requests": 0.0,
+        "max_drawdown_pct": -2.4158453015843406e-13,
+        "mean_abs_exposure": 0.0,
+        "daily_sharpe": 4.010680676458378e-15,
+        "annualized_volatility": -1.1102230246251565e-16
+      },
+      "max_daily_equity_error": 5.002220859751105e-12,
+      "first_fill": "2021-01-01 00:05:00+00:00"
+    },
+    {
+      "strategy": "r190_v3_b20",
+      "cell": "holdout",
+      "metrics": {
+        "final_balance": 2226.412226310923,
+        "fees_paid": 899.0506033377092,
+        "funding_paid": 0.0,
+        "fills": 241,
+        "completed_round_trips": 46,
+        "decision_requests": 1496,
+        "max_drawdown_pct": 39.93457502999847,
+        "mean_abs_exposure": 0.5978437089368799,
+        "daily_sharpe": 0.8478143296770974,
+        "annualized_volatility": 0.32160371031495055
+      },
+      "metric_errors": {
+        "final_balance": -2.2737367544323206e-12,
+        "fees_paid": -3.410605131648481e-13,
+        "funding_paid": 0.0,
+        "fills": 0.0,
+        "completed_round_trips": 0.0,
+        "decision_requests": 0.0,
+        "max_drawdown_pct": 1.4210854715202004e-14,
+        "mean_abs_exposure": 0.0,
+        "daily_sharpe": 1.1102230246251565e-16,
+        "annualized_volatility": -1.6653345369377348e-16
+      },
+      "max_daily_equity_error": 4.547473508864641e-12,
+      "first_fill": "2023-01-05 00:05:00+00:00"
+    },
+    {
+      "strategy": "kelly_regime_v3",
+      "cell": "holdout",
+      "metrics": {
+        "final_balance": 2210.1099487001893,
+        "fees_paid": 963.8019893154933,
+        "funding_paid": 0.0,
+        "fills": 297,
+        "completed_round_trips": 48,
+        "decision_requests": 318,
+        "max_drawdown_pct": 41.74520696464149,
+        "mean_abs_exposure": 0.5952473849419164,
+        "daily_sharpe": 0.8351408594551234,
+        "annualized_volatility": 0.3255249823456594
+      },
+      "metric_errors": {
+        "final_balance": -2.2737367544323206e-12,
+        "fees_paid": -1.1368683772161603e-12,
+        "funding_paid": 0.0,
+        "fills": 0.0,
+        "completed_round_trips": 0.0,
+        "decision_requests": 0.0,
+        "max_drawdown_pct": -4.263256414560601e-14,
+        "mean_abs_exposure": 1.1102230246251565e-16,
+        "daily_sharpe": -1.4432899320127035e-15,
+        "annualized_volatility": -1.1102230246251565e-16
+      },
+      "max_daily_equity_error": 6.366462912410498e-12,
+      "first_fill": "2023-01-04 23:50:00+00:00"
+    },
+    {
+      "strategy": "r190_v3_b20",
+      "cell": "funded_holdout",
+      "metrics": {
+        "final_balance": 2758.5469925200155,
+        "fees_paid": 152.9747261158911,
+        "funding_paid": 626.6711140208163,
+        "fills": 265,
+        "completed_round_trips": 46,
+        "decision_requests": 352,
+        "max_drawdown_pct": 36.95981368295711,
+        "mean_abs_exposure": 0.6519449736323994,
+        "daily_sharpe": 0.9527302015907703,
+        "annualized_volatility": 0.3630849727812297
+      },
+      "metric_errors": {
+        "final_balance": -9.094947017729282e-13,
+        "fees_paid": 1.1368683772161603e-13,
+        "funding_paid": 5.684341886080801e-13,
+        "fills": 0.0,
+        "completed_round_trips": 0.0,
+        "decision_requests": 0.0,
+        "max_drawdown_pct": 9.237055564881302e-14,
+        "mean_abs_exposure": 0.0,
+        "daily_sharpe": -1.3322676295501878e-15,
+        "annualized_volatility": 0.0
+      },
+      "max_daily_equity_error": 5.002220859751105e-12,
+      "first_fill": "2023-01-04 20:05:00+00:00"
+    },
+    {
+      "strategy": "kelly_regime_v3",
+      "cell": "funded_holdout",
+      "metrics": {
+        "final_balance": 2772.212364952827,
+        "fees_paid": 163.9962463560796,
+        "funding_paid": 643.4369340856956,
+        "fills": 301,
+        "completed_round_trips": 49,
+        "decision_requests": 336,
+        "max_drawdown_pct": 39.61202546760952,
+        "mean_abs_exposure": 0.6514644561886842,
+        "daily_sharpe": 0.9497038017632703,
+        "annualized_volatility": 0.3672870002147413
+      },
+      "metric_errors": {
+        "final_balance": -1.0913936421275139e-11,
+        "fees_paid": -3.410605131648481e-13,
+        "funding_paid": -1.1368683772161603e-12,
+        "fills": 0.0,
+        "completed_round_trips": 0.0,
+        "decision_requests": 0.0,
+        "max_drawdown_pct": 7.105427357601002e-14,
+        "mean_abs_exposure": 0.0,
+        "daily_sharpe": -4.6629367034256575e-15,
+        "annualized_volatility": 0.0
+      },
+      "max_daily_equity_error": 1.2732925824820995e-11,
+      "first_fill": "2023-01-04 18:50:00+00:00"
+    }
+  ],
+  "discrepancies": [],
+  "source_hashes": {
+    "experiments/r190_variations.py": "2c69ce04b005e6887d39e4ab1d2ad68e9dca35853ac1acaddc1c9e7575ad092e",
+    "experiments/r190_eval.py": "d626585aeb94bc4d9f38222d26a074efbff6f5096969b3f2d7b8c443756f8a75",
+    "experiments/r190_protocol.md": "dbea5b3021134e3eaa4ed2a769d6f163c1e3e13d9540675fcd8752f7a072dd27"
+  },
+  "holdout_manifest_hash": "546958d43083580a9490dce608a8549a92183e78f18e6749007c526e79d61921",
+  "real_training_causality": {
+    "max_timestamp": "2018-02-21 15:55:00+00:00",
+    "cut_timestamp": "2017-11-27 00:00:00+00:00",
+    "financial_evaluations": 0,
+    "candidates": [
+      {
+        "strategy": "r190_v4_b05",
+        "parent_identity": true,
+        "future_perturbation": true,
+        "prefix_identity": true
+      },
+      {
+        "strategy": "r190_v4_b10",
+        "parent_identity": true,
+        "future_perturbation": true,
+        "prefix_identity": true
+      },
+      {
+        "strategy": "r190_v4_b20",
+        "parent_identity": true,
+        "future_perturbation": true,
+        "prefix_identity": true
+      },
+      {
+        "strategy": "r190_v3_b05",
+        "parent_identity": true,
+        "future_perturbation": true,
+        "prefix_identity": true
+      },
+      {
+        "strategy": "r190_v3_b10",
+        "parent_identity": true,
+        "future_perturbation": true,
+        "prefix_identity": true
+      },
+      {
+        "strategy": "r190_v3_b20",
+        "parent_identity": true,
+        "future_perturbation": true,
+        "prefix_identity": true
+      },
+      {
+        "strategy": "r190_base_b05",
+        "parent_identity": true,
+        "future_perturbation": true,
+        "prefix_identity": true
+      },
+      {
+        "strategy": "r190_base_b10",
+        "parent_identity": true,
+        "future_perturbation": true,
+        "prefix_identity": true
+      },
+      {
+        "strategy": "r190_base_b20",
+        "parent_identity": true,
+        "future_perturbation": true,
+        "prefix_identity": true
+      },
+      {
+        "strategy": "r190_blend_b10",
+        "parent_identity": true,
+        "future_perturbation": true,
+        "prefix_identity": true
+      }
+    ]
+  }
+}
