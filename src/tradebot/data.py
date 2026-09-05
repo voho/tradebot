@@ -45,6 +45,9 @@ def load_ohlcv_csv(path: str | Path) -> pd.DataFrame:
     """Load an OHLCV CSV into a UTC-indexed DataFrame."""
     df = pd.read_csv(path)
     df.columns = [c.strip().lower() for c in df.columns]
+    # Older fetched klines use ``ts`` for the same epoch timestamp column.
+    if "timestamp" not in df.columns and "ts" in df.columns:
+        df = df.rename(columns={"ts": "timestamp"})
     required = {"timestamp", "open", "high", "low", "close", "volume"}
     missing = required - set(df.columns)
     if missing:

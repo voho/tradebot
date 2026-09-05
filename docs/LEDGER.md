@@ -306,6 +306,16 @@ backlog item.**
 | L-24 | `attrition_reversion` | 08-12 | Fade deviations from an inventory-shifted fair value; quit when waiting costs exceed the prize (Avellaneda & Stoikov 2008; Maynard Smith 1974) | COST | $4.94 | $0.99 | NEGATIVE | Avellaneda–Stoikov needs an order book. Run on bar-close fills it is a mean-reversion rule paying taker fees on both sides. |
 | L-25 | `rsi_reversion` | 08-12 | Buy RSI < 30, exit on recovery; mirror short on futures | — | $4.85 | $0.77 | NEGATIVE | Baseline. 4,464 trades. |
 | L-26 | `elliott_wave_zigzag` | 08-27 | Mechanical causal ZigZag+Fibonacci Elliott impulse counter, long wave2→wave5 (Frost & Prechter 1978) | — | $5,027 | 💀 $13 | NEGATIVE (R-156) | B-10, filed to convert an unfalsifiable debate into a table row: builds it, and it loses like every other pure predictor. OOS Δ-Sharpe −1.18 [−2.32,−0.14] spot, −1.74 [−2.83,−0.43] futures, both significant in the *losing* direction. |
+| L-27 | `cautious_optimism` | 09-05 | Cautious optimistic pacing over executable council experts | COST/ERR/SIZE | $55,424 | $55,343 | RESEARCH ONLY (R-189) | Holdout 0.001 fills/day, 0.000 completed trips/day; frozen promotion rule failed. |
+| L-28 | `squint_council` | 09-05 | Shared-variance Squint (2026) over executable council experts | COST/ERR/SIZE | $49,525 | $49,399 | RESEARCH ONLY (R-189) | Holdout 0.001 fills/day, 0.000 completed trips/day; frozen promotion rule failed. |
+| L-29 | `normalhedge_council` | 09-05 | NormalHedge.BH (2026) over executable council experts | COST/ERR/SIZE | $54,632 | $54,552 | RESEARCH ONLY (R-189) | Holdout 0.001 fills/day, 0.000 completed trips/day; frozen promotion rule failed. |
+| L-30 | `swap_regret_council` | 09-05 | Conditional swap-regret chain over executable council experts | COST/ERR/SIZE | $57,148 | $57,064 | RESEARCH ONLY (R-189) | Holdout 0.001 fills/day, 0.000 completed trips/day; frozen promotion rule failed. |
+| L-31 | `blackwell_council` | 09-05 | Vector approachability budgets over executable council experts | COST/ERR/SIZE | $10,922 | $14,080 | RESEARCH ONLY (R-189) | Holdout 0.106 fills/day, 0.014 completed trips/day; frozen promotion rule failed. |
+| L-32 | `minimax_council` | 09-05 | Worst-horizon maximin over executable council experts | COST/ERR/SIZE | $4,010 | $13,471 | RESEARCH ONLY (R-189) | Holdout 0.884 fills/day, 0.353 completed trips/day; frozen promotion rule failed. |
+| L-33 | `nash_council` | 09-05 | Finite Nash surplus bargaining over executable council experts | COST/ERR/SIZE | $3,170 | $14,212 | RESEARCH ONLY (R-189) | Holdout 2.368 fills/day, 0.187 completed trips/day; frozen promotion rule failed. |
+| L-34 | `qre_council` | 09-05 | Entropy-regularized scenario game over executable council experts | COST/ERR/SIZE | $7,881 | $13,637 | RESEARCH ONLY (R-189) | Holdout 3.042 fills/day, 0.000 completed trips/day; frozen promotion rule failed. |
+| L-35 | `sleeping_council` | 09-05 | Sleeping AdaNormalHedge over executable council experts | COST/ERR/SIZE | $53,759 | $41,620 | RESEARCH ONLY (R-189) | Holdout 0.001 fills/day, 0.000 completed trips/day; frozen promotion rule failed. |
+| L-36 | `defensive_forecast` | 09-05 | Kernel defensive forecasting over executable council experts | COST/ERR/SIZE | $1,609 | $1,999 | RESEARCH ONLY (R-189) | Holdout 0.584 fills/day, 0.165 completed trips/day; frozen promotion rule failed. |
 
 **Pattern across A:** every entry with `SIZE` in the attacks column is
 profitable; every pure predictor is not. The four `INFO` entries all
@@ -337,6 +347,93 @@ and loses nothing that the `ref` does not already reach.
 ```
 
 ## B. Research log (newest first)
+
+### R-189 · 09-05 · NEGATIVE — ten intraday council games, all retained as research
+
+**Direction.** Operator requested ten new game-theory strategies, combinations
+of existing winners, beta tests, chart inclusion and a few trades/day. The
+[source review](R189_RESEARCH.md) documents 2025–2026 cautious optimism,
+shared-variance Squint and NormalHedge.BH plus finite swap-regret, Blackwell,
+minimax, Nash bargaining, QRE, specialist and defensive-forecasting games.
+All reuse actual clipped Kelly v4 and causal technical/hold/cash experts.
+Attacks COST/ERR/SIZE, with no additional information source. Differences
+from R-188, plain Hedge L-09/L-17, RM+ L-20 and ONS R-171 are explicit in
+that review; current learning results are not claimed as proven trading alpha.
+This operator-directed batch takes precedence over the saturated daily
+literature/backlog routine; no undispatched frozen round was found.
+
+**What was done.** Ten registered classes in
+`src/tradebot/strategies/intraday_games.py`; six UTC slots/day, at most 1x
+long notional, no forced trades. **10 configurations**, no sweep/retuning.
+The full conjunctive promotion rule was written before evaluation in
+`experiments/r189_games.py` and hashed with the inputs in
+`reports/r189_games/manifest.json`. Required: >0.20 Sharpe improvement over
+both hold and Kelly on validation and holdout; profitable holdout, lower
+DD, 2–6 fills/day, positive paired growth lower bound, DSR >=0.95, fee/ETH/
+funded survival, >50% paired-window wins over both controls on both markets,
+and no candidate liquidation. Any failed clause means RESEARCH ONLY.
+All ten stay registered because the operator requested all candidates in
+the chart; registration is independent of promotion.
+
+**684 main evaluations** (12 strategies/controls ×57 cells): inner train,
+validation, primary holdout, 40bp fee stress, ETH, funded validation/holdout,
+2 historical full-period views and 24 paired windows on each market.
+**24 supplemental chart evaluations**, added solely to satisfy the existing
+full/holdout ×both-markets interval requirement, preserve historical zero
+slippage/unfunded proxy conventions. Total **708 cells: 590 candidates,
+118 controls**. Explicit Bitstamp 2017–2026, Coinbase ETH, and matched
+Deribit prices/funding; 10bp+1bp spot and 5bp+1bp funded-perp primary costs.
+Fresh flat accounts retain causal learner history; first Kelly control
+exposure is synchronized. Every end date includes the complete final bar.
+The new `ts` CSV header is supported without modifying the staged files;
+the funding fixture now explicitly loads its historical coverage data.
+The CLI also refuses cached intervals when dataset dates, source labels,
+cost conventions or daily counts differ from the published comparison.
+
+**Result.** Primary 2023-01-01→2026-08-12; $1,000 start. Hold: **$3,839,
+Sharpe 1.03, DD54.0%**; Kelly: **$3,392, Sharpe1.22, DD28.0%**.
+
+| candidate | spot balance | Sharpe | max DD | fills/day | closed trips/day | 40bp fee balance | funded perp balance |
+|---|---|---|---|---|---|---|---|
+| `cautious_optimism` | $3,751 | 1.02 | 53.7% | 0.001 | 0.000 | $3,740 | $3,042 |
+| `squint_council` | $3,725 | 1.02 | 53.7% | 0.001 | 0.000 | $3,714 | $2,212 |
+| `normalhedge_council` | $3,711 | 1.02 | 53.6% | 0.001 | 0.000 | $3,700 | $2,891 |
+| `swap_regret_council` | $3,839 | 1.03 | 54.0% | 0.001 | 0.000 | $3,827 | $3,072 |
+| `blackwell_council` | $2,431 | 1.09 | 34.2% | 0.106 | 0.014 | $2,175 | $2,119 |
+| `minimax_council` | $761 | -0.18 | 57.8% | 0.884 | 0.353 | $48 | $802 |
+| `nash_council` | $875 | 0.03 | 62.6% | 2.368 | 0.187 | $55 | $1,430 |
+| `qre_council` | $1,289 | 0.41 | 41.3% | 3.042 | 0.000 | $306 | $1,580 |
+| `sleeping_council` | $3,770 | 1.02 | 53.8% | 0.001 | 0.000 | $3,758 | $2,317 |
+| `defensive_forecast` | $1,061 | 0.45 | 4.6% | 0.584 | 0.165 | $860 | $1,119 |
+
+**2/10 meet the fill cadence, 0/10 meet a few completed round trips/day.**
+QRE's 3.04/day are rebalances of a position that never fully closes; its
+$1,289 drops to $306 at 40bp and $861 on ETH. Nash loses despite 2.37
+fills/day. Five cumulative learners each make one holdout fill, effectively
+passive longs. Every candidate wins fewer than 30% of spot beta windows
+against holding. No positive 95% lower growth bound; frozen DSR values
+0.001–0.261, all below0.95. Full tables, funding amounts, beta win rates,
+source limits and the chart are in [the report](../reports/r189_games/README.md).
+The candidate universe is not risk-matched to 5x buy-and-hold; its funded
+liquidation and disappearing log-chart zero tail are labeled as such.
+
+Independent audit reconstructs all 12 primary fill tapes to <6e-11 dollars,
+confirms next-open prices/slippage/fees, ≤6 candidate fills/UTC day and all
+closure counts. The finalized full suite passes **684 tests**, including
+causal future-mutation, active real-data fills, numerical game invariants,
+live decision parity, fresh broker and funding-coverage checks. Two timezone-bound failures stopped before any financial
+cell; initial manifests are preserved and no strategy or decision-rule
+change followed a performance observation.
+
+**Verdict.** **NEGATIVE; all ten retained as RESEARCH ONLY.** Faster learning
+rules can deliver several rebalances per day here, but this batch does not
+establish an advantage over holding or achieve a few completed trades/day.
+**Holdout counter +672, cumulative ~1,503**: +648 from the main battery and
++24 historical interval cells. The frozen decision DSR used the then-known
+~1,479; the additional display-only cells do not change any verdict. No
+promotion rule moved. Prior 54 comparison cells reproduce unchanged;
+20 new cells and full/holdout intervals are added. B-06/B-09/B-17/B-28
+remain unchanged, and no live trading configuration was altered.
 
 ### R-188 · 09-02 · NEGATIVE (all ten dropped) — ten new candidates in one operator-directed round: five game-theoretic / state-of-the-art rules and five intraday 1–10-trades-a-day rules; every one fails the pre-registered keep rule on the 2023+ holdout, and the fee-free ceilings say why
 
@@ -24845,6 +24942,7 @@ first `—`, and a dispatched round resets it by construction.
 
 | # | committed (UTC) | step 0 | attempted | outcome |
 |---|---|---|---|---|
+| — | 09-05 | Operator-directed R-189; R-188 completed; staged market files preserved. | Ten fixed games, 708 evaluation cells, all registered with intervals and chart. | NEGATIVE: no promotion; two fill-cadence matches, no few-round-trip/day match. See R-189. |
 | — | 09-02 06:0x | clean, HEAD == `origin/main` @ `02311f1` (B-06 auto-commit), no undispatched `_shared.py` (`r187_shared.py` newest, matching `### R-187`); 2 null passes since R-187, under the 3-pass bar; operator-directed brief, not the scheduled one | R-188 (NEGATIVE, all ten dropped): five game-theory / SOTA and five intraday candidates through the full pre-registered protocol; 41 configurations, 224 candidate evaluations; pre-registration committed (`e23cf76`, "IN PROGRESS: R-188") before the holdout was read | full detail under R-188 in section B, ten rulings added to section C; resets the consecutive-null-pass counter to 0 per this section's own construction rule |
 | 2 | 08-29 11:01 | clean, HEAD == `origin/main` @ `fe9a450` (B-06 auto-commit), unshallowed, no undispatched `_shared.py` (`r186_shared.py` newest, matching `### R-186`); 1 null pass since R-186's dispatch, under the 3-pass threshold | scheduled brief (best strategy, direction, research, dispatch conservative/novel sub-agents); backlog re-check (B-06/B-09/B-17/B-28, none actionable); researched Binance forced-liquidation order flow as a COST-axis execution-urgency trigger for R-77/C-v62's own named untested N>=72 gap | Infeasible: `data.binance.vision`'s USDS-M `liquidationSnapshot` archive is empty for BTCUSDT/ETHUSDT (only COIN-M quarterly contracts have it, confirmed by direct S3 listing) -- not simulable on this project's actual instrument. No branch dispatched. `pytest` 542 passed; B-06 fresh (10:15 UTC). |
 | 1 | 08-29 10:0x | clean, HEAD == `origin/main` @ `03de4f0` (R-186's own commit), unshallowed, no undispatched `_shared.py` (`r186_shared.py` newest, matching `### R-186`); 0 null passes since R-186's dispatch, well under the 3-pass threshold | scheduled brief (best strategy, direction, research, dispatch conservative/novel sub-agents); dispatched a research sub-agent: standing diagnosis + section C, R-172-186 re-read, backlog re-check (B-06/B-09/B-17/B-28), fresh 2025-26 web search across INFO/N≈3/ERR/COST for `kelly_regime_v4` | Verdict: nothing survives Step 1 -- conformal-Kelly dupes R-87/R-161/R-167, stop+breadth+signed composite dupes R-90/R-63/R-177, sentiment dupes closed ruling+R-180, GAN synthetic-data predicted to fail by R-67/R-68's N≈3 lesson. No branch dispatched. `pytest` 542 passed; B-06 ~6.6h stale. |
@@ -26458,6 +26556,8 @@ Rules that the format exists to enforce:
 Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
+
+- **09-05 · ~1,503** — R-189: **+672** on top of ~831. Main frozen battery +648 holdout-touching cells (54 ×12, including overlapping descriptive windows and full-period chart cells), then +24 historical holdout interval cells. Repeated windows are not independent trials; ten fixed configurations, no retuning.
 
 - **09-02 · ~831** — R-188: **+65** on top of R-178's ~766 (R-179 through R-187 read no holdout bar). One holdout pass of ten frozen candidates × 4 cells (spot, futures_5x, spot + 1 bp slippage, spot at a 0.20% taker) = 40, plus 3 benchmark cells; then the informational 2017–2026 full-period view, 10 × 2 markets + 2 benchmark = 22. Counted per cell, the more conservative of the two conventions this list has used (R-173 per cell, R-178 per branch).
 

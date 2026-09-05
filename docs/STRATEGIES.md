@@ -1,7 +1,9 @@
 # The strategies, best to worst
 
-Every registered strategy — all twenty-seven — ordered as in the README
-comparison table (final balance on the best market over 2017–2026). Each
+The original twenty-seven strategies are ordered as in the historical README
+comparison table (final balance on the best market over 2017–2026). Ten additional
+[R-189 research candidates](#r-189-intraday-game-candidates) are documented below.
+Each
 section says **what it is**, **how it works**, and **what principles it
 rests on**. Balances below are from a **$1,000** start — results scale
 proportionally with capital, so one start balance is enough; "spot" is 1x
@@ -52,6 +54,45 @@ twenty-two distinct ideas.
 > *how much to hold*; every strategy that tries to predict *what happens
 > next* loses. On 5-minute bars, after fees, sizing wins and forecasting
 > loses.
+
+---
+
+## R-189 intraday game candidates
+
+All ten are **registered research candidates**. Registration and chart inclusion
+do not imply promotion; evaluation is recorded in
+[reports/r189_games](../reports/r189_games/), using the frozen
+[R-189 harness](../experiments/r189_games.py). The
+[source review](R189_RESEARCH.md) gives primary citations, equations and the
+limits of each adaptation. The shared implementation is
+[intraday_games.py](../src/tradebot/strategies/intraday_games.py).
+
+| strategy | distinct mechanism |
+|---|---|
+| `cautious_optimism` | Optimistic expert regret with regret-dependent entropy pacing, following the 2025 COMWU construction. |
+| `squint_council` | The 2026 shared-variance Squint expert game, using numerical integration and an implicit variance update. |
+| `normalhedge_council` | The 2026 NormalHedge.BH constant-potential clock, with a disclosed practical initialization. |
+| `swap_regret_council` | Conditional expert-switching regrets and a stationary transition distribution. |
+| `blackwell_council` | A vector of return, risk and turnover deficits selects a separating exposure direction. |
+| `minimax_council` | Pure-expert maximin across three historical payoff summaries, with cash available. |
+| `nash_council` | Finite cooperative bargaining over model-committee surpluses and a concentration penalty. |
+| `qre_council` | A fixed-count logit-response approximation to an entropy-regularized expert/scenario game. |
+| `sleeping_council` | Confidence-rated AdaNormalHedge updates only active specialists. |
+| `defensive_forecast` | Finite-feature K29 calibration against a skeptic, followed by a fee-aware exposure rule. |
+
+The common experts combine clipped `kelly_regime_v4`, intraday trend,
+reversion, breakout, buy and cash. Targets are **long-only, at most 1x equity**
+on both markets. Closed-bar decisions occur at **00/04/08/12/16/20 UTC**, with
+next-open execution: at most six requested rebalances per day. Actual fills
+can be fewer; fills and completed round trips are different counts.
+
+A `0.05` exposure band checks both the proposed target and actual held notional.
+The broker additionally suppresses small nonzero-position rebalances below
+**5% of the market's maximum notional**. That is 5% of equity on spot and
+25% on a 5x futures account, so futures execution is coarser even though the
+candidate target remains capped at 1x. These bands do not force a minimum
+daily trade count. The model scenarios are constructed from prior expert
+payoffs, not observations of strategic market participants.
 
 ---
 

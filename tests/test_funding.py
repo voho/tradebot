@@ -173,10 +173,10 @@ def test_funding_materially_reduces_a_leveraged_long(real_ohlcv_slice):
 
 @pytest.fixture(scope="module")
 def real_ohlcv_slice():
-    from tradebot.data import load_dataset
+    from tradebot.data import load_ohlcv_csv
 
-    df, label = load_dataset(DATA_DIR, "spot")
-    assert label != "SYNTHETIC"
+    # Optional fetched files can cover a more recent, unfunded date range.
+    df = load_ohlcv_csv(DATA_DIR / "btcusd_spot_5m.csv.gz")
     # a span the committed funding data actually covers
     return df.loc["2021-01-01":"2022-12-31"]
 

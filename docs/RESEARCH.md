@@ -7,6 +7,18 @@ docstring carries its own citations, and the mapping is in the
 All input is 5m OHLCV bars only (no order book), so each mechanism below
 is stated together with its bar-visible footprint.
 
+The **R-189 intraday game round** adds ten registered research candidates;
+see the [source review](R189_RESEARCH.md) for primary 2024–2026 research,
+foundational algorithms, implementable equations and precise adaptation limits.
+It covers cautious optimism, second-order expert games, conditional regret,
+vector approachability, robust and cooperative model councils, quantal response,
+specialists and defensive forecasting. The
+[strategy registry section](STRATEGIES.md#r-189-intraday-game-candidates),
+[frozen evaluation harness](../experiments/r189_games.py) and
+[evaluation reports](../reports/r189_games/) distinguish research registration
+from promotion. The literature does not establish profitable intraday Bitcoin
+strategies or guarantee a few actual trades per day.
+
 ## 1. Market microstructure games
 
 - **Kyle (1985), "Continuous Auctions and Insider Trading," Econometrica 53(6)** —

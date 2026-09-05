@@ -1396,3 +1396,24 @@ error bars reads as a better number than it is.
 - **Survivorship in the council.** `champions_council` selects members
   that already performed well on this data. Its OOS split is reported
   above precisely because its in-sample rank is not evidence.
+
+## R-189: ten game-theory candidates, no promotion
+
+Ten fixed rules received 684 main evaluations plus 24 historical chart
+interval evaluations. [The complete report](../reports/r189_games/README.md)
+contains the source/data freeze, fees and funded-market conventions, every
+result, 24 paired windows per market, daily bootstrap intervals and trial
+adjustment. No parameter was retuned after financial results.
+
+Two candidates achieve the pre-registered 2–6 fills/day target: QRE
+($1,289 from $1,000, 3.04 fills/day) and Nash ($875, 2.37 fills/day).
+QRE never fully exits; Nash completes only 0.187 round trips/day. **None
+achieves a few completed trades/day or passes the promotion rule.**
+Primary buy-and-hold finishes $3,839 and Kelly v4 $3,392. All ten remain
+registered research candidates per the operator's request.
+
+![R-189 results and cadence](../reports/r189_games/candidates.png)
+
+The funded 5x buy-and-hold stress benchmark is liquidated and its zero
+tail is invisible on the logarithmic axis. Candidate exposure is capped
+at 1x; lower drawdown is not a matched-risk performance claim.

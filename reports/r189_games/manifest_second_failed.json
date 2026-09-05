@@ -1,0 +1,31 @@
+{
+  "frozen_at_utc": "2026-09-05T07:56:09.147544+00:00",
+  "configurations": 10,
+  "candidates": [
+    "cautious_optimism",
+    "squint_council",
+    "normalhedge_council",
+    "swap_regret_council",
+    "blackwell_council",
+    "minimax_council",
+    "nash_council",
+    "qre_council",
+    "sleeping_council",
+    "defensive_forecast"
+  ],
+  "protocol": "R-189: frozen ten-game intraday battery and chart integration.\n\nRun with ``.venv/bin/python experiments/r189_games.py run --workers 4``;\nthen ``... report``. No parameter selection or holdout-driven retuning.\nThe run writes a source/data hash manifest BEFORE preparing any signals.\n\nProtocol: explicit historical Bitstamp spot, completed 5m bars, next-open\nfills, $1,000 fresh broker per cell. Online learners retain causal earlier\nhistory; account resets do not reset their knowledge. Inner train ends\n2020-12-31 23:55, validation ends 2022-12-31 23:55, retrospective holdout\nstarts 2023-01-01. Primary spot costs 10bp taker +1bp slippage each way.\nFalsifications: 40bp taker+1bp; ETH spot; venue-matched Deribit perpetual\nprices +8h funding (continuous-funding approximation), 5bp taker+1bp.\n24 seeded, overlapping 120\u2013365 day windows per market are descriptive\nrobustness checks, not independent hypothesis tests. Every candidate runs\nevery cell, including losers. No forced transactions to satisfy cadence.\n\nFrozen promotion rule (all clauses required): primary validation and holdout\nSharpe exceed BOTH hold and Kelly v4 by >0.20; holdout profitable, shallower\ndrawdown than hold, 2\u20136 fills/calendar day; positive paired 95% lower bound\non holdout log-growth vs hold; program-trials DSR >=.95; profitable fee\nstress, ETH and funded futures; >50% beta-window growth wins against BOTH\ncontrols in BOTH markets, with no liquidation. Otherwise RESEARCH ONLY.\nRegistration/chart inclusion is requested by the operator and is independent\nof promotion. No live trading. All ten defaults count as configurations.\n\nHistorical comparison cells use the old table's EXACT zero-slippage,\nunfunded spot-proxy futures convention, separately labelled. Existing rows\nare reused only after independently reproducing both controls on both\nmarkets. They are never mixed with the funded/slippage evaluation cells.\n",
+  "hashes": {
+    "experiments/r189_games.py": "556bdf60baa0864aca9cdab47fc1e2aaecd82c68450c5bb567090ab38b26b0a6",
+    "src/tradebot/strategies/intraday_games.py": "2325fec1709ab771044c519466595f809950ad2dd065d2b4b75977b1d58b89df",
+    "src/tradebot/strategies/kelly_regime.py": "d5daf1e03b65553e4ec6d4abe3cdadca8bf82a8acf5e30f776ef26392f6548e3",
+    "src/tradebot/strategies/kelly_regime_v3.py": "69b0669db67dc8c7e881aa43c87bc5dd82ba6170dafc98ac4b9aa79c7ea1f491",
+    "src/tradebot/strategies/kelly_regime_v4.py": "8020ae2fe134f61f875ae7c6bca838c0781d03efeb86617ffcca15656ead6fcb",
+    "data/btcusd_spot_5m.csv.gz": "6d30c90859616598c329ea5f89ad954bcb45d0a4891795213a87a683a1d1a16d",
+    "data/btcusdt_deribit_perp_5m.csv.gz": "a85443b1877575ce1001d3ac5193f5715625a394e0f91f9146681fdb2b8d4e60",
+    "data/ethusd_coinbase_spot_5m.csv.gz": "e6c4a4867396d530733cbee94f9930cd4153b5a74a80231d9877162b91f06511",
+    "data/btcusdt_deribit_perp_funding_8h.csv.gz": "e7a4f22b74ec30b3c190994861a6f840b088e6c9dc91580e95af7379a169ba73"
+  },
+  "cells_per_strategy": 57,
+  "holdout_cells": 648,
+  "prior_consultations_approx": 831
+}

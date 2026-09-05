@@ -102,6 +102,50 @@ class RunConfig:
         return out
 
 
+def _period_label(df) -> str:
+    return (f"{df.index[0]:%Y-%m-%d} to {df.index[-1]:%Y-%m-%d} "
+            f"({len(df):,} x 5m bars)")
+
+
+def _matching_evidence(cfg: RunConfig, datasets: dict[str, tuple]) -> tuple[dict, dict]:
+    """Reject historical intervals when a run's dates or conventions differ.
+
+    The existing cache has no source hashes or cost metadata. Its published
+    period, source labels and daily counts can validate the original nominal
+    cost convention, but cannot establish unchanged prices within that span.
+    """
+    if (cfg.max_bars or cfg.slippage_bps != 0
+            or ("spot" in datasets and cfg.spot_fee != 0.001)
+            or ("perp" in datasets and (cfg.futures_fee != 0.0005 or cfg.leverage != 5.0))):
+        return {}, {}
+    report = Path(cfg.out_dir) / "comparison.md"
+    if not report.exists():
+        return {}, {}
+    metadata = dict(line.split(": ", 1) for line in report.read_text().splitlines()
+                    if line.startswith(("Period: ", "Data: ")))
+    labels = {label.strip() for label in metadata.get("Data", "").split(",")}
+    original_labels = {"spot": datamod.LABEL_REAL, "perp": datamod.LABEL_PROXY}
+    for kind, (df, label) in datasets.items():
+        if (label != original_labels[kind] or label not in labels
+                or _period_label(df) != metadata.get("Period", "").strip()):
+            return {}, {}
+
+    cached = load_evidence(cfg.out_dir)
+    markets = {"spot" if kind == "spot" else "futures_5x": df.index.normalize().nunique() - 1
+               for kind, (df, _) in datasets.items()}
+    for market, days in markets.items():
+        rows = [ev for (_, mk), ev in cached.items() if mk == market]
+        if not rows or any(ev.days != days for ev in rows):
+            return {}, {}
+    evidence = {key: ev for key, ev in cached.items() if key[1] in markets}
+    # A changed roster also makes the old adjacent-pair count stale.
+    roster = set(cfg.strategies or available_strategies())
+    ordering = {market: counts for market, counts in ordering_counts(cfg.out_dir).items()
+                if market in markets
+                and counts[1] == len(roster) - 1}
+    return evidence, ordering
+
+
 def run_matrix(cfg: RunConfig) -> tuple[list[Metrics], list[BacktestResult]]:
     names = cfg.strategies or sorted(available_strategies())
     specs = cfg.market_specs()
@@ -142,23 +186,12 @@ def run_matrix(cfg: RunConfig) -> tuple[list[Metrics], list[BacktestResult]]:
                           charts_dir / f"_all__{spec.name}__{balance:g}.png")
             all_results.extend(group_results)
 
-    first_df = next(iter(datasets.values()))[0]
-    period = (f"{first_df.index[0]:%Y-%m-%d} to {first_df.index[-1]:%Y-%m-%d} "
-              f"({len(first_df):,} x 5m bars)")
-    # R-29's intervals, if they are on disk (backlog B-12). They describe
-    # the full 2017-2026 history, so a trimmed run gets none rather than a
-    # mismatched one; the per-market keys likewise only match a 5x futures
-    # run, because that is the leverage they were measured at.
-    evidence: dict = {}
-    ordering: dict = {}
-    if not cfg.max_bars:
-        evidence = load_evidence(cfg.out_dir)
-        ordering = ordering_counts(cfg.out_dir)
-        if not evidence:
-            print("no bootstrap intervals found under "
-                  f"{Path(cfg.out_dir) / 'inference'}; the comparison table "
-                  "will print point estimates only (run scripts/inference.py)",
-                  file=sys.stderr)
+    period = _period_label(next(iter(datasets.values()))[0])
+    evidence, ordering = _matching_evidence(cfg, datasets)
+    if not evidence:
+        print("no matching bootstrap intervals for this period, data and cost "
+              "configuration; the comparison table will print point estimates only",
+              file=sys.stderr)
 
     md = comparison_report(all_metrics, cfg.out_dir, period=period,
                            evidence=evidence, ordering=ordering)

@@ -15,34 +15,42 @@ Every comparison against `buy_and_hold` carries a 95% paired block-bootstrap int
 | 5 | [kelly_regime_ev](../src/tradebot/strategies/kelly_regime_ev.py) | 🟢 $40.9K | 🟢 **$108.0K** | 135 | 📈 $107.0K | 37% | ≈ -0.45 [-3.28, +2.58] | ▲ -40.0pp [-55.5, -16.3] |
 | 6 | [kelly_regime_ev_fast](../src/tradebot/strategies/kelly_regime_ev.py) | 🟢 **$71.1K** | 🟢 $70.8K | 34 | 📈 $70.1K | 32% | ≈ +0.11 [-3.08, +3.29] | ▲ -52.9pp [-62.9, -20.7] |
 | 7 | [buy_and_hold](../src/tradebot/strategies/buy_and_hold.py) | 🟢 **$66.0K** | 💀 $18.05 | 1 | 📈 $65.0K | 84% ⚠️ | benchmark | benchmark |
-| 8 | [champions_council](../src/tradebot/strategies/champions_council.py) | 🟢 $19.3K | 🟢 **$36.8K** | 261 | 📈 $35.8K | 37% | ≈ -1.20 [-4.06, +1.81] | ▲ -49.5pp [-54.7, -19.0] |
-| 9 | [hedge_experts](../src/tradebot/strategies/hedge_experts.py) | 🟢 **$13.3K** | 🔴 $258 | 2,044 | 📈 $12.3K | 59% ⚠️ | ≈ -1.57 [-4.01, +0.96] | ▲ -24.1pp [-39.1, -3.0] |
-| 10 | [elliott_wave_zigzag](../src/tradebot/strategies/elliott_wave_zigzag.py) | 🟢 **$5,027** | 💀 $12.75 | 162 | 📈 $4,027 | 44% | ≈ -2.54 [-6.51, +1.49] | ≈ -43.8pp [-50.7, +2.9] |
-| 11 | [replicator_book](../src/tradebot/strategies/replicator_book.py) | 🟢 **$2,330** | 🔴 $10.58 | 713 | 📈 $1,330 | 38% | ≈ -3.31 [-6.86, +0.28] | ▲ -47.1pp [-57.9, -20.7] |
-| 12 | [universal_kelly](../src/tradebot/strategies/universal_kelly.py) | 🟢 **$1,276** | 🟢 $1,227 | 9 | 📈 $276 | 7% | ≈ -3.91 [-8.39, +0.44] | ▲ -76.6pp [-89.1, -52.9] |
-| 13 | [harsanyi_crowd](../src/tradebot/strategies/harsanyi_crowd.py) | 🔴 **$888** | 🔴 $429 | 91 | 📉 -$112 | 11% | ≈ -4.28 [-8.88, +0.23] | ▲ -71.9pp [-85.6, -46.0] |
-| 14 | [overshoot_fade](../src/tradebot/strategies/overshoot_fade.py) | 🔴 **$662** | 🔴 $33.52 | 189 | 📉 -$338 | 37% | ▼ -4.57 [-9.13, -0.07] | ▲ -46.6pp [-68.5, -19.6] |
-| 15 | [camouflage_flow](../src/tradebot/strategies/camouflage_flow.py) | 🔴 **$548** | 🔴 $0.99 | 802 | 📉 -$452 | 53% ⚠️ | ▼ -4.76 [-9.23, -0.29] | ▲ -31.4pp [-57.7, -2.5] |
-| 16 | [stealth_trend](../src/tradebot/strategies/stealth_trend.py) | 🔴 **$465** | 🔴 $0.38 | 1,605 | 📉 -$535 | 55% ⚠️ | ▼ -4.92 [-9.26, -0.76] | ≈ -29.0pp [-43.9, +12.1] |
-| 17 | [flow_regime](../src/tradebot/strategies/flow_regime.py) | 🔴 **$447** | 🔴 $0.80 | 1,184 | 📉 -$553 | 56% ⚠️ | ▼ -4.96 [-9.43, -0.54] | ≈ -27.3pp [-47.2, +6.3] |
-| 18 | [game_council](../src/tradebot/strategies/game_council.py) | 🔴 **$284** | 🔴 $2.00 | 2,541 | 📉 -$716 | 72% ⚠️ | ▼ -5.42 [-9.97, -0.95] | ≈ -11.5pp [-25.9, +12.4] |
-| 19 | [elliott_wave](../src/tradebot/strategies/elliott_wave.py) | 🔴 **$272** | 💀 $81.67 | 1,261 | 📉 -$728 | 81% ⚠️ | ▼ -5.46 [-9.80, -1.00] | ≈ -2.9pp [-33.6, +22.3] |
-| 20 | [minority_oracle](../src/tradebot/strategies/minority_oracle.py) | 🔴 **$53.36** | 🔴 $3.83 | 9,039 | 📉 -$947 | 95% ⚠️ | ▼ -7.09 [-11.60, -2.52] | ≈ +11.5pp [-3.8, +35.9] |
-| 21 | [game_switch](../src/tradebot/strategies/game_switch.py) | 🔴 **$5.00** | 🔴 $1.00 | 6,672 | 📉 -$995 | 99% ⚠️ | ▼ -9.45 [-15.38, -4.06] | ▼ +16.3pp [+1.0, +39.3] |
-| 22 | [regret_grid](../src/tradebot/strategies/regret_grid.py) | 🔴 **$5.00** | 🔴 $1.00 | 3,461 | 📉 -$995 | 100% ⚠️ | ▼ -9.46 [-16.20, -3.49] | ▼ +16.3pp [+0.9, +39.9] |
-| 23 | [tft_trend](../src/tradebot/strategies/tft_trend.py) | 🔴 **$4.99** | 🔴 $1.00 | 2,538 | 📉 -$995 | 100% ⚠️ | ▼ -9.46 [-14.88, -4.58] | ▼ +16.3pp [+3.0, +39.9] |
-| 24 | [macd_cross](../src/tradebot/strategies/macd_cross.py) | 🔴 **$4.99** | 🔴 $1.00 | 4,301 | 📉 -$995 | 100% ⚠️ | ▼ -9.47 [-16.93, -3.21] | ≈ +16.4pp [-1.4, +40.0] |
-| 25 | [macd_rsi](../src/tradebot/strategies/macd_rsi.py) | 🔴 **$4.96** | 🔴 $0.94 | 2,454 | 📉 -$995 | 100% ⚠️ | ▼ -9.46 [-15.00, -4.40] | ▼ +16.3pp [+2.6, +39.6] |
-| 26 | [attrition_reversion](../src/tradebot/strategies/attrition_reversion.py) | 🔴 **$4.94** | 🔴 $0.99 | 2,930 | 📉 -$995 | 100% ⚠️ | ▼ -9.47 [-14.55, -4.69] | ▼ +16.3pp [+3.1, +39.1] |
-| 27 | [rsi_reversion](../src/tradebot/strategies/rsi_reversion.py) | 🔴 **$4.85** | 🔴 $0.77 | 4,464 | 📉 -$995 | 100% ⚠️ | ▼ -9.49 [-13.24, -5.78] | ▼ +16.7pp [+3.5, +39.8] |
+| 8 | [swap_regret_council](../src/tradebot/strategies/intraday_games.py) | 🟢 **$57.1K** | 🟢 $57.1K | 1 | 📈 $56.1K | 84% ⚠️ | ≈ -0.11 [-0.70, +0.33] | ≈ -0.0pp [-4.2, +4.4] |
+| 9 | [cautious_optimism](../src/tradebot/strategies/intraday_games.py) | 🟢 **$55.4K** | 🟢 $55.3K | 1 | 📈 $54.4K | 84% ⚠️ | ≈ -0.14 [-0.73, +0.31] | ≈ -0.2pp [-4.3, +4.4] |
+| 10 | [normalhedge_council](../src/tradebot/strategies/intraday_games.py) | 🟢 **$54.6K** | 🟢 $54.6K | 1 | 📈 $53.6K | 84% ⚠️ | ≈ -0.16 [-0.74, +0.30] | ≈ -0.2pp [-4.4, +4.3] |
+| 11 | [sleeping_council](../src/tradebot/strategies/intraday_games.py) | 🟢 **$53.8K** | 🟢 $41.6K | 2 | 📈 $52.8K | 84% ⚠️ | ≈ -0.17 [-0.76, +0.30] | ≈ -0.1pp [-4.5, +4.4] |
+| 12 | [squint_council](../src/tradebot/strategies/intraday_games.py) | 🟢 **$49.5K** | 🟢 $49.4K | 1 | 📈 $48.5K | 83% ⚠️ | ≈ -0.25 [-0.86, +0.24] | ≈ -0.8pp [-4.8, +4.0] |
+| 13 | [champions_council](../src/tradebot/strategies/champions_council.py) | 🟢 $19.3K | 🟢 **$36.8K** | 261 | 📈 $35.8K | 37% | ≈ -1.20 [-4.06, +1.81] | ▲ -49.5pp [-54.7, -19.0] |
+| 14 | [nash_council](../src/tradebot/strategies/intraday_games.py) | 🟢 $3,170 | 🟢 **$14.2K** | 726 | 📈 $13.2K | 71% ⚠️ | ▼ -3.00 [-5.05, -0.76] | ≈ -2.3pp [-20.1, +17.3] |
+| 15 | [blackwell_council](../src/tradebot/strategies/intraday_games.py) | 🟢 $10.9K | 🟢 **$14.1K** | 51 | 📈 $13.1K | 58% ⚠️ | ≈ -1.77 [-5.09, +1.38] | ▲ -26.1pp [-56.0, -12.4] |
+| 16 | [qre_council](../src/tradebot/strategies/intraday_games.py) | 🟢 $7,881 | 🟢 **$13.6K** | 1 | 📈 $12.6K | 56% ⚠️ | ≈ -2.09 [-4.49, +0.34] | ▲ -25.0pp [-36.7, -6.8] |
+| 17 | [minimax_council](../src/tradebot/strategies/intraday_games.py) | 🟢 $4,010 | 🟢 **$13.5K** | 1,179 | 📈 $12.5K | 58% ⚠️ | ≈ -2.77 [-6.07, +0.62] | ≈ -21.5pp [-41.9, +11.5] |
+| 18 | [hedge_experts](../src/tradebot/strategies/hedge_experts.py) | 🟢 **$13.3K** | 🔴 $258 | 2,044 | 📈 $12.3K | 59% ⚠️ | ≈ -1.57 [-4.01, +0.96] | ▲ -24.1pp [-39.1, -3.0] |
+| 19 | [elliott_wave_zigzag](../src/tradebot/strategies/elliott_wave_zigzag.py) | 🟢 **$5,027** | 💀 $12.75 | 162 | 📈 $4,027 | 44% | ≈ -2.54 [-6.51, +1.49] | ≈ -43.8pp [-50.7, +2.9] |
+| 20 | [replicator_book](../src/tradebot/strategies/replicator_book.py) | 🟢 **$2,330** | 🔴 $10.58 | 713 | 📈 $1,330 | 38% | ≈ -3.31 [-6.86, +0.28] | ▲ -47.1pp [-57.9, -20.7] |
+| 21 | [defensive_forecast](../src/tradebot/strategies/intraday_games.py) | 🟢 $1,609 | 🟢 **$1,999** | 796 | 📈 $999 | 14% | ≈ -3.68 [-7.93, +0.51] | ▲ -67.2pp [-82.5, -45.0] |
+| 22 | [universal_kelly](../src/tradebot/strategies/universal_kelly.py) | 🟢 **$1,276** | 🟢 $1,227 | 9 | 📈 $276 | 7% | ≈ -3.91 [-8.39, +0.44] | ▲ -76.6pp [-89.1, -52.9] |
+| 23 | [harsanyi_crowd](../src/tradebot/strategies/harsanyi_crowd.py) | 🔴 **$888** | 🔴 $429 | 91 | 📉 -$112 | 11% | ≈ -4.28 [-8.88, +0.23] | ▲ -71.9pp [-85.6, -46.0] |
+| 24 | [overshoot_fade](../src/tradebot/strategies/overshoot_fade.py) | 🔴 **$662** | 🔴 $33.52 | 189 | 📉 -$338 | 37% | ▼ -4.57 [-9.13, -0.07] | ▲ -46.6pp [-68.5, -19.6] |
+| 25 | [camouflage_flow](../src/tradebot/strategies/camouflage_flow.py) | 🔴 **$548** | 🔴 $0.99 | 802 | 📉 -$452 | 53% ⚠️ | ▼ -4.76 [-9.23, -0.29] | ▲ -31.4pp [-57.7, -2.5] |
+| 26 | [stealth_trend](../src/tradebot/strategies/stealth_trend.py) | 🔴 **$465** | 🔴 $0.38 | 1,605 | 📉 -$535 | 55% ⚠️ | ▼ -4.92 [-9.26, -0.76] | ≈ -29.0pp [-43.9, +12.1] |
+| 27 | [flow_regime](../src/tradebot/strategies/flow_regime.py) | 🔴 **$447** | 🔴 $0.80 | 1,184 | 📉 -$553 | 56% ⚠️ | ▼ -4.96 [-9.43, -0.54] | ≈ -27.3pp [-47.2, +6.3] |
+| 28 | [game_council](../src/tradebot/strategies/game_council.py) | 🔴 **$284** | 🔴 $2.00 | 2,541 | 📉 -$716 | 72% ⚠️ | ▼ -5.42 [-9.97, -0.95] | ≈ -11.5pp [-25.9, +12.4] |
+| 29 | [elliott_wave](../src/tradebot/strategies/elliott_wave.py) | 🔴 **$272** | 💀 $81.67 | 1,261 | 📉 -$728 | 81% ⚠️ | ▼ -5.46 [-9.80, -1.00] | ≈ -2.9pp [-33.6, +22.3] |
+| 30 | [minority_oracle](../src/tradebot/strategies/minority_oracle.py) | 🔴 **$53.36** | 🔴 $3.83 | 9,039 | 📉 -$947 | 95% ⚠️ | ▼ -7.09 [-11.60, -2.52] | ≈ +11.5pp [-3.8, +35.9] |
+| 31 | [game_switch](../src/tradebot/strategies/game_switch.py) | 🔴 **$5.00** | 🔴 $1.00 | 6,672 | 📉 -$995 | 99% ⚠️ | ▼ -9.45 [-15.38, -4.06] | ▼ +16.3pp [+1.0, +39.3] |
+| 32 | [regret_grid](../src/tradebot/strategies/regret_grid.py) | 🔴 **$5.00** | 🔴 $1.00 | 3,461 | 📉 -$995 | 100% ⚠️ | ▼ -9.46 [-16.20, -3.49] | ▼ +16.3pp [+0.9, +39.9] |
+| 33 | [tft_trend](../src/tradebot/strategies/tft_trend.py) | 🔴 **$4.99** | 🔴 $1.00 | 2,538 | 📉 -$995 | 100% ⚠️ | ▼ -9.46 [-14.88, -4.58] | ▼ +16.3pp [+3.0, +39.9] |
+| 34 | [macd_cross](../src/tradebot/strategies/macd_cross.py) | 🔴 **$4.99** | 🔴 $1.00 | 4,301 | 📉 -$995 | 100% ⚠️ | ▼ -9.47 [-16.93, -3.21] | ≈ +16.4pp [-1.4, +40.0] |
+| 35 | [macd_rsi](../src/tradebot/strategies/macd_rsi.py) | 🔴 **$4.96** | 🔴 $0.94 | 2,454 | 📉 -$995 | 100% ⚠️ | ▼ -9.46 [-15.00, -4.40] | ▼ +16.3pp [+2.6, +39.6] |
+| 36 | [attrition_reversion](../src/tradebot/strategies/attrition_reversion.py) | 🔴 **$4.94** | 🔴 $0.99 | 2,930 | 📉 -$995 | 100% ⚠️ | ▼ -9.47 [-14.55, -4.69] | ▼ +16.3pp [+3.1, +39.1] |
+| 37 | [rsi_reversion](../src/tradebot/strategies/rsi_reversion.py) | 🔴 **$4.85** | 🔴 $0.77 | 4,464 | 📉 -$995 | 100% ⚠️ | ▼ -9.49 [-13.24, -5.78] | ▼ +16.7pp [+3.5, +39.8] |
 
 _Balances from a $1,000 start · bold = the strategy's better market · 🟢 profit · 🔴 loss · 💀 liquidated · ⚠️ drawdown over 50%. Trades, profit and max drawdown describe that market._
 
 _The last two columns are the only ones that answer **"is this difference real?"** Both are paired differences against `buy_and_hold` on spot over the full period (3,510 daily observations), each with a 95% stationary block-bootstrap interval — 30-day mean block, 2,000 resamples, the identical resample applied to both strategies so the market's own variance cancels instead of swamping the gap. ▲ / ▼ = the interval excludes zero and the strategy is better / worse; **≈ = it contains zero, so the difference from simply holding is not established**._
 
-_**Growth**, not Sharpe, because final balance is what this table ranks by — and the two disagree. **spot**, because leveraged buy-and-hold is a stress case rather than a benchmark: it is liquidated in early 2017, and an account that cannot draw down further is not something to draw down less than (R-22). On this run **0 of 26** strategies are distinguishably better than holding on growth; the drawdown column is where the project's findings actually live._
-
-_Adjacent steps down this ranking that survive the same test: **3 of 26** on spot · **2 of 26** on futures_5x. The order is a display convention, not a result — read the table as buckets._
+_**Growth**, not Sharpe, because final balance is what this table ranks by — and the two disagree. **spot**, because leveraged buy-and-hold is a stress case rather than a benchmark: it is liquidated in early 2017, and an account that cannot draw down further is not something to draw down less than (R-22). On this run **0 of 36** strategies are distinguishably better than holding on growth; the drawdown column is where the project's findings actually live._
 
 _Regenerate with `python scripts/inference.py`; the numbers live in `reports/inference/bootstrap.csv`._
 
@@ -58,7 +66,17 @@ _Regenerate with `python scripts/inference.py`; the numbers live in `reports/inf
 | [kelly_regime](../src/tradebot/strategies/kelly_regime.py) | $108.2K | $107.2K | +10722.13% | 143 | 14.1 | $44.9K | -$6,782 | 42.6 | 1.42 | 66.3 | $8,000 |  | ☠ +1.72 [+0.78, +2.44] | ☠ -57.6pp [-65.8, +60.2] | ☠ +8.86 [+2.56, +18.86] | 1.00 |
 | [kelly_regime_ev](../src/tradebot/strategies/kelly_regime_ev.py) | $108.0K | $107.0K | +10697.13% | 135 | 18.5 | $37.7K | -$7,065 | 36.8 | 1.53 | 62.2 | $4,278 |  | ☠ +1.84 [+0.90, +2.54] | ☠ -63.4pp [-71.6, +52.9] | ☠ +8.85 [+2.79, +18.88] | 1.00 |
 | [kelly_regime_ev_fast](../src/tradebot/strategies/kelly_regime_ev.py) | $70.8K | $69.8K | +6978.05% | 50 | 36.0 | $22.8K | -$7,231 | 43.0 | 1.42 | 52.7 | $1,525 |  | ☠ +1.76 [+0.80, +2.49] | ☠ -57.3pp [-71.7, +53.5] | ☠ +8.43 [+2.33, +18.26] | 1.00 |
+| [swap_regret_council](../src/tradebot/strategies/intraday_games.py) | $57.1K | $56.1K | +5606.39% | 1 | 0.0 | $56.1K | $56.1K | 84.1 | 0.94 | 97.7 | $0.50 |  | ☠ +1.26 [+0.31, +1.99] | ☠ -15.9pp [-39.1, +93.1] | ☠ +8.22 [+0.51, +19.09] | 0.98 |
+| [cautious_optimism](../src/tradebot/strategies/intraday_games.py) | $55.3K | $54.3K | +5434.30% | 1 | 0.0 | $54.3K | $54.3K | 83.9 | 0.93 | 97.7 | $0.48 |  | ☠ +1.25 [+0.31, +1.99] | ☠ -16.0pp [-39.2, +93.0] | ☠ +8.19 [+0.49, +19.03] | 0.98 |
+| [normalhedge_council](../src/tradebot/strategies/intraday_games.py) | $54.6K | $53.6K | +5355.18% | 1 | 0.0 | $53.6K | $53.6K | 83.8 | 0.93 | 97.7 | $0.48 |  | ☠ +1.25 [+0.31, +1.99] | ☠ -16.1pp [-39.3, +93.0] | ☠ +8.17 [+0.48, +19.00] | 0.98 |
+| [squint_council](../src/tradebot/strategies/intraday_games.py) | $49.4K | $48.4K | +4839.87% | 1 | 0.0 | $48.4K | $48.4K | 83.3 | 0.92 | 97.7 | $0.43 |  | ☠ +1.24 [+0.30, +1.97] | ☠ -16.7pp [-39.7, +93.0] | ☠ +8.07 [+0.44, +18.92] | 0.98 |
+| [sleeping_council](../src/tradebot/strategies/intraday_games.py) | $41.6K | $40.6K | +4061.96% | 2 | 0.0 | $40.7K | -$83.37 | 82.6 | 0.90 | 97.7 | $1.22 |  | ☠ +1.22 [+0.29, +1.95] | ☠ -17.4pp [-40.1, +93.0] | ☠ +7.90 [+0.37, +18.73] | 0.98 |
 | [champions_council](../src/tradebot/strategies/champions_council.py) | $36.8K | $35.8K | +3577.35% | 261 | 22.3 | $18.6K | -$2,070 | 37.2 | 1.37 | 97.1 | $2,052 |  | ☠ +1.67 [+0.71, +2.40] | ☠ -62.9pp [-72.1, +52.0] | ☠ +7.78 [+1.90, +17.65] | 1.00 |
+| [nash_council](../src/tradebot/strategies/intraday_games.py) | $14.2K | $13.2K | +1321.23% | 726 | 21.0 | $14.0K | -$1,952 | 71.2 | 0.83 | 81.5 | $11.5K |  | ☠ +1.15 [+0.11, +1.91] | ☠ -28.5pp [-53.2, +83.9] | ☠ +6.83 [+0.16, +17.01] | 0.98 |
+| [blackwell_council](../src/tradebot/strategies/intraday_games.py) | $14.1K | $13.1K | +1307.98% | 51 | 51.0 | $6,017 | -$2,755 | 57.9 | 1.05 | 56.0 | $466 |  | ☠ +1.37 [+0.42, +2.08] | ☠ -41.7pp [-70.9, +59.9] | ☠ +6.82 [+1.04, +16.46] | 1.00 |
+| [qre_council](../src/tradebot/strategies/intraday_games.py) | $13.6K | $12.6K | +1263.71% | 1 | 0.0 | $12.6K | $12.6K | 55.5 | 0.96 | 97.7 | $2,398 |  | ☠ +1.30 [+0.29, +2.05] | ☠ -44.3pp [-66.3, +65.0] | ☠ +6.78 [+0.91, +16.63] | 1.00 |
+| [minimax_council](../src/tradebot/strategies/intraday_games.py) | $13.5K | $12.5K | +1247.07% | 1179 | 32.1 | $2,552 | -$938 | 57.6 | 0.92 | 29.9 | $11.8K |  | ☠ +1.25 [+0.25, +2.04] | ☠ -41.7pp [-65.0, +68.3] | ☠ +6.77 [+0.75, +17.22] | 0.99 |
+| [defensive_forecast](../src/tradebot/strategies/intraday_games.py) | $1,999 | $999 | +99.91% | 796 | 55.3 | $141 | -$36.46 | 14.4 | 0.69 | 21.2 | $178 |  | ☠ +1.15 [+0.41, +1.69] | ☠ -87.9pp [-93.3, +14.6] | ☠ +4.86 [+0.32, +14.01] | 1.00 |
 | [universal_kelly](../src/tradebot/strategies/universal_kelly.py) | $1,227 | $227 | +22.65% | 20 | 50.0 | $129 | -$15.25 | 9.0 | 0.46 | 30.0 | $1.18 |  | ☠ +0.82 [-0.03, +1.45] | ☠ -90.9pp [-94.8, +13.5] | ☠ +4.38 [-0.01, +13.41] | 0.97 |
 | [harsanyi_crowd](../src/tradebot/strategies/harsanyi_crowd.py) | $429 | -$571 | -57.13% | 178 | 28.7 | $34.04 | -$73.42 | 57.7 | -0.86 | 0.2 | $308 |  | ☠ -0.67 [-1.49, -0.00] | ☠ -41.9pp [-61.0, +73.8] | ☠ +3.33 [-1.32, +12.38] | 0.64 |
 | [hedge_experts](../src/tradebot/strategies/hedge_experts.py) | $258 | -$742 | -74.25% | 4103 | 11.4 | $53.0K | -$15.9K | 99.9 | 0.96 | 99.6 | $52.1K |  | ☠ +1.14 [+0.15, +1.88] | ☠ +0.9pp [-1.6, +100.0] | ☠ +2.82 [-10.84, +18.21] | 0.62 |
@@ -88,13 +106,23 @@ _Regenerate with `python scripts/inference.py`; the numbers live in `reports/inf
 | [kelly_regime_v4](../src/tradebot/strategies/kelly_regime_v4.py) | $66.8K | $65.8K | +6579.39% | 174 | 14.4 | $21.7K | -$2,883 | 43.3 | 1.42 | 66.4 | $8,050 |  | ▲ +0.47 [+0.07, +0.87] | ▲ -41.1pp [-54.8, -18.4] | ≈ +0.04 [-2.60, +2.85] | 0.52 |
 | [buy_and_hold](../src/tradebot/strategies/buy_and_hold.py) | $66.0K | $65.0K | +6504.41% | 1 | 0.0 | $65.0K | $65.0K | 84.1 | 0.95 | 100.0 | $1.00 |  | benchmark | benchmark | benchmark | 0.00 |
 | [kelly_regime_v3](../src/tradebot/strategies/kelly_regime_v3.py) | $65.8K | $64.8K | +6484.44% | 147 | 14.4 | $23.7K | -$3,788 | 47.4 | 1.40 | 66.5 | $7,856 |  | ▲ +0.46 [+0.05, +0.87] | ▲ -36.8pp [-53.4, -16.1] | ≈ +0.03 [-2.54, +2.81] | 0.53 |
+| [swap_regret_council](../src/tradebot/strategies/intraday_games.py) | $57.1K | $56.1K | +5614.78% | 1 | 0.0 | $56.1K | $56.1K | 84.1 | 0.94 | 97.7 | $1.00 |  | ≈ -0.01 [-0.10, +0.06] | ≈ -0.0pp [-4.2, +4.4] | ≈ -0.11 [-0.70, +0.33] | 0.33 |
+| [cautious_optimism](../src/tradebot/strategies/intraday_games.py) | $55.4K | $54.4K | +5442.42% | 1 | 0.0 | $54.4K | $54.4K | 83.9 | 0.93 | 97.7 | $0.97 |  | ≈ -0.02 [-0.11, +0.05] | ≈ -0.2pp [-4.3, +4.4] | ≈ -0.14 [-0.73, +0.31] | 0.28 |
+| [normalhedge_council](../src/tradebot/strategies/intraday_games.py) | $54.6K | $53.6K | +5363.18% | 1 | 0.0 | $53.6K | $53.6K | 83.8 | 0.93 | 97.7 | $0.95 |  | ≈ -0.02 [-0.11, +0.05] | ≈ -0.2pp [-4.4, +4.3] | ≈ -0.16 [-0.74, +0.30] | 0.26 |
+| [sleeping_council](../src/tradebot/strategies/intraday_games.py) | $53.8K | $52.8K | +5275.91% | 2 | 0.0 | $52.8K | -$55.45 | 83.9 | 0.93 | 97.7 | $4.56 |  | ≈ -0.02 [-0.11, +0.05] | ≈ -0.1pp [-4.5, +4.4] | ≈ -0.17 [-0.76, +0.30] | 0.23 |
+| [squint_council](../src/tradebot/strategies/intraday_games.py) | $49.5K | $48.5K | +4852.47% | 1 | 0.0 | $48.5K | $48.5K | 83.3 | 0.92 | 97.7 | $1.29 |  | ≈ -0.03 [-0.12, +0.05] | ≈ -0.8pp [-4.8, +4.0] | ≈ -0.25 [-0.86, +0.24] | 0.15 |
 | [kelly_regime_v2](../src/tradebot/strategies/kelly_regime_v2.py) | $46.4K | $45.4K | +4542.30% | 113 | 15.2 | $13.9K | -$3,420 | 41.4 | 1.36 | 67.3 | $5,403 |  | ≈ +0.41 [-0.03, +0.84] | ▲ -43.4pp [-54.7, -15.3] | ≈ -0.32 [-3.15, +2.62] | 0.43 |
 | [kelly_regime](../src/tradebot/strategies/kelly_regime.py) | $42.1K | $41.1K | +4109.63% | 143 | 14.1 | $14.5K | -$2,428 | 45.3 | 1.29 | 66.3 | $5,445 |  | ≈ +0.33 [-0.08, +0.75] | ▲ -38.9pp [-50.3, -12.2] | ≈ -0.42 [-3.08, +2.36] | 0.39 |
 | [kelly_regime_ev](../src/tradebot/strategies/kelly_regime_ev.py) | $40.9K | $39.9K | +3986.30% | 81 | 25.9 | $15.1K | -$3,482 | 44.4 | 1.31 | 57.4 | $2,403 |  | ≈ +0.37 [-0.07, +0.81] | ▲ -40.0pp [-55.5, -16.3] | ≈ -0.45 [-3.28, +2.58] | 0.39 |
 | [champions_council](../src/tradebot/strategies/champions_council.py) | $19.3K | $18.3K | +1832.14% | 131 | 14.6 | $8,520 | -$1,150 | 34.6 | 1.23 | 87.9 | $4,050 |  | ≈ +0.25 [-0.18, +0.68] | ▲ -49.5pp [-54.7, -19.0] | ≈ -1.20 [-4.06, +1.81] | 0.23 |
 | [hedge_experts](../src/tradebot/strategies/hedge_experts.py) | $13.3K | $12.3K | +1227.66% | 2044 | 7.5 | $11.0K | -$1,469 | 59.3 | 0.87 | 88.0 | $16.7K |  | ≈ -0.07 [-0.42, +0.29] | ▲ -24.1pp [-39.1, -3.0] | ≈ -1.57 [-4.01, +0.96] | 0.11 |
+| [blackwell_council](../src/tradebot/strategies/intraday_games.py) | $10.9K | $9,922 | +992.15% | 51 | 51.0 | $4,367 | -$2,117 | 57.6 | 1.00 | 56.0 | $777 |  | ≈ +0.05 [-0.45, +0.53] | ▲ -26.1pp [-56.0, -12.4] | ≈ -1.77 [-5.09, +1.38] | 0.15 |
+| [qre_council](../src/tradebot/strategies/intraday_games.py) | $7,881 | $6,881 | +688.14% | 1 | 0.0 | $6,881 | $6,881 | 59.0 | 0.78 | 97.7 | $9,414 |  | ≈ -0.17 [-0.48, +0.11] | ▲ -25.0pp [-36.7, -6.8] | ≈ -2.09 [-4.49, +0.34] | 0.05 |
 | [elliott_wave_zigzag](../src/tradebot/strategies/elliott_wave_zigzag.py) | $5,027 | $4,027 | +402.68% | 162 | 54.7 | $1,469 | -$1,026 | 43.6 | 0.63 | 25.7 | $1,089 |  | ≈ -0.31 [-0.99, +0.36] | ≈ -43.8pp [-50.7, +2.9] | ≈ -2.54 [-6.51, +1.49] | 0.11 |
+| [minimax_council](../src/tradebot/strategies/intraday_games.py) | $4,010 | $3,010 | +300.98% | 1179 | 29.8 | $1,529 | -$526 | 62.0 | 0.58 | 29.9 | $11.6K |  | ≈ -0.39 [-1.02, +0.20] | ≈ -21.5pp [-41.9, +11.5] | ≈ -2.77 [-6.07, +0.62] | 0.06 |
+| [nash_council](../src/tradebot/strategies/intraday_games.py) | $3,170 | $2,170 | +216.99% | 726 | 17.7 | $8,745 | -$1,311 | 81.3 | 0.49 | 81.5 | $13.1K |  | ▼ -0.48 [-0.90, -0.11] | ≈ -2.3pp [-20.1, +17.3] | ▼ -3.00 [-5.05, -0.76] | 0.00 |
 | [replicator_book](../src/tradebot/strategies/replicator_book.py) | $2,330 | $1,330 | +132.98% | 713 | 26.2 | $451 | -$90.85 | 38.4 | 0.52 | 53.0 | $1,630 |  | ▼ -0.44 [-0.86, -0.06] | ▲ -47.1pp [-57.9, -20.7] | ≈ -3.31 [-6.86, +0.28] | 0.03 |
+| [defensive_forecast](../src/tradebot/strategies/intraday_games.py) | $1,609 | $609 | +60.88% | 796 | 50.9 | $183 | -$47.06 | 17.1 | 0.48 | 21.2 | $494 |  | ≈ -0.41 [-0.99, +0.17] | ▲ -67.2pp [-82.5, -45.0] | ≈ -3.68 [-7.93, +0.51] | 0.04 |
 | [universal_kelly](../src/tradebot/strategies/universal_kelly.py) | $1,276 | $276 | +27.60% | 9 | 88.9 | $131 | -$6.99 | 7.4 | 0.62 | 22.7 | $1.33 |  | ≈ -0.28 [-0.88, +0.32] | ▲ -76.6pp [-89.1, -52.9] | ≈ -3.91 [-8.39, +0.44] | 0.04 |
 | [harsanyi_crowd](../src/tradebot/strategies/harsanyi_crowd.py) | $888 | -$112 | -11.19% | 91 | 28.6 | $7.93 | -$13.89 | 11.4 | -0.82 | 0.1 | $90.02 |  | ▼ -2.03 [-2.96, -1.02] | ▲ -71.9pp [-85.6, -46.0] | ≈ -4.28 [-8.88, +0.23] | 0.03 |
 | [overshoot_fade](../src/tradebot/strategies/overshoot_fade.py) | $662 | -$338 | -33.84% | 189 | 59.8 | $21.29 | -$52.43 | 37.1 | -0.95 | 0.2 | $214 |  | ▼ -2.02 [-2.89, -1.06] | ▲ -46.6pp [-68.5, -19.6] | ▼ -4.57 [-9.13, -0.07] | 0.02 |

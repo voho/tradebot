@@ -1,0 +1,38 @@
+{
+  "frozen_at_utc": "2026-09-05T08:07:47.775005+00:00",
+  "protocol": "R-189 supplemental intervals under the historical table's holdout convention.\n\nRun ``.venv/bin/python experiments/r189_legacy_intervals.py --workers 4``.\nThis separately frozen supplement runs 24 fresh $1,000 accounts from\n2023-01-01 through 2026-08-12 00:40 UTC: ten candidates and two controls,\nspot at 10bp and 5x spot-proxy futures at 5bp, zero slippage, no funding.\nIt supplies the registered-strategy evidence requirement, not promotion.\n\nSignals retain all earlier causal Bitstamp history, as in the primary R-189\nrun; account evaluation uses a 100-day prefix and original control on_bar\nbehavior (no forced initial Kelly order). This differs from the older\nincumbent's truncated learning history, so existing incumbent rows are\npreserved. The buy-and-hold baseline must reproduce both official Sharpes.\nDaily returns retain the historical convention of omitting the first day's\nreturn. The unchanged scripts/inference.py helper produces paired 2,000\nstationary resamples with 30-day mean blocks and seed 7. Only the twenty new\nholdout intervals are merged into reports/inference/bootstrap.csv.\n",
+  "evaluations": 24,
+  "strategies": [
+    "cautious_optimism",
+    "squint_council",
+    "normalhedge_council",
+    "swap_regret_council",
+    "blackwell_council",
+    "minimax_council",
+    "nash_council",
+    "qre_council",
+    "sleeping_council",
+    "defensive_forecast",
+    "buy_and_hold",
+    "kelly_regime_v4"
+  ],
+  "new_configurations": 0,
+  "start": "2023-01-01 00:00:00+00:00",
+  "end": "2026-08-12 00:40:00+00:00",
+  "primary_protocol_unchanged": true,
+  "hashes": {
+    "experiments/r189_legacy_intervals.py": "5b7b62216937a0b7437cb316456f5e5ea231e36048e76ba953508861a03b96e8",
+    "experiments/r189_games.py": "5443dbb47444e73b4f57d70341c2c0b76314e1bd7ff8727b59c4900df7597b2e",
+    "scripts/inference.py": "e37feca16fccccf7d0694e007270cf295aabc1ea7232591d79a339e012566384",
+    "src/tradebot/inference.py": "a25fb493bcd6b653f17e19dfb067d50b5c1419c99ae4252f181da570f1367d69",
+    "src/tradebot/engine.py": "2f3ed4a0ab483409434f71174e0b448755b58630d09db8d51108133b4fe46169",
+    "src/tradebot/broker.py": "6f4d7717fd9b34749e114f74fd4bbd137030d76bbb2f0701f8f5e2c2acc188e5",
+    "src/tradebot/strategies/intraday_games.py": "2325fec1709ab771044c519466595f809950ad2dd065d2b4b75977b1d58b89df",
+    "src/tradebot/strategies/kelly_regime.py": "d5daf1e03b65553e4ec6d4abe3cdadca8bf82a8acf5e30f776ef26392f6548e3",
+    "src/tradebot/strategies/kelly_regime_v3.py": "69b0669db67dc8c7e881aa43c87bc5dd82ba6170dafc98ac4b9aa79c7ea1f491",
+    "src/tradebot/strategies/kelly_regime_v4.py": "8020ae2fe134f61f875ae7c6bca838c0781d03efeb86617ffcca15656ead6fcb",
+    "src/tradebot/strategies/buy_and_hold.py": "59c78e3836d8e70a7a034e761e1aff256aaf4f11c23d5b81a60a9b3207b22106",
+    "data/btcusd_spot_5m.csv.gz": "6d30c90859616598c329ea5f89ad954bcb45d0a4891795213a87a683a1d1a16d"
+  },
+  "official_bootstrap_before_merge_sha256": "8a702f7cb0ad58f062c9e6b9deb54ee287c8d6ddbd5b7af253d731ed385c3f91"
+}

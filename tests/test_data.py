@@ -68,6 +68,26 @@ def test_load_epoch_units(tmp_path):
         assert df.index[0] == pd.Timestamp(idx_ms, unit="ms", tz="UTC")
 
 
+def test_load_legacy_ts_alias_preserves_timestamp_precedence(tmp_path):
+    path = tmp_path / "legacy.csv"
+    path.write_text(
+        "ts,open,high,low,close,volume,quote_volume\n"
+        "1700000300000,2,3,1,2.5,20,50\n"
+        "1700000000000,1,2,0.5,1.5,10,15\n"
+    )
+    df = load_ohlcv_csv(path)
+    assert df.index[0] == pd.Timestamp(1_700_000_000_000, unit="ms", tz="UTC")
+    assert df.index.is_monotonic_increasing
+    assert list(df.columns) == ["open", "high", "low", "close", "volume"]
+    assert df["close"].tolist() == [1.5, 2.5]
+
+    path.write_text(
+        "timestamp,ts,open,high,low,close,volume\n"
+        "1700000000000,1750000000000,1,2,0.5,1.5,10\n"
+    )
+    assert load_ohlcv_csv(path).index[0] == df.index[0]
+
+
 def test_load_dataset_falls_back_to_synthetic(tmp_path, capsys):
     df, label = load_dataset(tmp_path, "perp")
     assert label == "SYNTHETIC"
