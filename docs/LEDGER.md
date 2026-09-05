@@ -348,6 +348,33 @@ and loses nothing that the `ref` does not already reach.
 
 ## B. Research log (newest first)
 
+### R-190 · 09-05 · IN PROGRESS — ten execution variations of the promoted Kelly parents
+
+**Direction.** Operator-requested COST/ERR replication: preserve L-01
+Kelly v4, L-02 Kelly v3 and L-04 original Kelly, and test actual-account
+execution at UTC four-hour slots. L-03 v2 is explicitly not promoted.
+The overlap with R-37/R-64/R-66/R-72/R-131/R-133/R-147/R-186 is deliberate;
+the mechanism and primary-source scope are in [R190_RESEARCH.md](R190_RESEARCH.md).
+
+**What was done.** Ten fixed candidates (three 0.05/0.10/0.20 bands per
+parent, one equal-weight blend), two auxiliary blend neighbours, four
+native controls. The [frozen protocol](../experiments/r190_protocol.md)
+defines the exact exhaustive promotion conjunction, 40bp spot entry tier,
+funding and ETH falsification, 24 paired windows per market, risk matching,
+plateau and cumulative-trials DSR. Planned core evaluations: 784, plus
+counted actual-broker risk-matching attempts. Code is in
+`experiments/r190_variations.py` and `experiments/r190_eval.py`; defaults
+of registered parents are untouched. This stub announces the round before
+financial evaluation; 28 synthetic implementation/harness checks passed.
+
+**Result.** Pending inner splits, freeze manifest, holdout and independent
+reproduction. No R-190 financial configuration evaluated at this commit.
+
+**Verdict.** IN PROGRESS. Default is NEGATIVE unless every frozen condition
+passes. Current inherited holdout counter ~1,503, increment still zero.
+Backlog table checked: B-06 ongoing, B-09 low, B-17 partial, B-28 blocked;
+none displaced by this explicitly requested round.
+
 ### R-189 · 09-05 · NEGATIVE — ten intraday council games, all retained as research
 
 **Direction.** Operator requested ten new game-theory strategies, combinations

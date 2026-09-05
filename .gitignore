@@ -227,3 +227,11 @@ uv.lock
 !/reports/r189_games/*.json
 !/reports/r189_games/*.png
 !/reports/r189_games/*.md
+# R-190 fixed variations: freeze, complete summaries, chart and daily evidence.
+!/reports/r190_variations/
+/reports/r190_variations/*/
+!/reports/r190_variations/*.csv
+!/reports/r190_variations/*.csv.gz
+!/reports/r190_variations/*.json
+!/reports/r190_variations/*.png
+!/reports/r190_variations/*.md
