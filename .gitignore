@@ -243,3 +243,11 @@ uv.lock
 !/reports/r191_strategies/*.json
 !/reports/r191_strategies/*.png
 !/reports/r191_strategies/*.md
+# R192: five targeted Kelly improvements and complete aggregate evidence.
+!/reports/r192_improvements/
+/reports/r192_improvements/*/
+!/reports/r192_improvements/*.csv
+!/reports/r192_improvements/*.csv.gz
+!/reports/r192_improvements/*.json
+!/reports/r192_improvements/*.png
+!/reports/r192_improvements/*.md

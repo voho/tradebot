@@ -348,6 +348,15 @@ and loses nothing that the `ref` does not already reach.
 
 ## B. Research log (newest first)
 
+### R-192 · 10-02 · IN PROGRESS — five targeted Kelly v4 improvements
+
+**Direction.** Operator-requested COST/ERR modifications to the top-ranked
+`kelly_regime_v4`, with unchanged registered defaults. Design and exhaustive
+promotion rule are frozen before evaluations in
+[`r192_protocol.md`](../experiments/r192_protocol.md). Fifteen fixed settings,
+common startup convention, parent and passive risk comparisons; no invented
+order-flow observations. Financial evaluations have not started.
+
 ### R-191 · 10-02 · NEGATIVE — five cost-aware daily allocation strategies
 
 **Direction.** Operator-requested five-strategy COST/ERR batch: proximal
