@@ -1,0 +1,17 @@
+{
+  "stage": "holdout",
+  "attempts": 555,
+  "comparisons": 250,
+  "valid_matches": 240,
+  "invalid_matches": 10,
+  "attempts_by_asset": {
+    "perp": 282,
+    "spot": 273
+  },
+  "holdout_consultations": 555,
+  "max_attempts_per_comparison": 3,
+  "starting_c": 0.5,
+  "relative_vol_tolerance": 0.02,
+  "fitted_ex_post": true,
+  "window_risk_matching": "Each candidate/window independently matched"
+}

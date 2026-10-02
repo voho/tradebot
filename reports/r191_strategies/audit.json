@@ -1,0 +1,176 @@
+{
+  "subject": "r191_cost_proximal",
+  "train_evaluations": 2,
+  "holdout_evaluations": 2,
+  "method": "Independent objective-extrema reconstruction and quote-cash accounting; no engine/broker replay",
+  "reproductions": [
+    {
+      "strategy": "r191_cost_proximal",
+      "cell": "inner_val",
+      "stage": "train",
+      "status": "completed",
+      "target_max_error": 4.551914400963142e-15,
+      "prefix_causality": true,
+      "max_prepared_timestamp": "2022-12-31 23:55:00+00:00",
+      "metrics": {
+        "final_balance": 1303.9049914825216,
+        "fees_paid": 64.24516919021332,
+        "funding_paid": 0.0,
+        "fills": 60,
+        "completed_round_trips": 8,
+        "decision_requests": 62,
+        "max_drawdown_pct": 41.63498901111201,
+        "mean_abs_exposure": 0.3359176597568416,
+        "time_in_market_pct": 45.205479452054796,
+        "daily_sharpe": 0.5217040748528171,
+        "annualized_volatility": 0.44392724072661716
+      },
+      "metric_errors": {
+        "final_balance": -6.821210263296962e-13,
+        "fees_paid": 0.0,
+        "funding_paid": 0.0,
+        "fills": 0.0,
+        "completed_round_trips": 0.0,
+        "decision_requests": 0.0,
+        "max_drawdown_pct": 2.1316282072803006e-14,
+        "mean_abs_exposure": 2.220446049250313e-16,
+        "time_in_market_pct": -7.105427357601002e-15,
+        "daily_sharpe": -1.4432899320127035e-15,
+        "annualized_volatility": 5.551115123125783e-17
+      },
+      "max_daily_equity_error": 1.5916157281026244e-12,
+      "first_fill": "2021-01-02 00:00:00+00:00",
+      "audit_source_sha256": "1648d4fd0a670e9172d45f60d17d01e68758e18b2dada278e2da87b93711b0be"
+    },
+    {
+      "strategy": "r191_cost_proximal",
+      "cell": "funded_val",
+      "stage": "train",
+      "status": "completed",
+      "target_max_error": 2.55351295663786e-15,
+      "prefix_causality": true,
+      "max_prepared_timestamp": "2022-12-31 23:55:00+00:00",
+      "metrics": {
+        "final_balance": 1118.2752156726363,
+        "fees_paid": 5.541282689740615,
+        "funding_paid": 232.5785047268793,
+        "fills": 28,
+        "completed_round_trips": 7,
+        "decision_requests": 157,
+        "max_drawdown_pct": 41.03058818024741,
+        "mean_abs_exposure": 0.32650262297840577,
+        "time_in_market_pct": 45.89041095890411,
+        "daily_sharpe": 0.3423761197349974,
+        "annualized_volatility": 0.4278623071789017
+      },
+      "metric_errors": {
+        "final_balance": 2.2737367544323206e-13,
+        "fees_paid": 3.552713678800501e-15,
+        "funding_paid": 0.0,
+        "fills": 0.0,
+        "completed_round_trips": 0.0,
+        "decision_requests": 0.0,
+        "max_drawdown_pct": 4.263256414560601e-14,
+        "mean_abs_exposure": -5.551115123125783e-17,
+        "time_in_market_pct": 0.0,
+        "daily_sharpe": -1.1102230246251565e-15,
+        "annualized_volatility": -1.6653345369377348e-16
+      },
+      "max_daily_equity_error": 2.0463630789890885e-12,
+      "first_fill": "2021-01-02 00:00:00+00:00",
+      "audit_source_sha256": "1648d4fd0a670e9172d45f60d17d01e68758e18b2dada278e2da87b93711b0be"
+    },
+    {
+      "strategy": "r191_cost_proximal",
+      "cell": "holdout",
+      "stage": "holdout",
+      "status": "completed",
+      "target_max_error": 4.551914400963142e-15,
+      "prefix_causality": true,
+      "max_prepared_timestamp": "2026-08-12 00:40:00+00:00",
+      "metrics": {
+        "final_balance": 2683.618553928322,
+        "fees_paid": 114.22604463211815,
+        "funding_paid": 0.0,
+        "fills": 66,
+        "completed_round_trips": 8,
+        "decision_requests": 86,
+        "max_drawdown_pct": 28.49122029329434,
+        "mean_abs_exposure": 0.5042310583429449,
+        "time_in_market_pct": 63.37984789973702,
+        "daily_sharpe": 1.0248831707819925,
+        "annualized_volatility": 0.31410457853019536
+      },
+      "metric_errors": {
+        "final_balance": 1.3642420526593924e-12,
+        "fees_paid": 1.8474111129762605e-13,
+        "funding_paid": 0.0,
+        "fills": 0.0,
+        "completed_round_trips": 0.0,
+        "decision_requests": 0.0,
+        "max_drawdown_pct": 4.263256414560601e-14,
+        "mean_abs_exposure": 4.440892098500626e-16,
+        "time_in_market_pct": 0.0,
+        "daily_sharpe": -4.440892098500626e-16,
+        "annualized_volatility": 4.440892098500626e-16
+      },
+      "max_daily_equity_error": 6.366462912410498e-12,
+      "first_fill": "2023-01-13 00:00:00+00:00",
+      "audit_source_sha256": "1648d4fd0a670e9172d45f60d17d01e68758e18b2dada278e2da87b93711b0be"
+    },
+    {
+      "strategy": "r191_cost_proximal",
+      "cell": "funded_holdout",
+      "stage": "holdout",
+      "status": "completed",
+      "target_max_error": 2.7755575615628914e-15,
+      "prefix_causality": true,
+      "max_prepared_timestamp": "2026-08-12 00:40:00+00:00",
+      "metrics": {
+        "final_balance": 2321.697489686727,
+        "fees_paid": 12.964765996554846,
+        "funding_paid": 351.9770132848349,
+        "fills": 40,
+        "completed_round_trips": 8,
+        "decision_requests": 302,
+        "max_drawdown_pct": 31.906455740040666,
+        "mean_abs_exposure": 0.5045472998483306,
+        "time_in_market_pct": 60.878011798431615,
+        "daily_sharpe": 0.8974735423164661,
+        "annualized_volatility": 0.31426394416942277
+      },
+      "metric_errors": {
+        "final_balance": -3.637978807091713e-12,
+        "fees_paid": -2.842170943040401e-14,
+        "funding_paid": -9.094947017729282e-13,
+        "fills": 0.0,
+        "completed_round_trips": 0.0,
+        "decision_requests": 0.0,
+        "max_drawdown_pct": 5.3290705182007514e-14,
+        "mean_abs_exposure": -1.1102230246251565e-16,
+        "time_in_market_pct": 0.0,
+        "daily_sharpe": -2.1094237467877974e-15,
+        "annualized_volatility": -1.1102230246251565e-16
+      },
+      "max_daily_equity_error": 8.185452315956354e-12,
+      "first_fill": "2023-01-12 00:00:00+00:00",
+      "audit_source_sha256": "1648d4fd0a670e9172d45f60d17d01e68758e18b2dada278e2da87b93711b0be"
+    }
+  ],
+  "discrepancies": [],
+  "source_hashes": {
+    "experiments/r191_strategies.py": "e5a0b1c26d43dc895c3d694f718c6b984e83f75a7648159df6c29fed77afbf5d",
+    "experiments/r191_eval.py": "942a0f562851992f1c83f0ff591bf791b2f7c787c79b274a67c10394351aff24",
+    "experiments/r191_protocol.md": "5442c8750969e41cec8e5ffa386255f779a89518f79c2be7c82ff95522614a7f",
+    "tests/test_r191_audit.py": "fad700e32c32d2a4d47e0101f1e63337e44d1150f2563139ed0de654e5f52d1e"
+  },
+  "holdout_manifest_hash": "9e3d7deecc862ecd61e381fc2f154b4912e63fad0df1fb08e4d71cc43e206117",
+  "post_run_source_edits": [
+    {
+      "path": "tests/test_r191_audit.py",
+      "executed_sha256": "1648d4fd0a670e9172d45f60d17d01e68758e18b2dada278e2da87b93711b0be",
+      "portable_sha256": "fad700e32c32d2a4d47e0101f1e63337e44d1150f2563139ed0de654e5f52d1e",
+      "scope": "Read committed aggregate cell/daily receipts filtered to fixed subject instead of ignored per-strategy receipts; disclose provenance. No accounting, signal, threshold, or financial evaluation change."
+    }
+  ]
+}

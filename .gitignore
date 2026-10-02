@@ -235,3 +235,19 @@ uv.lock
 !/reports/r190_variations/*.json
 !/reports/r190_variations/*.png
 !/reports/r190_variations/*.md
+# R-191: frozen five-strategy protocol, complete aggregate receipts and curves.
+!/reports/r191_strategies/
+/reports/r191_strategies/*/
+!/reports/r191_strategies/*.csv
+!/reports/r191_strategies/*.csv.gz
+!/reports/r191_strategies/*.json
+!/reports/r191_strategies/*.png
+!/reports/r191_strategies/*.md
+# R192: five targeted Kelly improvements and complete aggregate evidence.
+!/reports/r192_improvements/
+/reports/r192_improvements/*/
+!/reports/r192_improvements/*.csv
+!/reports/r192_improvements/*.csv.gz
+!/reports/r192_improvements/*.json
+!/reports/r192_improvements/*.png
+!/reports/r192_improvements/*.md

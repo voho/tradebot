@@ -35,7 +35,7 @@ anything not listed here has been folded into one of these:
 | document | its one job |
 |---|---|
 | **[docs/ROUTINE.md](docs/ROUTINE.md)** | **The process.** The single procedure for researching and adding a strategy — from idea selection through holdout evaluation to the ledger record, including the mechanics of registering one. |
-| **[docs/LEDGER.md](docs/LEDGER.md)** | **The memory.** Everything already tried — 37 registered strategies, and a research log of 190 rounds, newest first — the four binding constraints, the ruled-out list, and the ranked backlog. Read before a session, appended after it. |
+| **[docs/LEDGER.md](docs/LEDGER.md)** | **The memory.** Everything already tried — 37 registered strategies, and a research log of 192 rounds, newest first — the four binding constraints, the ruled-out list, and the ranked backlog. Read before a session, appended after it. |
 | **[docs/VALIDATION.md](docs/VALIDATION.md)** | **The evidence.** The single comparison protocol and benchmark, and every robustness result: walk-forward, bootstrap intervals, deflated Sharpe, Monte Carlo stress windows, fees, funding, and the ETH replication test. |
 | **[docs/STRATEGIES.md](docs/STRATEGIES.md)** | **The strategies.** What each registered strategy is, how it works, and the principles it rests on, with citations. |
 | **[docs/RESEARCH.md](docs/RESEARCH.md)** | **The literature.** The survey behind the strategies, and the methodology findings that changed how this repo tests. |
@@ -244,6 +244,70 @@ ideas being re-tried blind. Explore variants with
 `python scripts/experiment.py` (see `frontier`, `horizons`,
 `walkforward`) rather than by editing a registered strategy's defaults,
 so the comparison table stays a stable record.
+
+## Five targeted Kelly v4 improvements (R-192)
+
+Five isolated modifications to the first-ranked strategy were implemented and
+tested, each with two fixed neighbors. **All five are NEGATIVE under the frozen
+promotion rule; the registered v4 defaults remain unchanged.**
+
+Holdout balances from $1,000, 2023-01-01 through 2026-08-12, include 0.40%
+spot fees plus 1bp slippage and 5bp perpetual fees plus 1bp and observed funding.
+
+| Change | BTC spot | Funded BTC | ETH spot |
+|---|---:|---:|---:|
+| Tracking budget | $2,406 | $3,088 | $1,432 |
+| Factor clock | $2,458 | $3,082 | $1,686 |
+| Anchor confirmation | $2,536 | $2,667 | $1,572 |
+| Robust state | $2,532 | $3,552 | $1,632 |
+| Confirm increases | $2,375 | $3,068 | $1,679 |
+| Unchanged Kelly v4 | $2,454 | $3,193 | $1,662 |
+
+Robust state gives the strongest funded balance and a small positive spot
+Sharpe gain versus v4: +0.0269 [0.0048, 0.0550], below the +0.20 hurdle.
+Its funded gain is +0.0740 [-0.0002, 0.1614]. Anchor confirmation reduces
+spot fills 331→145 but worsens funded performance. No candidate clears the
+parent/passive risk comparisons, neighborhood, ETH/window and DSR requirements
+as a whole. Raw balances are not comparisons at equal risk.
+
+[Full report, intervals, gates and audit](reports/r192_improvements/README.md)
+records all 1,054 financial evaluations and 15 fixed settings. All 848 tests
+pass. The [October game-theory review](docs/GAME_THEORY_RESEARCH_2026_10.md)
+separately identifies ideas requiring data beyond the existing candles.
+
+![R-192 holdout performance and parent Sharpe intervals](reports/r192_improvements/summary.png)
+
+## Five cost-aware allocation strategies (R-191)
+
+Five daily long/cash rules were researched, implemented and evaluated with
+frozen parameters plus two neighbours each. **All five are NEGATIVE under
+the pre-registered promotion rule; none is registered for deployment.**
+
+Holdout final balances from **$1,000**, 2023-01-01 through 2026-08-12.
+BTC/ETH spot includes 0.40% taker fees plus 1bp slippage; perpetual results
+include 5bp fees, 1bp slippage and actual venue-matched funding.
+
+| Strategy | BTC spot | Funded BTC | ETH spot |
+|---|---:|---:|---:|
+| Cost-aware proximal allocation | $2,684 | $2,322 | $2,100 |
+| Adaptive downside-quantile budget | $2,342 | $2,448 | $1,747 |
+| Cost-gated moving-average reversion | $952 | $1,339 | $922 |
+| Sticky net-reward expert selection | $2,489 | $2,293 | $1,812 |
+| Robust block growth allocation | $1,907 | $2,367 | $750 |
+| Passive reference | $3,827 | $3,137 | $1,566 |
+
+The funded passive reference holds one-times notional with a 10% relative
+rebalance band. These raw balances carry different risk; the promotion
+decision also requires independently simulated, volatility-matched passive
+controls. Sticky expert selection led validation; holdout results did not
+select a replacement. The proximal allocator trades cheaply, but its lower
+raw drawdown is not evidence of a risk-matched improvement.
+
+[Complete results, matched intervals, all gates and audit](reports/r191_strategies/README.md)
+include every configuration and counted evaluation. The code remains in
+`experiments/`; the registered comparison above retains its original scope.
+
+![R-191 held-out results and matched-risk Sharpe intervals](reports/r191_strategies/summary.png)
 
 ## Ten variations of the accepted Kelly parents (R-190)
 

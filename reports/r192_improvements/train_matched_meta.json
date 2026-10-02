@@ -1,0 +1,17 @@
+{
+  "stage": "train",
+  "attempts": 20,
+  "comparisons": 10,
+  "valid_matches": 10,
+  "invalid_matches": 0,
+  "attempts_by_asset": {
+    "perp": 10,
+    "spot": 10
+  },
+  "holdout_consultations": 0,
+  "max_attempts_per_comparison": 3,
+  "starting_c": 0.5,
+  "relative_vol_tolerance": 0.02,
+  "fitted_ex_post": true,
+  "window_risk_matching": "Each candidate/window independently matched"
+}
