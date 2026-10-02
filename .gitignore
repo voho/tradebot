@@ -235,3 +235,11 @@ uv.lock
 !/reports/r190_variations/*.json
 !/reports/r190_variations/*.png
 !/reports/r190_variations/*.md
+# R-191: frozen five-strategy protocol, complete aggregate receipts and curves.
+!/reports/r191_strategies/
+/reports/r191_strategies/*/
+!/reports/r191_strategies/*.csv
+!/reports/r191_strategies/*.csv.gz
+!/reports/r191_strategies/*.json
+!/reports/r191_strategies/*.png
+!/reports/r191_strategies/*.md

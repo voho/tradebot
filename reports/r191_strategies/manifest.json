@@ -1,0 +1,70 @@
+{
+  "frozen_at_utc": "2026-10-02T11:16:28.026803+00:00",
+  "protocol": "experiments/r191_protocol.md",
+  "primary_candidates": [
+    "r191_cost_proximal",
+    "r191_conformal_tail",
+    "r191_cost_olmar",
+    "r191_sticky_expert",
+    "r191_robust_growth"
+  ],
+  "local_configurations": 15,
+  "prior_consultations_approx": 2290,
+  "core_evaluations": 455,
+  "core_holdout_evaluations": 404,
+  "sd_trials": 0.418538,
+  "validation_lead": "r191_sticky_expert",
+  "validation_ranking": [
+    {
+      "strategy": "r191_sticky_expert",
+      "mean_validation_sharpe": 0.45541421210569066,
+      "spot_fills": 16
+    },
+    {
+      "strategy": "r191_cost_proximal",
+      "mean_validation_sharpe": 0.4320400972939085,
+      "spot_fills": 60
+    },
+    {
+      "strategy": "r191_robust_growth",
+      "mean_validation_sharpe": 0.11050658411848915,
+      "spot_fills": 105
+    },
+    {
+      "strategy": "r191_conformal_tail",
+      "mean_validation_sharpe": 0.10056115165916435,
+      "spot_fills": 40
+    },
+    {
+      "strategy": "r191_cost_olmar",
+      "mean_validation_sharpe": -0.12269114690595426,
+      "spot_fills": 152
+    }
+  ],
+  "hashes": {
+    "experiments/r191_protocol.md": "5442c8750969e41cec8e5ffa386255f779a89518f79c2be7c82ff95522614a7f",
+    "experiments/r191_research_notes.md": "67549415910515d3e2470f019911a738b2f8a590ffb407e30da6671f89fd1432",
+    "experiments/r191_strategies.py": "e5a0b1c26d43dc895c3d694f718c6b984e83f75a7648159df6c29fed77afbf5d",
+    "experiments/r191_eval.py": "942a0f562851992f1c83f0ff591bf791b2f7c787c79b274a67c10394351aff24",
+    "experiments/r191_matched.py": "651d34ca1e39b7e348e210d1eaca9e2edefa3bc9523da569ef579629866d0a98",
+    "experiments/r191_report.py": "bd63664bd84ba651816660df514013ebce68cf5b60bb5d9675050eda207a7a87",
+    "experiments/r190_eval.py": "d626585aeb94bc4d9f38222d26a074efbff6f5096969b3f2d7b8c443756f8a75",
+    "experiments/r190_variations.py": "2c69ce04b005e6887d39e4ab1d2ad68e9dca35853ac1acaddc1c9e7575ad092e",
+    "experiments/matched_hold.py": "4c87806e2f33eb209aef52c04100ef3bcb3d4e6b04eebd71688ecb0995732a0d",
+    "src/tradebot/strategies/kelly_regime.py": "d5daf1e03b65553e4ec6d4abe3cdadca8bf82a8acf5e30f776ef26392f6548e3",
+    "src/tradebot/strategies/kelly_regime_v3.py": "69b0669db67dc8c7e881aa43c87bc5dd82ba6170dafc98ac4b9aa79c7ea1f491",
+    "src/tradebot/strategies/kelly_regime_v4.py": "8020ae2fe134f61f875ae7c6bca838c0781d03efeb86617ffcca15656ead6fcb",
+    "src/tradebot/strategies/buy_and_hold.py": "59c78e3836d8e70a7a034e761e1aff256aaf4f11c23d5b81a60a9b3207b22106",
+    "src/tradebot/engine.py": "2f3ed4a0ab483409434f71174e0b448755b58630d09db8d51108133b4fe46169",
+    "src/tradebot/broker.py": "6f4d7717fd9b34749e114f74fd4bbd137030d76bbb2f0701f8f5e2c2acc188e5",
+    "src/tradebot/data.py": "d5de38323ced21fb312ad88648118290ae412b1323587514bb9a36fe46d6ad7d",
+    "src/tradebot/inference.py": "a25fb493bcd6b653f17e19dfb067d50b5c1419c99ae4252f181da570f1367d69",
+    "src/tradebot/metrics.py": "24677ecc43fbfb462c3a9689838e3a05138822b1ed71a80f99bcf68aabb10b35",
+    "src/tradebot/orders.py": "bde0ee138db0191d7e0764d9aa5f8a83cb224d2f8433f773f2e26f60f8a9d253",
+    "src/tradebot/strategy.py": "75e0de3f38cab10f9e0d8f493db82b170a0005deb695e1636f48b6d8c691663a",
+    "data/btcusd_spot_5m.csv.gz": "6d30c90859616598c329ea5f89ad954bcb45d0a4891795213a87a683a1d1a16d",
+    "data/btcusdt_deribit_perp_5m.csv.gz": "a85443b1877575ce1001d3ac5193f5715625a394e0f91f9146681fdb2b8d4e60",
+    "data/ethusd_coinbase_spot_5m.csv.gz": "e6c4a4867396d530733cbee94f9930cd4153b5a74a80231d9877162b91f06511",
+    "data/btcusdt_deribit_perp_funding_8h.csv.gz": "e7a4f22b74ec30b3c190994861a6f840b088e6c9dc91580e95af7379a169ba73"
+  }
+}
