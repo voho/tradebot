@@ -72,6 +72,9 @@ at the daily decision, trades when the equity-notional gap exceeds .05, and
 closes residual holdings when the target is zero. Native broker deadbands
 and minima still apply; the 5x-capable broker's .25-equity target band may
 dominate the experiment band. No queue, order-book, or maker-fill proxy.
+Recursive selected targets and expert scores start flat/zero on completed
+day 253. Earlier daily observations supply rolling features and lagged expert
+decisions only; they do not create a suppressed virtual investment history.
 
 ## Data and cells
 
