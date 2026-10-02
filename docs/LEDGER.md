@@ -348,6 +348,14 @@ and loses nothing that the `ref` does not already reach.
 
 ## B. Research log (newest first)
 
+### R-191 · 10-02 · IN PROGRESS — five cost-aware allocation strategies
+
+**Direction.** Operator-requested five-strategy COST/ERR batch. The design,
+parameter neighborhoods, seven promotion gates and all evaluation cells
+are pre-registered in `experiments/r191_protocol.md`; sources and prior
+overlap are in `experiments/r191_research_notes.md`. No R-191 financial
+evaluation has been run at this design freeze.
+
 ### R-190 · 09-05 · NEGATIVE — ten execution variations of the promoted Kelly parents
 
 **Direction.** Operator-requested COST/ERR replication: preserve L-01
