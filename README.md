@@ -35,7 +35,7 @@ anything not listed here has been folded into one of these:
 | document | its one job |
 |---|---|
 | **[docs/ROUTINE.md](docs/ROUTINE.md)** | **The process.** The single procedure for researching and adding a strategy — from idea selection through holdout evaluation to the ledger record, including the mechanics of registering one. |
-| **[docs/LEDGER.md](docs/LEDGER.md)** | **The memory.** Everything already tried — 37 registered strategies, and a research log of 191 rounds, newest first — the four binding constraints, the ruled-out list, and the ranked backlog. Read before a session, appended after it. |
+| **[docs/LEDGER.md](docs/LEDGER.md)** | **The memory.** Everything already tried — 37 registered strategies, and a research log of 192 rounds, newest first — the four binding constraints, the ruled-out list, and the ranked backlog. Read before a session, appended after it. |
 | **[docs/VALIDATION.md](docs/VALIDATION.md)** | **The evidence.** The single comparison protocol and benchmark, and every robustness result: walk-forward, bootstrap intervals, deflated Sharpe, Monte Carlo stress windows, fees, funding, and the ETH replication test. |
 | **[docs/STRATEGIES.md](docs/STRATEGIES.md)** | **The strategies.** What each registered strategy is, how it works, and the principles it rests on, with citations. |
 | **[docs/RESEARCH.md](docs/RESEARCH.md)** | **The literature.** The survey behind the strategies, and the methodology findings that changed how this repo tests. |
@@ -244,6 +244,38 @@ ideas being re-tried blind. Explore variants with
 `python scripts/experiment.py` (see `frontier`, `horizons`,
 `walkforward`) rather than by editing a registered strategy's defaults,
 so the comparison table stays a stable record.
+
+## Five targeted Kelly v4 improvements (R-192)
+
+Five isolated modifications to the first-ranked strategy were implemented and
+tested, each with two fixed neighbors. **All five are NEGATIVE under the frozen
+promotion rule; the registered v4 defaults remain unchanged.**
+
+Holdout balances from $1,000, 2023-01-01 through 2026-08-12, include 0.40%
+spot fees plus 1bp slippage and 5bp perpetual fees plus 1bp and observed funding.
+
+| Change | BTC spot | Funded BTC | ETH spot |
+|---|---:|---:|---:|
+| Tracking budget | $2,406 | $3,088 | $1,432 |
+| Factor clock | $2,458 | $3,082 | $1,686 |
+| Anchor confirmation | $2,536 | $2,667 | $1,572 |
+| Robust state | $2,532 | $3,552 | $1,632 |
+| Confirm increases | $2,375 | $3,068 | $1,679 |
+| Unchanged Kelly v4 | $2,454 | $3,193 | $1,662 |
+
+Robust state gives the strongest funded balance and a small positive spot
+Sharpe gain versus v4: +0.0269 [0.0048, 0.0550], below the +0.20 hurdle.
+Its funded gain is +0.0740 [-0.0002, 0.1614]. Anchor confirmation reduces
+spot fills 331→145 but worsens funded performance. No candidate clears the
+parent/passive risk comparisons, neighborhood, ETH/window and DSR requirements
+as a whole. Raw balances are not comparisons at equal risk.
+
+[Full report, intervals, gates and audit](reports/r192_improvements/README.md)
+records all 1,054 financial evaluations and 15 fixed settings. All 848 tests
+pass. The [October game-theory review](docs/GAME_THEORY_RESEARCH_2026_10.md)
+separately identifies ideas requiring data beyond the existing candles.
+
+![R-192 holdout performance and parent Sharpe intervals](reports/r192_improvements/summary.png)
 
 ## Five cost-aware allocation strategies (R-191)
 

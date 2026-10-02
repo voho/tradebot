@@ -22,7 +22,7 @@ from r192_strategies import PRIMARY_NAMES
 
 SHORT = dict(zip(PRIMARY_NAMES, ("Tracking budget", "Factor clock",
     "Anchor confirmation", "Robust state", "Confirm increases")))
-SHORT.update(buy_and_hold="Passive holding (1×)", kelly_regime_v4="Kelly v4")
+SHORT.update(buy_and_hold="Spot buy-and-hold", kelly_regime_v4="Kelly v4")
 
 
 def main():
@@ -33,12 +33,16 @@ def main():
             ("BTC spot · 40bp fee + 1bp slippage", "BTC perpetual · 5bp + 1bp + funding")):
         for name in (*PRIMARY_NAMES, "buy_and_hold", "kelly_regime_v4"):
             r = daily[name, cell]
+            label = ("1× notional rebalanced hold" if cell == "funded_holdout"
+                     and name == "buy_and_hold" else SHORT[name])
             ax.plot(pd.to_datetime(r.index), 1000 * (1 + r).cumprod(),
-                label=SHORT[name], lw=1.6, ls="-" if name in PRIMARY_NAMES else "--")
+                label=label, lw=1.6, ls="-" if name in PRIMARY_NAMES else "--")
         ax.xaxis.set_major_locator(mdates.YearLocator())
         ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
         ax.set(title=title, ylabel="Account value ($), log scale", yscale="log")
         ax.grid(alpha=.2)
+    handles, labels = axes[0, 0].get_legend_handles_labels()
+    axes[0, 0].legend(handles[-2:], labels[-2:], fontsize=8, loc="lower right")
     axes[0, 1].legend(fontsize=8, loc="lower right")
     for ax, cell, title in zip(axes[1], ("holdout", "funded_holdout"),
             ("Spot · difference versus unchanged Kelly v4", "Funded · difference versus unchanged Kelly v4")):
@@ -55,7 +59,8 @@ def main():
             title=title, xlabel="Annualized daily Sharpe difference · paired 95% interval")
         ax.grid(axis="x", alpha=.15)
     fig.suptitle("R-192 · Five targeted Kelly v4 modifications", fontsize=17)
-    fig.supxlabel("2023–2026 holdout · $1,000 start · green line: +0.20 hurdle · red ×: invalid risk match", fontsize=10)
+    fig.supxlabel("2023–2026 · $1,000 start · green: growth-route +0.20 Sharpe hurdle · red ×: invalid risk match\n"
+                  "Parent comparisons shown; matched-passive and tail gates are in the report.", fontsize=9)
     fig.savefig(OUT / "summary.png", dpi=150)
     plt.close(fig)
 

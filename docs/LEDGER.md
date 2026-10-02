@@ -348,19 +348,85 @@ and loses nothing that the `ref` does not already reach.
 
 ## B. Research log (newest first)
 
-### R-192 · 10-02 · IN PROGRESS — five targeted Kelly v4 improvements
+### R-192 · 10-02 · NEGATIVE — five targeted Kelly v4 improvements
 
-**Direction.** Operator-requested COST/ERR modifications to the top-ranked
-`kelly_regime_v4`, with unchanged registered defaults. Design and exhaustive
-promotion rule are frozen before evaluations in
-[`r192_protocol.md`](../experiments/r192_protocol.md). Fifteen fixed settings,
-common startup convention, parent and passive risk comparisons; no invented
-order-flow observations. Training is complete: 51 core cells, 20 matching
-attempts and two successful independent accounting replays. Before holdout,
-the report was tightened to require all four audit receipts and to include
-initial capital in daily drawdown. No strategy or financial rule changed.
-The source/data manifest and training-only power evidence are frozen in
-`reports/r192_improvements/`; the full growth/tail decision is in the protocol.
+**Direction.** Operator-requested COST/ERR updates to the README's first-ranked
+`kelly_regime_v4`: accumulated tracking budget, vote/calendar factor clock,
+anchor excursion confirmation, clipped volatility-state classification and
+persistent increase confirmation. Bongaerts et al. (2020), de Lataillade and
+Chaouki (2020), and Gârleanu and Pedersen (2013) motivate costs and target
+adjustment, without proving these heuristics optimal. The
+[research notes](../experiments/r192_research_notes.md) distinguish R-64/165,
+R-190, R-131/133, R-89/114/160/174/181 and R-08/09/136/146/175. The separate
+[game-theory review](GAME_THEORY_RESEARCH_2026_10.md) identifies missing order-book
+and opponent data; no such information is manufactured from OHLCV.
+
+**What was done.** [Protocol](../experiments/r192_protocol.md) committed in
+`a956ddb6`, implementation/notes/tests in `8a3c78eb`; training evidence and
+75 source/data hashes frozen in `cb2b25e1` before holdout. **15 configurations**
+(five primaries plus ten preset neighbors), unchanged v4 and passive controls,
+51 training +404 holdout core cells. Costs/data/windows match R-191: 40bp+1bp
+BTC spot, 10bp discount, ETH 40bp stress, and Deribit 5bp+1bp with observed
+funding; $1,000 fresh accounts. Both parent and candidates receive the same
+explicit initial-target entry, followed by native callbacks. Lookbacks count
+observed bars; ETH's 415 missing timestamps remain a scope limitation.
+
+The frozen decision requires all common gates and a complete growth or tail
+route, otherwise NEGATIVE. Common: changed validation fills, parent risk
+within 5% and passive risk within 2%, profitable named holdouts, no primary/
+neighbor liquidation, profitable three-point neighborhoods with <=0.20 Sharpe
+spread, and program DSR >=0.95. Growth requires >0.20 Sharpe versus both
+references on validation/holdout, supporting holdout intervals, passive/ETH
+checks and >=13/24 paired window wins per market. Tail requires >2pp daily
+drawdown gains without growth loss plus interval/ETH/window confirmation.
+Before holdout, reporting was tightened to include initial capital in daily
+drawdown and require all four audit receipts. No financial configuration or
+threshold changed. Training-only power projects 0.38–29.49 years for +0.20
+Sharpe against the parent and 66.67–90.72 against matched passive; nonlinear
+DD projections are explicitly heuristic. No threshold was lowered.
+
+**Result.** Every primary validation balance is below $1,000 in both markets;
+robust state is the descriptive validation lead. Holdout final balances:
+
+| Change | BTC spot | Funded BTC | ETH spot |
+|---|---:|---:|---:|
+| Tracking budget | $2,406 | $3,088 | $1,432 |
+| Factor clock | $2,458 | $3,082 | $1,686 |
+| Anchor confirmation | $2,536 | $2,667 | $1,572 |
+| Robust state | $2,532 | $3,552 | $1,632 |
+| Confirm increases | $2,375 | $3,068 | $1,679 |
+| Unchanged Kelly v4 | $2,454 | $3,193 | $1,662 |
+
+Robust state's spot parent ΔSharpe is +0.0269 [0.0048, 0.0550], a small positive
+effect below the frozen hurdle; funded +0.0740 [-0.0002, 0.1614] and log-growth
++0.1064 [-0.0020, 0.2554] include zero. Its matched-passive ΔSharpe is
+-0.0641 [-0.6536, 0.4859] spot and +0.2511 [-0.3060, 0.7753] funded. Anchor
+confirmation cuts spot fills 331→145 and fees $1,039→$420 but loses 16.5% of
+funded balance versus v4. Every primary holdout is profitable and all main
+risk matches are valid; none clears either complete route. Every family fails
+profitable neighborhoods and program DSR (0.115–0.220). Growth window wins
+are 0–7/24 spot and 1–8/24 funded; tail wins 0–1/24 and 0–5/24. Factor clock
+and confirm increases pass ETH growth; only confirm increases passes ETH tail.
+
+All ten validation passive matches succeed in 20 attempts; 233/250 holdout
+matches succeed in 575 attempts, with 17 invalid windows counted as non-wins.
+All settings and failed matches are retained. The independent tracking-budget
+signal matches exactly; four independent quote-cash replays agree within
+$1.51e-11 daily equity. Both controls reproduce all seven R-191 same-cost named
+cells and daily curves. No core liquidation, financial interruption or repeat.
+**848 tests pass**, including strict causality and all new signal identities.
+[Complete report, chart, neighbors and gate receipts](../reports/r192_improvements/README.md).
+
+**Verdict.** **NEGATIVE, 0/5 promoted.** A cheaper execution path or a small
+parent improvement does not establish the required robust advantage.
+Registered defaults remain unchanged. **1,054 financial evaluations** =455
+core +595 matching +4 audit. **Holdout counter +981** =404 core +575 matching
++2 audit; cumulative **~4,232**, used in DSR alongside local count 15. The
+source, configuration and rule did not move after holdout. Presentation labels
+alone were improved. B-06 ongoing, B-09 low, B-17 partial and B-28 data-blocked
+remain correctly ranked; this batch supplies no new evidence to change them.
+Require new data or a materially different mechanism before retrying these
+settings; do not retune this holdout to manufacture a winner.
 
 ### R-191 · 10-02 · NEGATIVE — five cost-aware daily allocation strategies
 
@@ -20371,6 +20437,7 @@ trip.
 
 | what | why | ref |
 |---|---|---|
+| Five Kelly v4 updates: tracking budget, factor clock, anchor confirmation, robust volatility state, delayed increases | 15 fixed settings, 1,054 financial cells; 0/5 promoted. Robust state has a small positive spot parent effect, below the frozen hurdle; funded interval includes zero. All fail profitable neighborhoods, DSR and both full routes. Do not retune this holdout without new evidence or a materially different mechanism. | R-192 |
 | Five daily cost/error-aware long-cash rules: proximal allocation, adaptive downside budget, fee-gated OLMAR, sticky experts, block-median growth | 15 fixed configurations, 1,034 cells; 0/5 promoted. No BTC balance beats passive holding; best matched Sharpe gain +.017 with interval crossing zero. OLMAR and robust growth fail ETH. Do not retune these parameters on this holdout; require new evidence or a materially different mechanism. | R-191 |
 | Four-hour actual-account bands 0.05/0.10/0.20 on promoted Kelly v4/v3/original, plus their equal-weight blend | Ten candidates, two auxiliary neighbours, 879 total cells. Largest spot parent ΔSharpe +0.068, all intervals include zero; 0.17–0.29 fills/day. All fail the frozen rule. Do not re-try these bands expecting a few trades/day or established improvement without new evidence. | R-190 |
 | Distributionally robust / lower-confidence-bound Kelly as a standalone strategy: fraction-Kelly on `min_W(mu_W − kappa·sigma_W/sqrt(W))` over 10/30/90-day windows (Rujeerapaiboon–Kuhn–Wiesemann 2016; Sun & Boyd 2018; Baker & McHale 2013), `robust_kelly` | 3 kappa configs + 1 smoke. Holdout spot $600 (Sharpe −0.82 vs hold 1.03), futures $961; in market 18% of bars at kappa 0.5, 10% at kappa 1. Do not re-try a confidence-bound gate on BTC drift expecting exposure: with daily vol ~20x daily drift the bound is positive only in the strongest bull runs, and the robustness is bought with time out of the market (R-33's exposure line, from the theory side). | R-188 |
@@ -25152,6 +25219,7 @@ first `—`, and a dispatched round resets it by construction.
 
 | # | committed (UTC) | step 0 | attempted | outcome |
 |---|---|---|---|---|
+| — | 10-02 | User-directed R-192; R-191 complete; origin/main unchanged, no round collision; four live backlog statuses unchanged. | Five v4 updates +ten neighbors; 1,054 financial cells; frozen before holdout. | NEGATIVE: 0/5 promoted; defaults unchanged. Four independent audit cells agree; 848 tests pass. See R-192. |
 | — | 10-02 | Clean pull/rebase to origin/main; R-190 complete; no in-flight round; four live backlog statuses unchanged. | R-191: five strategies, ten neighbors, 1,034 financial cells; frozen source and rule before holdout. | NEGATIVE: 0/5 promoted. Independent four-cell audit agrees; 775 tests pass. Full evidence in R-191. |
 | — | 09-05 | Operator-directed R-190; R-189 complete; four live backlog rows unchanged. | Ten accepted-parent variations, 784 core +87 matching +8 audit cells; frozen before holdout. | NEGATIVE: 0/10 promoted; 0.17–0.29 fills/day. Chart and complete evidence under R-190. |
 | — | 09-05 | Operator-directed R-189; R-188 completed; staged market files preserved. | Ten fixed games, 708 evaluation cells, all registered with intervals and chart. | NEGATIVE: no promotion; two fill-cadence matches, no few-round-trip/day match. See R-189. |
@@ -26768,6 +26836,8 @@ Rules that the format exists to enforce:
 Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
+
+- **10-02 · ~4,232** — R-192: **+981** =404 core holdout cells +575 actual-broker risk-matching attempts +two independent holdout audit replays. Five primaries and ten fixed neighbors; no retuning. All dependent windows and failed matches count conservatively.
 
 - **10-02 · ~3,251** — R-191: **+961** = 404 core holdout cells, 555 actual-broker risk-matching attempts (including each beta window), and two independent holdout audit replays. Five primaries plus ten preset neighbors; no retuning. Dependent overlapping windows and fitted controls are counted conservatively.
 
