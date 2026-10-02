@@ -7,6 +7,12 @@ docstring carries its own citations, and the mapping is in the
 All input is 5m OHLCV bars only (no order book), so each mechanism below
 is stated together with its bar-visible footprint.
 
+The [October 2026 research review](GAME_THEORY_RESEARCH_2026_10.md) surveys
+recent primary work on strategic information, adaptive execution, derivatives
+and decentralized liquidity. It proposes five directions with explicit data
+requirements and falsification tests. These extend beyond the bar-only
+adaptations below; the review runs no new financial evaluations.
+
 The **R-190 variation round** tests actual-account execution bands on the
 three promoted Kelly parents, plus their equal-weight blend. Its
 [source review](R190_RESEARCH.md) separates Bell–Cover's theoretical
