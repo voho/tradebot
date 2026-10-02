@@ -355,7 +355,12 @@ and loses nothing that the `ref` does not already reach.
 promotion rule are frozen before evaluations in
 [`r192_protocol.md`](../experiments/r192_protocol.md). Fifteen fixed settings,
 common startup convention, parent and passive risk comparisons; no invented
-order-flow observations. Financial evaluations have not started.
+order-flow observations. Training is complete: 51 core cells, 20 matching
+attempts and two successful independent accounting replays. Before holdout,
+the report was tightened to require all four audit receipts and to include
+initial capital in daily drawdown. No strategy or financial rule changed.
+The source/data manifest and training-only power evidence are frozen in
+`reports/r192_improvements/`; the full growth/tail decision is in the protocol.
 
 ### R-191 · 10-02 · NEGATIVE — five cost-aware daily allocation strategies
 

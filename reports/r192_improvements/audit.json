@@ -1,0 +1,91 @@
+{
+  "subject": "r192_tracking_budget",
+  "train_evaluations": 2,
+  "holdout_evaluations": 0,
+  "method": "Independent Kelly feature and tracking-budget reconstruction plus quote-cash accounting; no engine/broker replay",
+  "reproductions": [
+    {
+      "strategy": "r192_tracking_budget",
+      "cell": "inner_val",
+      "stage": "train",
+      "status": "completed",
+      "target_max_error": 0.0,
+      "prefix_causality": true,
+      "max_prepared_timestamp": "2022-12-31 23:55:00+00:00",
+      "audit_source_sha256": "a45a14a55ede8770b26584584b92d60b220ade0881517811d3604075718b71d2",
+      "metrics": {
+        "final_balance": 874.2044196387208,
+        "fees_paid": 238.9892992891904,
+        "funding_paid": 0.0,
+        "fills": 177,
+        "completed_round_trips": 44,
+        "decision_requests": 186,
+        "max_drawdown_pct": 44.70966517619694,
+        "mean_abs_exposure": 0.29121543804998157,
+        "time_in_market_pct": 55.99457762557078,
+        "daily_sharpe": -0.07191757066787414,
+        "annualized_volatility": 0.3017106423497794
+      },
+      "metric_errors": {
+        "final_balance": -1.4779288903810084e-12,
+        "fees_paid": -8.526512829121202e-14,
+        "funding_paid": 0.0,
+        "fills": 0.0,
+        "completed_round_trips": 0.0,
+        "decision_requests": 0.0,
+        "max_drawdown_pct": 4.263256414560601e-14,
+        "mean_abs_exposure": -5.551115123125783e-17,
+        "time_in_market_pct": 0.0,
+        "daily_sharpe": -2.1510571102112408e-15,
+        "annualized_volatility": 2.7755575615628914e-16
+      },
+      "max_daily_equity_error": 1.5916157281026244e-12,
+      "first_fill": "2021-01-01 00:05:00+00:00"
+    },
+    {
+      "strategy": "r192_tracking_budget",
+      "cell": "funded_val",
+      "stage": "train",
+      "status": "completed",
+      "target_max_error": 0.0,
+      "prefix_causality": true,
+      "max_prepared_timestamp": "2022-12-31 23:55:00+00:00",
+      "audit_source_sha256": "a45a14a55ede8770b26584584b92d60b220ade0881517811d3604075718b71d2",
+      "metrics": {
+        "final_balance": 871.8109480087346,
+        "fees_paid": 22.9782936399572,
+        "funding_paid": 117.43647628311172,
+        "fills": 120,
+        "completed_round_trips": 43,
+        "decision_requests": 188,
+        "max_drawdown_pct": 40.8051881271044,
+        "mean_abs_exposure": 0.28594383929881617,
+        "time_in_market_pct": 56.03643455098935,
+        "daily_sharpe": -0.0943022802842318,
+        "annualized_volatility": 0.2876181876380614
+      },
+      "metric_errors": {
+        "final_balance": -1.2505552149377763e-12,
+        "fees_paid": -1.0658141036401503e-14,
+        "funding_paid": 1.4210854715202004e-14,
+        "fills": 0.0,
+        "completed_round_trips": 0.0,
+        "decision_requests": 0.0,
+        "max_drawdown_pct": 5.684341886080802e-14,
+        "mean_abs_exposure": 5.551115123125783e-17,
+        "time_in_market_pct": 0.0,
+        "daily_sharpe": -1.1934897514720433e-15,
+        "annualized_volatility": 1.1102230246251565e-16
+      },
+      "max_daily_equity_error": 2.2737367544323206e-12,
+      "first_fill": "2021-01-01 00:05:00+00:00"
+    }
+  ],
+  "discrepancies": [],
+  "source_hashes": {
+    "experiments/r192_strategies.py": "409412a0f5dbf3de0a253dbaef2b193ce3d951aca3a3a915d014f15ab0bc5c65",
+    "experiments/r192_eval.py": "99416283fd4be11efc26a0376471fe513dea3e3766212940c447489e3d77bf23",
+    "experiments/r192_protocol.md": "9ad292b626596f3e03d99b92d195342e4b6be4a0937b6e8cba934fb057a8a8b7",
+    "tests/test_r192_audit.py": "a45a14a55ede8770b26584584b92d60b220ade0881517811d3604075718b71d2"
+  }
+}

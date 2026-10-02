@@ -217,3 +217,152 @@ def test_matching_holdout_rejects_before_reference_reads(monkeypatch):
         matching.match_one(matching.evaluation.CANDIDATES[0], "holdout")
     with pytest.raises(RuntimeError, match="manifest rejected"):
         matching.run("holdout")
+
+
+def _report_fixture(monkeypatch, tmp_path):
+    from experiments import r192_report as report
+    stages, matches = {}, {}
+    dates = pd.date_range("2021-01-01", periods=80, tz="UTC")
+    candidate_returns = pd.Series(np.tile([.008, -.006], 40), index=dates)
+    reference_returns = pd.Series(np.tile([.004, -.010], 40), index=dates)
+    assert candidate_returns.std() == pytest.approx(reference_returns.std())
+    for stage in ("train", "holdout"):
+        rows, daily = [], {}
+        for name, cell in sorted(report.expected_core(stage)):
+            candidate = name in evaluation.ALL_NAMES
+            rows.append(dict(strategy=name, cell=cell,
+                final_balance=1200. if candidate else 1100., daily_sharpe=1.3 if candidate else 1.,
+                annualized_volatility=.5, fills=10, fills_per_day=.1, liquidated=False,
+                fill_signature=name))
+            daily[name, cell] = candidate_returns.copy() if candidate else reference_returns.copy()
+        stages[stage] = (pd.DataFrame(rows), daily)
+        rows, mdaily = [], {}
+        for name in evaluation.CANDIDATES:
+            for spec in matching.matching_specs(stage):
+                cell = spec[0]
+                ref = f"match_{name}_{cell}_i0"
+                rows.append(dict(strategy=ref, reference_candidate=name, cell=cell,
+                    final_selected=True, matched_valid=True, control_c=.5, relative_vol_error=0.,
+                    final_balance=1100.))
+                mdaily[ref, cell] = reference_returns.copy()
+        failed = rows[0] | dict(strategy="failed_attempt_" + stage, final_selected=False, matched_valid=False)
+        rows.append(failed)
+        mdaily[failed["strategy"], failed["cell"]] = reference_returns.copy()
+        matches[stage] = (pd.DataFrame(rows), mdaily)
+    monkeypatch.setattr(report, "OUT", tmp_path)
+    monkeypatch.setattr(report, "read", lambda stage, matched=False: matches[stage] if matched else stages[stage])
+    monkeypatch.setattr(report, "deflated_sharpe_ratio", lambda *args, **kwargs: 1.)
+    (tmp_path / "manifest.json").write_text(json.dumps({"sd_trials": .5}))
+    (tmp_path / "audit.json").write_text(json.dumps(_completed_audit()))
+    boot = pd.DataFrame([dict(strategy=name, cell=cell, control=control,
+        risk_valid=True, d_sharpe=.3, d_sharpe_lo=.1, d_growth_lo=.1,
+        d_drawdown=-1., d_drawdown_hi=.1)
+        for name in evaluation.CANDIDATES for cell in report.PRIMARY_CELLS
+        for control in ("parent", "matched_hold")])
+    return report, stages, matches, boot
+
+
+def _completed_audit():
+    return dict(subject="r192_tracking_budget", train_evaluations=2, holdout_evaluations=2,
+        discrepancies=[], reproductions=[dict(strategy="r192_tracking_budget", cell=cell,
+        stage=stage, status="completed") for cell, stage in (
+            ("inner_val", "train"), ("funded_val", "train"),
+            ("holdout", "holdout"), ("funded_holdout", "holdout"))])
+
+
+@pytest.mark.parametrize("failure", ["missing", "wrong_subject", "started", "failed",
+    "duplicate", "missing_cell", "extra_cell", "wrong_stage", "wrong_strategy",
+    "wrong_count", "discrepancy", "missing_discrepancies"])
+def test_report_fails_before_reading_results_without_complete_clean_audit(monkeypatch, tmp_path, failure):
+    from experiments import r192_report as report
+    monkeypatch.setattr(report, "OUT", tmp_path)
+    monkeypatch.setattr(report, "read", lambda *args: pytest.fail("No results before audit validation"))
+    audit = _completed_audit()
+    if failure == "wrong_subject":
+        audit["subject"] = "other"
+    elif failure in ("started", "failed"):
+        audit["reproductions"][0]["status"] = failure
+    elif failure == "duplicate":
+        audit["reproductions"][0] = audit["reproductions"][1].copy()
+    elif failure == "missing_cell":
+        audit["reproductions"].pop()
+    elif failure == "extra_cell":
+        audit["reproductions"].append(audit["reproductions"][0].copy())
+    elif failure == "wrong_stage":
+        audit["reproductions"][0]["stage"] = "holdout"
+    elif failure == "wrong_strategy":
+        audit["reproductions"][0]["strategy"] = "other"
+    elif failure == "wrong_count":
+        audit["train_evaluations"] = 3
+    elif failure == "discrepancy":
+        audit["discrepancies"] = [{"cell": "inner_val", "error": "mismatch"}]
+    elif failure == "missing_discrepancies":
+        del audit["discrepancies"]
+    if failure != "missing":
+        (tmp_path / "audit.json").write_text(json.dumps(audit))
+    with pytest.raises(ValueError, match="Final report requires"):
+        report.decide(pd.DataFrame())
+
+
+def test_daily_drawdown_includes_initial_capital_for_original_and_bootstrap_paths():
+    from experiments import r192_report as report
+    assert report.daily_drawdown(np.array([-.05, .02])) == pytest.approx(5.)
+    assert report.daily_drawdown(np.array([-.05])) == pytest.approx(5.)
+    assert report.daily_drawdown(np.array([])) == 0.
+    assert report.daily_drawdown(np.array([[-.05, .02], [.05, -.02]])) == pytest.approx([5., 2.])
+    assert dict(report.STATS)["drawdown"] is report.daily_drawdown
+
+
+def test_report_growth_tail_partition_counts_and_strict_two_percentage_points(monkeypatch, tmp_path):
+    report, stages, matches, boot = _report_fixture(monkeypatch, tmp_path)
+    _, decisions, counts = report.decide(boot)
+    assert decisions.verdict.eq("PROMOTED").all()
+    assert decisions.route.eq("growth").all()
+    assert decisions.beta_spot_valid.eq(24).all()
+    assert counts["core_evaluations"] == 455
+    assert counts["matching_evaluations"] == 262
+    assert counts["total_evaluations"] == 455 + 262 + 4
+    assert counts["holdout_consultations"] == 404 + 251 + 2
+    assert counts["cumulative_consultations_approx"] == 3251 + 404 + 251 + 2
+    boot["d_sharpe"] = .1
+    boot["d_drawdown"] = -3.
+    boot["d_drawdown_hi"] = -.1
+    boot["d_growth_lo"] = 0.
+    _, decisions, _ = report.decide(boot)
+    assert decisions.verdict.eq("PROMOTED").all()
+    assert decisions.route.eq("tail").all()
+    assert decisions.beta_perp_tail_wins.eq(24).all()
+    boot.loc[boot.strategy == evaluation.CANDIDATES[0], "d_drawdown"] = -2.
+    _, decisions, _ = report.decide(boot)
+    assert decisions.set_index("strategy").loc[evaluation.CANDIDATES[0], "verdict"] == "NEGATIVE"
+
+
+def test_report_requires_binding_risk_and_all_inference_cells(monkeypatch, tmp_path):
+    report, stages, matches, boot = _report_fixture(monkeypatch, tmp_path)
+    inert, invalid, unstable = evaluation.CANDIDATES[:3]
+    train = stages["train"][0]
+    train.loc[(train.strategy == inert) & (train.cell == "inner_val"), "fill_signature"] = report.PARENT
+    boot.loc[(boot.strategy == invalid) & (boot.cell == "holdout") & (boot.control == "parent"), "risk_valid"] = False
+    hold = stages["holdout"][0]
+    hold.loc[(hold.strategy == report.FAMILIES[unstable][1]) & (hold.cell == "holdout"), "liquidated"] = True
+    _, decisions, _ = report.decide(boot)
+    indexed = decisions.set_index("strategy")
+    assert not indexed.loc[inert, "mechanism_binding"]
+    assert not indexed.loc[invalid, "risk_valid"]
+    assert not indexed.loc[unstable, "no_liquidation"]
+    assert indexed.loc[[inert, invalid, unstable], "verdict"].eq("NEGATIVE").all()
+    with pytest.raises(ValueError, match="Incomplete or duplicate paired"):
+        report.decide(boot.iloc[:-1])
+
+
+def test_training_power_compares_both_controls_and_labels_nonlinear_projection(monkeypatch, tmp_path):
+    report, _, _, _ = _report_fixture(monkeypatch, tmp_path)
+    result = report.power()
+    assert len(result) == 5 * 2 * 2
+    assert set(result.control) == {"parent", "matched_hold"}
+    assert result.risk_valid.all()
+    assert result.sharpe_effect_threshold.eq(.20).all()
+    assert result.drawdown_effect_threshold.eq(2.).all()
+    assert result.power_limitation.str.contains("nonlinear drawdown").all()
+    assert np.isfinite(result.sharpe_required_days_approx).all()
+    assert np.isfinite(result.drawdown_required_days_approx).all()
