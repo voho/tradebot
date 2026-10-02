@@ -35,7 +35,7 @@ anything not listed here has been folded into one of these:
 | document | its one job |
 |---|---|
 | **[docs/ROUTINE.md](docs/ROUTINE.md)** | **The process.** The single procedure for researching and adding a strategy — from idea selection through holdout evaluation to the ledger record, including the mechanics of registering one. |
-| **[docs/LEDGER.md](docs/LEDGER.md)** | **The memory.** Everything already tried — 37 registered strategies, and a research log of 190 rounds, newest first — the four binding constraints, the ruled-out list, and the ranked backlog. Read before a session, appended after it. |
+| **[docs/LEDGER.md](docs/LEDGER.md)** | **The memory.** Everything already tried — 37 registered strategies, and a research log of 191 rounds, newest first — the four binding constraints, the ruled-out list, and the ranked backlog. Read before a session, appended after it. |
 | **[docs/VALIDATION.md](docs/VALIDATION.md)** | **The evidence.** The single comparison protocol and benchmark, and every robustness result: walk-forward, bootstrap intervals, deflated Sharpe, Monte Carlo stress windows, fees, funding, and the ETH replication test. |
 | **[docs/STRATEGIES.md](docs/STRATEGIES.md)** | **The strategies.** What each registered strategy is, how it works, and the principles it rests on, with citations. |
 | **[docs/RESEARCH.md](docs/RESEARCH.md)** | **The literature.** The survey behind the strategies, and the methodology findings that changed how this repo tests. |
@@ -244,6 +244,38 @@ ideas being re-tried blind. Explore variants with
 `python scripts/experiment.py` (see `frontier`, `horizons`,
 `walkforward`) rather than by editing a registered strategy's defaults,
 so the comparison table stays a stable record.
+
+## Five cost-aware allocation strategies (R-191)
+
+Five daily long/cash rules were researched, implemented and evaluated with
+frozen parameters plus two neighbours each. **All five are NEGATIVE under
+the pre-registered promotion rule; none is registered for deployment.**
+
+Holdout final balances from **$1,000**, 2023-01-01 through 2026-08-12.
+BTC/ETH spot includes 0.40% taker fees plus 1bp slippage; perpetual results
+include 5bp fees, 1bp slippage and actual venue-matched funding.
+
+| Strategy | BTC spot | Funded BTC | ETH spot |
+|---|---:|---:|---:|
+| Cost-aware proximal allocation | $2,684 | $2,322 | $2,100 |
+| Adaptive downside-quantile budget | $2,342 | $2,448 | $1,747 |
+| Cost-gated moving-average reversion | $952 | $1,339 | $922 |
+| Sticky net-reward expert selection | $2,489 | $2,293 | $1,812 |
+| Robust block growth allocation | $1,907 | $2,367 | $750 |
+| Passive reference | $3,827 | $3,137 | $1,566 |
+
+The funded passive reference holds one-times notional with a 10% relative
+rebalance band. These raw balances carry different risk; the promotion
+decision also requires independently simulated, volatility-matched passive
+controls. Sticky expert selection led validation; holdout results did not
+select a replacement. The proximal allocator trades cheaply, but its lower
+raw drawdown is not evidence of a risk-matched improvement.
+
+[Complete results, matched intervals, all gates and audit](reports/r191_strategies/README.md)
+include every configuration and counted evaluation. The code remains in
+`experiments/`; the registered comparison above retains its original scope.
+
+![R-191 held-out results and matched-risk Sharpe intervals](reports/r191_strategies/summary.png)
 
 ## Ten variations of the accepted Kelly parents (R-190)
 

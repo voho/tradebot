@@ -348,13 +348,98 @@ and loses nothing that the `ref` does not already reach.
 
 ## B. Research log (newest first)
 
-### R-191 · 10-02 · IN PROGRESS — five cost-aware allocation strategies
+### R-191 · 10-02 · NEGATIVE — five cost-aware daily allocation strategies
 
-**Direction.** Operator-requested five-strategy COST/ERR batch. The design,
-parameter neighborhoods, seven promotion gates and all evaluation cells
-are pre-registered in `experiments/r191_protocol.md`; sources and prior
-overlap are in `experiments/r191_research_notes.md`. No R-191 financial
-evaluation has been run at this design freeze.
+**Direction.** Operator-requested five-strategy COST/ERR batch: proximal
+mean/variance allocation, adaptive downside-quantile budgeting, cost-gated
+OLMAR, sticky net-reward expert selection, and block-median growth allocation.
+Primary sources: Boyd et al. (2017), Gibbs–Candès (NeurIPS 2021), Li–Hoi
+(ICML 2012), Herbster–Warmuth (Machine Learning 1998), and Lugosi–Mendelson
+(2019). These are explicit extensions/compositions, not five new information
+channels: overlaps with R-37/R-38/R-45/R-61/R-87/R-125/R-131/R-133/R-147/
+R-152/R-161/R-167/R-171/R-188/R-189 are detailed in the
+[research notes](../experiments/r191_research_notes.md). B-09's general
+conformal question remains LOW, not closed by this heuristic tail budget.
+
+**What was done.** The [protocol](../experiments/r191_protocol.md) was
+committed before any financial evaluation (`25f82c0b`), implementation in
+`330ccaf1`, and training evidence/source-data hashes before holdout
+(`f2edf574`). Five primaries plus two preset neighbors each: **15 candidate
+configurations, no parameter search or retuning**. **1,034 financial cells**:
+455 core (51 training, 404 holdout), 575 actual-broker risk-matching attempts
+(20 training, 555 holdout), and four independent audit replays (two each).
+Every candidate, neighbor, control and failed matching attempt is retained.
+
+All rules allocate [0,1] between one risky asset and cash, decide at complete
+UTC daily closes, fill next open, and use 252 completed observations as warmup.
+The design cost hurdle is fixed at 40bp+1bp even in cheaper execution scenarios;
+actual fees/funding are charged separately. Explicit Bitstamp BTC, Deribit BTC
+prices plus matching 8h funding, and Coinbase ETH end 2026-08-12 00:40 UTC.
+Train 2017–2020, validation 2021–2022, holdout 2023 onward, fresh $1,000 accounts.
+Primary spot uses verified 40bp entry taker +1bp and $10 minimum; 10bp is a
+separate discount scenario. ETH uses a 40bp stress; funded BTC uses conservative
+5bp+1bp with the generic linear-margin broker. The full passive funded control
+is unlevered c=1 with its existing 10% relative rebalance band, not 5x holding.
+
+Each primary receives 24 paired 120–365-day windows per market. A separately
+simulated passive control is matched to each validation/holdout/window's own
+realized volatility, maximum three attempts and 2% tolerance; invalid cells
+cannot win. Frozen promotion requires all seven: >+.20 matched Sharpe on both
+validation and holdout markets; positive paired holdout Sharpe/growth lower
+bounds; higher full-passive balances; profitable fee/ETH/funding falsification
+and ETH Sharpe >= passive, no liquidation; profitable <=.20-Sharpe-spread
+neighbors; program DSR >=.95; >=13/24 valid matched-window wins per market.
+Otherwise NEGATIVE. No tail-only reinterpretation was permitted.
+
+**Result.** All five are NEGATIVE. Final balances include costs, from $1,000:
+
+| Candidate | Train spot | Validation spot | Holdout spot | Funded holdout | ETH holdout |
+|---|---:|---:|---:|---:|---:|
+| Proximal allocation | $8,830 | $1,304 | $2,684 | $2,322 | $2,100 |
+| Adaptive downside budget | $7,169 | $982 | $2,342 | $2,448 | $1,747 |
+| Cost-gated OLMAR | $477 | $871 | $952 | $1,339 | $922 |
+| Sticky experts | $5,751 | $1,332 | $2,489 | $2,293 | $1,812 |
+| Robust block growth | $4,831 | $761 | $1,907 | $2,367 | $750 |
+
+Passive holding ends at $3,827 spot, $3,137 funded, $1,566 ETH. Native Kelly
+v4 ends at $2,454/$3,193/$1,662, at different risk. Sticky experts led
+validation (mean daily Sharpe .455); that descriptive choice was frozen.
+The proximal allocator's best new spot balance does not change it. Its
+matched-hold ΔSharpe is **+.0165 [−.6944,+.7012]** spot and **+.0051
+[−.6523,+.6765]** funded; log-growth intervals also cross zero. Its $114 spot
+fees are low, but this does not establish better growth at equal risk.
+
+OLMAR fails ETH/40bp falsification; its spot ΔSharpe interval is entirely
+negative, −.922 [−1.722,−.137]. Discounting to 10bp raises its spot balance
+from $952 to $1,346. Robust growth fails ETH ($750). The other three pass
+that falsification conjunction, but all fail the edge/interval/absolute-growth/
+DSR/window gates. Only sticky experts pass the neighborhood plateau; its
+spot holdout match misses at 3.168% and is **INVALID**. Global DSR is at most
+.178. Valid matched wins out of 24 spot/funded windows are proximal 10/10,
+downside 6/8, OLMAR 4/11, sticky 2/1, robust 2/5; no primary passes.
+
+All 10 training risk matches pass; 240/250 holdout comparisons pass, with
+10 invalid cells preserved. Bootstrap intervals condition on each fitted
+control exposure; they omit its estimation uncertainty. Windows overlap,
+not independent extra history. Pre-holdout power was **80.6–156.1 years**
+for the inherited +.20 Sharpe equivalent at validation noise, under a
+stationarity projection. ETH has 415 missing 5m timestamps and 31 incomplete
+interior days; skipped daily signals make its lookbacks complete-observation
+rather than strict calendar-day windows. BTC timestamp grids are complete.
+
+Independent objective-extrema reconstruction and quote-cash accounting
+reproduce the fixed proximal subject's four cells to <8.2e-12 USD daily equity;
+all 15 variants have non-vacuous causality/order checks. **775 tests pass**
+(718 existing +57 new). [Full report, chart, gates, counts and audit](../reports/r191_strategies/README.md).
+
+**Verdict.** **NEGATIVE, all five; no registration or live changes.** Reducing
+fees or changing uncertainty handling is not enough to establish a new edge
+on this exhausted history. **Holdout counter +961, cumulative ~3,251**:
+404 core, 555 matching attempts, two audit replays. Frozen rules/source/data
+did not move; a separate post-result chart renderer only improves labels.
+B-06 stays ongoing, B-09 low (annotated with this attempt), B-17 partial,
+B-28 data-blocked. No outcome justifies retuning these parameters against
+this holdout; a future attempt needs a materially different mechanism or evidence.
 
 ### R-190 · 09-05 · NEGATIVE — ten execution variations of the promoted Kelly parents
 
@@ -20272,6 +20357,7 @@ trip.
 
 | what | why | ref |
 |---|---|---|
+| Five daily cost/error-aware long-cash rules: proximal allocation, adaptive downside budget, fee-gated OLMAR, sticky experts, block-median growth | 15 fixed configurations, 1,034 cells; 0/5 promoted. No BTC balance beats passive holding; best matched Sharpe gain +.017 with interval crossing zero. OLMAR and robust growth fail ETH. Do not retune these parameters on this holdout; require new evidence or a materially different mechanism. | R-191 |
 | Four-hour actual-account bands 0.05/0.10/0.20 on promoted Kelly v4/v3/original, plus their equal-weight blend | Ten candidates, two auxiliary neighbours, 879 total cells. Largest spot parent ΔSharpe +0.068, all intervals include zero; 0.17–0.29 fills/day. All fail the frozen rule. Do not re-try these bands expecting a few trades/day or established improvement without new evidence. | R-190 |
 | Distributionally robust / lower-confidence-bound Kelly as a standalone strategy: fraction-Kelly on `min_W(mu_W − kappa·sigma_W/sqrt(W))` over 10/30/90-day windows (Rujeerapaiboon–Kuhn–Wiesemann 2016; Sun & Boyd 2018; Baker & McHale 2013), `robust_kelly` | 3 kappa configs + 1 smoke. Holdout spot $600 (Sharpe −0.82 vs hold 1.03), futures $961; in market 18% of bars at kappa 0.5, 10% at kappa 1. Do not re-try a confidence-bound gate on BTC drift expecting exposure: with daily vol ~20x daily drift the bound is positive only in the strongest bull runs, and the robustness is bought with time out of the market (R-33's exposure line, from the theory side). | R-188 |
 | Krichevsky–Trofimov coin-betting fraction (Orabona & Pál 2016) as a position sizer on daily rounds with a forgetting factor, `coin_betting` | 3 configs + 1 smoke. The round's closest miss: holdout spot $1,148 and inner-val $1,055, but Sharpe 0.63 vs hold 1.03 fails the ±0.20 KEEP clause by exactly 0.20; 6% max DD is the ~15% mean-exposure artefact. Do not re-try KT betting for growth without a leverage multiplier well above 3, which is no longer parameter-free. | R-188 |
@@ -22278,7 +22364,7 @@ which only forward paper trading can supply.
 | **B-06** | Forward paper-trading recorder | N≈3 | **ONGOING → R-71; AUDITED and DE-RANKED → R-78** — keep it running, stop calling it the plan. R-78 measured the horizon (median 18.9 years on 2017–2020 effect sizes, never on 2021–2022; 100% of resolving paths resolve *against* the strategy) and audited the record (10.0% of v4's target changes seen, −0.31 to −0.41 Sharpe). The decision defect is **fixed** (`level_resync_order()`, 9 new tests); the horizon is not. See B-38 for the actionable replacement. | Now scheduled and multi-strategy: a GitHub Actions workflow (`.github/workflows/paper_trading.yml`, `*/15 * * * *`) invokes `scripts/paper_trade.py` unattended and commits new rows, recording the whole `kelly_regime` lineage (`v4/v3/v2/kelly_regime/ev/ev_fast`) plus `buy_and_hold` — not just the original two — into `reports/paper_trading/`. |
 | ~~B-07~~ | ~~On-chain features, sign-corrected~~ | INFO | **DONE → R-44** | Sign was fixed as designed (both branches leaned exposure INTO confirmed high-participation/capitulation-recovery regimes, never away from rising activity) and neither branch repeated R-08's inversion — they failed for unrelated, independently-reproduced reasons (magnitude-only exposure-artifact; clean inner-validation loss). Real CoinMetrics data is now committed (`data/btc_onchain_daily.csv.gz`, `data/eth_onchain_daily.csv.gz`) and available for a future round with a different exploitation. |
 | ~~B-08~~ | ~~Second bear, second asset, different period (ETH 2020–2026)~~ | N≈3 | **DONE → R-47** | Frozen `kelly_regime_v4`, zero parameters changed, run against the now-committed `ethusd_coinbase_spot_5m.csv.gz` (2019-03-14→2026-08-19). Drawdown/tail protection replicates cleanly on ETH's own 2022 bear (previously untested — independent of the 2018 BTC bear every prior ETH check shared); the return edge does not survive the realistic 0.40% fee tier over the full 2020–2026 window. Confirms L-01/R-17's own standing caveat on genuinely independent evidence for the first time. |
-| **B-09** | Conformal prediction / adaptive conformal by betting (adaptive conformal inference under distribution shift; conformal prediction with change points, NeurIPS 2025; adaptive conformal inference by betting, 2024) | ERR | LOW | Was "mostly subsumed by B-01" — now demoted further by R-28's result: the binding problem is not that trust is miscalibrated but that correctly-calibrated trust is *low*, and conformal would say the same thing more slowly. |
+| **B-09** | Conformal prediction / adaptive conformal by betting (adaptive conformal inference under distribution shift; conformal prediction with change points, NeurIPS 2025; adaptive conformal inference by betting, 2024) | ERR | LOW | R-28 found calibrated trust remains low. R-191 tested a standalone ACI-inspired downside-quantile budget: NEGATIVE despite profitable holdouts. This heuristic tail-sizing result does not close adaptive conformal inference by betting or establish a coverage guarantee; priority stays LOW. |
 | ~~B-13~~ | ~~Matched-risk benchmark: `kelly_regime_v4` against a **de-levered** `buy_and_hold` at equal realized volatility~~ | ERR, SIZE | **DONE → R-33** | Answered, and it cost the project its headline. … R-31 showed that precise mismatch manufactured a mechanism finding for the e-process gate that vanished at equal risk. … Needs no new data, no fetch, and the harness already exists. Pre-register the answer both ways — a hold de-levered to 0.5x is *not* obviously a weaker benchmark, and if the drawdown gap survives it, that is the strongest result this project has ever had. |
 | ~~B-10~~ | ~~Deterministic Elliott wave counter~~ | — | **DONE → R-156 and R-157 (independent collision, both NEGATIVE)** | Two unrelated sessions dispatched this same item the same day without seeing each other's work (see R-157's own collision note); both registered a strategy regardless of B-10's own "no discretion" negative-result framing. … The unfalsifiable debate is closed twice over, by two structurally different implementations reaching the same qualitative verdict. |
 | ~~B-15~~ | ~~Build a real perp price series (Deribit `BTC-PERPETUAL`, 5m OHLCV) alongside the existing spot series~~ | ERR, COST, INFO | **DONE → R-41** | Built: real BTC-PERPETUAL (2018-08-14→) and ETH-PERPETUAL (2019-03-14→) 5m OHLCV, plus a matching Coinbase ETH spot series, all committed. `tradebot.data.load_deribit_perp_price()`/`compute_basis()` give a genuine, non-proxied spot/perp basis for the first time — used as a `kelly_regime_v4` SIZE input in R-41 (both branches NEGATIVE, for reasons unrelated to data quality). … Not wired into `CANONICAL["perp"]`, so no existing comparison-table number changed. |
@@ -25052,6 +25138,7 @@ first `—`, and a dispatched round resets it by construction.
 
 | # | committed (UTC) | step 0 | attempted | outcome |
 |---|---|---|---|---|
+| — | 10-02 | Clean pull/rebase to origin/main; R-190 complete; no in-flight round; four live backlog statuses unchanged. | R-191: five strategies, ten neighbors, 1,034 financial cells; frozen source and rule before holdout. | NEGATIVE: 0/5 promoted. Independent four-cell audit agrees; 775 tests pass. Full evidence in R-191. |
 | — | 09-05 | Operator-directed R-190; R-189 complete; four live backlog rows unchanged. | Ten accepted-parent variations, 784 core +87 matching +8 audit cells; frozen before holdout. | NEGATIVE: 0/10 promoted; 0.17–0.29 fills/day. Chart and complete evidence under R-190. |
 | — | 09-05 | Operator-directed R-189; R-188 completed; staged market files preserved. | Ten fixed games, 708 evaluation cells, all registered with intervals and chart. | NEGATIVE: no promotion; two fill-cadence matches, no few-round-trip/day match. See R-189. |
 | — | 09-02 06:0x | clean, HEAD == `origin/main` @ `02311f1` (B-06 auto-commit), no undispatched `_shared.py` (`r187_shared.py` newest, matching `### R-187`); 2 null passes since R-187, under the 3-pass bar; operator-directed brief, not the scheduled one | R-188 (NEGATIVE, all ten dropped): five game-theory / SOTA and five intraday candidates through the full pre-registered protocol; 41 configurations, 224 candidate evaluations; pre-registration committed (`e23cf76`, "IN PROGRESS: R-188") before the holdout was read | full detail under R-188 in section B, ten rulings added to section C; resets the consecutive-null-pass counter to 0 per this section's own construction rule |
@@ -26667,6 +26754,8 @@ Rules that the format exists to enforce:
 Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
+
+- **10-02 · ~3,251** — R-191: **+961** = 404 core holdout cells, 555 actual-broker risk-matching attempts (including each beta window), and two independent holdout audit replays. Five primaries plus ten preset neighbors; no retuning. Dependent overlapping windows and fitted controls are counted conservatively.
 
 - **09-05 · ~2,290** — R-190: **+787** = 736 core holdout cells, 47 actual-broker risk-matching attempts and four independent holdout reproductions. Ten candidates plus two auxiliary configurations, no retuning. Overlapping windows and fitted controls are dependent; the cumulative DSR count is deliberately conservative.
 
