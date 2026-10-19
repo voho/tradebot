@@ -515,3 +515,4 @@ timestamp,candle_close_price,prior_target,new_target,trade_qty,fee_paid,position
 2026-10-19T01:35:00+00:00,82334.13,0.813654,0.747890,-0.00091302,0.3007,0.00989159,1043.5348,1093.0244,"LEVEL RESYNC target=0.7479 from 0.8137 (on_bar's edge-triggered gate emitted nothing; see level_resync_order, R-78)"
 2026-10-19T06:50:00+00:00,82706.73,0.745960,0.745960,0.00000000,0.0000,0.00989159,1043.5348,1096.7100,target unchanged (0.7460)
 2026-10-19T14:20:00+00:00,82008.95,0.744351,0.744351,0.00000000,0.0000,0.00989159,1043.5348,1089.8078,target unchanged (0.7444)
+2026-10-19T20:00:00+00:00,81842.71,0.743964,0.801270,0.00071931,0.2355,0.01061091,1043.2993,1087.9280,"LEVEL RESYNC target=0.8013 from 0.7440 (on_bar's edge-triggered gate emitted nothing; see level_resync_order, R-78)"
