@@ -631,22 +631,23 @@ git clone --depth 1 https://github.com/ff137/bitstamp-btcusd-minute-data /tmp/bi
 python scripts/build_bitstamp_dataset.py --source /tmp/bitstamp
 ```
 
-Data files are resolved in priority order (all
-`timestamp,open,high,low,close,volume`, ms UTC epoch, `.gz` read
-transparently):
+`tradebot run` and every full-period harness load data through
+`tradebot.data.load_dataset` (all `timestamp,open,high,low,close,volume`,
+ms UTC epoch, `.gz` read transparently):
 
 | priority | file | used by | label |
 |---|---|---|---|
-| 1 | `btcusdt_perp_5m.csv` (via `tradebot fetch`) | futures | `real` |
-| 1 | `btcusdt_spot_aligned_5m.csv` (via `tradebot fetch`) | spot | `real` |
-| 2 | `btcusd_spot_5m.csv.gz` (committed) | spot; futures fall back to it | `real` / `spot (perp proxy)` |
-| 3 | `synthetic_*.csv` (generated, seeded) | last resort | `SYNTHETIC` |
+| 1 | `btcusd_spot_5m.csv.gz` (committed, 2017 →) | spot; futures run on it too | `real` / `spot (perp proxy)` |
+| 2 | `synthetic_*.csv` (generated, seeded) | last resort | `SYNTHETIC` |
 
-Without true perp data the futures market trades the spot series — the
-perp basis is small, and every table row and chart carries the
-`spot (perp proxy)` label so it's never mistaken for real perp fills.
-`tradebot fetch` (needs Binance network access) produces the true
-perp + aligned-spot pair, which then takes precedence automatically.
+There is no full-history perp series, so the futures market trades the
+spot series — the perp basis is small, and every table row and chart
+carries the `spot (perp proxy)` label so it's never mistaken for real perp
+fills. `tradebot fetch` (needs Binance network access) writes an aligned
+BTCUSDT perp + spot pair (`btcusdt_perp_5m.csv`,
+`btcusdt_spot_aligned_5m.csv`; the committed pair spans 2025-08 → 2026-08).
+`load_dataset` deliberately ignores it, so fetching never shortens the
+comparison period; load those files by path to study the real perp.
 
 Real Binance BTCUSDT **funding rates** for 2020–2023 are also committed
 (`data/btcusdt_perp_funding_8h.csv.gz`), and the ETH/BTC pair used by the

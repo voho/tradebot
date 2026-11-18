@@ -7,11 +7,11 @@ constructor (R-188 and R-190 through R-194; R-189's ten are registered) is
 run here under that table's own protocol: full history, $1,000, 0.10% spot,
 0.05% futures at 5x on the spot series ("spot (perp proxy)"), no slippage.
 
-The full-history file is loaded explicitly. Since 2026-09-05,
-``load_dataset(..., "spot")`` prefers the one-year
-``btcusdt_spot_aligned_5m.csv``, so going through it would silently rank
-the last year only. ``buy_and_hold`` and ``kelly_regime_v4`` are rerun and
-must reproduce their committed rows before anything is written.
+The full-history file is loaded explicitly. (From 2026-09-05 until the
+loader fix, ``load_dataset(..., "spot")`` preferred the one-year
+``btcusdt_spot_aligned_5m.csv``; it now always returns this file.)
+``buy_and_hold`` and ``kelly_regime_v4`` are rerun and must reproduce their
+committed rows before anything is written.
 
 These runs read the 2023+ holdout as part of the full period, so they count
 as holdout consultations (see docs/LEDGER.md). They are descriptive: no
