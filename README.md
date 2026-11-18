@@ -245,6 +245,47 @@ ideas being re-tried blind. Explore variants with
 `walkforward`) rather than by editing a registered strategy's defaults,
 so the comparison table stays a stable record.
 
+## Three attention-based allocators (R-193) — evaluated, not registered
+
+Three daily BTC/cash allocators built from the transformer architecture of
+*Attention Is All You Need* (Vaswani et al. 2017), each a step further in:
+
+- **single-head attention** over matured 20-day outcomes, used as a drift
+  estimate;
+- **multi-head attention** with a learned (ridge) output projection;
+- **a one-layer transformer encoder** trained end to end with evolution
+  strategies on log growth net of costs.
+
+**All three are NEGATIVE under the frozen promotion rule.** They cannot be
+registered in the ranked table above: they need 1–2 years of daily history
+before their first trade, which the real-slice causality guard does not
+allow. Their code stays in `experiments/`.
+
+Holdout balances from $1,000, 2023-01-01 through 2026-08-12. BTC/ETH spot pays
+0.40% fees plus 1bp slippage; the funded perpetual pays 5bp plus 1bp and
+observed funding.
+
+| Strategy | BTC spot | Funded BTC | ETH spot | Spot ΔSharpe vs matched hold [95% CI] |
+|---|---:|---:|---:|---|
+| `r193_attention` — single-head attention | $2,179 | $2,099 | $1,336 | −0.19 [−0.60, +0.21] |
+| `r193_multihead` — multi-head + ridge W_O | $1,759 | $1,871 | $1,432 | +0.01 [−0.05, +0.09] |
+| `r193_transformer` — ES-trained encoder | $2,161 | $1,957 | $1,322 | −0.28 [−0.83, +0.22] |
+| `r191_cost_proximal` — same sizing, linear trailing mean | $2,684 | $2,322 | $2,100 | — |
+| `kelly_regime_v4` | $2,454 | $3,193 | $1,662 | — |
+| `buy_and_hold` (funded: unlevered 1x long) | $3,827 | $3,137 | $1,566 | — |
+
+The linear comparator uses the same sizer with a trailing-mean drift instead
+of attention, and it beats all three. That matches Zeng et al. (2023): on
+this problem, attention adds nothing a linear estimate does not already
+give. The trained encoder learned to stay mostly long: mean holdout exposure
+0.79, above 0.9 on 78% of days. Every interval against a volatility-matched
+passive hold contains zero.
+
+[Full report, intervals, gates and receipts](reports/r193_attention/README.md) ·
+[ledger entry R-193](docs/LEDGER.md) · 665 financial evaluations, 9 fixed settings.
+
+![R-193 holdout performance and matched-risk Sharpe intervals](reports/r193_attention/summary.png)
+
 ## Five targeted Kelly v4 improvements (R-192)
 
 Five isolated modifications to the first-ranked strategy were implemented and

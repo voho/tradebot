@@ -867,6 +867,28 @@ usual default; full detail in `docs/LEDGER.md` R-107.
 
 ---
 
+## Evaluated and not registered (R-193)
+
+Three attention allocators from *Attention Is All You Need* (Vaswani et al.
+2017) trade BTC against cash once a day:
+
+- **`r193_attention`** uses single-head scaled dot-product attention. Today's
+  7-feature state queries every past state whose 20-day outcome has matured,
+  and the attention-weighted outcome is the drift fed into R-191's proximal
+  sizer.
+- **`r193_multihead`** adds three subspace heads (short, trend, volatility)
+  and a ridge output projection, refitted yearly on matured outcomes.
+- **`r193_transformer`** is a one-layer encoder: sinusoidal positions, 2-head
+  attention, residual + LayerNorm and FFN. It is trained by antithetic
+  evolution strategies on next-day log growth net of 41bp.
+
+All three are NEGATIVE: they fail all seven frozen gates. A same-sizing linear
+trailing mean beats each of them, and the encoder learns to stay mostly long.
+Code is in [r193_strategies.py](../experiments/r193_strategies.py), with the
+[research notes](../experiments/r193_research_notes.md),
+[protocol](../experiments/r193_protocol.md) and
+[results](../reports/r193_attention/README.md).
+
 ## Evaluated and not registered (R-190)
 
 Ten variations of the three PROMOTED parents (`kelly_regime_v4`,

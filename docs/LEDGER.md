@@ -348,6 +348,86 @@ and loses nothing that the `ref` does not already reach.
 
 ## B. Research log (newest first)
 
+### R-193 · 11-18 · NEGATIVE — three attention allocators ("Attention Is All You Need")
+
+**Direction.** Operator-requested batch: three daily BTC/cash allocators built
+from Vaswani et al. (2017), each a step further into the transformer.
+`r193_attention` is single-head scaled dot-product attention over matured
+20-day outcomes (an analog/kernel memory, Tsai et al. 2019, Ramsauer et al.
+2021), and its drift feeds R-191's proximal sizer. `r193_multihead` has three
+subspace heads and a yearly ridge output projection W_O fitted on matured
+outcomes only. `r193_transformer` is a one-layer encoder (positional encoding,
+2-head attention, residual + LayerNorm, FFN; 601 parameters), trained by
+antithetic ES (Salimans et al. 2017) on next-day log growth net of 41bp. This
+is the first *test* of R-05, which closed deep learning on grounds. The
+[research notes](../experiments/r193_research_notes.md) answer R-05's cost
+objection by construction (daily cadence, cost inside the objective) and its
+linear-baseline objection with a same-sizing comparator. Breadth stays open.
+Attacks SIZE / ERR / COST respectively. Not a duplicate of L-12/R-34
+(discrete-state drift), R-37 (per-state Kelly), or R-147/R-189/R-191
+councils (which weight positions by PnL, not forecasts by regression).
+
+**What was done.** [Protocol](../experiments/r193_protocol.md) and code were
+committed before any financial evaluation (`9b2c06c`). Training receipts,
+power and source/data hashes were frozen before the holdout (`9f39830`). The
+evaluator, cells and seed-191 windows are R-191's unchanged, and the
+seven-gate decision is R-191's verbatim. **9 configurations** (three
+primaries, ±1 neighbour each). 317 core cells (33 train, 284 holdout) plus
+348 matching attempts (14 train, 334 holdout): **665 financial evaluations**.
+An independent reviewer that had seen no result read the code before the
+holdout. It found **no lookahead**. It did show the end-to-end causality test
+could not see fit-day leaks (cuts missed fit days; clipped targets absorb
+small forecast changes): five injected leaks passed the suite. Strict
+pre-sizing prefix tests at every fit/refit day were added and catch every
+mutant. The strategy code was unchanged, so no training cell was rerun. A
+non-finite-close fallback bug was found too, but it cannot fire on this data
+(checked: zero non-finite closes or tokens in all three files). Two Codex PR
+findings were answered, not applied, because the code was frozen. (1) The
+liquidation gate scans all receipts, not just primary cells. This is moot:
+**no cell liquidated**. (2) The 5x broker deadband dominates the 0.05 band in
+the funded cell. This is B-30/R-72, inherited by R-191/R-192 alike. Training
+power for +0.20 Sharpe needs 1.8–51.5 years against ~3.6 holdout years; the
+bar was not lowered.
+
+**Result.** Validation lead `r193_attention` (mean validation Sharpe 0.20).
+Holdout balances from $1,000:
+
+| Strategy | BTC spot | Funded BTC | ETH spot |
+|---|---:|---:|---:|
+| Single-head attention | $2,179 | $2,099 | $1,336 |
+| Multi-head + ridge W_O | $1,759 | $1,871 | $1,432 |
+| ES-trained transformer | $2,161 | $1,957 | $1,322 |
+| R-191 same-sizing linear (`r191_cost_proximal`) | $2,684 | $2,322 | $2,100 |
+| Buy-and-hold / unlevered funded long | $3,827 | $3,137 | $1,566 |
+| Kelly v4 | $2,454 | $3,193 | $1,662 |
+
+Every matched-passive interval contains zero. The best is multi-head spot
+holdout, ΔSharpe +0.014 [−0.054, +0.085]; attention −0.188 [−0.604, +0.213];
+transformer −0.275 [−0.830, +0.220]. Program DSR is 0.045–0.172. Window wins
+are 6/6, 13/2 and 7/8 (spot/funded). **All three fail all seven gates.**
+Neighbours do not plateau: transformer ETH spans $648–$1,332. The transformer
+learned "mostly long": holdout mean exposure 0.79, above 0.9 on 78% of days.
+Its ETH Sharpe is 0.08–0.43 against 0.51 passive, so it fails ETH
+falsification. The same-sizing linear comparator beats every attention family
+in every cell, which matches Zeng et al. (2023) on this problem. Attention
+validation cut matched drawdown ~12pp, but no tail route exists in this
+frozen rule and growth intervals cross zero. Both controls reproduce R-191's
+named cells exactly. **All R-193 tests pass**, strict causality included.
+[Report, chart and receipts](../reports/r193_attention/README.md).
+
+**Verdict.** **NEGATIVE, 0/3 promoted; R-05's on-grounds closure now has
+measured support.** Even with costs inside the objective and a daily
+cadence, attention-derived drift on one price series is worse than a trailing
+mean under the same sizer. The trained encoder rediscovers "be long" and
+nothing else. **Holdout counter +618** (284 core + 334 matching attempts),
+cumulative **~4,850**. The rule, source and data did not move after the
+holdout. At operator request the three primaries are shown in an
+evaluated-not-registered README table. They cannot be registered without
+weakening `test_every_strategy_actually_trades_on_the_real_slice` (they need
+1–2 years of daily history before a first trade), so they stay under
+`experiments/`. Backlog unchanged: B-06 ongoing, B-09 low, B-17 partial,
+B-28 data-blocked.
+
 ### R-192 · 10-02 · NEGATIVE — five targeted Kelly v4 improvements
 
 **Direction.** Operator-requested COST/ERR updates to the README's first-ranked
@@ -20437,6 +20517,7 @@ trip.
 
 | what | why | ref |
 |---|---|---|
+| Attention allocators on one daily price series: single-head analog attention, multi-head with ridge W_O, ES-trained one-layer transformer encoder (Vaswani 2017) | 9 fixed configurations, 665 cells; 0/3 promoted, all fail all seven gates. A same-sizing linear trailing mean beats every attention family; the encoder learns "mostly long". Do not re-try transformer drift estimators on this one series without new breadth or new information. | R-193 |
 | Five Kelly v4 updates: tracking budget, factor clock, anchor confirmation, robust volatility state, delayed increases | 15 fixed settings, 1,054 financial cells; 0/5 promoted. Robust state has a small positive spot parent effect, below the frozen hurdle; funded interval includes zero. All fail profitable neighborhoods, DSR and both full routes. Do not retune this holdout without new evidence or a materially different mechanism. | R-192 |
 | Five daily cost/error-aware long-cash rules: proximal allocation, adaptive downside budget, fee-gated OLMAR, sticky experts, block-median growth | 15 fixed configurations, 1,034 cells; 0/5 promoted. No BTC balance beats passive holding; best matched Sharpe gain +.017 with interval crossing zero. OLMAR and robust growth fail ETH. Do not retune these parameters on this holdout; require new evidence or a materially different mechanism. | R-191 |
 | Four-hour actual-account bands 0.05/0.10/0.20 on promoted Kelly v4/v3/original, plus their equal-weight blend | Ten candidates, two auxiliary neighbours, 879 total cells. Largest spot parent ΔSharpe +0.068, all intervals include zero; 0.17–0.29 fills/day. All fail the frozen rule. Do not re-try these bands expecting a few trades/day or established improvement without new evidence. | R-190 |
@@ -26836,6 +26917,8 @@ Rules that the format exists to enforce:
 Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
+
+- **11-18 · ~4,850** — R-193: **+618** =284 core holdout cells +334 actual-broker risk-matching attempts. Three primaries and six fixed neighbours; no retuning, no audit replays beyond the reruns of both controls (which reproduce R-191 exactly and are inside the 284).
 
 - **10-02 · ~4,232** — R-192: **+981** =404 core holdout cells +575 actual-broker risk-matching attempts +two independent holdout audit replays. Five primaries and ten fixed neighbors; no retuning. All dependent windows and failed matches count conservatively.
 

@@ -217,6 +217,19 @@ deep-learning finance papers and found most do not beat a naive forecast;
 Zeng et al. (AAAI 2023) show a one-layer linear model beats transformer
 forecasters on nine benchmarks. No torch/sklearn dependency was added.
 
+**Tested by R-193 (2026-11-18); the closure above now has measured
+support.** Three numpy-only attention allocators were evaluated under a
+frozen rule:
+
+- an analog attention memory;
+- multi-head attention with a learned output projection;
+- an ES-trained one-layer encoder.
+
+They traded daily, with the 41bp cost inside each objective. All three fail.
+A linear trailing-mean drift under the same sizer beats every one of them,
+and the encoder learns little beyond "be long". The breadth objection
+(one instrument here) was left untested.
+
 Sobering for our own baseline: Zakamulin (2014, J. Asset Management; 2018,
 Int. Review of Finance) finds moving-average timing performance "highly
 overstated" with substantial data-mining bias — which is why the

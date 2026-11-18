@@ -1,0 +1,4 @@
+strategy,verdict,matched_edge,intervals,absolute_growth,falsification,plateau,dsr,beta,failed_gates,dsr_spot,dsr_perp,local_dsr_spot,local_dsr_perp,program_trials_approx,beta_spot_valid,beta_spot_wins,beta_perp_valid,beta_perp_wins
+r193_attention,NEGATIVE,False,False,False,False,False,False,False,"matched_edge, intervals, absolute_growth, falsification, plateau, dsr, beta",0.09542935464919572,0.07772548855068856,0.6645345367836276,0.6206712436068933,4850,23,6,22,6
+r193_multihead,NEGATIVE,False,False,False,False,False,False,False,"matched_edge, intervals, absolute_growth, falsification, plateau, dsr, beta",0.17244518974602852,0.08946608199808248,0.786385037706322,0.6517259997179621,4850,24,13,23,2
+r193_transformer,NEGATIVE,False,False,False,False,False,False,False,"matched_edge, intervals, absolute_growth, falsification, plateau, dsr, beta",0.061160935263032956,0.04544670974940579,0.5750221863901082,0.5147726393742025,4850,24,7,23,8
