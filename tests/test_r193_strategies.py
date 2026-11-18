@@ -188,3 +188,96 @@ def test_actual_account_drift_and_zero_target_exit():
     broker.pos = .001
     broker.execute(orders()[0], frame.index[288], 100.)
     assert broker.pos == 0. and orders() == []
+
+
+# --- strict causality at fit days, and pinned arithmetic (added after the
+# independent pre-holdout review: the end-to-end test above compares clipped
+# targets at two cuts and missed deliberately injected fit-day leaks).
+
+def _daily_walk(n=820, seed=7):
+    rng = np.random.default_rng(seed)
+    index = pd.date_range("2017-03-01", periods=n, freq="D", tz="UTC")
+    return pd.Series(100 * np.exp(np.cumsum(rng.normal(.001, .03, n))), index=index)
+
+
+def _fit_cuts(close, first_fit):
+    refits = np.flatnonzero(r193._refit_days(close.index))
+    cuts = {first_fit - 1, first_fit, first_fit + 1}
+    cuts |= {d + k for d in refits if d > first_fit for k in (-1, 0, 1)}
+    return sorted(c for c in cuts if c < len(close) - 1)
+
+
+def _assert_prefix_equal(fn, close, cuts):
+    full = fn(close)
+    for cut in cuts:
+        np.testing.assert_array_equal(fn(close.iloc[:cut + 1]), full[:cut + 1], err_msg=f"cut {cut}")
+
+
+@pytest.mark.parametrize("family", ["r193_attention", "r193_multihead"])
+def test_drift_forecast_is_causal_at_every_fit_day(family, monkeypatch):
+    # Capture the forecast u before proximal sizing absorbs small differences.
+    monkeypatch.setattr(r193, "_proximal_path", lambda u, sigma: u)
+    close = _daily_walk()
+    x, _, outcome = r193._features(close)
+    if family == "r193_attention":
+        fn = lambda c: r193._attention_targets(c, 1.)  # noqa: E731
+        first = int(np.argmax([np.isfinite(x[:max(t - HORIZON + 1, 0)]).all(1).sum() >= r193.MIN_KEYS
+                               for t in range(len(x))]))
+    else:
+        fn = lambda c: r193._multihead_targets(c, 1.)  # noqa: E731
+        heads = _head_outputs(x, outcome, 1., r193.HEADS)
+        usable = np.isfinite(heads).all(1) & np.isfinite(outcome)
+        first = int(np.argmax([usable[:max(t - HORIZON + 1, 0)].sum() >= r193.MIN_FIT
+                               for t in range(len(x))]))
+    assert np.isfinite(fn(close)[first + 1])
+    _assert_prefix_equal(fn, close, _fit_cuts(close, first))
+
+
+def test_transformer_is_causal_at_every_fit_day(fast_es):
+    close = _daily_walk()
+    x, _, _ = r193._features(close)
+    _, complete = _windows(x, 30)
+    next_return = close.pct_change(fill_method=None).shift(-1).to_numpy()
+    rows = np.cumsum(complete & np.isfinite(next_return))
+    first = int(np.argmax(np.r_[0, rows[:-1]] >= r193.MIN_FIT))  # rows strictly before t
+    fn = lambda c: r193._transformer_targets(c, 30)  # noqa: E731
+    assert fn(close)[first] > 0 and fn(close)[first - 1] == 0
+    _assert_prefix_equal(fn, close, _fit_cuts(close, first))
+
+
+def test_features_outcome_and_drift_pinned():
+    close = _daily_walk(400)
+    x, sigma, outcome = r193._features(close)
+    lc = np.log(close.to_numpy())
+    lr = np.diff(lc, prepend=np.nan)
+    t, j = 300, 250
+    s60 = np.std(lr[t - 59:t + 1], ddof=1)
+    assert sigma[t] == pytest.approx(s60)
+    for col, k in enumerate((1, 5, 20, 60, 120)):
+        assert x[t, col] == pytest.approx((lc[t] - lc[t - k]) / (s60 * np.sqrt(k)))
+    assert x[t, 5] == pytest.approx(np.log(np.std(lr[t - 19:t + 1], ddof=1) / s60))
+    assert x[t, 6] == pytest.approx(np.log(s60 / np.std(lr[t - 119:t + 1], ddof=1)))
+    assert outcome[j] == pytest.approx((lc[j + 20] - lc[j]) / (sigma[j] * np.sqrt(20)))
+    assert np.isnan(outcome[-HORIZON:]).all()
+    assert r193._drift(1., .04) == pytest.approx(.04 / np.sqrt(20) + .0008)
+    assert r193.PROXIMAL_PENALTY == 2.
+
+
+def test_transformer_utility_and_frozen_hyperparameters_pinned():
+    assert (r193.ES_PAIRS, r193.ES_SIGMA, r193.ES_STEPS, r193.ES_LR, r193.ES_INIT,
+            r193.WEIGHT_DECAY, r193.D_MODEL, r193.N_HEADS, r193.D_FF, r193.N_PARAMS) == \
+        (24, .05, 200, .02, .1, 1e-3, 8, 2, 16, 601)
+    rng = np.random.default_rng(6)
+    theta, tokens = rng.standard_normal(r193.N_PARAMS), rng.standard_normal((50, 10, 7))
+    ret = rng.normal(0, .03, 50)
+    w = _encode(theta, tokens)
+    turnover = np.r_[0., np.abs(np.diff(w))]
+    expected = np.mean(np.log1p(w * ret) - .0041 * turnover) - 1e-3 * np.mean(theta ** 2)
+    assert _utility(theta, tokens, ret) == pytest.approx(expected)
+
+
+def test_transformer_seed_follows_refit_year(monkeypatch):
+    seeds = []
+    monkeypatch.setattr(r193, "_train", lambda tokens, ret, seed: seeds.append(seed) or np.zeros(r193.N_PARAMS))
+    r193._transformer_targets(_daily_walk(), 30)
+    assert seeds == [193 + 2018, 193 + 2019]

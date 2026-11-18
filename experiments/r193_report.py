@@ -208,7 +208,8 @@ def descriptive(cells):
             active = part[part.index >= part.ne(0).idxmax()] if part.ne(0).any() else part
             rows.append(dict(strategy=name, period=label, days=len(part),
                 mean_target=part.mean(), mean_active_target=active.mean(),
-                share_flat=(part == 0).mean(), share_above_09=(part > .9).mean(),
+                share_flat=(part == 0).mean(), share_below_005=(part < .05).mean(),
+                share_above_09=(part > .9).mean(),
                 daily_target_change=part.diff().abs().mean()))
     exposure = pd.DataFrame(rows)
     exposure.to_csv(OUT / "exposure.csv", index=False)
