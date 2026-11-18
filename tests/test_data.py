@@ -1,8 +1,11 @@
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
 
 from tradebot.data import (
+    ALIGNED,
     align,
     coinbase_spot_file,
     generate_synthetic_pair,
@@ -99,12 +102,26 @@ def test_load_dataset_falls_back_to_synthetic(tmp_path, capsys):
     assert label2 == "SYNTHETIC"
 
 
-def test_load_dataset_prefers_real(tmp_path):
-    perp, _ = generate_synthetic_pair(n_bars=200)
-    save_ohlcv_csv(perp, tmp_path / "btcusdt_perp_5m.csv")
+def test_load_dataset_prefers_real_and_ignores_fetched_pair(tmp_path):
+    perp, spot = generate_synthetic_pair(n_bars=300)
+    save_ohlcv_csv(perp, tmp_path / ALIGNED["perp"])
+    save_ohlcv_csv(spot, tmp_path / ALIGNED["spot"])
+    save_ohlcv_csv(spot.iloc[:200], tmp_path / "btcusd_spot_5m.csv.gz")
+    df, label = load_dataset(tmp_path, "spot")
+    assert (label, len(df)) == ("real", 200)
     df, label = load_dataset(tmp_path, "perp")
-    assert label == "real"
-    assert len(df) == 200
+    assert (label, len(df)) == ("spot (perp proxy)", 200)
+
+
+@pytest.mark.parametrize("kind", ["spot", "perp"])
+def test_committed_dataset_is_full_history(kind):
+    """The comparison table and experiment harness read load_dataset; a
+    shorter file sneaking ahead of the 2017 series silently turns every
+    full-period number into a short-window one (it happened: 2026-09-05)."""
+    df, label = load_dataset(Path(__file__).resolve().parents[1] / "data", kind)
+    assert label != "SYNTHETIC"
+    assert df.index[0] < pd.Timestamp("2017-01-02", tz="UTC")
+    assert df.index[-1] - df.index[0] > pd.Timedelta(days=9 * 365)
 
 
 def test_align():
