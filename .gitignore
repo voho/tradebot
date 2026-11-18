@@ -267,3 +267,7 @@ uv.lock
 !/reports/r194_kelly_transformer/*.json
 !/reports/r194_kelly_transformer/*.png
 !/reports/r194_kelly_transformer/*.md
+# All tried strategies ranked under the README table protocol.
+!/reports/all_strategies/
+!/reports/all_strategies/*.csv
+!/reports/all_strategies/*.md
