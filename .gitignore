@@ -251,3 +251,11 @@ uv.lock
 !/reports/r192_improvements/*.json
 !/reports/r192_improvements/*.png
 !/reports/r192_improvements/*.md
+# R-193: three attention allocators; frozen manifest and aggregate receipts.
+!/reports/r193_attention/
+/reports/r193_attention/*/
+!/reports/r193_attention/*.csv
+!/reports/r193_attention/*.csv.gz
+!/reports/r193_attention/*.json
+!/reports/r193_attention/*.png
+!/reports/r193_attention/*.md
