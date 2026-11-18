@@ -113,14 +113,16 @@ def build(frame: pd.DataFrame) -> pd.DataFrame:
         g = group.set_index("market")
         rows.append(dict(strategy=name, round="registered", status="registered",
                          spot=g.loc["spot", "final_balance"], futures_5x=g.loc["futures_5x", "final_balance"],
-                         trades=int(g.num_trades.max()), max_dd=float(g.max_drawdown_pct.min()),
+                         trades=int(g.num_trades.max()),
+                         max_dd=float(g.loc[g.final_balance.idxmax(), "max_drawdown_pct"]),
                          sharpe=float(g.sharpe.max())))
     labels = candidates()
     for name, group in frame[frame.strategy.isin(labels)].groupby("strategy"):
         g = group.set_index("market")
         rows.append(dict(strategy=name, round=labels[name], status="evaluated, NEGATIVE",
                          spot=g.loc["spot", "final_balance"], futures_5x=g.loc["futures_5x", "final_balance"],
-                         trades=int(g.num_trades.max()), max_dd=float(g.max_drawdown_pct.min()),
+                         trades=int(g.num_trades.max()),
+                         max_dd=float(g.loc[g.final_balance.idxmax(), "max_drawdown_pct"]),
                          sharpe=float(g.sharpe.max())))
     ranked = pd.DataFrame(rows)
     ranked["best"] = ranked[["spot", "futures_5x"]].max(axis=1)
@@ -135,11 +137,11 @@ def money(x: float) -> str:
 
 
 def markdown(ranked: pd.DataFrame) -> str:
-    lines = ["| # | strategy | round | status | spot | futures_5x | trades | best Sharpe |",
-             "|---:|---|---|---|---:|---:|---:|---:|"]
+    lines = ["| # | strategy | round | status | spot | futures_5x | max DD (best market) | trades | best Sharpe |",
+             "|---:|---|---|---|---:|---:|---:|---:|---:|"]
     for r in ranked.itertuples():
         lines.append(f"| {r.rank} | `{r.strategy}` | {r.round} | {r.status} | {money(r.spot)} | "
-                     f"{money(r.futures_5x)} | {r.trades:,} | {r.sharpe:.2f} |")
+                     f"{money(r.futures_5x)} | {r.max_dd:.0f}% | {r.trades:,} | {r.sharpe:.2f} |")
     return "\n".join(lines)
 
 

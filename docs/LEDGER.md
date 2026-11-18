@@ -27007,6 +27007,8 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **11-18 · ~5,564** — all-strategies ranking (operator request; no verdict changed): **+76** full-period cells. These are 36 frozen candidates (R-188, R-190–R-194) plus `buy_and_hold` and `kelly_regime_v4` as reproduction checks, on 2 markets, in `experiments/all_strategies_rank.py`. Found: `load_dataset("spot")` now prefers the one-year aligned file added 09-05, so a fresh `tradebot run` would rank the last year only.
+
 - **11-18 · ~5,488** — R-194: **+638** =284 core holdout cells +354 actual-broker risk-matching attempts. Three primaries and six fixed neighbours; no retuning. The 33 discarded stale-bytecode cells were training-only and read no holdout bar.
 
 - **11-18 · ~4,850** — R-193: **+618** =284 core holdout cells +334 actual-broker risk-matching attempts. Three primaries and six fixed neighbours; no retuning, no audit replays beyond the reruns of both controls (which reproduce R-191 exactly and are inside the 284).
