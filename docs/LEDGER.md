@@ -348,6 +348,94 @@ and loses nothing that the `ref` does not already reach.
 
 ## B. Research log (newest first)
 
+### R-194 · 11-18 · NEGATIVE — three Kelly v4 x transformer hybrids (cross-attention, memory, residual)
+
+**Direction.** Operator-requested, straight after R-193 ("combine the best
+kelly-regime with transformer architecture", "be creative"). R-193's
+lesson shaped it: a transformer *replacing* a simple estimate lost to that
+estimate. So each hybrid keeps `kelly_regime_v4` intact and is v4 bit for
+bit while its component is silent.
+
+- `r194_panel_cross_attention`: cross-attention (Vaswani 2017) from BTC's
+  state into a matured-outcome memory pooled from nine instruments, cast
+  as a fourth vote (R-55 architecture). Attacks N≈3 and INFO; it answers
+  R-05's breadth point by pooling to learn, not to trade.
+- `r194_kelly_episodic_memory`: attention keyed on v4's own vote and scale
+  (Pritzel et al. 2017 episodic control). The retrieved conditional Kelly
+  fraction, relative to the unconditional one, multiplies v4 in [0, 2].
+- `r194_residual_transformer`: R-193's encoder with a zero-initialised
+  output head (He et al. 2016; Goyal et al. 2017), trained by ES as a
+  multiplicative correction exp(tanh z) on v4, net of cost.
+
+All three are two-sided, so not R-73's barred brake, and none re-tunes the
+scale alone (R-62). Not duplicates of R-37 (discrete per-state Kelly
+*replacing* the scale), R-04 (logistic meta-label gate), R-63/R-187 (panel
+trading and panel brake) or R-193.
+[Research notes](../experiments/r194_research_notes.md).
+
+**What was done.** [Protocol](../experiments/r194_protocol.md) and code
+were committed before any financial evaluation (`d7f9527`). R-192's
+harness, seed-192 windows and decision rule were reused verbatim; R-192's
+four-cell replay was replaced by R-193's independent pre-holdout review.
+The freeze (85 hashes, including all nine panel files) landed in `eb1094b`
+before the holdout. **9 configurations**; 317 core cells plus 366 matching
+attempts gives **683 financial evaluations**, plus 33 discarded training
+cells (below).
+
+**Process failure, caught before the freeze.** In-place mutation testing
+left stale bytecode of a lookahead mutant (`seen = tokens[:t + 2]`, same
+byte size, restored in the same second), and the first training run
+executed it. A failing strict-causality test exposed it. Only that run's
+nine residual-transformer cells differ from the clean rerun; it was
+discarded and recorded. R-193's bytecode was verified clean against fresh
+compiles. The holdout ran under a fresh `PYTHONPYCACHEPREFIX`. **Lesson:
+mutate scratch copies, never the module in place;
+`PYTHONDONTWRITEBYTECODE` does not stop Python *reading* a stale `.pyc`.**
+
+The reviewer found **no lookahead**. It showed day-start and query-side
+leaks passing the suite, so stronger tests were added. It also flagged
+thin panel coverage: complete days are DASH 17%, ETC 39%, XTZ 54% and XRP
+62%, against 91–100% for the rest. That was disclosed and not pruned.
+
+**Result.** Training-only lead was `r194_kelly_episodic_memory` (mean
+validation Sharpe 0.265). Holdout balances from $1,000:
+
+| Strategy | BTC spot | Funded BTC | ETH spot |
+|---|---:|---:|---:|
+| Panel cross-attention vote | $2,623 | $3,091 | $1,571 |
+| Episodic-memory Kelly ratio | $2,129 | $3,038 | $1,203 |
+| Residual transformer (L=30) | $1,992 | $3,529 | $1,000 |
+| Unchanged Kelly v4 | $2,454 | $3,193 | $1,662 |
+| Buy-and-hold / unlevered funded long | $3,827 | $3,137 | $1,566 |
+
+**All three fail.** Each misses `risk_valid`, the plateau and DSR, and
+neither the growth nor the tail route passes. Program DSR is 0.058–0.142.
+Window growth wins are 3/6 (panel), 0/0 (episodic) and 1/0 (residual)
+against both references.
+
+- **Panel cross-attention is near-inert.** Its spot ΔSharpe against the
+  parent is +0.019 [−0.224, +0.243].
+- **Episodic memory's validation lead reversed.** Against the parent it
+  is −0.095 [−0.376, +0.181] on spot and −0.134 on funded; ETH Sharpe 0.32
+  against 0.57.
+- **The residual transformer added risk, not skill.** Against the parent
+  it is −0.191 [−0.486, +0.092]. Its L=60 neighbour's $4,839 funded
+  balance comes from leverage: the primary's parent volatility ratio is
+  0.63, ETH Sharpe 0.13, and the matched funded edge −0.002. That is
+  R-33's exposure artifact.
+
+No cell liquidated. **All R-194 tests pass** (24, strict causality
+included). [Report and receipts](../reports/r194_kelly_transformer/README.md).
+
+**Verdict.** **NEGATIVE, 0/3 promoted.** Adding a transformer to the
+strongest strategy does not help it on this history. The near-inert
+variant ties v4, and the learned variants either reverse their training
+lead or buy return with risk. **Holdout counter +638** (284 core + 354
+matching), cumulative **~5,488**. The rule, source and data did not move
+after the holdout. At operator request the results are shown in an
+evaluated-not-registered README table. Backlog unchanged: B-06, B-09,
+B-17, B-28.
+
 ### R-193 · 11-18 · NEGATIVE — three attention allocators ("Attention Is All You Need")
 
 **Direction.** Operator-requested batch: three daily BTC/cash allocators built
@@ -20517,6 +20605,7 @@ trip.
 
 | what | why | ref |
 |---|---|---|
+| Transformer components on `kelly_regime_v4`: nine-instrument cross-attention 4th vote, episodic-memory Kelly-ratio multiplier, zero-initialised residual encoder correction | 9 fixed configurations, 683 cells; 0/3 promoted. The vote is near-inert, the memory's validation lead reverses, and the residual buys return with volatility (R-33). Do not re-try learned overlays on v4 without new information or breadth. | R-194 |
 | Attention allocators on one daily price series: single-head analog attention, multi-head with ridge W_O, ES-trained one-layer transformer encoder (Vaswani 2017) | 9 fixed configurations, 665 cells; 0/3 promoted, all fail all seven gates. A same-sizing linear trailing mean beats every attention family; the encoder learns "mostly long". Do not re-try transformer drift estimators on this one series without new breadth or new information. | R-193 |
 | Five Kelly v4 updates: tracking budget, factor clock, anchor confirmation, robust volatility state, delayed increases | 15 fixed settings, 1,054 financial cells; 0/5 promoted. Robust state has a small positive spot parent effect, below the frozen hurdle; funded interval includes zero. All fail profitable neighborhoods, DSR and both full routes. Do not retune this holdout without new evidence or a materially different mechanism. | R-192 |
 | Five daily cost/error-aware long-cash rules: proximal allocation, adaptive downside budget, fee-gated OLMAR, sticky experts, block-median growth | 15 fixed configurations, 1,034 cells; 0/5 promoted. No BTC balance beats passive holding; best matched Sharpe gain +.017 with interval crossing zero. OLMAR and robust growth fail ETH. Do not retune these parameters on this holdout; require new evidence or a materially different mechanism. | R-191 |
@@ -26917,6 +27006,8 @@ Rules that the format exists to enforce:
 Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
+
+- **11-18 · ~5,488** — R-194: **+638** =284 core holdout cells +354 actual-broker risk-matching attempts. Three primaries and six fixed neighbours; no retuning. The 33 discarded stale-bytecode cells were training-only and read no holdout bar.
 
 - **11-18 · ~4,850** — R-193: **+618** =284 core holdout cells +334 actual-broker risk-matching attempts. Three primaries and six fixed neighbours; no retuning, no audit replays beyond the reruns of both controls (which reproduce R-191 exactly and are inside the 284).
 

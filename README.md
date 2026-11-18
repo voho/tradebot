@@ -245,6 +245,40 @@ ideas being re-tried blind. Explore variants with
 `walkforward`) rather than by editing a registered strategy's defaults,
 so the comparison table stays a stable record.
 
+## Three Kelly v4 x transformer hybrids (R-194) — evaluated, not registered
+
+Three hybrids keep `kelly_regime_v4` intact and add one transformer component
+each. Each is v4 bit for bit until its component has something to say:
+
+- **cross-attention** into a memory pooled from nine instruments, used as a
+  fourth vote;
+- **an episodic attention memory** keyed on v4's own state, which scales v4
+  by a conditional-to-unconditional Kelly ratio;
+- **a residual transformer**, initialised exactly at v4 and trained to
+  correct it net of costs.
+
+**All three are NEGATIVE under R-192's frozen rule**, which compares each
+against both the unchanged v4 parent and a volatility-matched passive hold.
+
+| Strategy | BTC spot | Funded BTC | ETH spot | Spot ΔSharpe vs v4 [95% CI] |
+|---|---:|---:|---:|---|
+| `r194_panel_cross_attention` | $2,623 | $3,091 | $1,571 | +0.02 [−0.22, +0.24] |
+| `r194_kelly_episodic_memory` | $2,129 | $3,038 | $1,203 | −0.10 [−0.38, +0.18] |
+| `r194_residual_transformer` | $1,992 | $3,529 | $1,000 | −0.19 [−0.49, +0.09] |
+| `kelly_regime_v4` (parent) | $2,454 | $3,193 | $1,662 | — |
+| `buy_and_hold` (funded: unlevered 1x long) | $3,827 | $3,137 | $1,566 | — |
+
+- **The cross-attention vote barely changes v4.** It rarely moves v4's
+  latched target enough to matter.
+- **The episodic memory led on validation, then fell behind v4 on the
+  holdout.**
+- **The residual transformer's best neighbour reached $4,839 funded by
+  taking far more risk than v4.** At matched risk the edge is about zero, and
+  ETH falls. That is the exposure artifact this repo keeps finding (R-33).
+
+[Full report, gates and receipts](reports/r194_kelly_transformer/README.md) ·
+[ledger entry R-194](docs/LEDGER.md) · 683 financial evaluations, 9 fixed settings.
+
 ## Three attention-based allocators (R-193) — evaluated, not registered
 
 Three daily BTC/cash allocators built from the transformer architecture of

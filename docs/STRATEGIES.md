@@ -867,6 +867,28 @@ usual default; full detail in `docs/LEDGER.md` R-107.
 
 ---
 
+## Evaluated and not registered (R-194)
+
+Three hybrids keep `kelly_regime_v4`'s vote, scale, 10% latch and callback,
+and each adds one transformer component:
+
+- **`r194_panel_cross_attention`** casts a fourth vote. Cross-attention
+  reads a matured-outcome memory pooled from nine instruments.
+- **`r194_kelly_episodic_memory`** multiplies v4 by a conditional /
+  unconditional Kelly ratio, clipped to [0, 2]. The ratio is retrieved by
+  attention keyed on v4's own vote and scale.
+- **`r194_residual_transformer`** multiplies v4 by exp(tanh z). It is a
+  zero-initialised residual encoder, trained by evolution strategies net of
+  cost.
+
+All three are NEGATIVE under R-192's rule against both parent and matched
+passive. The vote is near-inert, the memory's validation lead reverses on
+the holdout, and the residual raises return only by raising risk. Code is in
+[r194_strategies.py](../experiments/r194_strategies.py), with the
+[notes](../experiments/r194_research_notes.md),
+[protocol](../experiments/r194_protocol.md) and
+[results](../reports/r194_kelly_transformer/README.md).
+
 ## Evaluated and not registered (R-193)
 
 Three attention allocators from *Attention Is All You Need* (Vaswani et al.
