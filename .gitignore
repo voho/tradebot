@@ -259,3 +259,11 @@ uv.lock
 !/reports/r193_attention/*.json
 !/reports/r193_attention/*.png
 !/reports/r193_attention/*.md
+# R-194: three Kelly v4 x transformer hybrids; frozen manifest and aggregate receipts.
+!/reports/r194_kelly_transformer/
+/reports/r194_kelly_transformer/*/
+!/reports/r194_kelly_transformer/*.csv
+!/reports/r194_kelly_transformer/*.csv.gz
+!/reports/r194_kelly_transformer/*.json
+!/reports/r194_kelly_transformer/*.png
+!/reports/r194_kelly_transformer/*.md
