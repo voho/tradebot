@@ -2,8 +2,8 @@
 
 All target strategies share R-190's explicit initial-target entry convention;
 later decisions delegate to their original callback. Fees, fills, funding,
-warmup and daily accounting reuse the frozen R-190 evaluator. Five primaries
-and two controls receive 55 cells each; ten neighbours receive seven each.
+warmup and daily accounting reuse the frozen R-190 evaluator. Three primaries
+and two controls receive 55 cells each; six neighbours receive seven each.
 """
 from __future__ import annotations
 

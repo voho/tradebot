@@ -106,3 +106,45 @@ memory, as a fourth vote.**
 - Parent-relative power: R-192 measured 0.38–29.5 years to see +0.20 Sharpe
   against v4. This is likely unreachable on ~3.6 holdout years whatever the
   mechanism, and the bar is not lowered.
+
+## Pre-freeze disclosure (added after training, before freeze; no design change)
+
+The independent pre-holdout review found no lookahead. It strengthened the
+tests: the unlatched target is now checked at mid-day cuts while v4 is long,
+and panel drift is checked on the query side. Two data facts are recorded
+here, and neither changes the frozen design.
+
+**Panel coverage.** Complete-day coverage of the panel memory through
+2026-08-12 is uneven:
+
+| instrument | complete days |
+|---|---:|
+| BTC | 100% |
+| ETH | 98.9% |
+| LINK | 97.6% |
+| LTC | 97.3% |
+| BCH | 91.5% |
+| XRP | 61.6% |
+| XTZ | 53.7% |
+| ETC | 38.7% |
+| DASH | 16.9% |
+
+For the thin instruments, "20 observations ahead" spans more calendar time.
+That is causal but dilutes those memories. The panel was not pruned, because
+the training results had been seen.
+
+**Residual multiplier and NaN.** A NaN residual multiplier would silently
+fall back to 1 in `_to_bars`. By construction it cannot occur:
+
+- `exp(tanh(z))` is bounded;
+- training rows require complete finite windows, finite base and finite
+  next returns;
+- tokens are clipped;
+- the utility clamps its log argument.
+
+So `θ` stays finite. This is argued from the code, not measured.
+
+The first training run was discarded. It executed stale bytecode left behind
+by in-place mutation testing (a same-size mutant restored within one second).
+Only its nine residual-transformer cells differ from the clean rerun. The
+holdout runs with a fresh `PYTHONPYCACHEPREFIX`.

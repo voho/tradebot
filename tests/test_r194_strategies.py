@@ -184,3 +184,31 @@ def test_residual_seed_and_frozen_hyperparameters(monkeypatch):
     close, frac, scale = _walk_with_state()
     r194._residual_multiplier(close, frac, scale, np.minimum(frac * scale, 2.), 30)
     assert seeds == [194 + 2018, 194 + 2019]
+
+
+# --- added from the independent pre-holdout review: the latch and the
+# 23:55 cut hid day-start and query-side leaks from the tests above.
+
+@pytest.mark.parametrize("name", PRIMARY_NAMES)
+def test_prelatch_desired_is_causal_mid_day_while_long(name, regimes, fast_es, monkeypatch):
+    monkeypatch.setattr(r194, "_latch", lambda d: np.asarray(d, float))  # target == desired
+    native = KellyRegimeV4().prepare(regimes.copy())["target"].to_numpy()
+    full = make_strategy(name, panel=_panel(regimes)).prepare(regimes.copy())["target"].to_numpy()
+    cuts = [d * 288 + k for d in (470, 500, 530) for k in (137, 286)]
+    assert all(native[c] > 0 for c in cuts)
+    for cut in cuts:
+        frame = regimes.iloc[:cut + 1].copy()
+        panel = [s.loc[:frame.index[-1]] for s in _panel(regimes)]
+        prefix = make_strategy(name, panel=panel).prepare(frame)["target"].to_numpy()
+        np.testing.assert_array_equal(prefix, full[:cut + 1], err_msg=f"cut {cut}")
+
+
+def test_panel_drift_is_causal_on_the_query_side():
+    rng = np.random.default_rng(3)
+    days = pd.date_range("2020-01-01 23:55", periods=400, freq="D", tz="UTC")
+    walk = lambda: pd.Series(100 * np.exp(np.cumsum(rng.normal(0, .03, 400))), index=days)  # noqa: E731
+    query, other = walk(), walk()
+    full = _panel_drift(query, [query, other])
+    for t in (200, 260, 350):
+        cut = [s.iloc[:t + 1] for s in (query, other)]
+        np.testing.assert_array_equal(_panel_drift(cut[0], cut), full[:t + 1], err_msg=f"t {t}")
