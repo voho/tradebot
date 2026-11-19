@@ -9,8 +9,8 @@ Rows:
 - the 37 registered single-asset strategies. Each is rerun here and must
   reproduce its row in ``reports/comparison.csv``;
 - 36 frozen candidates from R-188 and R-190 to R-194;
-- 17 older candidates (R-62 to R-179) that build from their shipped defaults,
-  run on the BTC series alone and read no other file.
+- 49 older candidates (R-28 to R-179) that build from their shipped defaults,
+  run on the BTC series alone and read no other file (probed empirically).
 
 Older classes that need external data, per-round calibration or a
 multi-asset universe are not reconstructable here and are not ranked.
@@ -52,30 +52,82 @@ BENCHMARK = "buy_and_hold"
 R188 = ("robust_kelly", "coin_betting", "level_k", "focal_levels", "mfg_crowding",
         "noise_area_breakout", "intraday_momentum", "session_drift",
         "vwap_reversion", "jump_momentum")
-# Older classes reconstructable from shipped defaults: module -> round label.
-OLDER = {
-    "r62_conservative_voltarget_only": "R-62", "r62_novel_vote_constant_exposure": "R-62",
-    "r64_novel_aim_partial_adjustment": "R-64", "r64_conservative_trade_to_boundary": "R-64",
-    "r66_novel_scaled_band": "R-66", "r66_conservative_snap_to_flat": "R-66",
-    "r80_conservative_hitrate_confirm": "R-80", "r128_conservative_ev_band": "R-128",
-    "r129_conservative_per_expert_band": "R-129", "r129_novel_bucket_band": "R-129",
-    "r131_conservative_turnover_band": "R-131", "r131_novel_turnover_throttle": "R-131",
-    "r133_mechanisms": "R-133 (replicates R-131)", "r141_novel_lppls_dampener": "R-141",
-    "r157_elliott_confidence_novel": "R-157", "r179_novel": "R-179",
-}
+# Older strategies that rebuild faithfully from their shipped defaults on the
+# BTC series alone (empirically probed: they construct, trade, and read no
+# file but BTC prices). Controls, ablations, harness helpers and anything that
+# needs funding, on-chain, basis, MVRV or per-round calibration are excluded.
+OLDER = (  # (module, strategy name, round)
+    ("eprocess_regime", "eprocess_regime", "R-28"),
+    ("kelly_regime_v5_bayes", "kelly_regime_v5_bayes", "R-34"),
+    ("kelly_regime_v5_damp", "kelly_regime_v5_damp", "R-34"),
+    ("kelly_regime_v6_state_kelly", "kelly_regime_v6_state_kelly", "R-37"),
+    ("kelly_regime_v7_crra", "kelly_regime_v7_crra", "R-38"),
+    ("kelly_regime_v7_ddcap", "kelly_regime_v7_ddcap", "R-38"),
+    ("kelly_regime_v8_ladder_bag", "kelly_regime_v8_ladder_bag", "R-40"),
+    ("kelly_regime_v8_uncertainty_shrink", "kelly_regime_v8_uncertainty_shrink", "R-40"),
+    ("kelly_regime_v11_robust_ladder", "kelly_regime_v11_robust_ladder", "R-45"),
+    ("kelly_regime_v12_cppi_conservative", "kelly_regime_v12_cppi_conservative", "R-46"),
+    ("kelly_regime_v12_cppi_hurst", "kelly_regime_v12_cppi_hurst", "R-46"),
+    ("r59_novel_relative_vol_scale", "kelly_regime_v58_relvol", "R-59"),
+    ("r60_novel_cusum_vote", "kelly_regime_r60_cusum_vote", "R-60"),
+    ("r61_conservative_zscore_reversion", "kelly_regime_v61_zscore_reversion", "R-61"),
+    ("r61_novel_hurst_gated_reversion", "kelly_regime_v61_hurst_gated_reversion", "R-61"),
+    ("r62_conservative_voltarget_only", "r62_conservative_voltarget_only", "R-62"),
+    ("r62_novel_vote_constant_exposure", "r62_novel_vote_constant_exposure", "R-62"),
+    ("r64_novel_aim_partial_adjustment", "r64_novel_gp_aim_partial_adjustment", "R-64"),
+    ("r64_conservative_trade_to_boundary", "r64_conservative_trade_to_boundary", "R-64"),
+    ("r66_novel_scaled_band", "r66_novel_scaled_band", "R-66"),
+    ("r66_conservative_snap_to_flat", "r66_conservative_snap_to_flat", "R-66"),
+    ("r80_conservative_hitrate_confirm", "r80_conservative_hitrate_confirm", "R-80"),
+    ("r80_novel_metalabel_logistic", "kelly_regime_v80_metalabel", "R-80"),
+    ("r84_conservative_volume_confirm", "r84_conservative_volume_confirm", "R-84"),
+    ("r87_conservative_aci_confidence", "kelly_regime_v4_aci_conservative", "R-87"),
+    ("r87_novel_aci_conformal_scale", "kelly_regime_aci_conformal", "R-87"),
+    ("r93_shared", "r93_gz_scaled_kelly", "R-93"),
+    ("r101_conservative_jackknife_static", "kelly_regime_v4_conservative_static_jackknife", "R-101"),
+    ("r101_novel_jackknife_causal", "kelly_regime_v4_jackknife_causal", "R-101"),
+    ("r125_novel_cvar_kelly", "r125_novel_cvar_kelly", "R-125"),
+    ("r128_conservative_ev_band", "r128_conservative_ev_band", "R-128"),
+    ("r128_novel_adaptive_band", "r128_novel_adaptive_band", "R-128"),
+    ("r129_conservative_per_expert_band", "r129_conservative_per_expert_band", "R-129"),
+    ("r129_novel_bucket_band", "r129_novel_bucket_band", "R-129"),
+    ("r130_novel_commission_avoidant", "r130_cape_commission_avoidant", "R-130"),
+    ("r131_conservative_turnover_band", "r131_conservative_turnover_band", "R-131"),
+    ("r131_novel_turnover_throttle", "r131_novel_turnover_throttle", "R-131"),
+    ("r133_mechanisms", "r133_conservative_turnover_band", "R-133"),
+    ("r133_mechanisms", "r133_novel_turnover_throttle", "R-133"),
+    ("r136_conservative_har_rv_scale", "r136_conservative_har_rv_scale", "R-136"),
+    ("r141_novel_lppls_dampener", "r141_novel_lppls_dampener", "R-141"),
+    ("r142_novel_slope_dampener", "r142_novel_slope_dampener", "R-142"),
+    ("r157_elliott_confidence_novel", "elliott_confidence_kelly_v4", "R-157"),
+    ("r165_conservative_boundary", "r165_conservative_boundary_scale", "R-165"),
+    ("r165_novel_ewma", "kelly_regime_v4_ewma_scale", "R-165"),
+    ("r177_conservative_signed_vote", "r177_conservative_signed_vote", "R-177"),
+    ("r177_novel_state_kelly_short", "r177_novel_state_kelly_short", "R-177"),
+    ("r179_conservative", "r179_conservative_meta_veto", "R-179"),
+    ("r179_novel", "r179_novel_meta_sigmoid", "R-179"),
+)
 
 
 def _older_classes() -> dict[str, tuple[type, str]]:
     import importlib
-    import inspect
-    from tradebot.strategy import Strategy
     out = {}
-    for module, label in OLDER.items():
+    for module, name, label in OLDER:
         mod = importlib.import_module(module)
-        for cls in vars(mod).values():
-            if (inspect.isclass(cls) and issubclass(cls, Strategy)
-                    and cls.__module__ == mod.__name__ and not cls.__name__.startswith("_")):
-                out[cls.name] = (cls, label)
+        cls = next(c for c in vars(mod).values()
+                   if isinstance(c, type) and getattr(c, "name", None) == name and c.__module__ == mod.__name__)
+        out[name] = (cls, label)
+    return out
+
+
+def verdicts() -> dict[str, str]:
+    """Round label -> the verdict word(s) of its ledger heading."""
+    import re
+    out = {}
+    for line in (ROOT / "docs/LEDGER.md").read_text().splitlines():
+        m = re.match(r"### (R-\d+) · [^·]+ · ([A-Z][A-Z-]*)", line)
+        if m and m.group(1) not in out:
+            out[m.group(1)] = m.group(2)
     return out
 
 
@@ -129,14 +181,21 @@ def one(job):
     return row, daily_returns(result.equity).rename(f"{name}|{market}")
 
 
-def run(workers: int) -> tuple[pd.DataFrame, pd.DataFrame]:
+def run(workers: int, add: bool = False) -> tuple[pd.DataFrame, pd.DataFrame]:
     names = [*registered(), *candidates()]
+    if add:
+        done_frame = pd.read_csv(OUT / "runs.csv")
+        done_curves = pd.read_csv(OUT / "daily_returns.csv.gz", index_col=0)
+        names = [n for n in names if n not in set(done_frame.strategy)]
     jobs = sorted(((n, k) for n in names for k in MARKETS),
                   key=lambda j: "transformer" not in j[0])  # slowest first
     with ProcessPoolExecutor(workers) as pool:
         results = list(pool.map(one, jobs))
     frame = pd.DataFrame([row for row, _ in results])
     curves = pd.concat([curve for _, curve in results], axis=1)
+    if add:
+        frame = pd.concat([done_frame, frame], ignore_index=True)
+        curves = pd.concat([done_curves, curves], axis=1)
     OUT.mkdir(parents=True, exist_ok=True)
     frame.to_csv(OUT / "runs.csv", index=False)
     curves.to_csv(OUT / "daily_returns.csv.gz")
@@ -175,13 +234,15 @@ def intervals(curves: pd.DataFrame, names: list[str]) -> pd.DataFrame:
 
 def build(frame: pd.DataFrame, curves: pd.DataFrame) -> pd.DataFrame:
     labels = candidates()
+    verdict = verdicts()
     rows = []
     for name, group in frame.groupby("strategy"):
         g = group.set_index("market")
         best = g.final_balance.idxmax()
         rows.append(dict(
             strategy=name, origin=labels.get(name, "registered"),
-            status="evaluated, NEGATIVE" if name in labels else "registered",
+            status=(f"evaluated, {verdict.get(labels[name].split()[0], 'NEGATIVE')}"
+                    if name in labels else "registered"),
             spot=g.loc["spot", "final_balance"], futures_5x=g.loc["futures_5x", "final_balance"],
             profit=g.loc[best, "final_balance"] - 1_000.0, best_market=best,
             max_dd=g.loc[best, "max_drawdown_pct"], trades=int(g.loc[best, "num_trades"])))
@@ -220,12 +281,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--reuse", action="store_true", help="rebuild from saved runs")
+    parser.add_argument("--add", action="store_true", help="run only strategies missing from saved runs")
     args = parser.parse_args()
     if args.reuse:
         frame = pd.read_csv(OUT / "runs.csv")
         curves = pd.read_csv(OUT / "daily_returns.csv.gz", index_col=0)
     else:
-        frame, curves = run(args.workers)
+        frame, curves = run(args.workers, args.add)
     check = reference_check(frame)
     if not check.ok.all():
         print("Registered rows that do NOT reproduce reports/comparison.csv:")
