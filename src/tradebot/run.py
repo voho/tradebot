@@ -25,7 +25,6 @@ from tradebot.report import (
     overlay_chart,
     print_comparison,
     run_chart,
-    update_readme,
     update_readme_multi_asset,
 )
 
@@ -198,17 +197,14 @@ def run_matrix(cfg: RunConfig) -> tuple[list[Metrics], list[BacktestResult]]:
     print_comparison(all_metrics)
     print(f"\nreport: {md}\ncharts: {charts_dir}/", file=sys.stderr)
 
-    # The README table must always cover every registered strategy on the
-    # full matrix (CI enforces it), so partial or synthetic runs skip it.
     full_run = set(names) >= set(available_strategies())
     real_data = all(m.data_label != "SYNTHETIC" for m in all_metrics)
-    if full_run and real_data and not cfg.max_bars:
-        if update_readme(all_metrics, cfg.readme, period=period,
-                         evidence=evidence, ordering=ordering):
-            print(f"updated comparison table in {cfg.readme}", file=sys.stderr)
-    else:
-        print("README comparison not updated (partial/synthetic/trimmed run)",
-              file=sys.stderr)
+    # The README holds one ranking of every rebuildable strategy, written by
+    # experiments/all_strategies_rank.py from reports/comparison.csv plus the
+    # research candidates; rewriting it here with registered rows only would
+    # silently shrink it back to 37 rows.
+    print("README ranking: run `python experiments/all_strategies_rank.py` "
+          "to refresh it from this run's reports/comparison.csv", file=sys.stderr)
 
     # Multi-asset strategies (backlog B-32): additive, after and independent
     # of everything above. Runs on the same "full, real-data, untrimmed"

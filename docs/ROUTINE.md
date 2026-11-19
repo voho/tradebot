@@ -468,8 +468,9 @@ Three rules the format exists to protect, learned by losing them:
 Then, by verdict:
 
 - **PROMOTED** → register the strategy, run `python scripts/inference.py`
-  so it has an interval, then the full `tradebot run` to regenerate the
-  README table with that interval in it, and refresh
+  so it has an interval, then the full `tradebot run` to refresh
+  `reports/comparison.csv`, then `python experiments/all_strategies_rank.py`
+  to put it in the README's single strategy ranking, and refresh
   `docs/STRATEGIES.md` and `docs/VALIDATION.md`. CI fails if a
   registered strategy is missing from either the README table or
   `reports/inference/bootstrap.csv`.

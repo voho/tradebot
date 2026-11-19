@@ -270,22 +270,32 @@ def money(x: float) -> str:
     return f"{sign}${x / 1000:,.1f}K" if x >= 10_000 else f"{sign}${x:,.0f}" if x >= 100 else f"{sign}${x:,.2f}"
 
 
-def interval(point, lo, hi, unit="") -> str:
-    mark = "▲" if lo > 0 else "▼" if hi < 0 else "≈"
-    return f"{mark} {point:+.2f}{unit} [{lo:+.2f}, {hi:+.2f}]"
+def source_path(name: str) -> str:
+    """Repository-relative path of the file that implements ``name``."""
+    import inspect
+    return Path(inspect.getsourcefile(type(make(name)))).resolve().relative_to(ROOT).as_posix()
 
 
 def markdown(ranked: pd.DataFrame) -> str:
-    lines = ["| # | strategy | origin | status | profit (best market) | spot | futures_5x | max DD | "
-             "growth vs hold (spot) | max DD vs hold (spot) |",
-             "|---:|---|---|---|---:|---:|---:|---:|---|---|"]
+    lines = ["| # | strategy | from | profit | spot | futures 5x | max drawdown |",
+             "|---:|---|---|---:|---:|---:|---:|"]
     for r in ranked.itertuples():
-        dd = (f"{'▲' if r.d_max_dd_hi < 0 else '▼' if r.d_max_dd_lo > 0 else '≈'} "
-              f"{r.d_max_dd_pp:+.1f}pp [{r.d_max_dd_lo:+.1f}, {r.d_max_dd_hi:+.1f}]")
-        lines.append(f"| {r.rank} | `{r.strategy}` | {r.origin} | {r.status} | {money(r.profit)} | "
-                     f"{money(r.spot)} | {money(r.futures_5x)} | {r.max_dd:.0f}% | "
-                     f"{interval(r.d_log_growth, r.d_log_growth_lo, r.d_log_growth_hi)} | {dd} |")
+        lines.append(f"| {r.rank} | [{r.strategy}]({source_path(r.strategy)}) | {r.origin} | "
+                     f"{money(r.profit)} | {money(r.spot)} | {money(r.futures_5x)} | {r.max_dd:.0f}% |")
     return "\n".join(lines)
+
+
+README_BEGIN = "<!-- comparison:begin -->"
+README_END = "<!-- comparison:end -->"
+
+
+def write_readme(table: str) -> None:
+    """Replace the README ranking between its markers (the only ranking table)."""
+    path = ROOT / "README.md"
+    text = path.read_text()
+    head, rest = text.split(README_BEGIN)
+    _, tail = rest.split(README_END)
+    path.write_text(f"{head}{README_BEGIN}\n{table}\n{README_END}{tail}")
 
 
 if __name__ == "__main__":
@@ -305,5 +315,7 @@ if __name__ == "__main__":
         print("Registered rows that do NOT reproduce reports/comparison.csv:")
         print(check[~check.ok].to_string(index=False))
     ranked = build(frame, curves)
-    (OUT / "table.md").write_text(markdown(ranked) + "\n")
-    print(markdown(ranked))
+    table = markdown(ranked)
+    (OUT / "table.md").write_text(table + "\n")
+    write_readme(table)
+    print(table)
