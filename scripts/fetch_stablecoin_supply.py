@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Fetch daily aggregate stablecoin circulating supply from CoinMetrics'
 free community API (R-54 NOVEL branch, B-21-adjacent but a genuinely new
-signal -- see ``experiments/_stablecoin_signal.py`` for the mechanism).
+signal; its strategy code was removed on 2026-11-19, see docs/LEDGER.md R-54).
 
 Modeled directly on ``scripts/fetch_onchain_metrics.py`` (B-07/R-44):
 same endpoint family, same chunked date-range fetch with retry/backoff,
@@ -14,8 +14,8 @@ started: USDT ``SplyCur`` is served back to 2017-01-01 with no gaps in a
 spot-check; USDC ``SplyCur`` is served from 2018-08-03 (all-zero/placeholder
 until 2018-09-25, when its real minted supply begins) -- USDC's real
 history is therefore roughly 1.5 years shorter than USDT's, which is why
-this round's signal module uses USDT alone (see ``_stablecoin_signal.py``'s
-module docstring for the explicit reasoning, not silently proxied here).
+that round's signal used USDT alone (reasoning in docs/LEDGER.md R-54),
+not silently proxied here.
 
 Usage::
 

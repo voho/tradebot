@@ -9,7 +9,7 @@ Rows:
 - the 37 registered single-asset strategies. Each is rerun here and must
   reproduce its row in ``reports/comparison.csv``;
 - 36 frozen candidates from R-188 and R-190 to R-194;
-- 49 older candidates (R-28 to R-179) that build from their shipped defaults,
+- 44 older candidates (R-28 to R-179) that build from their shipped defaults,
   run on the BTC series alone and read no other file (probed empirically).
 
 Older classes that need external data, per-round calibration or a
@@ -56,6 +56,9 @@ R188 = ("robust_kelly", "coin_betting", "level_k", "focal_levels", "mfg_crowding
 # BTC series alone (empirically probed: they construct, trade, and read no
 # file but BTC prices). Controls, ablations, harness helpers and anything that
 # needs funding, on-chain, basis, MVRV or per-round calibration are excluded.
+# Also excluded: classes whose shipped defaults switch their mechanism off
+# (they reproduce kelly_regime_v4 bit for bit, so the row would not be the
+# strategy their round tested): R-101 static jackknife, R-141, R-142, R-165.
 OLDER = (  # (module, strategy name, round)
     ("eprocess_regime", "eprocess_regime", "R-28"),
     ("kelly_regime_v5_bayes", "kelly_regime_v5_bayes", "R-34"),
@@ -84,7 +87,6 @@ OLDER = (  # (module, strategy name, round)
     ("r87_conservative_aci_confidence", "kelly_regime_v4_aci_conservative", "R-87"),
     ("r87_novel_aci_conformal_scale", "kelly_regime_aci_conformal", "R-87"),
     ("r93_shared", "r93_gz_scaled_kelly", "R-93"),
-    ("r101_conservative_jackknife_static", "kelly_regime_v4_conservative_static_jackknife", "R-101"),
     ("r101_novel_jackknife_causal", "kelly_regime_v4_jackknife_causal", "R-101"),
     ("r125_novel_cvar_kelly", "r125_novel_cvar_kelly", "R-125"),
     ("r128_conservative_ev_band", "r128_conservative_ev_band", "R-128"),
@@ -97,11 +99,7 @@ OLDER = (  # (module, strategy name, round)
     ("r133_mechanisms", "r133_conservative_turnover_band", "R-133"),
     ("r133_mechanisms", "r133_novel_turnover_throttle", "R-133"),
     ("r136_conservative_har_rv_scale", "r136_conservative_har_rv_scale", "R-136"),
-    ("r141_novel_lppls_dampener", "r141_novel_lppls_dampener", "R-141"),
-    ("r142_novel_slope_dampener", "r142_novel_slope_dampener", "R-142"),
     ("r157_elliott_confidence_novel", "elliott_confidence_kelly_v4", "R-157"),
-    ("r165_conservative_boundary", "r165_conservative_boundary_scale", "R-165"),
-    ("r165_novel_ewma", "kelly_regime_v4_ewma_scale", "R-165"),
     ("r177_conservative_signed_vote", "r177_conservative_signed_vote", "R-177"),
     ("r177_novel_state_kelly_short", "r177_novel_state_kelly_short", "R-177"),
     ("r179_conservative", "r179_conservative_meta_veto", "R-179"),
@@ -181,11 +179,23 @@ def one(job):
     return row, daily_returns(result.equity).rename(f"{name}|{market}")
 
 
+def _read_curves() -> pd.DataFrame:
+    """Saved daily returns with a real UTC date index.
+
+    The CSV round trip returns text dates; merging those with fresh
+    DatetimeIndex columns would double the rows and pad every series with
+    zeros. Normalise, then collapse any rows that share a date.
+    """
+    curves = pd.read_csv(OUT / "daily_returns.csv.gz", index_col=0)
+    curves.index = pd.to_datetime(curves.index, utc=True)
+    return curves.groupby(level=0).first()
+
+
 def run(workers: int, add: bool = False) -> tuple[pd.DataFrame, pd.DataFrame]:
     names = [*registered(), *candidates()]
     if add:
         done_frame = pd.read_csv(OUT / "runs.csv")
-        done_curves = pd.read_csv(OUT / "daily_returns.csv.gz", index_col=0)
+        done_curves = _read_curves()
         names = [n for n in names if n not in set(done_frame.strategy)]
     jobs = sorted(((n, k) for n in names for k in MARKETS),
                   key=lambda j: "transformer" not in j[0])  # slowest first
@@ -193,6 +203,7 @@ def run(workers: int, add: bool = False) -> tuple[pd.DataFrame, pd.DataFrame]:
         results = list(pool.map(one, jobs))
     frame = pd.DataFrame([row for row, _ in results])
     curves = pd.concat([curve for _, curve in results], axis=1)
+    curves.index = pd.to_datetime(curves.index, utc=True)
     if add:
         frame = pd.concat([done_frame, frame], ignore_index=True)
         curves = pd.concat([done_curves, curves], axis=1)
@@ -285,9 +296,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.reuse:
         frame = pd.read_csv(OUT / "runs.csv")
-        curves = pd.read_csv(OUT / "daily_returns.csv.gz", index_col=0)
+        curves = _read_curves()
     else:
         frame, curves = run(args.workers, args.add)
+    frame = frame[frame.strategy.isin([*registered(), *candidates()])]
     check = reference_check(frame)
     if not check.ok.all():
         print("Registered rows that do NOT reproduce reports/comparison.csv:")

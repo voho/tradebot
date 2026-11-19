@@ -245,108 +245,235 @@ ideas being re-tried blind. Explore variants with
 `walkforward`) rather than by editing a registered strategy's defaults,
 so the comparison table stays a stable record.
 
-## Every strategy tried, ranked (73)
+## Every strategy tried, ranked by profit (117)
 
-This table holds every strategy in this repo that can be rerun exactly. It has
-the 37 registered rows above, plus the 36 unregistered candidates with frozen
-configurations from R-188 and R-190 to R-194. Most of the 36 are Kelly-family
-variants. R-189's ten candidates are already registered.
+This table holds every strategy in this repo that can be rebuilt faithfully:
+37 registered and 80 evaluated candidates. The candidates come
+from R-28 to R-194; most are `kelly_regime_v4` variants. All 117 rows run on
+**one dataset under the main table's protocol**: full history 2017–2026
+(`btcusd_spot_5m.csv.gz`), $1,000, 0.10% spot and 0.05% futures at 5×. Rows
+are sorted by **profit, descending**, in each strategy's better market.
 
-All 73 use the main table's protocol: full history 2017–2026, $1,000, 0.10%
-spot and 0.05% futures at 5×. Rows are ranked by the better of the two
-balances. `buy_and_hold` and `kelly_regime_v4` were rerun and reproduce their
-rows above exactly, and R-188's rows match that round's own receipts.
-Reproduce with `python experiments/all_strategies_rank.py`.
+- **Reproduction:** every registered row was rerun and reproduces the table
+  above exactly (74 of 74 results).
+- **Intervals:** these are `scripts/inference.py`'s paired bootstrap against
+  spot buy-and-hold (30-day blocks, 2,000 resamples, 95%). `kelly_regime_v4`
+  reproduces its row above to the digit.
+- **To reproduce:** `python experiments/all_strategies_rank.py`
 
-**Read the status column, not the rank.** This is one path, the futures
-column charges no funding, and final balance rewards leverage:
+**Read the status and the intervals, not the rank:**
 
-- **#1 earned its balance with risk.** `r194_residual_transformer` reaches
-  $207.6K with a 65% drawdown and a lower Sharpe than v4. Judged at matched
-  risk on the 2023+ holdout, it was NEGATIVE.
-- **Every "evaluated, NEGATIVE" row failed its round's frozen holdout test.**
-  This table changes none of those verdicts.
+- **Profit rewards leverage.** This is one path, and the futures column
+  charges no funding. The top two rows (`kelly_regime_v12_cppi_*`, R-46)
+  reach $2.3M with an **81%** drawdown, and their growth interval against
+  holding still crosses zero.
+- **No row is distinguishable from holding on growth.** Every growth
+  interval in this table crosses zero except the ▼ rows, which are worse.
+- **Every "evaluated, NEGATIVE" row failed its round's frozen test.** This
+  table changes no verdict.
 
-Not included: about 97 strategy classes from R-59 to R-187. Their frozen
-settings and external data feeds can't be reconstructed reliably from
-constructor defaults, so they are documented in
-[docs/LEDGER.md](docs/LEDGER.md) instead.
+| # | strategy | origin | status | profit (best market) | spot | futures_5x | max DD | growth vs hold (spot) | max DD vs hold (spot) |
+|---:|---|---|---|---:|---:|---:|---:|---|---|
+| 1 | `kelly_regime_v12_cppi_conservative` | R-46 | evaluated, NEGATIVE | $2,320.5K | $153.0K | $2,321.5K | 81% | ≈ +0.87 [-1.20, +3.13] | ▲ -21.9pp [-39.4, -1.5] |
+| 2 | `kelly_regime_v12_cppi_hurst` | R-46 | evaluated, NEGATIVE | $2,251.5K | $151.3K | $2,252.5K | 81% | ≈ +0.86 [-1.19, +3.11] | ▲ -21.9pp [-39.2, -1.3] |
+| 3 | `kelly_regime_aci_conformal` | R-87 | evaluated, NEGATIVE | $247.5K | $86.8K | $248.5K | 51% | ≈ +0.31 [-2.24, +2.96] | ▲ -42.6pp [-51.5, -13.7] |
+| 4 | `r179_novel_meta_sigmoid` | R-179 | evaluated, NEGATIVE | $217.8K | $95.8K | $218.8K | 40% | ≈ +0.40 [-2.07, +3.06] | ▲ -35.4pp [-51.9, -15.4] |
+| 5 | `r194_residual_transformer` | R-194 | evaluated, NEGATIVE | $206.6K | $50.4K | $207.6K | 65% | ≈ -0.24 [-2.97, +2.51] | ▲ -34.5pp [-48.3, -9.1] |
+| 6 | `r177_conservative_signed_vote` | R-177 | evaluated, NEGATIVE | $174.4K | $46.6K | $175.4K | 41% | ≈ -0.32 [-3.29, +2.69] | ▲ -49.5pp [-59.1, -18.8] |
+| 7 | `r192_robust_state` | R-192 | evaluated, NEGATIVE | $168.6K | $64.3K | $169.6K | 36% | ≈ +0.01 [-2.66, +2.78] | ▲ -39.6pp [-53.9, -17.4] |
+| 8 | `r194_kelly_episodic_memory` | R-194 | evaluated, NEGATIVE | $160.7K | $35.3K | $161.7K | 43% | ≈ -0.59 [-3.57, +2.35] | ▲ -44.1pp [-53.1, -13.3] |
+| 9 | `r62_novel_vote_constant_exposure` | R-62 | evaluated, NEGATIVE | $160.3K | $136.9K | $161.3K | 58% | ≈ +0.76 [-1.46, +3.24] | ▲ -26.7pp [-45.8, -6.8] |
+| 10 | `r131_conservative_turnover_band` | R-131 | evaluated, NEGATIVE | $157.6K | $67.3K | $158.6K | 35% | ≈ +0.05 [-2.57, +2.83] | ▲ -41.6pp [-54.8, -18.7] |
+| 11 | `r133_conservative_turnover_band` | R-133 | evaluated, NEGATIVE | $156.2K | $65.8K | $157.2K | 35% | ≈ +0.03 [-2.60, +2.83] | ▲ -40.8pp [-54.4, -18.7] |
+| 12 | `kelly_regime_v4` | registered | registered | $155.2K | $66.8K | $156.2K | 35% | ≈ +0.04 [-2.60, +2.85] | ▲ -41.1pp [-54.8, -18.4] |
+| 13 | `r192_tracking_budget` | R-192 | evaluated, NEGATIVE | $150.1K | $66.8K | $151.1K | 42% | ≈ +0.04 [-2.58, +2.79] | ▲ -43.8pp [-54.6, -18.1] |
+| 14 | `kelly_regime_v4_aci_conservative` | R-87 | evaluated, NEGATIVE | $148.0K | $66.0K | $149.0K | 34% | ≈ +0.03 [-2.62, +2.85] | ▲ -41.3pp [-54.8, -18.5] |
+| 15 | `r84_conservative_volume_confirm` | R-84 | evaluated, NEGATIVE | $144.8K | $71.3K | $145.8K | 33% | ≈ +0.11 [-2.55, +2.90] | ▲ -49.7pp [-55.9, -19.8] |
+| 16 | `r66_novel_scaled_band` | R-66 | evaluated, NEGATIVE | $143.2K | $68.3K | $144.2K | 35% | ≈ +0.07 [-2.57, +2.84] | ▲ -42.5pp [-54.8, -18.9] |
+| 17 | `kelly_regime_v11_robust_ladder` | R-45 | evaluated, NEGATIVE | $142.7K | $68.9K | $143.7K | 36% | ≈ +0.07 [-2.56, +2.88] | ▲ -43.6pp [-54.9, -17.1] |
+| 18 | `r179_conservative_meta_veto` | R-179 | evaluated, NEGATIVE | $140.4K | $67.0K | $141.4K | 36% | ≈ +0.05 [-2.62, +2.83] | ▲ -42.5pp [-54.9, -18.0] |
+| 19 | `kelly_regime_v3` | registered | registered | $138.5K | $65.8K | $139.5K | 42% | ≈ +0.03 [-2.54, +2.81] | ▲ -36.8pp [-53.4, -16.1] |
+| 20 | `kelly_regime_v8_uncertainty_shrink` | R-40 | evaluated, NEGATIVE | $135.2K | $64.7K | $136.2K | 37% | ≈ +0.01 [-2.72, +2.86] | ▲ -43.6pp [-57.0, -20.2] |
+| 21 | `r192_confirm_increase` | R-192 | evaluated, NEGATIVE | $131.9K | $59.9K | $132.9K | 37% | ≈ -0.07 [-2.72, +2.75] | ▲ -40.5pp [-54.3, -18.0] |
+| 22 | `r136_conservative_har_rv_scale` | R-136 | evaluated, NEGATIVE | $131.1K | $67.0K | $132.1K | 37% | ≈ +0.05 [-2.70, +2.84] | ▲ -46.6pp [-55.1, -19.0] |
+| 23 | `r64_novel_gp_aim_partial_adjustment` | R-64 | evaluated, NEGATIVE | $130.5K | $67.1K | $131.5K | 44% | ≈ +0.05 [-2.58, +2.85] | ▲ -41.1pp [-54.7, -18.4] |
+| 24 | `r190_v3_b05` | R-190 | evaluated, NEGATIVE | $129.0K | $51.8K | $130.0K | 44% | ≈ -0.21 [-2.94, +2.57] | ▲ -35.8pp [-53.0, -15.6] |
+| 25 | `r190_v3_b10` | R-190 | evaluated, NEGATIVE | $129.0K | $57.2K | $130.0K | 44% | ≈ -0.11 [-2.79, +2.64] | ▲ -37.1pp [-53.1, -15.8] |
+| 26 | `r190_v4_b05` | R-190 | evaluated, NEGATIVE | $129.0K | $57.5K | $130.0K | 35% | ≈ -0.11 [-2.88, +2.71] | ▲ -41.8pp [-55.1, -18.9] |
+| 27 | `r190_v4_b10` | R-190 | evaluated, NEGATIVE | $129.0K | $61.6K | $130.0K | 35% | ≈ -0.04 [-2.76, +2.77] | ▲ -43.3pp [-55.2, -19.1] |
+| 28 | `r66_conservative_snap_to_flat` | R-66 | evaluated, NEGATIVE | $128.8K | $67.9K | $129.8K | 37% | ≈ +0.06 [-2.66, +2.85] | ▲ -46.7pp [-57.3, -20.1] |
+| 29 | `r190_v3_b20` | R-190 | evaluated, NEGATIVE | $128.3K | $51.7K | $129.3K | 43% | ≈ -0.21 [-2.98, +2.58] | ▲ -38.4pp [-53.3, -15.4] |
+| 30 | `r131_novel_turnover_throttle` | R-131 | evaluated, NEGATIVE | $126.9K | $47.4K | $127.9K | 40% | ≈ -0.30 [-2.91, +2.47] | ▲ -33.4pp [-51.2, -15.8] |
+| 31 | `r133_novel_turnover_throttle` | R-133 | evaluated, NEGATIVE | $126.8K | $65.1K | $127.8K | 40% | ≈ +0.02 [-2.63, +2.77] | ▲ -37.9pp [-53.9, -18.4] |
+| 32 | `r192_factor_clock` | R-192 | evaluated, NEGATIVE | $126.3K | $51.8K | $127.3K | 36% | ≈ -0.21 [-2.93, +2.62] | ▲ -40.2pp [-53.4, -16.9] |
+| 33 | `r190_v4_b20` | R-190 | evaluated, NEGATIVE | $124.3K | $67.1K | $125.3K | 35% | ≈ +0.05 [-2.76, +2.87] | ▲ -49.6pp [-57.0, -20.2] |
+| 34 | `kelly_regime_v2` | registered | registered | $121.0K | $46.4K | $122.0K | 40% | ≈ -0.32 [-3.15, +2.62] | ▲ -43.4pp [-54.7, -15.3] |
+| 35 | `r64_conservative_trade_to_boundary` | R-64 | evaluated, NEGATIVE | $113.0K | $65.9K | $114.0K | 41% | ≈ +0.03 [-2.54, +2.69] | ▲ -43.4pp [-54.3, -20.7] |
+| 36 | `r194_panel_cross_attention` | R-194 | evaluated, NEGATIVE | $110.5K | $53.4K | $111.5K | 47% | ≈ -0.18 [-2.60, +2.30] | ▲ -34.8pp [-47.7, -16.2] |
+| 37 | `kelly_regime` | registered | registered | $107.2K | $42.1K | $108.2K | 43% | ≈ -0.42 [-3.08, +2.36] | ▲ -38.9pp [-50.3, -12.2] |
+| 38 | `kelly_regime_ev` | registered | registered | $107.0K | $40.9K | $108.0K | 37% | ≈ -0.45 [-3.28, +2.58] | ▲ -40.0pp [-55.5, -16.3] |
+| 39 | `r192_anchor_confirm` | R-192 | evaluated, NEGATIVE | $102.4K | $53.6K | $103.4K | 46% | ≈ -0.17 [-2.79, +2.53] | ▲ -37.7pp [-52.2, -14.7] |
+| 40 | `r190_blend_b10` | R-190 | evaluated, NEGATIVE | $94.0K | $49.9K | $95.0K | 40% | ≈ -0.25 [-2.97, +2.55] | ▲ -41.7pp [-53.1, -16.0] |
+| 41 | `kelly_regime_v8_ladder_bag` | R-40 | evaluated, NEGATIVE | $92.5K | $71.9K | $93.5K | 46% | ≈ +0.12 [-2.51, +2.85] | ▲ -43.8pp [-54.9, -18.9] |
+| 42 | `r190_base_b05` | R-190 | evaluated, NEGATIVE | $90.8K | $39.3K | $91.8K | 44% | ≈ -0.49 [-3.19, +2.29] | ▲ -36.9pp [-49.2, -12.1] |
+| 43 | `r190_base_b10` | R-190 | evaluated, NEGATIVE | $90.8K | $38.8K | $91.8K | 44% | ≈ -0.50 [-3.21, +2.28] | ▲ -38.5pp [-50.1, -12.3] |
+| 44 | `r190_base_b20` | R-190 | evaluated, NEGATIVE | $85.3K | $42.7K | $86.3K | 45% | ≈ -0.40 [-3.14, +2.45] | ▲ -38.7pp [-50.0, -11.5] |
+| 45 | `kelly_regime_v6_state_kelly` | R-37 | evaluated, NEGATIVE | $81.4K | $11.9K | $82.4K | 71% | ≈ -1.68 [-4.91, +1.56] | ≈ -23.1pp [-41.5, +5.2] |
+| 46 | `kelly_regime_v7_crra` | R-38 | evaluated, NEGATIVE | $75.6K | $32.1K | $76.6K | 47% | ≈ -0.69 [-3.83, +2.50] | ▲ -51.0pp [-60.4, -20.1] |
+| 47 | `kelly_regime_v4_jackknife_causal` | R-101 | evaluated, NEGATIVE | $72.4K | $36.7K | $73.4K | 33% | ≈ -0.55 [-3.75, +2.54] | ▲ -50.8pp [-59.7, -21.8] |
+| 48 | `kelly_regime_ev_fast` | registered | registered | $70.1K | $71.1K | $70.8K | 32% | ≈ +0.11 [-3.08, +3.29] | ▲ -52.9pp [-62.9, -20.7] |
+| 49 | `buy_and_hold` | registered | registered | $65.0K | $66.0K | $18.05 | 84% | ≈ +0.00 [+0.00, +0.00] | ≈ +0.0pp [+0.0, +0.0] |
+| 50 | `elliott_confidence_kelly_v4` | R-157 | evaluated, NEGATIVE | $63.9K | $40.1K | $64.9K | 36% | ≈ -0.47 [-3.35, +2.53] | ▲ -46.8pp [-57.8, -21.1] |
+| 51 | `r80_conservative_hitrate_confirm` | R-80 | evaluated, NEGATIVE | $60.4K | $46.8K | $61.4K | 48% | ≈ -0.31 [-2.82, +2.31] | ▲ -37.1pp [-50.2, -18.7] |
+| 52 | `swap_regret_council` | registered | registered | $56.1K | $57.1K | $57.1K | 84% | ≈ -0.11 [-0.70, +0.33] | ≈ -0.0pp [-4.2, +4.4] |
+| 53 | `cautious_optimism` | registered | registered | $54.4K | $55.4K | $55.3K | 84% | ≈ -0.14 [-0.73, +0.31] | ≈ -0.2pp [-4.3, +4.4] |
+| 54 | `normalhedge_council` | registered | registered | $53.6K | $54.6K | $54.6K | 84% | ≈ -0.16 [-0.74, +0.30] | ≈ -0.2pp [-4.4, +4.3] |
+| 55 | `sleeping_council` | registered | registered | $52.8K | $53.8K | $41.6K | 84% | ≈ -0.17 [-0.76, +0.30] | ≈ -0.1pp [-4.5, +4.4] |
+| 56 | `squint_council` | registered | registered | $48.5K | $49.5K | $49.4K | 83% | ≈ -0.25 [-0.86, +0.24] | ≈ -0.8pp [-4.8, +4.0] |
+| 57 | `kelly_regime_v58_relvol` | R-59 | evaluated, NEGATIVE | $46.6K | $30.8K | $47.6K | 35% | ≈ -0.73 [-3.57, +2.30] | ▲ -40.3pp [-60.3, -25.1] |
+| 58 | `r62_conservative_voltarget_only` | R-62 | evaluated, NEGATIVE | $41.8K | $27.3K | $42.8K | 74% | ≈ -0.85 [-2.33, +0.58] | ▲ -12.0pp [-21.7, -0.2] |
+| 59 | `champions_council` | registered | registered | $35.8K | $19.3K | $36.8K | 37% | ≈ -1.20 [-4.06, +1.81] | ▲ -49.5pp [-54.7, -19.0] |
+| 60 | `r191_cost_proximal` | R-191 | evaluated, NEGATIVE | $34.3K | $35.3K | $28.7K | 53% | ≈ -0.59 [-3.65, +2.38] | ▲ -32.8pp [-46.7, -5.8] |
+| 61 | `kelly_regime_v5_damp` | R-34 | evaluated, NEGATIVE | $33.1K | $30.1K | $34.1K | 28% | ≈ -0.75 [-3.79, +2.33] | ▲ -52.6pp [-62.6, -27.3] |
+| 62 | `kelly_regime_v80_metalabel` | R-80 | evaluated, NEGATIVE | $31.6K | $22.0K | $32.6K | 34% | ≈ -1.06 [-4.24, +1.98] | ▲ -44.5pp [-53.3, -17.6] |
+| 63 | `r129_novel_bucket_band` | R-129 | evaluated, NEGATIVE | $29.4K | $30.4K | $643 | 59% | ≈ -0.74 [-3.21, +1.92] | ▲ -26.2pp [-47.7, -12.1] |
+| 64 | `r130_cape_commission_avoidant` | R-130 | evaluated, NEGATIVE | $24.2K | $25.2K | $537 | 55% | ≈ -0.93 [-3.34, +1.55] | ▲ -28.4pp [-43.9, -9.4] |
+| 65 | `r191_sticky_expert` | R-191 | evaluated, NEGATIVE | $23.8K | $24.0K | $24.8K | 74% | ≈ -0.98 [-3.86, +1.97] | ≈ -10.5pp [-35.9, +8.3] |
+| 66 | `r191_conformal_tail` | R-191 | evaluated, NEGATIVE | $22.4K | $23.4K | $21.9K | 59% | ≈ -1.00 [-4.06, +2.14] | ▲ -23.8pp [-45.2, -1.2] |
+| 67 | `r128_conservative_ev_band` | R-128 | evaluated, NEGATIVE | $21.6K | $22.6K | $9.15 | 51% | ≈ -1.04 [-3.77, +1.84] | ▲ -35.0pp [-49.9, -10.8] |
+| 68 | `r129_conservative_per_expert_band` | R-129 | evaluated, NEGATIVE | $18.3K | $19.3K | $26.53 | 56% | ≈ -1.20 [-3.65, +1.38] | ▲ -27.0pp [-42.4, -6.6] |
+| 69 | `r128_novel_adaptive_band` | R-128 | evaluated, NEGATIVE | $17.6K | $18.6K | $24.05 | 53% | ≈ -1.23 [-3.92, +1.60] | ▲ -31.4pp [-48.5, -10.9] |
+| 70 | `r191_robust_growth` | R-191 | evaluated, NEGATIVE | $14.5K | $15.5K | $15.0K | 78% | ≈ -1.42 [-4.11, +1.25] | ≈ -6.9pp [-28.2, +11.4] |
+| 71 | `nash_council` | registered | registered | $13.2K | $3,170 | $14.2K | 71% | ▼ -3.00 [-5.05, -0.76] | ≈ -2.3pp [-20.1, +17.3] |
+| 72 | `blackwell_council` | registered | registered | $13.1K | $10.9K | $14.1K | 58% | ≈ -1.77 [-5.09, +1.38] | ▲ -26.1pp [-56.0, -12.4] |
+| 73 | `qre_council` | registered | registered | $12.6K | $7,881 | $13.6K | 56% | ≈ -2.09 [-4.49, +0.34] | ▲ -25.0pp [-36.7, -6.8] |
+| 74 | `minimax_council` | registered | registered | $12.5K | $4,010 | $13.5K | 58% | ≈ -2.77 [-6.07, +0.62] | ≈ -21.5pp [-41.9, +11.5] |
+| 75 | `hedge_experts` | registered | registered | $12.3K | $13.3K | $258 | 59% | ≈ -1.57 [-4.01, +0.96] | ▲ -24.1pp [-39.1, -3.0] |
+| 76 | `r193_attention` | R-193 | evaluated, NEGATIVE | $8,412 | $9,412 | $9,155 | 71% | ≈ -1.92 [-4.60, +0.64] | ▲ -14.1pp [-34.4, -1.2] |
+| 77 | `mfg_crowding` | R-188 | evaluated, NEGATIVE | $7,112 | $4,433 | $8,112 | 51% | ≈ -2.67 [-5.87, +0.69] | ▲ -24.9pp [-49.8, -3.4] |
+| 78 | `eprocess_regime` | R-28 | evaluated, NEGATIVE | $7,102 | $8,102 | $7,881 | 21% | ≈ -2.07 [-5.67, +1.50] | ▲ -62.6pp [-73.9, -38.5] |
+| 79 | `robust_kelly` | R-188 | evaluated, NEGATIVE | $5,190 | $1,889 | $6,190 | 60% | ≈ -3.52 [-7.49, +0.60] | ≈ -23.3pp [-54.6, +2.3] |
+| 80 | `elliott_wave_zigzag` | registered | registered | $4,027 | $5,027 | $12.75 | 44% | ≈ -2.54 [-6.51, +1.49] | ≈ -43.8pp [-50.7, +2.9] |
+| 81 | `r193_transformer` | R-193 | evaluated, NEGATIVE | $4,005 | $4,473 | $5,005 | 79% | ≈ -2.66 [-5.96, +0.32] | ≈ -5.6pp [-25.2, +13.9] |
+| 82 | `kelly_regime_v7_ddcap` | R-38 | evaluated, NEGATIVE | $3,616 | $4,616 | $3,944 | 24% | ≈ -2.63 [-6.30, +1.08] | ▲ -60.3pp [-69.0, -31.1] |
+| 83 | `kelly_regime_r60_cusum_vote` | R-60 | evaluated, NEGATIVE | $3,472 | $2,838 | $4,472 | 47% | ≈ -3.11 [-6.40, +0.08] | ▲ -25.4pp [-45.3, -9.4] |
+| 84 | `r93_gz_scaled_kelly` | R-93 | evaluated, NEGATIVE | $2,783 | $3,783 | $2,112 | 30% | ≈ -2.83 [-6.82, +1.31] | ▲ -56.4pp [-68.4, -21.1] |
+| 85 | `coin_betting` | R-188 | evaluated, NEGATIVE | $1,984 | $2,904 | $2,984 | 35% | ≈ -3.09 [-6.94, +0.75] | ▲ -57.2pp [-72.3, -35.9] |
+| 86 | `r125_novel_cvar_kelly` | R-125 | evaluated, NEGATIVE | $1,833 | $2,628 | $2,833 | 40% | ≈ -3.19 [-7.23, +0.62] | ▲ -47.6pp [-61.5, -17.8] |
+| 87 | `replicator_book` | registered | registered | $1,330 | $2,330 | $10.58 | 38% | ≈ -3.31 [-6.86, +0.28] | ▲ -47.1pp [-57.9, -20.7] |
+| 88 | `r177_novel_state_kelly_short` | R-177 | evaluated, NEGATIVE | $1,087 | $2,087 | $66.11 | 74% | ▼ -3.42 [-6.48, -0.36] | ≈ -11.3pp [-23.0, +20.1] |
+| 89 | `defensive_forecast` | registered | registered | $999 | $1,609 | $1,999 | 14% | ≈ -3.68 [-7.93, +0.51] | ▲ -67.2pp [-82.5, -45.0] |
+| 90 | `universal_kelly` | registered | registered | $276 | $1,276 | $1,227 | 7% | ≈ -3.91 [-8.39, +0.44] | ▲ -76.6pp [-89.1, -52.9] |
+| 91 | `r191_cost_olmar` | R-191 | evaluated, NEGATIVE | $103 | $952 | $1,103 | 60% | ▼ -4.21 [-8.18, -0.40] | ≈ -24.0pp [-39.6, +7.2] |
+| 92 | `intraday_momentum` | R-188 | evaluated, NEGATIVE | -$5.78 | $397 | $994 | 54% | ▼ -5.08 [-9.57, -0.62] | ≈ -17.1pp [-46.4, +15.6] |
+| 93 | `r193_multihead` | R-193 | evaluated, NEGATIVE | -$60.86 | $931 | $939 | 63% | ▼ -4.23 [-8.12, -0.50] | ≈ -21.3pp [-49.1, +4.6] |
+| 94 | `harsanyi_crowd` | registered | registered | -$112 | $888 | $429 | 11% | ≈ -4.28 [-8.88, +0.23] | ▲ -71.9pp [-85.6, -46.0] |
+| 95 | `overshoot_fade` | registered | registered | -$338 | $662 | $33.52 | 37% | ▼ -4.57 [-9.13, -0.07] | ▲ -46.6pp [-68.5, -19.6] |
+| 96 | `kelly_regime_v61_hurst_gated_reversion` | R-61 | evaluated, NEGATIVE | -$341 | $622 | $659 | 52% | ▼ -4.63 [-8.97, -0.28] | ≈ -34.5pp [-61.8, +0.4] |
+| 97 | `camouflage_flow` | registered | registered | -$452 | $548 | $0.99 | 53% | ▼ -4.76 [-9.23, -0.29] | ▲ -31.4pp [-57.7, -2.5] |
+| 98 | `kelly_regime_v5_bayes` | R-34 | evaluated, NEGATIVE | -$471 | $22.54 | $529 | 63% | ▼ -7.95 [-12.52, -3.48] | ▼ +14.6pp [+0.9, +38.2] |
+| 99 | `vwap_reversion` | R-188 | evaluated, NEGATIVE | -$491 | $509 | $255 | 91% | ▼ -4.83 [-8.78, -0.73] | ≈ +7.2pp [-34.1, +21.2] |
+| 100 | `jump_momentum` | R-188 | evaluated, NEGATIVE | -$519 | $455 | $481 | 64% | ▼ -4.95 [-9.29, -0.58] | ≈ -13.0pp [-45.4, +17.5] |
+| 101 | `stealth_trend` | registered | registered | -$535 | $465 | $0.38 | 55% | ▼ -4.92 [-9.26, -0.76] | ≈ -29.0pp [-43.9, +12.1] |
+| 102 | `flow_regime` | registered | registered | -$553 | $447 | $0.80 | 56% | ▼ -4.96 [-9.43, -0.54] | ≈ -27.3pp [-47.2, +6.3] |
+| 103 | `session_drift` | R-188 | evaluated, NEGATIVE | -$591 | $409 | $397 | 59% | ▼ -5.05 [-9.71, -0.42] | ≈ -24.0pp [-46.0, +4.6] |
+| 104 | `game_council` | registered | registered | -$716 | $284 | $2.00 | 72% | ▼ -5.42 [-9.97, -0.95] | ≈ -11.5pp [-25.9, +12.4] |
+| 105 | `elliott_wave` | registered | registered | -$728 | $272 | $81.67 | 81% | ▼ -5.46 [-9.80, -1.00] | ≈ -2.9pp [-33.6, +22.3] |
+| 106 | `kelly_regime_v61_zscore_reversion` | R-61 | evaluated, NEGATIVE | -$900 | $75.30 | $99.84 | 94% | ▼ -6.74 [-10.10, -3.52] | ≈ +11.0pp [-1.2, +29.7] |
+| 107 | `minority_oracle` | registered | registered | -$947 | $53.36 | $3.83 | 95% | ▼ -7.09 [-11.60, -2.52] | ≈ +11.5pp [-3.8, +35.9] |
+| 108 | `noise_area_breakout` | R-188 | evaluated, NEGATIVE | -$950 | $42.26 | $49.85 | 95% | ▼ -7.32 [-11.69, -2.95] | ≈ +12.6pp [-0.4, +36.0] |
+| 109 | `level_k` | R-188 | evaluated, NEGATIVE | -$995 | $5.00 | $5.01 | 100% | ▼ -9.46 [-15.27, -3.97] | ▼ +16.4pp [+1.4, +39.2] |
+| 110 | `focal_levels` | R-188 | evaluated, NEGATIVE | -$995 | $4.95 | $5.00 | 100% | ▼ -9.47 [-15.34, -4.29] | ▼ +16.4pp [+2.7, +39.9] |
+| 111 | `game_switch` | registered | registered | -$995 | $5.00 | $1.00 | 99% | ▼ -9.45 [-15.38, -4.06] | ▼ +16.3pp [+1.0, +39.3] |
+| 112 | `regret_grid` | registered | registered | -$995 | $5.00 | $1.00 | 100% | ▼ -9.46 [-16.20, -3.49] | ▼ +16.3pp [+0.9, +39.9] |
+| 113 | `tft_trend` | registered | registered | -$995 | $4.99 | $1.00 | 100% | ▼ -9.46 [-14.88, -4.58] | ▼ +16.3pp [+3.0, +39.9] |
+| 114 | `macd_cross` | registered | registered | -$995 | $4.99 | $1.00 | 100% | ▼ -9.47 [-16.93, -3.21] | ≈ +16.4pp [-1.4, +40.0] |
+| 115 | `macd_rsi` | registered | registered | -$995 | $4.96 | $0.94 | 100% | ▼ -9.46 [-15.00, -4.40] | ▼ +16.3pp [+2.6, +39.6] |
+| 116 | `attrition_reversion` | registered | registered | -$995 | $4.94 | $0.99 | 100% | ▼ -9.47 [-14.55, -4.69] | ▼ +16.3pp [+3.1, +39.1] |
+| 117 | `rsi_reversion` | registered | registered | -$995 | $4.85 | $0.77 | 100% | ▼ -9.49 [-13.24, -5.78] | ▼ +16.7pp [+3.5, +39.8] |
 
-| # | strategy | round | status | spot | futures_5x | max DD (best market) | trades | best Sharpe |
-|---:|---|---|---|---:|---:|---:|---:|---:|
-| 1 | `r194_residual_transformer` | R-194 | evaluated, NEGATIVE | $50.4K | $207.6K | 65% | 150 | 1.22 |
-| 2 | `r192_robust_state` | R-192 | evaluated, NEGATIVE | $64.3K | $169.6K | 36% | 174 | 1.60 |
-| 3 | `r194_kelly_episodic_memory` | R-194 | evaluated, NEGATIVE | $35.3K | $161.7K | 43% | 137 | 1.29 |
-| 4 | `kelly_regime_v4` | registered | registered | $66.8K | $156.2K | 35% | 174 | 1.59 |
-| 5 | `r192_tracking_budget` | R-192 | evaluated, NEGATIVE | $66.8K | $151.1K | 42% | 143 | 1.56 |
-| 6 | `kelly_regime_v3` | registered | registered | $65.8K | $139.5K | 42% | 147 | 1.55 |
-| 7 | `r192_confirm_increase` | R-192 | evaluated, NEGATIVE | $59.9K | $132.9K | 37% | 173 | 1.56 |
-| 8 | `r190_v3_b05` | R-190 | evaluated, NEGATIVE | $51.8K | $130.0K | 44% | 127 | 1.51 |
-| 9 | `r190_v3_b10` | R-190 | evaluated, NEGATIVE | $57.2K | $130.0K | 44% | 127 | 1.51 |
-| 10 | `r190_v4_b10` | R-190 | evaluated, NEGATIVE | $61.6K | $130.0K | 35% | 154 | 1.53 |
-| 11 | `r190_v4_b05` | R-190 | evaluated, NEGATIVE | $57.5K | $130.0K | 35% | 154 | 1.53 |
-| 12 | `r190_v3_b20` | R-190 | evaluated, NEGATIVE | $51.7K | $129.3K | 43% | 113 | 1.51 |
-| 13 | `r192_factor_clock` | R-192 | evaluated, NEGATIVE | $51.8K | $127.3K | 36% | 174 | 1.52 |
-| 14 | `r190_v4_b20` | R-190 | evaluated, NEGATIVE | $67.1K | $125.3K | 35% | 130 | 1.55 |
-| 15 | `kelly_regime_v2` | registered | registered | $46.4K | $122.0K | 40% | 113 | 1.49 |
-| 16 | `r194_panel_cross_attention` | R-194 | evaluated, NEGATIVE | $53.4K | $111.5K | 47% | 44 | 1.46 |
-| 17 | `kelly_regime` | registered | registered | $42.1K | $108.2K | 43% | 143 | 1.42 |
-| 18 | `kelly_regime_ev` | registered | registered | $40.9K | $108.0K | 37% | 135 | 1.53 |
-| 19 | `r192_anchor_confirm` | R-192 | evaluated, NEGATIVE | $53.6K | $103.4K | 46% | 59 | 1.45 |
-| 20 | `r190_blend_b10` | R-190 | evaluated, NEGATIVE | $49.9K | $95.0K | 40% | 117 | 1.43 |
-| 21 | `r190_base_b05` | R-190 | evaluated, NEGATIVE | $39.3K | $91.8K | 44% | 125 | 1.37 |
-| 22 | `r190_base_b10` | R-190 | evaluated, NEGATIVE | $38.8K | $91.8K | 44% | 125 | 1.37 |
-| 23 | `r190_base_b20` | R-190 | evaluated, NEGATIVE | $42.7K | $86.3K | 45% | 113 | 1.36 |
-| 24 | `kelly_regime_ev_fast` | registered | registered | $71.1K | $70.8K | 32% | 50 | 1.49 |
-| 25 | `buy_and_hold` | registered | registered | $66.0K | $18.05 | 84% | 1 | 0.95 |
-| 26 | `swap_regret_council` | registered | registered | $57.1K | $57.1K | 84% | 1 | 0.94 |
-| 27 | `cautious_optimism` | registered | registered | $55.4K | $55.3K | 84% | 1 | 0.93 |
-| 28 | `normalhedge_council` | registered | registered | $54.6K | $54.6K | 84% | 1 | 0.93 |
-| 29 | `sleeping_council` | registered | registered | $53.8K | $41.6K | 84% | 2 | 0.93 |
-| 30 | `squint_council` | registered | registered | $49.5K | $49.4K | 83% | 1 | 0.92 |
-| 31 | `champions_council` | registered | registered | $19.3K | $36.8K | 37% | 261 | 1.37 |
-| 32 | `r191_cost_proximal` | R-191 | evaluated, NEGATIVE | $35.3K | $28.7K | 53% | 24 | 1.04 |
-| 33 | `r191_sticky_expert` | R-191 | evaluated, NEGATIVE | $24.0K | $24.8K | 74% | 35 | 0.89 |
-| 34 | `r191_conformal_tail` | R-191 | evaluated, NEGATIVE | $23.4K | $21.9K | 59% | 62 | 1.00 |
-| 35 | `r191_robust_growth` | R-191 | evaluated, NEGATIVE | $15.5K | $15.0K | 78% | 130 | 0.79 |
-| 36 | `nash_council` | registered | registered | $3,170 | $14.2K | 71% | 726 | 0.83 |
-| 37 | `blackwell_council` | registered | registered | $10.9K | $14.1K | 58% | 51 | 1.05 |
-| 38 | `qre_council` | registered | registered | $7,881 | $13.6K | 56% | 1 | 0.96 |
-| 39 | `minimax_council` | registered | registered | $4,010 | $13.5K | 58% | 1,179 | 0.92 |
-| 40 | `hedge_experts` | registered | registered | $13.3K | $258 | 59% | 4,103 | 0.96 |
-| 41 | `r193_attention` | R-193 | evaluated, NEGATIVE | $9,412 | $9,155 | 71% | 7 | 0.75 |
-| 42 | `mfg_crowding` | R-188 | evaluated, NEGATIVE | $4,433 | $8,112 | 51% | 1,375 | 0.72 |
-| 43 | `robust_kelly` | R-188 | evaluated, NEGATIVE | $1,889 | $6,190 | 60% | 1,214 | 0.68 |
-| 44 | `elliott_wave_zigzag` | registered | registered | $5,027 | $12.75 | 44% | 162 | 0.63 |
-| 45 | `r193_transformer` | R-193 | evaluated, NEGATIVE | $4,473 | $5,005 | 79% | 1 | 0.59 |
-| 46 | `coin_betting` | R-188 | evaluated, NEGATIVE | $2,904 | $2,984 | 35% | 85 | 0.73 |
-| 47 | `replicator_book` | registered | registered | $2,330 | $10.58 | 38% | 1,427 | 0.52 |
-| 48 | `defensive_forecast` | registered | registered | $1,609 | $1,999 | 14% | 796 | 0.69 |
-| 49 | `universal_kelly` | registered | registered | $1,276 | $1,227 | 7% | 20 | 0.62 |
-| 50 | `r191_cost_olmar` | R-191 | evaluated, NEGATIVE | $952 | $1,103 | 60% | 193 | 0.19 |
-| 51 | `intraday_momentum` | R-188 | evaluated, NEGATIVE | $397 | $994 | 54% | 1,711 | 0.12 |
-| 52 | `r193_multihead` | R-193 | evaluated, NEGATIVE | $931 | $939 | 63% | 2 | 0.09 |
-| 53 | `harsanyi_crowd` | registered | registered | $888 | $429 | 11% | 178 | -0.82 |
-| 54 | `overshoot_fade` | registered | registered | $662 | $33.52 | 37% | 341 | -0.95 |
-| 55 | `camouflage_flow` | registered | registered | $548 | $0.99 | 53% | 1,044 | -0.64 |
-| 56 | `vwap_reversion` | R-188 | evaluated, NEGATIVE | $509 | $255 | 91% | 2,277 | -0.03 |
-| 57 | `jump_momentum` | R-188 | evaluated, NEGATIVE | $455 | $481 | 64% | 2,963 | -0.14 |
-| 58 | `stealth_trend` | registered | registered | $465 | $0.38 | 55% | 1,605 | -0.31 |
-| 59 | `flow_regime` | registered | registered | $447 | $0.80 | 56% | 1,184 | -0.72 |
-| 60 | `session_drift` | R-188 | evaluated, NEGATIVE | $409 | $397 | 59% | 592 | -1.64 |
-| 61 | `game_council` | registered | registered | $284 | $2.00 | 72% | 2,541 | -1.66 |
-| 62 | `elliott_wave` | registered | registered | $272 | $81.67 | 81% | 1,261 | 0.13 |
-| 63 | `minority_oracle` | registered | registered | $53.36 | $3.83 | 95% | 9,039 | -8.29 |
-| 64 | `noise_area_breakout` | R-188 | evaluated, NEGATIVE | $42.26 | $49.85 | 95% | 6,568 | -1.16 |
-| 65 | `level_k` | R-188 | evaluated, NEGATIVE | $5.00 | $5.01 | 100% | 4,456 | -1.65 |
-| 66 | `focal_levels` | R-188 | evaluated, NEGATIVE | $4.95 | $5.00 | 100% | 2,872 | -1.73 |
-| 67 | `game_switch` | registered | registered | $5.00 | $1.00 | 99% | 6,672 | -1.60 |
-| 68 | `regret_grid` | registered | registered | $5.00 | $1.00 | 100% | 3,461 | -2.13 |
-| 69 | `tft_trend` | registered | registered | $4.99 | $1.00 | 100% | 2,538 | -1.03 |
-| 70 | `macd_cross` | registered | registered | $4.99 | $1.00 | 100% | 4,301 | -1.08 |
-| 71 | `macd_rsi` | registered | registered | $4.96 | $0.94 | 100% | 2,454 | -0.94 |
-| 72 | `attrition_reversion` | registered | registered | $4.94 | $0.99 | 100% | 2,930 | -0.24 |
-| 73 | `rsi_reversion` | registered | registered | $4.85 | $0.77 | 100% | 4,464 | 0.68 |
+### Tried and dropped (63 strategies)
+
+These were tried, and are recorded with their results in
+[docs/LEDGER.md](docs/LEDGER.md). They are **not** in the ranking because
+they can't be rebuilt faithfully on this dataset:
+
+- they need external data (funding, on-chain metrics, perpetual basis,
+  implied volatility, macro series, a multi-coin universe), which doesn't
+  cover the same full period;
+- or they need per-round calibration or arguments;
+- or their shipped defaults switch the mechanism off.
+
+Rather than rank them on numbers that wouldn't be theirs, their code was
+removed on 2026-11-19; it is still in git history. Nine controls and
+ablations (passive matched holds, gate harnesses, a skeptic ablation) were
+removed with them; they were never strategies.
+
+| round | strategy | idea | why it is not ranked |
+|---|---|---|---|
+| R-35 | `funding_ev_band` | ``kelly_regime_ev`` with a forecast-funding-drag haircut on the target and (optionally) on the band | needs external data |
+| R-39 | `funding_gate_decile` | kelly_regime_v4, unchanged, plus a binary flat-override on top-decile funding | needs external data |
+| R-39 | `funding_gate_decile_ext` | R-35's gate with the extended funding series injected. No logic of its own | needs external data (btcusdt_deribit_perp_funding, btcusdt_perp_funding) |
+| R-41 | `kelly_regime_v9_basis_brake` | v4's vote + conditional vol-targeting exposure, braked (never raised) by the real Deribit basis | needs external data (btcusdt_deribit_perp) |
+| R-41 | `kelly_regime_v9_basis_lead` | Basis as a 4th, faster confirming vote -- accelerates the vote's | needs external data (btcusdt_deribit_perp) |
+| R-44 | `kelly_regime_v10_hashribbon_vote` | v4's 3-anchor vote plus a 4th, precision-weighted Hash-Ribbons miner-capitulation vote | needs external data (btc_onchain) |
+| R-44 | `kelly_regime_v10_onchain_confirm` | v4's vote + conditional vol-targeting exposure, scaled by a bounded, symmetric on-chain confirmation multiplier | needs external data (btc_onchain) |
+| R-45 | `kelly_regime_v11_walkforward_adaptive` | v3/v4's unchanged vote+hysteresis-scale formula, with target_vol/max_leverage refit on a schedule | does not trade without its round's inputs |
+| R-53 | `kelly_regime_v14_macro_brake` | v4's vote + conditional vol-targeting exposure, braked (never raised) by macro stress | needs external data |
+| R-54 | `kelly_regime_v15_macro_veto` | B-21's mechanism: a hard, unweighted macro-veto override of v4's | needs external data |
+| R-55 | `kelly_regime_v14_macro_lead` | v4's 3-anchor vote plus a 4th, precision-weighted macro-stress (VIX/DXY) vote | needs external data |
+| R-55 | `kelly_regime_v14_macro_override` | Ablation: the SIMPLEST possible version of the same idea | needs external data |
+| R-58 | `kelly_regime_v15_stablecoin_veto` | v4's 3-anchor vote with a hard veto: force ``frac=0`` while the | needs external data |
+| R-58 | `kelly_regime_v16_stablecoin_confirm` | v4's 3-anchor vote plus a 4th, precision-weighted CONFIRMING vote | needs external data |
+| R-58 | `kelly_regime_v16_stablecoin_override_ablation` | Ablation, for falsification test (3): the hard-override version of | needs external data |
+| R-58 | `kelly_regime_v16_stablecoin_persist` | v4's 3-anchor vote with a hard veto identical to R-54's | needs external data |
+| R-58 | `kelly_regime_v17_stablecoin_corroborate` | v4's 3-anchor vote plus a 4th, precision-weighted CONFIRMING vote, | needs external data |
+| R-58 | `kelly_regime_v17_stablecoin_corroborate_override_ablation` | Ablation arm: the identical AND-gate corroboration, fed into R-54's | needs external data |
+| R-58 | `kelly_regime_v17_stablecoin_shortwindow` | v4's 3-anchor vote with a hard veto identical to | needs external data |
+| R-73 | `kelly_regime_v18_vrp_brake` | v4's vote + conditional vol-targeting exposure, braked (never raised) by a compressed VRP | needs external data |
+| R-74 | `kelly_regime_r74_mvrv_confirm` | v4's 3-anchor vote plus a 4th, weighted CONFIRMING vote from MVRV | needs external data |
+| R-76 | `_r76_pair_leg` | One leg of an R-76 distance-method pairs book | needs per-round calibration/arguments |
+| R-88 | `r88_conservative_taker_flow_vote` | kelly_regime_v4 + a taker-flow-confirmed signed vote (R-88 | needs per-round calibration/arguments |
+| R-89 | `r89_target` | Wrap a pure ``build_target(df) -> np.ndarray`` as a runnable strategy | needs per-round calibration/arguments |
+| R-90 | `r90_target` | Wrap a pure ``build_target(df) -> np.ndarray`` as a runnable strategy | needs per-round calibration/arguments |
+| R-91 | `r91_target` | Wrap a pure ``build_target(df) -> np.ndarray`` as a runnable strategy | needs per-round calibration/arguments |
+| R-92 | `r92_target` | Wrap a pure ``build_target(df) -> np.ndarray`` as a runnable strategy | needs per-round calibration/arguments |
+| R-93 | `r93_control` | Wrap a pure ``build_target(df) -> np.ndarray`` as a runnable strategy | needs per-round calibration/arguments |
+| R-94 | `r94_conservative_attention_confirm` | kelly_regime_v4 + a Wikipedia-attention-confirmed fast-anchor vote | needs per-round calibration/arguments |
+| R-95 | `r95_conservative_fgi_confirm` | kelly_regime_v4 + an FGI-extremity-confirmed fast-anchor vote (R-95 | needs per-round calibration/arguments |
+| R-98 | `r98_conservative_gpd_confirm` | kelly_regime_v4 + a GPD-tail-alarm-confirmed fast-anchor vote (R-98 | needs per-round calibration/arguments |
+| R-99 | `r99_conservative_bv_jump_confirm` | kelly_regime_v4 + a bipower-variation-jump-alarm-confirmed fast-anchor | needs per-round calibration/arguments |
+| R-100 | `r100_conservative_funding_divergence_vote` | kelly_regime_v4 + a cross-venue funding-divergence confirming vote | needs per-round calibration/arguments |
+| R-101 | `kelly_regime_v4_conservative_static_jackknife` | v4 with a third, frozen multiplicative factor: desired = frac*scale*conf | shipped defaults switch the mechanism off (identical to v4) |
+| R-102 | `r102_control` | Wrap a pure ``build_target(df) -> np.ndarray`` as a runnable strategy | needs per-round calibration/arguments |
+| R-116 | `r116_conservative_control` | Wrap a pure ``build_target(df) -> np.ndarray`` as a runnable | needs per-round calibration/arguments |
+| R-116 | `r116_novel_control` | Wrap a pure ``build_target(df) -> np.ndarray`` as a runnable strategy | needs per-round calibration/arguments |
+| R-120 | `r120_conservative_basis_level_confirm` | kelly_regime_v4 + a Deribit-calendar-basis-LEVEL-confirmed fast-anchor | needs per-round calibration/arguments |
+| R-125 | `r125_conservative_cvar_scale` | kelly_regime_v4's exact architecture (3-anchor vote, 20/40/80-day | needs per-round calibration/arguments |
+| R-132 | `conservative_mvrv_expert` | `hedge_experts` plus one MVRV-valuation mean-reversion vote (R-132 CONSERVATIVE) | needs external data |
+| R-132 | `r132_novel_diversified_panel` | Full NOVEL construction: horizon collapse (1h+1w momentum) AND two | needs external data (btc_mvrv, stablecoin_supply) |
+| R-135 | `r135_conservative_positioning_expert` | Full CONSERVATIVE construction: the unmodified 10-expert | needs external data |
+| R-135 | `r135_novel_breadth_drop_only_ablation` | Ablation (pre-registered, not optional): drop the SAME two | harness-only module (asserts its round's setup) |
+| R-135 | `r135_novel_breadth_optimized_panel` | Full NOVEL construction: breadth-optimized drop of the two least- | harness-only module (asserts its round's setup) |
+| R-136 | `r136_novel_har_iv_scale` | kelly_regime_v4 with its EWM(8d) vol estimator replaced by | needs per-round calibration/arguments |
+| R-141 | `r141_novel_lppls_dampener` | — | shipped defaults switch the mechanism off (identical to v4) |
+| R-142 | `r142_novel_slope_dampener` | kelly_regime_v4's exact architecture (3-anchor vote, 20/40/80-day | shipped defaults switch the mechanism off (identical to v4) |
+| R-146 | `r146_control` | Wrap a pure ``build_target(df) -> np.ndarray`` as a runnable strategy | needs per-round calibration/arguments |
+| R-148 | `r148_control` | Wrap a pure ``build_target(df) -> np.ndarray`` as a runnable strategy | needs per-round calibration/arguments |
+| R-149 | `r149_control` | Wrap a pure ``build_target(df) -> np.ndarray`` as a runnable strategy | needs per-round calibration/arguments |
+| R-150 | `r150_control` | Wrap a pure ``build_target(df) -> np.ndarray`` as a runnable strategy | needs per-round calibration/arguments |
+| R-152 | `r152_conservative_cdar_cap` | ``kelly_regime_v4`` with its fixed ``max_leverage=2.0`` replaced by | needs per-round calibration/arguments |
+| R-152 | `r152_novel_cdar_budget` | ``kelly_regime_v4`` with its vol-target ratio replaced by a CDaR_0.95 | needs per-round calibration/arguments |
+| R-153 | `r152_conservative_cdar_cap` | kelly_regime_v4's exact architecture with the ONE substitution this | needs per-round calibration/arguments |
+| R-153 | `r152_novel_cdar_budget` | v4's vote and hysteresis latch, CDaR-budget sized: f* = min(budget / | needs per-round calibration/arguments |
+| R-165 | `kelly_regime_v4_ewma_scale` | kelly_regime_v4 with an EXPONENTIALLY SMOOTHED `scale` factor | shipped defaults switch the mechanism off (identical to v4) |
+| R-165 | `r165_conservative_boundary_scale` | v4 with a no-trade region, boundary destination, on ``scale`` alone | shipped defaults switch the mechanism off (identical to v4) |
+| R-168 | `r168_conservative_venue_fusion` | CONSERVATIVE R-168 branch: equal-weight venue fusion, zero new | needs external data |
+| R-168 | `r168_novel_venue_fusion` | kelly_regime_v4, with the vote's anchor input replaced by a | needs external data |
+| R-180 | `r180_conservative_meta_veto` | `kelly_regime_v4`'s vote+scale signal, gated by a binary walk-forward | needs external data |
+| R-180 | `r180_novel_betting_confidence` | v4's own `frac*scale`, continuously rescaled by a bounded function of | needs external data |
+| R-185 | `r185_conservative_disagreement_veto` | CONSERVATIVE R-185 branch: bounded, never-increase disagreement veto | needs external data |
+| R-185 | `r185_novel_disagreement_ensemble` | kelly_regime_v4 with its single spot vote replaced by a causal | needs external data |
 
 ## Three Kelly v4 x transformer hybrids (R-194) — evaluated, not registered
 

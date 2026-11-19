@@ -822,9 +822,9 @@ measured Kelly ratio than unanimous agreement — but fails its ETH
 falsification test decisively, underperforming v4 on the BTC control run
 through the identical pipeline as well as on ETH itself, indicating the
 inner-validation win was fitted to one window. Full detail in
-[docs/LEDGER.md](docs/LEDGER.md) (R-37); code in
-`experiments/kelly_regime_v6_retune.py` and
-`experiments/kelly_regime_v6_state_kelly.py`.
+[docs/LEDGER.md](docs/LEDGER.md) (R-37). `kelly_regime_v6_state_kelly`
+is still runnable (`experiments/kelly_regime_v6_state_kelly.py`); the
+retune variant's code was removed on 2026-11-19 and is in git history.
 
 One diagnostic from the same round that belongs next to every spot figure
 on this page: **on the 2023+ spot holdout `kelly_regime_v4` asks for more
@@ -1208,7 +1208,8 @@ outright; it is backlog item B-02 and blocked on network access.
 > turned out to matter more than the headline.** Funding through 2026 is
 > now available (Deribit, a different venue — see `load_funding_extended`
 > in `src/tradebot/data.py`) and the delta-neutral trade was implemented
-> as real code for the first time (`experiments/funding_harvest_carry.py`).
+> as real code for the first time (removed on 2026-11-19 with the other
+> unranked strategies; recorded in the ledger as R-39, code in git history).
 > Two findings change how this section should be read:
 >
 > 1. **The +16.2%/yr headline is largely a Binance-specific number, not a

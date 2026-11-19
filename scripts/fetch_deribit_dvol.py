@@ -30,7 +30,7 @@ truncated, and asserts that at every chunk boundary.
 
 Also supports ``--currency ETH`` (Deribit publishes an independent ETH
 DVOL index, confirmed reachable, same 2021-03-24 start) so the VRP
-falsification round (``experiments/_vrp_signal.py``) can test a genuine
+falsification round (R-73; its code was removed on 2026-11-19) could test a genuine
 asset-specific variance risk premium on ETH rather than proxying it
 through BTC's own implied vol.
 

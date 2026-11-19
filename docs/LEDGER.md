@@ -27007,6 +27007,8 @@ Newest first, one bullet per round, same order as section B. The count is
 the running program-level total *after* that round; the increment and its
 justification are in the note.
 
+- **11-19 · ~5,808** — 117-strategy ranking by profit (operator request; no verdict changed): **+244** full-period cells (122 strategies × 2 markets in `experiments/all_strategies_rank.py`; 5 later excluded as identity-default). All 74 registered results reproduce. At operator request, code for strategies that can't be rebuilt faithfully (63 strategies, 9 controls; 357 `.py`, 25 other files, 6 report folders) was **removed on 11-19, records kept**: ledger paths to them resolve in git history before that commit, and README lists each with its idea and the reason.
+
 - **11-18 · ~5,564** — all-strategies ranking (operator request; no verdict changed): **+76** full-period cells. These are 36 frozen candidates (R-188, R-190–R-194) plus `buy_and_hold` and `kelly_regime_v4` as reproduction checks, on 2 markets, in `experiments/all_strategies_rank.py`. Found: `load_dataset("spot")` now prefers the one-year aligned file added 09-05, so a fresh `tradebot run` would rank the last year only.
 
 - **11-18 · ~5,488** — R-194: **+638** =284 core holdout cells +354 actual-broker risk-matching attempts. Three primaries and six fixed neighbours; no retuning. The 33 discarded stale-bytecode cells were training-only and read no holdout bar.
