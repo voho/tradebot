@@ -271,3 +271,4 @@ uv.lock
 !/reports/all_strategies/
 !/reports/all_strategies/*.csv
 !/reports/all_strategies/*.md
+/reports/all_strategies/daily_returns.csv.gz
