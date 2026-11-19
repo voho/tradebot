@@ -36,7 +36,7 @@ def main(argv: list[str] | None = None) -> int:
     p_new = sub.add_parser("new", help="scaffold a new strategy file")
     p_new.add_argument("name", help="strategy name, e.g. ema_trend (lowercase_with_underscores)")
 
-    p_fetch = sub.add_parser("fetch", help="download real BTCUSDT 5m data from Binance")
+    p_fetch = sub.add_parser("fetch", help="download an aligned BTCUSDT perp/spot 5m pair from Binance (not used by run)")
     p_fetch.add_argument("--data-dir", type=Path, default=Path("data"))
     p_fetch.add_argument("--symbol", default="BTCUSDT")
     p_fetch.add_argument("--start", default="2020-01-01",

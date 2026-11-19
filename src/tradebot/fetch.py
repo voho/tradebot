@@ -1,9 +1,12 @@
 """Fetch real BTCUSDT 5m data from Binance public endpoints (stdlib only).
 
-Produces the canonical CSVs used by the framework:
+Produces an aligned perp/spot pair (``tradebot.data.ALIGNED``):
 
 - ``data/btcusdt_perp_5m.csv``          (USDT-margined perpetual futures)
 - ``data/btcusdt_spot_aligned_5m.csv``  (spot, aligned to the perp index)
+
+``load_dataset`` does not read these; it always uses the committed
+full-history series, so fetching never changes the comparison table.
 
 Tries the bulk monthly archives on data.binance.vision first (fast), then
 falls back to the paginated klines REST API. Needs outbound network access
@@ -159,6 +162,6 @@ def fetch_data(data_dir: str | Path, symbol: str = "BTCUSDT",
     spot = fetch_klines("spot", symbol, start_dt, end_dt)
 
     perp, spot = datamod.align(perp, spot)
-    datamod.save_ohlcv_csv(perp, data_dir / datamod.CANONICAL["perp"][0])
-    datamod.save_ohlcv_csv(spot, data_dir / datamod.CANONICAL["spot"][0])
+    datamod.save_ohlcv_csv(perp, data_dir / datamod.ALIGNED["perp"])
+    datamod.save_ohlcv_csv(spot, data_dir / datamod.ALIGNED["spot"])
     print(f"Wrote {len(perp)} aligned bars to {data_dir}/", file=sys.stderr)

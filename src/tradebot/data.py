@@ -1,22 +1,26 @@
 """Data loading: committed real data, optional fetched data, synthetic fallback.
 
-Canonical files, in loading priority order:
+``load_dataset`` resolves the canonical full-history series every
+full-period number in this repo (README comparison table,
+``scripts/experiment.py``, the research harnesses) is measured on:
 
-- ``data/btcusdt_perp_5m.csv``          USDT-margined BTCUSDT perp 5m klines
-  (produced by ``python -m tradebot fetch``; needs Binance network access)
-- ``data/btcusdt_spot_aligned_5m.csv``  BTCUSDT spot 5m aligned to the perp
-  (produced by ``python -m tradebot fetch``)
 - ``data/btcusd_spot_5m.csv.gz``        Bitstamp BTC/USD 5m, 2017 -> present,
   committed to the repo (built by ``scripts/build_bitstamp_dataset.py``)
+
+There is no full-history perp series, so the futures market runs on the
+spot series and every report is labeled "spot (perp proxy)" — the perp
+basis is small, but the label keeps it honest.
+
+``python -m tradebot fetch`` writes a Binance BTCUSDT perp + aligned-spot
+pair (``ALIGNED``). It covers a shorter window, so ``load_dataset`` never
+picks it up: load it by path when a study wants the real perp.
 
 Format: columns ``timestamp,open,high,low,close,volume`` with ``timestamp``
 as milliseconds since epoch (UTC); ``.gz`` files are read transparently.
 
-When no perp file exists, the futures market runs on the spot series and
-every report is labeled "spot (perp proxy)" — the perp basis is small, but
-the label keeps it honest. If no real data exists at all, ``load_dataset``
-falls back to a seeded synthetic series (generated once into
-``data/synthetic_*.csv``, gitignored) so the framework stays runnable.
+If no real data exists at all, ``load_dataset`` falls back to a seeded
+synthetic series (generated once into ``data/synthetic_*.csv``,
+gitignored) so the framework stays runnable.
 """
 
 from __future__ import annotations
@@ -28,8 +32,15 @@ import numpy as np
 import pandas as pd
 
 CANONICAL = {
-    "perp": ["btcusdt_perp_5m.csv"],
-    "spot": ["btcusdt_spot_aligned_5m.csv", "btcusd_spot_5m.csv.gz"],
+    "perp": [],
+    "spot": ["btcusd_spot_5m.csv.gz"],
+}
+# Written by ``tradebot fetch``. Deliberately not in CANONICAL: the committed
+# pair spans 2025-08 -> 2026-08 only, and preferring it silently turned every
+# full-period run into a one-year run.
+ALIGNED = {
+    "perp": "btcusdt_perp_5m.csv",
+    "spot": "btcusdt_spot_aligned_5m.csv",
 }
 SYNTHETIC = {
     "perp": "synthetic_perp_5m.csv",
@@ -350,29 +361,28 @@ def load_dataset(data_dir: str | Path, kind: str) -> tuple[pd.DataFrame, str]:
     if kind not in CANONICAL:
         raise ValueError(f"kind must be one of {sorted(CANONICAL)}")
     data_dir = Path(data_dir)
-    candidates = [(name, LABEL_REAL) for name in CANONICAL[kind]]
+    for name in CANONICAL[kind]:
+        path = data_dir / name
+        if path.exists():
+            return load_ohlcv_csv(path), LABEL_REAL
+
     if kind == "perp":
-        candidates += [(name, LABEL_PROXY) for name in CANONICAL["spot"]]
-    found = [(load_ohlcv_csv(data_dir / name), label)
-             for name, label in candidates if (data_dir / name).exists()]
-    if found:
-        # Longest history wins; ties keep the listed order. A committed
-        # one-year fetch snapshot must not silently shrink every
-        # full-history comparison (it did from 2026-09-05 until this rule).
-        df, label = max(found, key=lambda c: c[0].index[-1] - c[0].index[0])
-        if label == LABEL_PROXY:
-            print(
-                "NOTE: no perp data covering the spot history - futures runs use "
-                "the spot series (labeled 'spot (perp proxy)').",
-                file=sys.stderr,
-            )
-        return df, label
+        for name in CANONICAL["spot"]:
+            path = data_dir / name
+            if path.exists():
+                print(
+                    "NOTE: no full-history perp series - futures runs use the spot series "
+                    "(labeled 'spot (perp proxy)').",
+                    file=sys.stderr,
+                )
+                return load_ohlcv_csv(path), LABEL_PROXY
 
     synth = data_dir / SYNTHETIC[kind]
     if not synth.exists():
         print(
             f"WARNING: no real data in {data_dir} - generating SYNTHETIC data at {synth}.\n"
-            "         Run 'python -m tradebot fetch' (with network access) to get real data.",
+            "         Restore data/btcusd_spot_5m.csv.gz (committed; rebuild with "
+            "scripts/build_bitstamp_dataset.py) to use real data.",
             file=sys.stderr,
         )
         perp, spot = generate_synthetic_pair()

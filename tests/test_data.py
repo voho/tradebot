@@ -1,8 +1,11 @@
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
 
 from tradebot.data import (
+    ALIGNED,
     align,
     coinbase_spot_file,
     generate_synthetic_pair,
@@ -99,12 +102,26 @@ def test_load_dataset_falls_back_to_synthetic(tmp_path, capsys):
     assert label2 == "SYNTHETIC"
 
 
-def test_load_dataset_prefers_real(tmp_path):
-    perp, _ = generate_synthetic_pair(n_bars=200)
-    save_ohlcv_csv(perp, tmp_path / "btcusdt_perp_5m.csv")
+def test_load_dataset_prefers_real_and_ignores_fetched_pair(tmp_path):
+    perp, spot = generate_synthetic_pair(n_bars=300)
+    save_ohlcv_csv(perp, tmp_path / ALIGNED["perp"])
+    save_ohlcv_csv(spot, tmp_path / ALIGNED["spot"])
+    save_ohlcv_csv(spot.iloc[:200], tmp_path / "btcusd_spot_5m.csv.gz")
+    df, label = load_dataset(tmp_path, "spot")
+    assert (label, len(df)) == ("real", 200)
     df, label = load_dataset(tmp_path, "perp")
-    assert label == "real"
-    assert len(df) == 200
+    assert (label, len(df)) == ("spot (perp proxy)", 200)
+
+
+@pytest.mark.parametrize("kind", ["spot", "perp"])
+def test_committed_dataset_is_full_history(kind):
+    """The comparison table and experiment harness read load_dataset; a
+    shorter file sneaking ahead of the 2017 series silently turns every
+    full-period number into a short-window one (it happened: 2026-09-05)."""
+    df, label = load_dataset(Path(__file__).resolve().parents[1] / "data", kind)
+    assert label != "SYNTHETIC"
+    assert df.index[0] < pd.Timestamp("2017-01-02", tz="UTC")
+    assert df.index[-1] - df.index[0] > pd.Timedelta(days=9 * 365)
 
 
 def test_align():
@@ -138,24 +155,3 @@ def test_load_coinbase_eth_spot_uses_the_same_path(tmp_path):
     save_ohlcv_csv(df, tmp_path / coinbase_spot_file("ETH"))
     pd.testing.assert_frame_equal(load_coinbase_eth_spot(tmp_path),
                                   load_coinbase_spot(tmp_path, "ETH"))
-
-
-def test_load_dataset_longest_history_wins(tmp_path):
-    long_, _ = generate_synthetic_pair(n_bars=600)
-    save_ohlcv_csv(long_, tmp_path / "btcusd_spot_5m.csv.gz")
-    save_ohlcv_csv(long_.iloc[-200:], tmp_path / "btcusdt_spot_aligned_5m.csv")
-    save_ohlcv_csv(long_.iloc[-200:], tmp_path / "btcusdt_perp_5m.csv")
-    spot, label = load_dataset(tmp_path, "spot")
-    assert len(spot) == 600 and label == "real"
-    perp, label = load_dataset(tmp_path, "perp")
-    assert len(perp) == 600 and label == "spot (perp proxy)"
-    # Equal span: the fetched file keeps precedence.
-    save_ohlcv_csv(long_, tmp_path / "btcusdt_spot_aligned_5m.csv")
-    spot, _ = load_dataset(tmp_path, "spot")
-    assert spot.index.equals(long_.index)
-
-
-def test_committed_dataset_is_full_history():
-    from pathlib import Path
-    df, _ = load_dataset(Path(__file__).resolve().parents[1] / "data", "spot")
-    assert df.index[0].year <= 2017, "the comparison must run on full history"
