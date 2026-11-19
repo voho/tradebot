@@ -138,3 +138,24 @@ def test_load_coinbase_eth_spot_uses_the_same_path(tmp_path):
     save_ohlcv_csv(df, tmp_path / coinbase_spot_file("ETH"))
     pd.testing.assert_frame_equal(load_coinbase_eth_spot(tmp_path),
                                   load_coinbase_spot(tmp_path, "ETH"))
+
+
+def test_load_dataset_longest_history_wins(tmp_path):
+    long_, _ = generate_synthetic_pair(n_bars=600)
+    save_ohlcv_csv(long_, tmp_path / "btcusd_spot_5m.csv.gz")
+    save_ohlcv_csv(long_.iloc[-200:], tmp_path / "btcusdt_spot_aligned_5m.csv")
+    save_ohlcv_csv(long_.iloc[-200:], tmp_path / "btcusdt_perp_5m.csv")
+    spot, label = load_dataset(tmp_path, "spot")
+    assert len(spot) == 600 and label == "real"
+    perp, label = load_dataset(tmp_path, "perp")
+    assert len(perp) == 600 and label == "spot (perp proxy)"
+    # Equal span: the fetched file keeps precedence.
+    save_ohlcv_csv(long_, tmp_path / "btcusdt_spot_aligned_5m.csv")
+    spot, _ = load_dataset(tmp_path, "spot")
+    assert spot.index.equals(long_.index)
+
+
+def test_committed_dataset_is_full_history():
+    from pathlib import Path
+    df, _ = load_dataset(Path(__file__).resolve().parents[1] / "data", "spot")
+    assert df.index[0].year <= 2017, "the comparison must run on full history"

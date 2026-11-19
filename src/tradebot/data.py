@@ -350,22 +350,23 @@ def load_dataset(data_dir: str | Path, kind: str) -> tuple[pd.DataFrame, str]:
     if kind not in CANONICAL:
         raise ValueError(f"kind must be one of {sorted(CANONICAL)}")
     data_dir = Path(data_dir)
-    for name in CANONICAL[kind]:
-        path = data_dir / name
-        if path.exists():
-            return load_ohlcv_csv(path), LABEL_REAL
-
+    candidates = [(name, LABEL_REAL) for name in CANONICAL[kind]]
     if kind == "perp":
-        for name in CANONICAL["spot"]:
-            path = data_dir / name
-            if path.exists():
-                print(
-                    "NOTE: no perp data found - futures runs use the spot series "
-                    "(labeled 'spot (perp proxy)'). Run 'python -m tradebot fetch' "
-                    "to get real Binance perp data.",
-                    file=sys.stderr,
-                )
-                return load_ohlcv_csv(path), LABEL_PROXY
+        candidates += [(name, LABEL_PROXY) for name in CANONICAL["spot"]]
+    found = [(load_ohlcv_csv(data_dir / name), label)
+             for name, label in candidates if (data_dir / name).exists()]
+    if found:
+        # Longest history wins; ties keep the listed order. A committed
+        # one-year fetch snapshot must not silently shrink every
+        # full-history comparison (it did from 2026-09-05 until this rule).
+        df, label = max(found, key=lambda c: c[0].index[-1] - c[0].index[0])
+        if label == LABEL_PROXY:
+            print(
+                "NOTE: no perp data covering the spot history - futures runs use "
+                "the spot series (labeled 'spot (perp proxy)').",
+                file=sys.stderr,
+            )
+        return df, label
 
     synth = data_dir / SYNTHETIC[kind]
     if not synth.exists():

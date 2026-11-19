@@ -637,8 +637,8 @@ transparently):
 
 | priority | file | used by | label |
 |---|---|---|---|
-| 1 | `btcusdt_perp_5m.csv` (via `tradebot fetch`) | futures | `real` |
-| 1 | `btcusdt_spot_aligned_5m.csv` (via `tradebot fetch`) | spot | `real` |
+| 1 | `btcusdt_perp_5m.csv` (via `tradebot fetch`) | futures, if it covers the longest history | `real` |
+| 1 | `btcusdt_spot_aligned_5m.csv` (via `tradebot fetch`) | spot, if it covers the longest history | `real` |
 | 2 | `btcusd_spot_5m.csv.gz` (committed) | spot; futures fall back to it | `real` / `spot (perp proxy)` |
 | 3 | `synthetic_*.csv` (generated, seeded) | last resort | `SYNTHETIC` |
 
@@ -646,7 +646,9 @@ Without true perp data the futures market trades the spot series — the
 perp basis is small, and every table row and chart carries the
 `spot (perp proxy)` label so it's never mistaken for real perp fills.
 `tradebot fetch` (needs Binance network access) produces the true
-perp + aligned-spot pair, which then takes precedence automatically.
+perp + aligned-spot pair. Among the real files, the one with the longest
+history wins (ties go to the fetched file), so a short fetch never silently
+shrinks the full-history comparison.
 
 Real Binance BTCUSDT **funding rates** for 2020–2023 are also committed
 (`data/btcusdt_perp_funding_8h.csv.gz`), and the ETH/BTC pair used by the
